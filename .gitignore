@@ -1,0 +1,86 @@
+############################
+# Environment variables
+############################
+.env
+.env.*
+!.env.example
+
+############################
+# Go (Golang)
+############################
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go workspace
+/go.work.sum
+
+############################
+# Node.js
+############################
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+############################
+# React / Vite
+############################
+dist/
+build/
+.vite/
+
+############################
+# Logs
+############################
+logs/
+*.log
+
+############################
+# MongoDB
+############################
+data/
+dump/
+
+############################
+# Docker
+############################
+*.pid
+docker-compose.override.yml
+
+############################
+# OS generated files
+############################
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+
+############################
+# Editor / IDE
+############################
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+
+############################
+# Testing / Coverage
+############################
+coverage/
+*.cover
+
+############################
+# Temporary files
+############################
+tmp/
+temp/
