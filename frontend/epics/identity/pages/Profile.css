@@ -1,0 +1,148 @@
+.profile-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+
+.profile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+}
+
+.profile-header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: #1a202c;
+    margin: 0;
+}
+
+.profile-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 32px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.profile-tabs button {
+    background: none;
+    border: none;
+    padding: 12px 24px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #718096;
+    cursor: pointer;
+    position: relative;
+    transition: color 0.2s;
+}
+
+.profile-tabs button:hover {
+    color: #2d3748;
+}
+
+.profile-tabs button.tab-active {
+    color: #667eea;
+}
+
+.profile-tabs button.tab-active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #667eea;
+}
+
+.tab-content {
+    background: white;
+    border-radius: 12px;
+    padding: 32px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.profile-form {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    max-width: 600px;
+}
+
+.danger-zone {
+    margin-top: 48px;
+    padding-top: 32px;
+    border-top: 2px solid #e2e8f0;
+}
+
+.danger-zone h3 {
+    color: #c53030;
+    font-size: 18px;
+    margin: 0 0 16px 0;
+}
+
+.activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 24px;
+}
+
+.activity-item {
+    display: flex;
+    gap: 16px;
+    padding: 16px;
+    background: #f7fafc;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+    transition: all 0.2s;
+}
+
+.activity-item:hover {
+    background: #edf2f7;
+    transform: translateX(4px);
+}
+
+.activity-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.activity-details {
+    flex: 1;
+}
+
+.activity-details strong {
+    display: block;
+    color: #2d3748;
+    font-size: 14px;
+    margin-bottom: 4px;
+    text-transform: capitalize;
+}
+
+.activity-details p {
+    color: #4a5568;
+    font-size: 14px;
+    margin: 0 0 4px 0;
+}
+
+.activity-details small {
+    color: #718096;
+    font-size: 12px;
+}
+
+@media (max-width: 768px) {
+    .profile-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .profile-tabs {
+        overflow-x: auto;
+    }
+
+    .tab-content {
+        padding: 20px;
+    }
+}
