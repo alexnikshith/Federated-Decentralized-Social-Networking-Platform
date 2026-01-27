@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: federated_social_mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: federated_social
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - federated_network
+
+  # Backend API (Go)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: federated_social_backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - MONGO_URI=mongodb://mongodb:27017
+      - DB_NAME=federated_social
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production-min-32-chars
+      - INSTANCE_ID=default-instance
+    depends_on:
+      - mongodb
+    networks:
+      - federated_network
+
+  # Frontend (React + Vite)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: federated_social_frontend
+    restart: unless-stopped
+    ports:
+      - "5174:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8080
+    depends_on:
+      - backend
+    networks:
+      - federated_network
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+networks:
+  federated_network:
+    driver: bridge
+
+volumes:
+  mongodb_data:

@@ -1,0 +1,49 @@
+# Backend Dependencies (Go)
+# Install with: cd backend && go mod tidy
+
+Go >= 1.21
+
+# Core Dependencies
+github.com/gorilla/mux v1.8.1
+github.com/golang-jwt/jwt/v5 v5.2.0
+golang.org/x/crypto v0.18.0
+go.mongodb.org/mongo-driver v1.13.1
+github.com/joho/godotenv v1.5.1
+
+# Frontend Dependencies (Node.js)
+# Install with: cd frontend && npm install
+
+Node.js >= 18.0.0
+npm >= 9.0.0
+
+# Production Dependencies
+react ^18.2.0
+react-dom ^18.2.0
+react-router-dom ^6.21.1
+zustand ^4.4.7
+axios ^1.6.5
+
+# Development Dependencies
+vite ^5.0.11
+@vitejs/plugin-react ^4.2.1
+typescript ^5.3.3
+@types/react ^18.2.48
+@types/react-dom ^18.2.18
+eslint ^8.56.0
+@typescript-eslint/eslint-plugin ^6.19.0
+@typescript-eslint/parser ^6.19.0
+eslint-plugin-react-hooks ^4.6.0
+eslint-plugin-react-refresh ^0.4.5
+
+# Database
+MongoDB >= 7.0 (Recommended 7.0.x)
+
+# Containerization
+Docker >= 20.10
+Docker Compose >= 2.0
+
+# Docker Images
+mongo:7.0
+golang:1.21-alpine
+node:18-alpine
+alpine:latest
