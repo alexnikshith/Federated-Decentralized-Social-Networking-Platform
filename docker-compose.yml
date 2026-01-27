@@ -1,20 +1,4 @@
-version: '3.8'
-
 services:
-  # MongoDB Database
-  mongodb:
-    image: mongo:7.0
-    container_name: federated_social_mongodb
-    restart: unless-stopped
-    environment:
-      MONGO_INITDB_DATABASE: federated_social
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
-    networks:
-      - federated_network
-
   # Backend API (Go)
   backend:
     build:
@@ -26,12 +10,11 @@ services:
       - "8080:8080"
     environment:
       - PORT=8080
-      - MONGO_URI=mongodb://mongodb:27017
+      - MONGO_URI=mongodb+srv://kaushal:mongodb_123@ecoquest.kntdk2q.mongodb.net/federated_social?retryWrites=true&w=majority
       - DB_NAME=federated_social
       - JWT_SECRET=your-super-secret-jwt-key-change-in-production-min-32-chars
       - INSTANCE_ID=default-instance
-    depends_on:
-      - mongodb
+    depends_on: []
     networks:
       - federated_network
 
@@ -58,5 +41,3 @@ networks:
   federated_network:
     driver: bridge
 
-volumes:
-  mongodb_data:
