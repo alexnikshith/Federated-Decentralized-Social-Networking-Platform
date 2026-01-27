@@ -85,6 +85,30 @@
     transition: all 0.3s;
 }
 
+.stat-card.featured {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: 3px solid transparent;
+}
+
+.stat-card.featured .stat-info h3,
+.stat-card.featured .stat-info p {
+    color: white;
+}
+
+.stat-card.featured .stat-link {
+    color: white;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 8px 16px;
+    border-radius: 8px;
+    display: inline-block;
+}
+
+.stat-card.featured .stat-link:hover {
+    background: rgba(255, 255, 255, 0.3);
+    text-decoration: none;
+}
+
 .stat-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 12px 24px rgba(102, 126, 234, 0.15);
@@ -135,6 +159,7 @@
     border-radius: 12px;
     padding: 32px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    margin-bottom: 24px;
 }
 
 .info-section h2 {

@@ -12,7 +12,7 @@ services:
       - PORT=8080
       - MONGO_URI=mongodb+srv://kaushal:mongodb_123@ecoquest.kntdk2q.mongodb.net/federated_social?retryWrites=true&w=majority
       - DB_NAME=federated_social
-      - JWT_SECRET=your-super-secret-jwt-key-change-in-production-min-32-chars
+      - JWT_SECRET=xBZK56kjLiDbpNVkXk1j4On9bzbZLR5o
       - INSTANCE_ID=default-instance
     depends_on: []
     networks:

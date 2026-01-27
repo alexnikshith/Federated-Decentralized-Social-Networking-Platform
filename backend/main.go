@@ -4,6 +4,8 @@ import (
 	"context"
 	"federated-social/backend/config"
 	"federated-social/backend/database"
+	contentRepo "federated-social/backend/epics/content-sharing/repository"
+	contentRoutes "federated-social/backend/epics/content-sharing/routes"
 	"federated-social/backend/epics/identity/repository"
 	"federated-social/backend/epics/identity/routes"
 	"federated-social/backend/middleware"
@@ -27,7 +29,28 @@ func main() {
 
 	userRepo := repository.NewUserRepository()
 	if err := userRepo.CreateIndexes(ctx); err != nil {
-		log.Printf("Warning: Failed to create indexes: %v", err)
+		log.Printf("Warning: Failed to create user indexes: %v", err)
+	}
+
+	// Create content-sharing indexes
+	postRepo := contentRepo.NewPostRepository()
+	if err := postRepo.CreateIndexes(ctx); err != nil {
+		log.Printf("Warning: Failed to create post indexes: %v", err)
+	}
+
+	followRepo := contentRepo.NewFollowRepository()
+	if err := followRepo.CreateIndexes(ctx); err != nil {
+		log.Printf("Warning: Failed to create follow indexes: %v", err)
+	}
+
+	notificationRepo := contentRepo.NewNotificationRepository()
+	if err := notificationRepo.CreateIndexes(ctx); err != nil {
+		log.Printf("Warning: Failed to create notification indexes: %v", err)
+	}
+
+	searchRepo := contentRepo.NewSearchRepository()
+	if err := searchRepo.CreateIndexes(ctx); err != nil {
+		log.Printf("Warning: Failed to create search indexes: %v", err)
 	}
 
 	// Setup router
@@ -39,6 +62,7 @@ func main() {
 
 	// Register routes
 	routes.RegisterIdentityRoutes(router)
+	contentRoutes.RegisterContentSharingRoutes(router)
 
 	// Health check endpoint
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
