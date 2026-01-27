@@ -12,24 +12,44 @@ import (
 
 var DB *mongo.Database
 
-// Connect establishes connection to MongoDB
+// Connect establishes connection to MongoDB with retries
 func Connect() {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	maxRetries := 5
+	retryDelay := 10 * time.Second
 
-	clientOptions := options.Client().ApplyURI(config.AppConfig.MongoURI)
-	client, err := mongo.Connect(ctx, clientOptions)
-	if err != nil {
-		log.Fatal("Failed to connect to MongoDB:", err)
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+
+		clientOptions := options.Client().ApplyURI(config.AppConfig.MongoURI)
+		client, err := mongo.Connect(ctx, clientOptions)
+		cancel()
+
+		if err != nil {
+			log.Printf("Attempt %d/%d: Failed to connect to MongoDB: %v", attempt, maxRetries, err)
+			if attempt < maxRetries {
+				time.Sleep(retryDelay)
+				continue
+			}
+			log.Fatal("Failed to connect to MongoDB after retries:", err)
+		}
+
+		// Ping the database
+		ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+		if err := client.Ping(ctx, nil); err != nil {
+			cancel()
+			log.Printf("Attempt %d/%d: Failed to ping MongoDB: %v", attempt, maxRetries, err)
+			if attempt < maxRetries {
+				time.Sleep(retryDelay)
+				continue
+			}
+			log.Fatal("Failed to ping MongoDB after retries:", err)
+		}
+		cancel()
+
+		DB = client.Database(config.AppConfig.DatabaseName)
+		log.Println("Connected to MongoDB successfully")
+		return
 	}
-
-	// Ping the database
-	if err := client.Ping(ctx, nil); err != nil {
-		log.Fatal("Failed to ping MongoDB:", err)
-	}
-
-	DB = client.Database(config.AppConfig.DatabaseName)
-	log.Println("Connected to MongoDB successfully")
 }
 
 // GetCollection returns a MongoDB collection
