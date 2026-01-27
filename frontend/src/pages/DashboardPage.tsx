@@ -29,6 +29,17 @@ export const DashboardPage: React.FC = () => {
                 </div>
 
                 <div className="stats-grid">
+                    <div className="stat-card featured">
+                        <div className="stat-icon">📱</div>
+                        <div className="stat-info">
+                            <h3>Feed</h3>
+                            <p>View posts, like, and comment</p>
+                            <Link to="/feed" className="stat-link">
+                                Go to Feed →
+                            </Link>
+                        </div>
+                    </div>
+
                     <div className="stat-card">
                         <div className="stat-icon">👤</div>
                         <div className="stat-info">
@@ -59,15 +70,6 @@ export const DashboardPage: React.FC = () => {
                             <Link to="/profile" className="stat-link">
                                 View Activity →
                             </Link>
-                        </div>
-                    </div>
-
-                    <div className="stat-card">
-                        <div className="stat-icon">🌐</div>
-                        <div className="stat-info">
-                            <h3>Federation</h3>
-                            <p>Coming soon...</p>
-                            <span className="stat-link disabled">Explore →</span>
                         </div>
                     </div>
                 </div>
@@ -106,6 +108,44 @@ export const DashboardPage: React.FC = () => {
                         <div className="feature-item">
                             <span className="feature-check">✓</span>
                             <span>US1.8: Secure Logout</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="info-section">
+                    <h2>Epic 2: Content Sharing - Completed ✅</h2>
+                    <div className="feature-list">
+                        <div className="feature-item">
+                            <span className="feature-check">✓</span>
+                            <span>US2.1: Create Posts</span>
+                        </div>
+                        <div className="feature-item">
+                            <span className="feature-check">✓</span>
+                            <span>US2.2: View Feed</span>
+                        </div>
+                        <div className="feature-item">
+                            <span className="feature-check">✓</span>
+                            <span>US2.3: Like Posts</span>
+                        </div>
+                        <div className="feature-item">
+                            <span className="feature-check">✓</span>
+                            <span>US2.4: Comment on Posts</span>
+                        </div>
+                        <div className="feature-item">
+                            <span className="feature-check">✓</span>
+                            <span>US2.5: Delete Posts</span>
+                        </div>
+                        <div className="feature-item">
+                            <span className="feature-check">✓</span>
+                            <span>US2.6: Follow Users</span>
+                        </div>
+                        <div className="feature-item">
+                            <span className="feature-check">✓</span>
+                            <span>US2.7: Notifications</span>
+                        </div>
+                        <div className="feature-item">
+                            <span className="feature-check">✓</span>
+                            <span>US2.8: Search Users</span>
                         </div>
                     </div>
                 </div>

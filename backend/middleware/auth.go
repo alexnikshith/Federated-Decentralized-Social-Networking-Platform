@@ -9,6 +9,7 @@ import (
 	"log"
 
 	"github.com/golang-jwt/jwt/v5"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type contextKey string
@@ -88,4 +89,11 @@ func Logging(next http.Handler) http.Handler {
 		log.Printf("[%s] %s %s", r.RemoteAddr, r.Method, r.URL.Path)
 		next.ServeHTTP(w, r)
 	})
+}
+
+// GetUserIDFromContext extracts user ID from context
+func GetUserIDFromContext(ctx context.Context) primitive.ObjectID {
+	userIDStr := ctx.Value(UserIDKey).(string)
+	userID, _ := primitive.ObjectIDFromHex(userIDStr)
+	return userID
 }
