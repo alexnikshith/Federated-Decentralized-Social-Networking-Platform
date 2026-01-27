@@ -4,6 +4,7 @@ import { useAuthStore } from '../epics/identity/store/authStore';
 import { LoginPage } from '../epics/identity/pages/LoginPage';
 import { SignupPage } from '../epics/identity/pages/SignupPage';
 import { ProfilePage } from '../epics/identity/pages/ProfilePage';
+import { FeedPage } from '../epics/content-sharing/pages/FeedPage';
 import { DashboardPage } from './pages/DashboardPage';
 import './App.css';
 
@@ -42,6 +43,14 @@ function App() {
                 />
 
                 {/* Protected routes */}
+                <Route
+                    path="/feed"
+                    element={
+                        <ProtectedRoute>
+                            <FeedPage />
+                        </ProtectedRoute>
+                    }
+                />
                 <Route
                     path="/dashboard"
                     element={
