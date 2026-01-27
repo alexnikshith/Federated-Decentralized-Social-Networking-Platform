@@ -1,14 +1,9 @@
-############################
 # Environment variables
-############################
 .env
-.env.*
-!.env.example
+.env.local
+.env.*.local
 
-############################
-# Go (Golang)
-############################
-# Binaries
+# Go
 *.exe
 *.exe~
 *.dll
@@ -16,71 +11,60 @@
 *.dylib
 *.test
 *.out
+go.work
+vendor/
 
-# Go workspace
-/go.work.sum
-
-############################
-# Node.js
-############################
+# Node
 node_modules/
+dist/
+dist-ssr/
+*.local
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+lerna-debug.log*
 
-############################
-# React / Vite
-############################
-dist/
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Build outputs
 build/
-.vite/
-
-############################
-# Logs
-############################
-logs/
 *.log
 
-############################
-# MongoDB
-############################
+# Database
+*.db
+*.sqlite
 data/
-dump/
 
-############################
 # Docker
-############################
-*.pid
-docker-compose.override.yml
+.dockerignore
 
-############################
-# OS generated files
-############################
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
+# OS
 Thumbs.db
+.DS_Store
 
-############################
-# Editor / IDE
-############################
-.vscode/
-.idea/
+# Temporary files
+*.tmp
+*.temp
 *.swp
 *.swo
-*.swn
+*~
 
-############################
-# Testing / Coverage
-############################
+# Coverage
 coverage/
 *.cover
+*.coverage
 
-############################
-# Temporary files
-############################
-tmp/
-temp/
+# IDEs
+.vscode/
+.idea/
+*.iml
