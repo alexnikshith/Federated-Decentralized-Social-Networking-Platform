@@ -41,31 +41,63 @@ func (s *PostService) CreatePost(ctx context.Context, userID primitive.ObjectID,
 	return post, nil
 }
 
-// GetFeed retrieves the feed for a user (all posts in chronological order)
+// GetFeed retrieves the feed for a user with prioritized algorithm
+// Shows posts from followed users first (newest), then posts from everyone else
 func (s *PostService) GetFeed(ctx context.Context, userID primitive.ObjectID, limit int64) (*dto.FeedResponse, error) {
-	// For now, show ALL posts to users can see content from everyone
-	// You can later add a "Following" filter as an option
+	log.Printf("DEBUG GetFeed: Starting prioritized feed retrieval for user %v, limit=%d", userID, limit)
 
-	log.Printf("DEBUG GetFeed: Starting feed retrieval for user %v, limit=%d", userID, limit)
-
-	// Create a slice with just the user ID to pass to GetFeed
-	// But we'll modify the repository method to get all posts
-	var posts []models.Post
-	var err error
-
-	// Get all posts (pass empty slice means get all)
-	posts, err = s.postRepo.GetAllPosts(ctx, limit)
+	// Get list of users the current user follows
+	followingIDs, err := s.followRepo.GetFollowingIDs(ctx, userID)
 	if err != nil {
-		log.Printf("ERROR GetFeed: Failed to get all posts: %v", err)
+		log.Printf("ERROR GetFeed: Failed to get following list: %v", err)
 		return nil, err
 	}
-	log.Printf("DEBUG GetFeed: Retrieved %d posts from database", len(posts))
-	for i, post := range posts {
-		log.Printf("  Post %d: ID=%v, AuthorID=%v, Content=%.40s", i+1, post.ID, post.AuthorID, post.Content)
+	log.Printf("DEBUG GetFeed: User follows %d users", len(followingIDs))
+
+	var allPosts []models.Post
+
+	if len(followingIDs) > 0 {
+		// User follows someone - use prioritized algorithm
+		log.Printf("DEBUG GetFeed: Fetching posts from followed users")
+
+		// Get posts from followed users (newest first)
+		followedPosts, err := s.postRepo.GetPostsByAuthors(ctx, followingIDs, limit)
+		if err != nil {
+			log.Printf("ERROR GetFeed: Failed to get posts from followed users: %v", err)
+			return nil, err
+		}
+		log.Printf("DEBUG GetFeed: Retrieved %d posts from followed users", len(followedPosts))
+
+		// Get posts from everyone else (newest first)
+		otherPosts, err := s.postRepo.GetPostsExcludingAuthors(ctx, followingIDs, limit)
+		if err != nil {
+			log.Printf("ERROR GetFeed: Failed to get posts from other users: %v", err)
+			return nil, err
+		}
+		log.Printf("DEBUG GetFeed: Retrieved %d posts from other users", len(otherPosts))
+
+		// Combine: followed posts first, then other posts
+		allPosts = append(followedPosts, otherPosts...)
+		log.Printf("DEBUG GetFeed: Combined total: %d posts", len(allPosts))
+
+		// Trim to limit
+		if int64(len(allPosts)) > limit {
+			allPosts = allPosts[:limit]
+			log.Printf("DEBUG GetFeed: Trimmed to limit: %d posts", len(allPosts))
+		}
+	} else {
+		// User follows nobody - show all posts chronologically
+		log.Printf("DEBUG GetFeed: User follows nobody, showing all posts")
+		allPosts, err = s.postRepo.GetAllPosts(ctx, limit)
+		if err != nil {
+			log.Printf("ERROR GetFeed: Failed to get all posts: %v", err)
+			return nil, err
+		}
+		log.Printf("DEBUG GetFeed: Retrieved %d posts from all users", len(allPosts))
 	}
 
 	// Enrich posts with author information and like status
-	postResponses, err := s.enrichPosts(ctx, posts, userID)
+	postResponses, err := s.enrichPosts(ctx, allPosts, userID)
 	if err != nil {
 		log.Printf("ERROR GetFeed: Failed to enrich posts: %v", err)
 		return nil, err
