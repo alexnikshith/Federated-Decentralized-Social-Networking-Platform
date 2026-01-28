@@ -1,0 +1,120 @@
+.dashboard-container {
+    min-height: 100vh;
+    background-color: hsl(var(--background));
+}
+
+.dashboard-content {
+    width: 100%;
+}
+
+.welcome-header {
+    margin-bottom: 2.5rem;
+    animation: fadeInUp 0.5s ease-out forwards;
+}
+
+.welcome-header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+    font-family: 'Syne', sans-serif;
+}
+
+.welcome-header p {
+    font-size: 1.125rem;
+    color: hsl(var(--muted-foreground));
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 350px;
+    gap: 2rem;
+}
+
+@media (max-width: 1024px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.feed-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.sidebar-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: hsl(var(--foreground));
+}
+
+.stats-overview {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.stat-box {
+    text-align: center;
+    padding: 1rem;
+    background: hsl(var(--secondary)/0.3);
+    border-radius: var(--radius);
+    border: 1px solid hsl(var(--border)/0.5);
+    transition: all 0.2s ease;
+}
+
+.stat-box:hover {
+    border-color: hsl(var(--primary)/0.5);
+    background: hsl(var(--secondary)/0.5);
+}
+
+.stat-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: hsl(var(--primary));
+}
+
+.stat-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: hsl(var(--muted-foreground));
+    font-weight: 600;
+}
+
+.empty-state {
+    padding: 4rem 2rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.empty-state-icon {
+    width: 3rem;
+    height: 3rem;
+    margin-bottom: 1rem;
+    color: hsl(var(--muted-foreground));
+    opacity: 0.5;
+}
+
+.feed-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    color: hsl(var(--muted-foreground));
+}

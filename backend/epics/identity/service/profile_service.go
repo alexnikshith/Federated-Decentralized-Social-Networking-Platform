@@ -36,7 +36,7 @@ func (s *ProfileService) GetProfile(ctx context.Context, userID primitive.Object
 	}
 
 	// Check visibility
-	if user.ProfileVisibility == "followers" {
+	if user.ProfileVisibility == "followers" || user.ProfileVisibility == "private" {
 		// If requesting user is not the owner, check if they're a follower
 		if requestingUserID == nil || *requestingUserID != userID {
 			// TODO: Check follower relationship when federation is implemented
@@ -62,7 +62,7 @@ func (s *ProfileService) UpdateProfile(ctx context.Context, userID primitive.Obj
 		update["avatar_url"] = *req.AvatarURL
 	}
 	if req.ProfileVisibility != nil {
-		if *req.ProfileVisibility != "public" && *req.ProfileVisibility != "followers" {
+		if *req.ProfileVisibility != "public" && *req.ProfileVisibility != "followers" && *req.ProfileVisibility != "private" {
 			return nil, errors.New("invalid profile visibility value")
 		}
 		update["profile_visibility"] = *req.ProfileVisibility
