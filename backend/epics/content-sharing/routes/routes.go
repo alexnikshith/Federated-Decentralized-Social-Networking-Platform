@@ -3,6 +3,7 @@ package routes
 import (
 	"federated-social/backend/epics/content-sharing/handlers"
 	"federated-social/backend/middleware"
+	"net/http"
 
 	"github.com/gorilla/mux"
 )
@@ -14,28 +15,24 @@ func RegisterContentSharingRoutes(router *mux.Router) {
 	notificationHandler := handlers.NewNotificationHandler()
 	searchHandler := handlers.NewSearchHandler()
 
-	// Protected routes (authentication required)
-	protected := router.PathPrefix("/api").Subrouter()
-	protected.Use(middleware.AuthMiddleware)
-
 	// Post routes
-	protected.HandleFunc("/posts", postHandler.CreatePost).Methods("POST", "OPTIONS")
-	protected.HandleFunc("/feed", postHandler.GetFeed).Methods("GET", "OPTIONS")
-	protected.HandleFunc("/posts/{id}/like", postHandler.LikePost).Methods("POST", "OPTIONS")
-	protected.HandleFunc("/posts/{id}/like", postHandler.UnlikePost).Methods("DELETE", "OPTIONS")
-	protected.HandleFunc("/posts/{id}/comments", postHandler.CreateComment).Methods("POST", "OPTIONS")
-	protected.HandleFunc("/posts/{id}/comments", postHandler.GetComments).Methods("GET", "OPTIONS")
-	protected.HandleFunc("/posts/{id}", postHandler.DeletePost).Methods("DELETE", "OPTIONS")
+	router.Handle("/api/posts", middleware.AuthMiddleware(http.HandlerFunc(postHandler.CreatePost))).Methods("POST", "OPTIONS")
+	router.Handle("/api/feed", middleware.AuthMiddleware(http.HandlerFunc(postHandler.GetFeed))).Methods("GET", "OPTIONS")
+	router.Handle("/api/posts/{id}/like", middleware.AuthMiddleware(http.HandlerFunc(postHandler.LikePost))).Methods("POST", "OPTIONS")
+	router.Handle("/api/posts/{id}/like", middleware.AuthMiddleware(http.HandlerFunc(postHandler.UnlikePost))).Methods("DELETE", "OPTIONS")
+	router.Handle("/api/posts/{id}/comments", middleware.AuthMiddleware(http.HandlerFunc(postHandler.CreateComment))).Methods("POST", "OPTIONS")
+	router.Handle("/api/posts/{id}/comments", middleware.AuthMiddleware(http.HandlerFunc(postHandler.GetComments))).Methods("GET", "OPTIONS")
+	router.Handle("/api/posts/{id}", middleware.AuthMiddleware(http.HandlerFunc(postHandler.DeletePost))).Methods("DELETE", "OPTIONS")
 
 	// Follow routes
-	protected.HandleFunc("/users/{id}/follow", followHandler.Follow).Methods("POST", "OPTIONS")
-	protected.HandleFunc("/users/{id}/unfollow", followHandler.Unfollow).Methods("DELETE", "OPTIONS")
+	router.Handle("/api/users/{id}/follow", middleware.AuthMiddleware(http.HandlerFunc(followHandler.Follow))).Methods("POST", "OPTIONS")
+	router.Handle("/api/users/{id}/unfollow", middleware.AuthMiddleware(http.HandlerFunc(followHandler.Unfollow))).Methods("DELETE", "OPTIONS")
 
 	// Notification routes
-	protected.HandleFunc("/notifications", notificationHandler.GetNotifications).Methods("GET", "OPTIONS")
-	protected.HandleFunc("/notifications/{id}/read", notificationHandler.MarkAsRead).Methods("PUT", "OPTIONS")
-	protected.HandleFunc("/notifications/unread/count", notificationHandler.GetUnreadCount).Methods("GET", "OPTIONS")
+	router.Handle("/api/notifications", middleware.AuthMiddleware(http.HandlerFunc(notificationHandler.GetNotifications))).Methods("GET", "OPTIONS")
+	router.Handle("/api/notifications/{id}/read", middleware.AuthMiddleware(http.HandlerFunc(notificationHandler.MarkAsRead))).Methods("PUT", "OPTIONS")
+	router.Handle("/api/notifications/unread/count", middleware.AuthMiddleware(http.HandlerFunc(notificationHandler.GetUnreadCount))).Methods("GET", "OPTIONS")
 
 	// Search routes
-	protected.HandleFunc("/users/search", searchHandler.SearchUsers).Methods("GET", "OPTIONS")
+	router.Handle("/api/users/search", middleware.AuthMiddleware(http.HandlerFunc(searchHandler.SearchUsers))).Methods("GET", "OPTIONS")
 }
