@@ -165,6 +165,48 @@ func (r *PostRepository) GetAllPosts(ctx context.Context, limit int64) ([]models
 	return posts, nil
 }
 
+// GetPostsByAuthors retrieves posts from specific authors sorted by timestamp (newest first)
+func (r *PostRepository) GetPostsByAuthors(ctx context.Context, authorIDs []primitive.ObjectID, limit int64) ([]models.Post, error) {
+	filter := bson.M{"author_id": bson.M{"$in": authorIDs}}
+	opts := options.Find().
+		SetSort(bson.D{{Key: "created_at", Value: -1}}).
+		SetLimit(limit)
+
+	cursor, err := r.posts.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var posts []models.Post
+	if err = cursor.All(ctx, &posts); err != nil {
+		return nil, err
+	}
+
+	return posts, nil
+}
+
+// GetPostsExcludingAuthors retrieves posts excluding specific authors sorted by timestamp (newest first)
+func (r *PostRepository) GetPostsExcludingAuthors(ctx context.Context, excludeIDs []primitive.ObjectID, limit int64) ([]models.Post, error) {
+	filter := bson.M{"author_id": bson.M{"$nin": excludeIDs}}
+	opts := options.Find().
+		SetSort(bson.D{{Key: "created_at", Value: -1}}).
+		SetLimit(limit)
+
+	cursor, err := r.posts.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var posts []models.Post
+	if err = cursor.All(ctx, &posts); err != nil {
+		return nil, err
+	}
+
+	return posts, nil
+}
+
 // DeletePost deletes a post by ID
 func (r *PostRepository) DeletePost(ctx context.Context, postID primitive.ObjectID) error {
 	_, err := r.posts.DeleteOne(ctx, bson.M{"_id": postID})
