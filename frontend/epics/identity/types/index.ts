@@ -5,8 +5,14 @@ export interface User {
     display_name: string;
     bio: string;
     avatar_url: string;
-    profile_visibility: 'public' | 'followers';
+    profile_visibility: 'public' | 'followers' | 'private';
     created_at: string;
+    location?: string;
+    website?: string;
+    followers_count?: number;
+    following_count?: number;
+    posts_count?: number;
+    instance?: string;
 }
 
 export interface ActivityLog {
@@ -41,7 +47,7 @@ export interface UpdateProfileRequest {
     display_name?: string;
     bio?: string;
     avatar_url?: string;
-    profile_visibility?: 'public' | 'followers';
+    profile_visibility?: 'public' | 'followers' | 'private';
 }
 
 export interface ChangePasswordRequest {

@@ -57,7 +57,6 @@ func main() {
 	router := mux.NewRouter()
 
 	// Apply global middleware
-	router.Use(middleware.CORS)
 	router.Use(middleware.Logging)
 
 	// Register routes
@@ -76,7 +75,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:         addr,
-		Handler:      router,
+		Handler:      middleware.CORS(router),
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,

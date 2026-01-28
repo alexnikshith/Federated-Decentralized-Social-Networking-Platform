@@ -67,10 +67,11 @@ func CORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
 
-		// Allow the requesting origin for development
+		// Log CORS request
 		if origin != "" {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 		} else {
+			// Fallback for requests without Origin header
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 		}
 
@@ -81,6 +82,7 @@ func CORS(next http.Handler) http.Handler {
 
 		// Handle preflight requests
 		if r.Method == "OPTIONS" {
+			log.Printf("CORS Preflight: %s %s from %s", r.Method, r.URL.Path, origin)
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
@@ -97,9 +99,18 @@ func Logging(next http.Handler) http.Handler {
 	})
 }
 
-// GetUserIDFromContext extracts user ID from context
+// GetUserIDFromContext extracts user ID from context safely
 func GetUserIDFromContext(ctx context.Context) primitive.ObjectID {
-	userIDStr := ctx.Value(UserIDKey).(string)
+	val := ctx.Value(UserIDKey)
+	if val == nil {
+		return primitive.NilObjectID
+	}
+
+	userIDStr, ok := val.(string)
+	if !ok {
+		return primitive.NilObjectID
+	}
+
 	userID, _ := primitive.ObjectIDFromHex(userIDStr)
 	return userID
 }
