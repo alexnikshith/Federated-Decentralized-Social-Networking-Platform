@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import type { PublicUser } from '../types';
 import * as api from '../api/client';
+import { Search, UserPlus, Globe, SearchX } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 export const UserSearch: React.FC = () => {
     const [query, setQuery] = useState('');
@@ -26,40 +29,69 @@ export const UserSearch: React.FC = () => {
     };
 
     return (
-        <div className="user-search">
-            <input
-                type="text"
-                value={query}
-                onChange={(e) => handleSearch(e.target.value)}
-                placeholder="Search users..."
-                className="search-input"
-            />
+        <div className="space-y-4">
+            <div className="relative group">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                <input
+                    type="text"
+                    value={query}
+                    onChange={(e) => handleSearch(e.target.value)}
+                    placeholder="Search the federation..."
+                    className="w-full bg-secondary/50 border border-border/50 rounded-xl py-2.5 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all"
+                />
+            </div>
 
-            {loading && <div className="search-loading">Searching...</div>}
+            <div className="space-y-2 max-h-[400px] overflow-y-auto scrollbar-hide">
+                {loading && (
+                    <div className="flex items-center justify-center py-8">
+                        <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                    </div>
+                )}
 
-            {results.length > 0 && (
-                <div className="search-results">
-                    {results.map((user) => (
-                        <div key={user.id} className="search-result-item">
-                            {user.avatar_url && (
-                                <img src={user.avatar_url} alt={user.username} className="avatar" />
+                {results.map((user) => (
+                    <div
+                        key={user.id}
+                        className="group flex items-center gap-3 p-3 rounded-xl hover:bg-secondary/30 transition-all border border-transparent hover:border-border/50"
+                    >
+                        <div className="relative flex-shrink-0">
+                            {user.avatar_url ? (
+                                <img src={user.avatar_url} alt={user.username} className="w-10 h-10 rounded-full object-cover" />
+                            ) : (
+                                <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-xs font-bold text-muted-foreground border border-border/50">
+                                    {user.username[0]?.toUpperCase()}
+                                </div>
                             )}
-                            {!user.avatar_url && (
-                                <div className="avatar-placeholder">{user.username[0]?.toUpperCase()}</div>
-                            )}
-                            <div className="user-info">
-                                <div className="username">{user.username}</div>
-                                {user.display_name && <div className="display-name">{user.display_name}</div>}
-                                {user.bio && <div className="bio">{user.bio}</div>}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 overflow-hidden">
+                                <span className="font-semibold text-sm truncate">{user.display_name || user.username}</span>
+                                {user.username.includes('@') && (
+                                    <Globe className="w-2.5 h-2.5 text-accent flex-shrink-0" />
+                                )}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground truncate font-mono">
+                                @{user.username}
                             </div>
                         </div>
-                    ))}
-                </div>
-            )}
 
-            {query && !loading && results.length === 0 && (
-                <div className="no-results">No users found</div>
-            )}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                            <UserPlus className="w-4 h-4 text-primary" />
+                        </Button>
+                    </div>
+                ))}
+
+                {query && !loading && results.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-8 opacity-40">
+                        <SearchX className="w-8 h-8 mb-2" />
+                        <p className="text-[10px] uppercase tracking-widest font-medium">No matches found</p>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };

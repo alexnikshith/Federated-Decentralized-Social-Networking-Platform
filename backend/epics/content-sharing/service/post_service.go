@@ -78,6 +78,24 @@ func (s *PostService) GetFeed(ctx context.Context, userID primitive.ObjectID, li
 	}, nil
 }
 
+// GetUserPosts retrieves posts for a specific user
+func (s *PostService) GetUserPosts(ctx context.Context, userID, requestingUserID primitive.ObjectID, limit int64) (*dto.FeedResponse, error) {
+	posts, err := s.postRepo.GetPostsByAuthor(ctx, userID, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	postResponses, err := s.enrichPosts(ctx, posts, requestingUserID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &dto.FeedResponse{
+		Posts: postResponses,
+		Total: len(postResponses),
+	}, nil
+}
+
 // LikePost likes a post and creates a notification
 func (s *PostService) LikePost(ctx context.Context, postID, userID primitive.ObjectID) error {
 	// Check if post exists
