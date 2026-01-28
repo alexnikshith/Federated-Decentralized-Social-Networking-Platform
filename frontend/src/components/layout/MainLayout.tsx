@@ -5,21 +5,24 @@ import {
     IconArrowLeft,
     IconBrandTabler,
     IconSettings,
-    IconUserBolt,
-    IconHome,
     IconUsers,
     IconSearch,
+    IconMoon,
+    IconSun,
 } from "@tabler/icons-react";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "../../../epics/identity/store/authStore";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useTheme } from "@/components/theme-provider";
+import { MessagesSquare } from "lucide-react";
 
 export const MainLayout = ({ children }: { children: React.ReactNode }) => {
     const { user, clearAuth } = useAuthStore();
     const navigate = useNavigate();
     const location = useLocation();
     const [open, setOpen] = useState(false);
+    const { theme, toggleTheme } = useTheme();
 
     const links = [
         {
@@ -33,14 +36,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
             label: "Feed",
             href: "/feed",
             icon: (
-                <IconHome className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
-            ),
-        },
-        {
-            label: "Profile",
-            href: "/profile",
-            icon: (
-                <IconUserBolt className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+                <MessagesSquare className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
             ),
         },
         {
@@ -89,12 +85,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
     }
 
     return (
-        <div
-            className={cn(
-                "flex flex-col md:flex-row bg-gray-100 dark:bg-neutral-800 w-full flex-1 overflow-hidden",
-                "h-screen"
-            )}
-        >
+        <>
             <Sidebar open={open} setOpen={setOpen}>
                 <SidebarBody className="justify-between gap-10">
                     <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto">
@@ -111,6 +102,21 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                         </div>
                     </div>
                     <div className="flex flex-col gap-2">
+                        <SidebarLink
+                            link={{
+                                label: theme === "dark" ? "Dark" : "Light",
+                                href: "#",
+                                icon: theme === "dark" ? (
+                                    <IconMoon className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+                                ) : (
+                                    <IconSun className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+                                ),
+                            }}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                toggleTheme();
+                            }}
+                        />
                         <SidebarLink
                             link={{
                                 label: user?.display_name || user?.username || "User",
@@ -134,10 +140,16 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                     </div>
                 </SidebarBody>
             </Sidebar>
-            <div className="flex-1 overflow-y-auto bg-white dark:bg-neutral-900 md:rounded-tl-2xl border-l border-t border-neutral-200 dark:border-neutral-700">
+            <div
+                className={cn(
+                    "min-h-screen bg-background transition-all duration-300",
+                    "w-full md:w-[calc(100%-60px)] md:ml-[60px]",
+                    open && "md:w-[calc(100%-240px)] md:ml-[240px]"
+                )}
+            >
                 {children}
             </div>
-        </div>
+        </>
     );
 };
 

@@ -1,5 +1,3 @@
-import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import {
   Calendar,
@@ -28,6 +26,7 @@ import type { Post } from "../../content-sharing/types";
 import type { User, ActivityLog } from "../types";
 import { PostCard } from "../../content-sharing/components/PostCard";
 
+
 const ProfileUI = () => {
   const { username } = useParams();
   const navigate = useNavigate();
@@ -40,6 +39,7 @@ const ProfileUI = () => {
   const [activities, setActivities] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
 
   const isOwnProfile = !username || username === currentUser?.username || username === currentUser?.id;
 
@@ -83,28 +83,24 @@ const ProfileUI = () => {
     loadProfileData();
   }, [username, isOwnProfile, currentUser]);
 
+  const handleProfileUpdated = (updatedUser: User) => {
+    setProfileUser(updatedUser);
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
-        <Footer />
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
   if (error || !profileUser) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <div className="flex-1 flex flex-col items-center justify-center p-4">
-          <h2 className="text-2xl font-bold mb-2">Error</h2>
-          <p className="text-muted-foreground mb-4">{error || "User not found"}</p>
-          <Button onClick={() => navigate("/feed")}>Back to Feed</Button>
-        </div>
-        <Footer />
+      <div className="min-h-screen flex flex-col items-center justify-center p-4">
+        <h2 className="text-2xl font-bold mb-2">Error</h2>
+        <p className="text-muted-foreground mb-4">{error || "User not found"}</p>
+        <Button onClick={() => navigate("/feed")}>Back to Feed</Button>
       </div>
     );
   }
@@ -113,17 +109,16 @@ const ProfileUI = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
-      <main className="pt-16 pb-20">
+      <main className="pb-8">
         {/* Cover */}
-        <div className="h-48 md:h-72 bg-gradient-to-br from-primary/20 via-accent/10 to-background relative overflow-hidden">
+        <div className="h-32 md:h-48 bg-gradient-to-br from-primary/20 via-accent/10 to-background relative overflow-hidden">
           <div className="absolute inset-0 grid-pattern opacity-10" />
           <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
         </div>
 
-        <div className="container mx-auto px-4 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 lg:px-6">
           {/* Profile header */}
-          <div className="relative -mt-20 mb-8">
+          <div className="relative -mt-16 md:-mt-20 mb-6">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
               <div className="flex flex-col md:flex-row md:items-end gap-6">
                 {/* Avatar */}
@@ -156,7 +151,11 @@ const ProfileUI = () => {
               {/* Actions */}
               <div className="flex items-center gap-2 self-start md:self-end pb-2">
                 {isOwnProfile ? (
-                  <Button variant="hero" className="rounded-full px-6 gap-2 shadow-lg shadow-primary/20">
+                  <Button
+                    variant="hero"
+                    className="rounded-full px-6 gap-2 shadow-lg shadow-primary/20"
+                    onClick={() => navigate("/settings")}
+                  >
                     <Edit className="w-4 h-4" />
                     Edit Profile
                   </Button>
@@ -220,21 +219,21 @@ const ProfileUI = () => {
               </div>
 
               {/* Stats */}
-              <div className="glass-card rounded-[2rem] p-8 border-primary/10 bg-gradient-to-br from-card to-secondary/30">
-                <div className="grid grid-cols-2 gap-8">
-                  <div className="group cursor-pointer">
+              <div className="glass-card rounded-[2rem] p-6 border-primary/10 bg-gradient-to-br from-card to-secondary/30">
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="group cursor-pointer text-center">
                     <div className="text-3xl font-display font-black text-foreground group-hover:text-primary transition-colors">
-                      {posts.length}
+                      {profileUser.posts_count || posts.length}
                     </div>
                     <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground mt-1">Posts</div>
                   </div>
-                  <div className="group cursor-pointer">
+                  <div className="group cursor-pointer text-center">
                     <div className="text-3xl font-display font-black text-foreground group-hover:text-primary transition-colors">
                       {profileUser.followers_count || 0}
                     </div>
                     <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground mt-1">Followers</div>
                   </div>
-                  <div className="group cursor-pointer">
+                  <div className="group cursor-pointer text-center">
                     <div className="text-3xl font-display font-black text-foreground group-hover:text-primary transition-colors">
                       {profileUser.following_count || 0}
                     </div>
@@ -247,7 +246,7 @@ const ProfileUI = () => {
             {/* Main content */}
             <div className="lg:col-span-8">
               {/* Tabs */}
-              <div className="flex gap-2 p-1.5 bg-secondary/50 backdrop-blur-md rounded-2xl mb-8 border border-border/50 sticky top-20 z-20">
+              <div className="flex gap-2 p-1.5 bg-secondary/50 backdrop-blur-md rounded-2xl mb-8 border border-border/50 sticky top-4 z-20">
                 {tabs.map((tab) => (
                   <button
                     key={tab}
@@ -336,7 +335,6 @@ const ProfileUI = () => {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 };

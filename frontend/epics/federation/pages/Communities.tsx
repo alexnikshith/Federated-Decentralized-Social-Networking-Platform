@@ -1,5 +1,3 @@
-import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Users, Globe, Shield, Star, ChevronRight, Filter } from "lucide-react";
@@ -121,8 +119,7 @@ const Communities = () => {
 
   return (
     <div className="min-h-screen">
-      <Header />
-      <main className="pt-24 pb-16">
+      <main className="pb-16">
         <div className="container mx-auto px-4 lg:px-8">
           {/* Header */}
           <div className="max-w-3xl mb-12">
@@ -130,7 +127,7 @@ const Communities = () => {
               Explore <span className="text-gradient-gold">Communities</span>
             </h1>
             <p className="text-lg text-muted-foreground">
-              Find your people. Each community is independently operated with its own culture, 
+              Find your people. Each community is independently operated with its own culture,
               rules, and moderation. Join one that aligns with your interests and values.
             </p>
           </div>
@@ -200,7 +197,6 @@ const Communities = () => {
           )}
         </div>
       </main>
-      <Footer />
     </div>
   );
 };

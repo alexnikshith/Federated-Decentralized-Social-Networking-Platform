@@ -4,8 +4,6 @@ import { CreatePost } from '../components/CreatePost';
 import { PostCard } from '../components/PostCard';
 import { UserSearch } from '../components/UserSearch';
 import { NotificationList } from '../components/NotificationList';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
 import {
     Search,
@@ -39,8 +37,6 @@ export const FeedPage: React.FC = () => {
 
     return (
         <div className="feed-page-wrapper">
-            <Header />
-
             <main className="feed-content-container">
                 <div className="feed-layout-grid">
                     {/* Left/Main Column */}
@@ -169,8 +165,6 @@ export const FeedPage: React.FC = () => {
                     </div>
                 </div>
             </main>
-
-            <Footer />
         </div>
     );
 };

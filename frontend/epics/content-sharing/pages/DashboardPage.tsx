@@ -87,28 +87,6 @@ export const DashboardPage: React.FC = () => {
 
                     {/* Sidebar section */}
                     <div className="sidebar-section stagger-3">
-                        {/* Quick Stats */}
-                        <div className="glass-card rounded-xl p-6">
-                            <h2 className="section-title">
-                                <Activity className="w-5 h-5 text-accent" />
-                                Overview
-                            </h2>
-                            <div className="stats-overview">
-                                <div className="stat-box">
-                                    <span className="stat-value">{posts.length}</span>
-                                    <span className="stat-label">Posts</span>
-                                </div>
-                                <div className="stat-box">
-                                    <span className="stat-value">0</span>
-                                    <span className="stat-label">Followers</span>
-                                </div>
-                                <div className="stat-box">
-                                    <span className="stat-value">0</span>
-                                    <span className="stat-label">Following</span>
-                                </div>
-                            </div>
-                        </div>
-
                         {/* Notifications */}
                         <div className="glass-card rounded-xl p-6">
                             <h2 className="section-title">
@@ -130,19 +108,6 @@ export const DashboardPage: React.FC = () => {
                                 Discover
                             </h2>
                             <UserSearch />
-                        </div>
-
-                        {/* Privacy Card */}
-                        <div className="glass-card rounded-xl p-6 bg-gradient-gold/5 border-primary/20">
-                            <div className="flex items-center gap-3 mb-3">
-                                <Shield className="w-6 h-6 text-primary" />
-                                <h3 className="font-display font-bold">Privacy First</h3>
-                            </div>
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                                Your profile is {user?.profile_visibility || 'private'}.
-                                Federated instances only receive data you choose to share.
-                                Your keys, your data.
-                            </p>
                         </div>
                     </div>
                 </div>
