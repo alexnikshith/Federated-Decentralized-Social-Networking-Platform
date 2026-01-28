@@ -171,3 +171,30 @@ func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 
 	respondSuccess(w, "Post deleted successfully", nil, http.StatusOK)
 }
+
+// GetUserPosts handles GET /api/users/:id/posts
+func (h *PostHandler) GetUserPosts(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userID, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		respondError(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	requestingUserID := middleware.GetUserIDFromContext(r.Context())
+
+	limit := int64(50)
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if parsedLimit, err := strconv.ParseInt(limitStr, 10, 64); err == nil {
+			limit = parsedLimit
+		}
+	}
+
+	feed, err := h.postService.GetUserPosts(r.Context(), userID, requestingUserID, limit)
+	if err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondSuccess(w, "User posts retrieved successfully", feed, http.StatusOK)
+}

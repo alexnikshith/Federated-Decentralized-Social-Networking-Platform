@@ -7,6 +7,11 @@ export interface User {
     avatar_url: string;
     profile_visibility: 'public' | 'followers';
     created_at: string;
+    location?: string;
+    website?: string;
+    followers_count?: number;
+    following_count?: number;
+    instance?: string;
 }
 
 export interface ActivityLog {
