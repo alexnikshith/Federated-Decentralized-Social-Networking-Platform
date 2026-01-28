@@ -185,8 +185,9 @@ Federated-Decentralized-Social-Networking-Platform/
 - ✅ Account Creation with unique usernames
 - ✅ Secure JWT-based authentication
 - ✅ Profile management and editing
+- ✅ Dedicated Settings page with split navigation
 - ✅ Privacy controls (public/followers-only)
-- ✅ Account deactivation
+- ✅ Account deactivation (Danger Zone)
 - ✅ Password change functionality
 - ✅ Activity logging and tracking
 - ✅ Secure logout with token invalidation
@@ -196,6 +197,7 @@ Federated-Decentralized-Social-Networking-Platform/
 - `/register` - Registration (Epic 1)
 - `/profile` - Current user profile (Epic 1)
 - `/profile/:username` - View other user profiles (Epic 1)
+- `/settings` - User settings & account management (Epic 1)
 
 **Status:** ✅ **Fully Implemented & Tested**
 
@@ -206,7 +208,7 @@ Federated-Decentralized-Social-Networking-Platform/
 
 **Features:**
 - ✅ Post creation and display
-- ✅ Comment system
+- ✅ Enhanced Comment system with premium UI
 - ✅ Like/reaction system
 - ✅ User notifications
 - ✅ Follow/Unfollow
@@ -216,7 +218,7 @@ Federated-Decentralized-Social-Networking-Platform/
 - `/feed` - Main content feed
 - `/dashboard` - User dashboard
 
-**Status:** ✅ **Implemented with Modern UI**
+**Status:** ✅ **Implemented with Premium UI**
 
 ---
 
