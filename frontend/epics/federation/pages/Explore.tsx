@@ -1,13 +1,11 @@
-import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
-import { 
-  TrendingUp, 
-  Clock, 
-  Globe, 
-  MessageSquare, 
-  Heart, 
-  Share2, 
+import {
+  TrendingUp,
+  Clock,
+  Globe,
+  MessageSquare,
+  Heart,
+  Share2,
   MoreHorizontal,
   Bookmark,
   ExternalLink
@@ -104,8 +102,7 @@ const Explore = () => {
 
   return (
     <div className="min-h-screen">
-      <Header />
-      <main className="pt-24 pb-16">
+      <main className="pb-16">
         <div className="container mx-auto px-4 lg:px-8">
           <div className="max-w-2xl mx-auto">
             {/* Header */}
@@ -153,7 +150,6 @@ const Explore = () => {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 };
@@ -168,7 +164,7 @@ function PostCard({ post, index }: PostCardProps) {
   const [bookmarked, setBookmarked] = useState(false);
 
   return (
-    <article 
+    <article
       className="glass-card rounded-xl p-5 transition-all hover:border-border/80 opacity-0 animate-fade-in-up"
       style={{ animationDelay: `${index * 0.05}s` }}
     >
@@ -179,7 +175,7 @@ function PostCard({ post, index }: PostCardProps) {
           <div className="w-11 h-11 rounded-full bg-primary/20 flex items-center justify-center text-sm font-semibold text-primary">
             {post.author.avatar}
           </div>
-          
+
           <div>
             <div className="flex items-center gap-2">
               <span className="font-semibold">{post.author.name}</span>
@@ -211,9 +207,9 @@ function PostCard({ post, index }: PostCardProps) {
       {/* Actions */}
       <div className="flex items-center justify-between pt-3 border-t border-border/50">
         <div className="flex items-center gap-1">
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             className={cn(
               "gap-2 text-muted-foreground hover:text-foreground",
               liked && "text-destructive hover:text-destructive"
@@ -236,9 +232,9 @@ function PostCard({ post, index }: PostCardProps) {
         </div>
 
         <div className="flex items-center gap-1">
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             className={cn(
               "h-8 w-8 text-muted-foreground hover:text-foreground",
               bookmarked && "text-primary hover:text-primary"
@@ -247,7 +243,7 @@ function PostCard({ post, index }: PostCardProps) {
           >
             <Bookmark className={cn("w-4 h-4", bookmarked && "fill-current")} />
           </Button>
-          
+
           {post.federated && (
             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
               <ExternalLink className="w-4 h-4" />

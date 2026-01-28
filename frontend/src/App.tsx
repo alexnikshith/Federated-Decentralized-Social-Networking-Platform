@@ -17,6 +17,7 @@ import { DashboardPage } from '../epics/content-sharing/pages/DashboardPage';
 import LoginPage from '../epics/identity/pages/LoginUI';
 import RegisterPage from '../epics/identity/pages/RegisterUI';
 import ProfileUI from '../epics/identity/pages/ProfileUI';
+import { SettingsPage } from '../epics/identity/pages/SettingsPage';
 
 // Epic 3: Federation - Import pages
 import Communities from '../epics/federation/pages/Communities';
@@ -79,78 +80,88 @@ function App() {
                 <TooltipProvider>
                     <Toaster />
                     <Sonner />
-                    <BrowserRouter>
-                        <Routes>
-                            <Route path="/" element={<Index />} />
-                            <Route
-                                path="/login"
-                                element={
-                                    <PublicRoute>
-                                        <LoginPage />
-                                    </PublicRoute>
-                                }
-                            />
-                            <Route
-                                path="/register"
-                                element={
-                                    <PublicRoute>
-                                        <RegisterPage />
-                                    </PublicRoute>
-                                }
-                            />
-                            <Route path="/signup" element={<Navigate to="/register" />} />
-                            <Route
-                                path="/profile"
-                                element={
-                                    <ProtectedRoute>
-                                        <ProfileUI />
-                                    </ProtectedRoute>
-                                }
-                            />
-                            <Route
-                                path="/profile/:username"
-                                element={
-                                    <ProtectedRoute>
-                                        <ProfileUI />
-                                    </ProtectedRoute>
-                                }
-                            />
-                            <Route
-                                path="/feed"
-                                element={
-                                    <ProtectedRoute>
-                                        <FeedPage />
-                                    </ProtectedRoute>
-                                }
-                            />
-                            <Route
-                                path="/dashboard"
-                                element={
-                                    <ProtectedRoute>
-                                        <DashboardPage />
-                                    </ProtectedRoute>
-                                }
-                            />
-                            <Route
-                                path="/communities"
-                                element={
-                                    <ProtectedRoute>
-                                        <Communities />
-                                    </ProtectedRoute>
-                                }
-                            />
-                            <Route
-                                path="/explore"
-                                element={
-                                    <ProtectedRoute>
-                                        <Explore />
-                                    </ProtectedRoute>
-                                }
-                            />
-                            <Route path="/about" element={<About />} />
-                            <Route path="*" element={<NotFound />} />
-                        </Routes>
-                    </BrowserRouter>
+                    <div className="h-full">
+                        <BrowserRouter>
+                            <Routes>
+                                <Route path="/" element={<Index />} />
+                                <Route
+                                    path="/login"
+                                    element={
+                                        <PublicRoute>
+                                            <LoginPage />
+                                        </PublicRoute>
+                                    }
+                                />
+                                <Route
+                                    path="/register"
+                                    element={
+                                        <PublicRoute>
+                                            <RegisterPage />
+                                        </PublicRoute>
+                                    }
+                                />
+                                <Route path="/signup" element={<Navigate to="/register" />} />
+                                <Route
+                                    path="/profile"
+                                    element={
+                                        <ProtectedRoute>
+                                            <ProfileUI />
+                                        </ProtectedRoute>
+                                    }
+                                />
+                                <Route
+                                    path="/profile/:username"
+                                    element={
+                                        <ProtectedRoute>
+                                            <ProfileUI />
+                                        </ProtectedRoute>
+                                    }
+                                />
+                                <Route
+                                    path="/settings"
+                                    element={
+                                        <ProtectedRoute>
+                                            <SettingsPage />
+                                        </ProtectedRoute>
+                                    }
+                                />
+                                <Route
+                                    path="/feed"
+                                    element={
+                                        <ProtectedRoute>
+                                            <FeedPage />
+                                        </ProtectedRoute>
+                                    }
+                                />
+                                <Route
+                                    path="/dashboard"
+                                    element={
+                                        <ProtectedRoute>
+                                            <DashboardPage />
+                                        </ProtectedRoute>
+                                    }
+                                />
+                                <Route
+                                    path="/communities"
+                                    element={
+                                        <ProtectedRoute>
+                                            <Communities />
+                                        </ProtectedRoute>
+                                    }
+                                />
+                                <Route
+                                    path="/explore"
+                                    element={
+                                        <ProtectedRoute>
+                                            <Explore />
+                                        </ProtectedRoute>
+                                    }
+                                />
+                                <Route path="/about" element={<About />} />
+                                <Route path="*" element={<NotFound />} />
+                            </Routes>
+                        </BrowserRouter>
+                    </div>
                 </TooltipProvider>
             </QueryClientProvider>
         </ThemeProvider>
