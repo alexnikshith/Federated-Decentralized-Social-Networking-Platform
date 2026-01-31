@@ -198,3 +198,57 @@ func (h *PostHandler) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 
 	respondSuccess(w, "User posts retrieved successfully", feed, http.StatusOK)
 }
+
+// GetUserLikedPosts handles GET /api/users/:id/likes
+func (h *PostHandler) GetUserLikedPosts(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userID, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		respondError(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	requestingUserID := middleware.GetUserIDFromContext(r.Context())
+
+	limit := int64(50)
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if parsedLimit, err := strconv.ParseInt(limitStr, 10, 64); err == nil {
+			limit = parsedLimit
+		}
+	}
+
+	feed, err := h.postService.GetUserLikedPosts(r.Context(), userID, requestingUserID, limit)
+	if err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondSuccess(w, "User liked posts retrieved successfully", feed, http.StatusOK)
+}
+
+// GetUserCommentedPosts handles GET /api/users/:id/comments
+func (h *PostHandler) GetUserCommentedPosts(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userID, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		respondError(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	requestingUserID := middleware.GetUserIDFromContext(r.Context())
+
+	limit := int64(50)
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if parsedLimit, err := strconv.ParseInt(limitStr, 10, 64); err == nil {
+			limit = parsedLimit
+		}
+	}
+
+	feed, err := h.postService.GetUserCommentedPosts(r.Context(), userID, requestingUserID, limit)
+	if err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondSuccess(w, "User commented posts retrieved successfully", feed, http.StatusOK)
+}

@@ -14,6 +14,12 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 
+// VerifyOTPRequest represents the OTP verification request payload
+type VerifyOTPRequest struct {
+	Email string `json:"email"`
+	Code  string `json:"code"`
+}
+
 // LoginResponse represents the login response
 type LoginResponse struct {
 	Token     string      `json:"token"`

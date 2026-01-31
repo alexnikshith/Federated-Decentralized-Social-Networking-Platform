@@ -21,9 +21,9 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { profileApi } from "../api/client";
-import { getUserPosts } from "../../content-sharing/api/client";
+import { getUserPosts, getUserLikedPosts, getUserCommentedPosts } from "../../content-sharing/api/client";
 import type { Post } from "../../content-sharing/types";
-import type { User, ActivityLog } from "../types";
+import type { User } from "../types";
 import { PostCard } from "../../content-sharing/components/PostCard";
 
 
@@ -36,7 +36,9 @@ const ProfileUI = () => {
   const [isFollowing, setIsFollowing] = useState(false);
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
-  const [activities, setActivities] = useState<ActivityLog[]>([]);
+  const [likedPosts, setLikedPosts] = useState<Post[]>([]);
+  const [commentedPosts, setCommentedPosts] = useState<Post[]>([]);
+  const [activeSubTab, setActiveSubTab] = useState("Likes");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,11 +68,7 @@ const ProfileUI = () => {
         const postsData = await getUserPosts(userToDisplay.id);
         setPosts(postsData.posts);
 
-        // Fetch activity if own profile
-        if (isOwnProfile) {
-          const activityData = await profileApi.getActivity(10);
-          setActivities(activityData);
-        }
+
 
       } catch (err: any) {
         console.error("Failed to load profile:", err);
@@ -82,6 +80,25 @@ const ProfileUI = () => {
 
     loadProfileData();
   }, [username, isOwnProfile, currentUser]);
+
+  useEffect(() => {
+    const fetchActivityData = async () => {
+      if (activeTab === "Activity" && profileUser) {
+        try {
+          if (activeSubTab === "Likes") {
+            const posts = await getUserLikedPosts(profileUser.id);
+            setLikedPosts(posts);
+          } else {
+            const posts = await getUserCommentedPosts(profileUser.id);
+            setCommentedPosts(posts);
+          }
+        } catch (err) {
+          console.error("Failed to fetch activity data", err);
+        }
+      }
+    };
+    fetchActivityData();
+  }, [activeTab, activeSubTab, profileUser]);
 
   const handleProfileUpdated = (updatedUser: User) => {
     setProfileUser(updatedUser);
@@ -105,7 +122,7 @@ const ProfileUI = () => {
     );
   }
 
-  const tabs = isOwnProfile ? ["Posts", "Activity", "Media"] : ["Posts", "Media"];
+  const tabs = ["Posts", "Activity", "Media"];
 
   return (
     <div className="min-h-screen bg-background">
@@ -288,38 +305,59 @@ const ProfileUI = () => {
                   </>
                 )}
 
-                {activeTab === "Activity" && isOwnProfile && (
-                  <div className="space-y-4">
-                    {activities.length === 0 ? (
-                      <div className="glass-card rounded-3xl p-20 text-center opacity-50">
-                        <Activity className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                        <h3 className="text-xl font-bold mb-1">No recent activity</h3>
-                        <p className="text-sm">Your recent actions will be listed here.</p>
-                      </div>
-                    ) : (
-                      activities.map((activity, index) => (
-                        <div
-                          key={activity.id}
-                          className="glass-card rounded-2xl p-5 flex items-center gap-4 animate-scale-in"
-                          style={{ animationDelay: `${index * 0.05}s` }}
+                {activeTab === "Activity" && (
+                  <div className="space-y-6">
+                    {/* Sub Tabs */}
+                    <div className="flex items-center gap-6 border-b border-border/50 px-2">
+                      {["Likes", "Comments"].map((subTab) => (
+                        <button
+                          key={subTab}
+                          onClick={() => setActiveSubTab(subTab)}
+                          className={cn(
+                            "py-3 text-sm font-bold uppercase tracking-widest border-b-2 transition-colors",
+                            activeSubTab === subTab
+                              ? "border-primary text-primary"
+                              : "border-transparent text-muted-foreground hover:text-foreground"
+                          )}
                         >
-                          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-xl shadow-inner">
-                            {activity.action === 'login' && '🔐'}
-                            {activity.action === 'logout' && '🚪'}
-                            {activity.action === 'profile_update' && '✏️'}
-                            {activity.action === 'password_change' && '🔑'}
-                            {activity.action === 'signup' && '✨'}
+                          {subTab}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="space-y-4">
+                      {activeSubTab === "Likes" && (
+                        likedPosts.length === 0 ? (
+                          <div className="glass-card rounded-3xl p-16 text-center opacity-50">
+                            <Heart className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                            <h3 className="text-xl font-bold mb-1">No liked posts</h3>
+                            <p className="text-sm">Posts {profileUser.display_name} likes will appear here.</p>
                           </div>
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between">
-                              <h4 className="font-bold uppercase tracking-widest text-[10px] text-primary">{activity.action.replace('_', ' ')}</h4>
-                              <span className="text-[10px] font-medium text-muted-foreground uppercase">{new Date(activity.timestamp).toLocaleDateString()}</span>
+                        ) : (
+                          likedPosts.map((post) => (
+                            <div key={post.id} className="glass-card rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all shadow-sm">
+                              <PostCard post={post} />
                             </div>
-                            <p className="text-sm font-medium text-foreground/80 mt-1">{activity.details}</p>
+                          ))
+                        )
+                      )}
+
+                      {activeSubTab === "Comments" && (
+                        commentedPosts.length === 0 ? (
+                          <div className="glass-card rounded-3xl p-16 text-center opacity-50">
+                            <MessageSquare className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                            <h3 className="text-xl font-bold mb-1">No comments</h3>
+                            <p className="text-sm">Posts {profileUser.display_name} commented on will appear here.</p>
                           </div>
-                        </div>
-                      ))
-                    )}
+                        ) : (
+                          commentedPosts.map((post) => (
+                            <div key={post.id} className="glass-card rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all shadow-sm">
+                              <PostCard post={post} />
+                            </div>
+                          ))
+                        )
+                      )}
+                    </div>
                   </div>
                 )}
 

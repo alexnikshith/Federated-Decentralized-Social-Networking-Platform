@@ -120,3 +120,14 @@ func (r *FollowRepository) GetFollowerIDs(ctx context.Context, userID primitive.
 
 	return followerIDs, nil
 }
+
+// DeleteAllFollows removes all follow relationships where the user is either a follower or following
+func (r *FollowRepository) DeleteAllFollows(ctx context.Context, userID primitive.ObjectID) error {
+	_, err := r.collection.DeleteMany(ctx, bson.M{
+		"$or": []bson.M{
+			{"follower_id": userID},
+			{"following_id": userID},
+		},
+	})
+	return err
+}

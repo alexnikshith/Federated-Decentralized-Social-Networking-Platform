@@ -19,6 +19,8 @@ func RegisterContentSharingRoutes(router *mux.Router) {
 	router.Handle("/api/posts", middleware.AuthMiddleware(http.HandlerFunc(postHandler.CreatePost))).Methods("POST", "OPTIONS")
 	router.Handle("/api/feed", middleware.AuthMiddleware(http.HandlerFunc(postHandler.GetFeed))).Methods("GET", "OPTIONS")
 	router.Handle("/api/users/{id}/posts", middleware.AuthMiddleware(http.HandlerFunc(postHandler.GetUserPosts))).Methods("GET", "OPTIONS")
+	router.Handle("/api/users/{id}/likes", middleware.AuthMiddleware(http.HandlerFunc(postHandler.GetUserLikedPosts))).Methods("GET", "OPTIONS")
+	router.Handle("/api/users/{id}/comments", middleware.AuthMiddleware(http.HandlerFunc(postHandler.GetUserCommentedPosts))).Methods("GET", "OPTIONS")
 	router.Handle("/api/posts/{id}/like", middleware.AuthMiddleware(http.HandlerFunc(postHandler.LikePost))).Methods("POST", "OPTIONS")
 	router.Handle("/api/posts/{id}/like", middleware.AuthMiddleware(http.HandlerFunc(postHandler.UnlikePost))).Methods("DELETE", "OPTIONS")
 	router.Handle("/api/posts/{id}/comments", middleware.AuthMiddleware(http.HandlerFunc(postHandler.CreateComment))).Methods("POST", "OPTIONS")

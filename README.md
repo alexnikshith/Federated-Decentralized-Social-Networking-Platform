@@ -11,6 +11,8 @@ docker-compose up
 # Frontend: http://localhost:8080
 # Backend API: http://localhost:8080/api
 # MongoDB: localhost:27017
+
+For detailed instructions on local development and environment setup, see the [**Getting Started Guide**](GETTING_STARTED.md).
 ```
 
 ### Local Development
@@ -396,7 +398,7 @@ npm run test                # Run tests
 
 ## Documentation
 
-- **Quick Start Guide:** [QUICKSTART.md](QUICKSTART.md)
+- **Setup & Usage Guide:** [GETTING_STARTED.md](GETTING_STARTED.md)
 - **Epic 1 Documentation:** [docs/EPIC1_IDENTITY.md](docs/EPIC1_IDENTITY.md)
 - **Architecture:** [docs/architecture/system-architecture.md](docs/architecture/system-architecture.md)
 - **Database Schema:** [docs/architecture/database-schema.md](docs/architecture/database-schema.md)
