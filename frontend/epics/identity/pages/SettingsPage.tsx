@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Loader2, User, Settings, Shield, Bell, Lock, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { User as UserType } from "../types";
+import type { User as UserType, ActivityLog } from "../types";
 import { useToast } from "@/hooks/use-toast";
 
 export const SettingsPage = () => {
@@ -46,6 +46,24 @@ export const SettingsPage = () => {
             });
         }
     }, [currentUser]);
+
+    // Fetch activity logs
+    const [activities, setActivities] = useState<ActivityLog[]>([]);
+    const [showActivity, setShowActivity] = useState(false);
+
+    useEffect(() => {
+        const loadActivity = async () => {
+            if (activeTab === "account") {
+                try {
+                    const data = await profileApi.getActivity(10);
+                    setActivities(data);
+                } catch (error) {
+                    console.error("Failed to load activity", error);
+                }
+            }
+        };
+        loadActivity();
+    }, [activeTab]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -149,8 +167,8 @@ export const SettingsPage = () => {
                                     </div>
 
                                     <form onSubmit={handleSubmit} className="space-y-8">
-                                        <div className="space-y-4">
-                                            <div className="grid gap-2">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="space-y-2">
                                                 <Label htmlFor="display_name" className="text-base">Display Name</Label>
                                                 <Input
                                                     id="display_name"
@@ -162,7 +180,7 @@ export const SettingsPage = () => {
                                                 <p className="text-xs text-muted-foreground">The name that will be shown to other users.</p>
                                             </div>
 
-                                            <div className="grid gap-2">
+                                            <div className="space-y-2">
                                                 <Label htmlFor="username" className="text-base">Username</Label>
                                                 <Input
                                                     id="username"
@@ -173,7 +191,7 @@ export const SettingsPage = () => {
                                                 <p className="text-xs text-muted-foreground">Usernames cannot be changed freely.</p>
                                             </div>
 
-                                            <div className="grid gap-2">
+                                            <div className="space-y-2 md:col-span-2">
                                                 <Label htmlFor="bio" className="text-base">Bio</Label>
                                                 <Textarea
                                                     id="bio"
@@ -184,7 +202,7 @@ export const SettingsPage = () => {
                                                 />
                                             </div>
 
-                                            <div className="grid gap-2">
+                                            <div className="space-y-2 md:col-span-1">
                                                 <Label htmlFor="visibility" className="text-base">Profile Visibility</Label>
                                                 <Select
                                                     value={formData.profile_visibility}
@@ -240,6 +258,56 @@ export const SettingsPage = () => {
                                     </div>
 
                                     <div className="space-y-8">
+                                        {/* Activity Section */}
+                                        <div className="space-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <h3 className="font-bold text-lg">Recent User Activity</h3>
+                                                <Button
+                                                    onClick={() => setShowActivity(!showActivity)}
+                                                    variant="outline"
+                                                    size="sm"
+                                                >
+                                                    {showActivity ? "Hide Activity" : "View Activity"}
+                                                </Button>
+                                            </div>
+
+                                            {showActivity && (
+                                                <div className="space-y-4 animate-in slide-in-from-top-2 fade-in duration-300">
+                                                    {activities.length === 0 ? (
+                                                        <div className="p-8 text-center border rounded-xl bg-secondary/20">
+                                                            <p className="text-muted-foreground">No recent activity found.</p>
+                                                        </div>
+                                                    ) : (
+                                                        activities.map((activity, index) => (
+                                                            <div
+                                                                key={activity.id}
+                                                                className="flex items-center gap-4 p-4 rounded-xl border border-border/50 bg-card/50"
+                                                            >
+                                                                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-lg shrink-0">
+                                                                    {activity.action === 'login' && '🔐'}
+                                                                    {activity.action === 'logout' && '🚪'}
+                                                                    {activity.action === 'profile_update' && '✏️'}
+                                                                    {activity.action === 'password_change' && '🔑'}
+                                                                    {activity.action === 'signup' && '✨'}
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <div className="flex items-center justify-between mb-1">
+                                                                        <h4 className="font-bold text-xs uppercase tracking-wider text-primary truncate pr-2">
+                                                                            {activity.action.replace('_', ' ')}
+                                                                        </h4>
+                                                                        <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                                                                            {new Date(activity.timestamp).toLocaleDateString()}
+                                                                        </span>
+                                                                    </div>
+                                                                    <p className="text-sm text-foreground/80 truncate">{activity.details}</p>
+                                                                </div>
+                                                            </div>
+                                                        ))
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+
                                         <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-6">
                                             <div className="flex items-start gap-4">
                                                 <div className="p-2 bg-destructive/10 rounded-full shrink-0">

@@ -9,6 +9,7 @@ import type {
     ActivityLog,
     ApiResponse,
     ApiError,
+    VerifyOTPRequest,
 } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
@@ -51,8 +52,13 @@ export const authApi = {
         return response.data;
     },
 
-    login: async (data: LoginRequest): Promise<LoginResponse> => {
+    login: async (data: LoginRequest): Promise<ApiResponse<string>> => {
         const response = await api.post('/api/auth/login', data);
+        return response.data;
+    },
+
+    verifyOTP: async (data: VerifyOTPRequest): Promise<LoginResponse> => {
+        const response = await api.post('/api/auth/verify-otp', data);
         return response.data;
     },
 

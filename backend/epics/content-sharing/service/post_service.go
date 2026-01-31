@@ -292,3 +292,39 @@ func (s *PostService) enrichPosts(ctx context.Context, posts []models.Post, curr
 	log.Printf("DEBUG enrichPosts: Returning %d enriched posts (filtered from %d original posts)", len(postResponses), len(posts))
 	return postResponses, nil
 }
+
+// GetUserLikedPosts retrieves posts liked by a specific user
+func (s *PostService) GetUserLikedPosts(ctx context.Context, userID, requestingUserID primitive.ObjectID, limit int64) (*dto.FeedResponse, error) {
+	posts, err := s.postRepo.GetLikedPostsByUser(ctx, userID, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	postResponses, err := s.enrichPosts(ctx, posts, requestingUserID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &dto.FeedResponse{
+		Posts: postResponses,
+		Total: len(postResponses),
+	}, nil
+}
+
+// GetUserCommentedPosts retrieves posts commented on by a specific user
+func (s *PostService) GetUserCommentedPosts(ctx context.Context, userID, requestingUserID primitive.ObjectID, limit int64) (*dto.FeedResponse, error) {
+	posts, err := s.postRepo.GetCommentedPostsByUser(ctx, userID, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	postResponses, err := s.enrichPosts(ctx, posts, requestingUserID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &dto.FeedResponse{
+		Posts: postResponses,
+		Total: len(postResponses),
+	}, nil
+}
