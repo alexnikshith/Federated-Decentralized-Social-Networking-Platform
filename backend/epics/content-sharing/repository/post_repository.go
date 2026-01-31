@@ -146,12 +146,18 @@ func (r *PostRepository) GetPostsByAuthor(ctx context.Context, authorID primitiv
 }
 
 // GetAllPosts retrieves all posts sorted by timestamp (newest first)
-func (r *PostRepository) GetAllPosts(ctx context.Context, limit int64) ([]models.Post, error) {
+// GetAllPosts retrieves all posts sorted by timestamp (newest first), excluding specific authors
+func (r *PostRepository) GetAllPosts(ctx context.Context, excludeIDs []primitive.ObjectID, limit int64) ([]models.Post, error) {
+	filter := bson.M{}
+	if len(excludeIDs) > 0 {
+		filter["author_id"] = bson.M{"$nin": excludeIDs}
+	}
+
 	opts := options.Find().
 		SetSort(bson.D{{Key: "created_at", Value: -1}}).
 		SetLimit(limit)
 
-	cursor, err := r.posts.Find(ctx, bson.M{}, opts)
+	cursor, err := r.posts.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -406,4 +412,9 @@ func (r *PostRepository) DeleteLikesByUser(ctx context.Context, userID primitive
 func (r *PostRepository) DeleteCommentsByUser(ctx context.Context, userID primitive.ObjectID) error {
 	_, err := r.comments.DeleteMany(ctx, bson.M{"user_id": userID})
 	return err
+}
+
+// CountPostsByAuthor returns the number of posts by a specific user
+func (r *PostRepository) CountPostsByAuthor(ctx context.Context, userID primitive.ObjectID) (int64, error) {
+	return r.posts.CountDocuments(ctx, bson.M{"author_id": userID})
 }
