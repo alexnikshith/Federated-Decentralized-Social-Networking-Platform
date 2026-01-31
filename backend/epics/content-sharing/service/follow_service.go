@@ -2,9 +2,11 @@ package service
 
 import (
 	"context"
+	"federated-social/backend/epics/content-sharing/models"
 	"federated-social/backend/epics/content-sharing/repository"
 	identityModels "federated-social/backend/epics/identity/models"
 	identityRepo "federated-social/backend/epics/identity/repository"
+	"log"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -69,17 +71,27 @@ func (s *FollowService) Follow(ctx context.Context, followerID, followingID prim
 		return nil // Cannot follow yourself
 	}
 
+	// Check if already following
+	if isFollowing, _ := s.followRepo.IsFollowing(ctx, followerID, followingID); isFollowing {
+		log.Printf("DEBUG: User %v already follows %v, skipping follow and notification", followerID.Hex(), followingID.Hex())
+		return nil
+	}
+
 	if err := s.followRepo.Follow(ctx, followerID, followingID); err != nil {
+		log.Printf("ERROR: Follow operation failed: %v", err)
 		return err
 	}
 
 	// Create notification for the user being followed
-	// notification := &models.Notification{
-	// 	UserID:        followingID,
-	// 	Type:          "follow",
-	// 	RelatedUserID: followerID,
-	// }
-	// s.notificationRepo.CreateNotification(ctx, notification)
+	log.Printf("DEBUG: Creating follow notification for user %v from follower %v", followingID.Hex(), followerID.Hex())
+	notification := &models.Notification{
+		UserID:        followingID,
+		Type:          "follow",
+		RelatedUserID: followerID,
+	}
+	if err := s.notificationRepo.CreateNotification(ctx, notification); err != nil {
+		log.Printf("ERROR: Failed to create follow notification: %v", err)
+	}
 
 	return nil
 }
