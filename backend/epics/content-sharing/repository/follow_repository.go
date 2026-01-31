@@ -131,3 +131,13 @@ func (r *FollowRepository) DeleteAllFollows(ctx context.Context, userID primitiv
 	})
 	return err
 }
+
+// CountFollowers returns the number of followers for a user
+func (r *FollowRepository) CountFollowers(ctx context.Context, userID primitive.ObjectID) (int64, error) {
+	return r.collection.CountDocuments(ctx, bson.M{"following_id": userID})
+}
+
+// CountFollowing returns the number of users that the given user follows
+func (r *FollowRepository) CountFollowing(ctx context.Context, userID primitive.ObjectID) (int64, error) {
+	return r.collection.CountDocuments(ctx, bson.M{"follower_id": userID})
+}

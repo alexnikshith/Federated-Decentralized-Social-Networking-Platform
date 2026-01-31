@@ -24,8 +24,8 @@ type User struct {
 	IsDeactivated bool `json:"is_deactivated" bson:"is_deactivated"`
 
 	// Timestamps
-	CreatedAt time.Time `json:"created_at" bson:"created_at"`
-	UpdatedAt time.Time `json:"updated_at" bson:"updated_at"`
+	CreatedAt interface{} `json:"created_at" bson:"created_at"`
+	UpdatedAt interface{} `json:"updated_at" bson:"updated_at"`
 
 	// Instance info
 	InstanceID string `json:"instance_id" bson:"instance_id"`
@@ -60,7 +60,11 @@ type PublicUser struct {
 	Bio               string             `json:"bio"`
 	AvatarURL         string             `json:"avatar_url"`
 	ProfileVisibility string             `json:"profile_visibility"`
-	CreatedAt         time.Time          `json:"created_at"`
+	CreatedAt         interface{}        `json:"created_at"`
+	FollowersCount    int64              `json:"followers_count"`
+	FollowingCount    int64              `json:"following_count"`
+	PostsCount        int64              `json:"posts_count"`
+	IsFollowing       bool               `json:"is_following"`
 }
 
 // ToPublicUser converts User to PublicUser
@@ -73,5 +77,8 @@ func (u *User) ToPublicUser() PublicUser {
 		AvatarURL:         u.AvatarURL,
 		ProfileVisibility: u.ProfileVisibility,
 		CreatedAt:         u.CreatedAt,
+		FollowersCount:    0,
+		FollowingCount:    0,
+		PostsCount:        0,
 	}
 }

@@ -56,3 +56,39 @@ func (h *FollowHandler) Unfollow(w http.ResponseWriter, r *http.Request) {
 
 	respondSuccess(w, "User unfollowed successfully", nil, http.StatusOK)
 }
+
+// GetFollowers handles GET /api/users/:id/followers
+func (h *FollowHandler) GetFollowers(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userID, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		respondError(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	followers, err := h.followService.GetFollowers(r.Context(), userID)
+	if err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondSuccess(w, "Followers retrieved successfully", followers, http.StatusOK)
+}
+
+// GetFollowing handles GET /api/users/:id/following
+func (h *FollowHandler) GetFollowing(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userID, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		respondError(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	following, err := h.followService.GetFollowing(r.Context(), userID)
+	if err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondSuccess(w, "Following retrieved successfully", following, http.StatusOK)
+}
