@@ -2,30 +2,39 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"federated-social/backend/config"
 	"federated-social/backend/epics/identity/dto"
 	"federated-social/backend/epics/identity/models"
 	"federated-social/backend/epics/identity/repository"
+	"federated-social/backend/pkg/email"
+	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"go.mongodb.org/mongo-driver/bson"
+
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthService struct {
-	userRepo     *repository.UserRepository
-	sessionRepo  *repository.SessionRepository
-	activityRepo *repository.ActivityRepository
+	userRepo         *repository.UserRepository
+	sessionRepo      *repository.SessionRepository
+	activityRepo     *repository.ActivityRepository
+	verificationRepo *repository.VerificationRepository
+	emailSender      *email.EmailSender
 }
 
 func NewAuthService() *AuthService {
 	return &AuthService{
-		userRepo:     repository.NewUserRepository(),
-		sessionRepo:  repository.NewSessionRepository(),
-		activityRepo: repository.NewActivityRepository(),
+		userRepo:         repository.NewUserRepository(),
+		sessionRepo:      repository.NewSessionRepository(),
+		activityRepo:     repository.NewActivityRepository(),
+		verificationRepo: repository.NewVerificationRepository(),
+		emailSender:      email.NewEmailSender(),
 	}
 }
 
@@ -71,22 +80,73 @@ func (s *AuthService) Signup(ctx context.Context, req dto.SignupRequest) (*model
 	return user, nil
 }
 
-// Login authenticates a user and returns a JWT token (US1.2)
-func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest, ipAddress, userAgent string) (*dto.LoginResponse, error) {
+// InitiateLogin validates credentials and triggers 2FA (US1.2 updated)
+func (s *AuthService) InitiateLogin(ctx context.Context, req dto.LoginRequest) (string, error) {
 	// Find user
 	user, err := s.userRepo.FindByEmail(ctx, req.Email)
 	if err != nil {
-		return nil, errors.New("invalid credentials")
+		return "", errors.New("invalid credentials")
 	}
 
 	// Check if account is deactivated
 	if user.IsDeactivated {
-		return nil, errors.New("account is deactivated")
+		return "", errors.New("account is deactivated")
 	}
 
 	// Verify password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
-		return nil, errors.New("invalid credentials")
+		return "", errors.New("invalid credentials")
+	}
+
+	// Generate OTP
+	code, err := generateRandomCode(6)
+	if err != nil {
+		return "", err
+	}
+
+	// Save verification code
+	verificationCode := &models.VerificationCode{
+		UserID:    user.ID,
+		Code:      code,
+		ExpiresAt: time.Now().Add(10 * time.Minute),
+	}
+
+	if err := s.verificationRepo.CreateVerificationCode(ctx, verificationCode); err != nil {
+		return "", err
+	}
+
+	// Send email
+	if err := s.emailSender.SendVerificationEmail(user.Email, code); err != nil {
+		// Log error but maybe don't fail the request completely if email fails?
+		// Ideally we should fail because user can't login otherwise.
+		return "", fmt.Errorf("failed to send verification email: %v", err)
+	}
+
+	return "Verification code sent to your email", nil
+}
+
+// VerifyOTP validates the code and logs the user in
+func (s *AuthService) VerifyOTP(ctx context.Context, req dto.VerifyOTPRequest, ipAddress, userAgent string) (*dto.LoginResponse, error) {
+	// Find user
+	user, err := s.userRepo.FindByEmail(ctx, req.Email)
+	if err != nil {
+		return nil, errors.New("user not found")
+	}
+
+	// Find latest verification code
+	storedCode, err := s.verificationRepo.FindLatestByUserID(ctx, user.ID)
+	if err != nil {
+		return nil, errors.New("invalid or expired verification code")
+	}
+
+	// Check if code matches
+	if storedCode.Code != req.Code {
+		return nil, errors.New("invalid verification code")
+	}
+
+	// Check if expired
+	if time.Now().After(storedCode.ExpiresAt) {
+		return nil, errors.New("verification code expired")
 	}
 
 	// Generate JWT token
@@ -113,13 +173,26 @@ func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest, ipAddress
 	}
 
 	// Log activity
-	s.logActivity(ctx, user.ID, "login", "User logged in", ipAddress, userAgent)
+	s.logActivity(ctx, user.ID, "login", "User logged in via 2FA", ipAddress, userAgent)
 
 	return &dto.LoginResponse{
 		Token:     tokenString,
 		ExpiresAt: expiresAt.Format(time.RFC3339),
 		User:      user.ToPublicUser(),
 	}, nil
+}
+
+func generateRandomCode(length int) (string, error) {
+	const charset = "0123456789"
+	code := make([]byte, length)
+	for i := range code {
+		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		if err != nil {
+			return "", err
+		}
+		code[i] = charset[num.Int64()]
+	}
+	return string(code), nil
 }
 
 // Logout invalidates the user's session (US1.8)

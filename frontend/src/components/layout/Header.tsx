@@ -27,7 +27,7 @@ export function Header() {
   return (
     <header className={cn(
       "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
-      isLanding ? "bg-transparent" : "bg-background/80 backdrop-blur-xl border-b border-border/50"
+      isLanding ? "bg-background/50 backdrop-blur-md border-b border-border/10" : "bg-background/80 backdrop-blur-xl border-b border-border/50"
     )}>
       <nav className="container mx-auto px-4 lg:px-8">
         <div className="flex h-16 items-center justify-between">

@@ -43,6 +43,16 @@ export const getUserPosts = async (userId: string, limit = 50): Promise<FeedResp
     return response.data.data;
 };
 
+export const getUserLikedPosts = async (userId: string, limit = 50): Promise<Post[]> => {
+    const response = await api.get(`/api/users/${userId}/likes?limit=${limit}`);
+    return response.data.data.posts || [];
+};
+
+export const getUserCommentedPosts = async (userId: string, limit = 50): Promise<Post[]> => {
+    const response = await api.get(`/api/users/${userId}/comments?limit=${limit}`);
+    return response.data.data.posts || [];
+};
+
 export const likePost = async (postId: string): Promise<void> => {
     await api.post(`/api/posts/${postId}/like`);
 };
