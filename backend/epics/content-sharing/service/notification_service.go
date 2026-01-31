@@ -4,6 +4,7 @@ import (
 	"context"
 	"federated-social/backend/epics/content-sharing/dto"
 	"federated-social/backend/epics/content-sharing/repository"
+	"log"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -26,6 +27,7 @@ func (s *NotificationService) GetNotifications(ctx context.Context, userID primi
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("DEBUG: NotificationService found %d notifications for user %v", len(notifications), userID.Hex())
 
 	// Get unique related user IDs
 	userIDs := make([]primitive.ObjectID, 0)
@@ -46,14 +48,21 @@ func (s *NotificationService) GetNotifications(ctx context.Context, userID primi
 	// Build notification responses
 	notificationResponses := make([]dto.NotificationResponse, len(notifications))
 	for i, notif := range notifications {
-		user := users[notif.RelatedUserID]
+		user, ok := users[notif.RelatedUserID]
+		userName := "Unknown User"
+		userAvatar := ""
+		if ok && user != nil {
+			userName = user.Username
+			userAvatar = user.AvatarURL
+		}
+
 		notificationResponses[i] = dto.NotificationResponse{
 			ID:                notif.ID,
 			Type:              notif.Type,
 			RelatedEntityID:   notif.RelatedEntityID,
 			RelatedUserID:     notif.RelatedUserID,
-			RelatedUserName:   user.Username,
-			RelatedUserAvatar: user.AvatarURL,
+			RelatedUserName:   userName,
+			RelatedUserAvatar: userAvatar,
 			IsRead:            notif.IsRead,
 			CreatedAt:         notif.CreatedAt,
 		}
