@@ -30,6 +30,8 @@ func RegisterContentSharingRoutes(router *mux.Router) {
 	// Follow routes
 	router.Handle("/api/users/{id}/follow", middleware.AuthMiddleware(http.HandlerFunc(followHandler.Follow))).Methods("POST", "OPTIONS")
 	router.Handle("/api/users/{id}/unfollow", middleware.AuthMiddleware(http.HandlerFunc(followHandler.Unfollow))).Methods("DELETE", "OPTIONS")
+	router.Handle("/api/users/{id}/followers", middleware.AuthMiddleware(http.HandlerFunc(followHandler.GetFollowers))).Methods("GET", "OPTIONS")
+	router.Handle("/api/users/{id}/following", middleware.AuthMiddleware(http.HandlerFunc(followHandler.GetFollowing))).Methods("GET", "OPTIONS")
 
 	// Notification routes
 	router.Handle("/api/notifications", middleware.AuthMiddleware(http.HandlerFunc(notificationHandler.GetNotifications))).Methods("GET", "OPTIONS")

@@ -112,6 +112,27 @@ func (r *UserRepository) DeleteUser(ctx context.Context, userID primitive.Object
 	return err
 }
 
+// FindByIDs finds multiple users by their IDs
+func (r *UserRepository) FindByIDs(ctx context.Context, ids []primitive.ObjectID) ([]models.User, error) {
+	if len(ids) == 0 {
+		return []models.User{}, nil
+	}
+
+	filter := bson.M{"_id": bson.M{"$in": ids}}
+	cursor, err := r.collection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var users []models.User
+	if err = cursor.All(ctx, &users); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
 // CreateIndexes creates necessary database indexes
 func (r *UserRepository) CreateIndexes(ctx context.Context) error {
 	indexes := []mongo.IndexModel{
