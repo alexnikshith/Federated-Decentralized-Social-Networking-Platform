@@ -3,12 +3,14 @@ package service
 import (
 	"context"
 	"errors"
+	"federated-social/backend/epics/content-sharing/models"
 	"federated-social/backend/epics/content-sharing/repository"
 	identityModels "federated-social/backend/epics/identity/models"
 	identityRepo "federated-social/backend/epics/identity/repository"
+	"log"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	
+
 	safetyRepo "federated-social/backend/epics/safety/repository"
 	safetyService "federated-social/backend/epics/safety/service"
 )
@@ -75,36 +77,36 @@ func (s *FollowService) Follow(ctx context.Context, followerID, followingID prim
 		return nil // Cannot follow yourself
 	}
 
-	// Check if blocked (Bidirectional)
-	// 1. Is followingID blocked by followerID?
-	blocked, err := s.blockService.IsBlocked(ctx, followerID, followingID)
+	// Check for blocks
+	isBlocked, err := s.blockService.IsBlocked(ctx, followerID, followingID)
 	if err != nil {
 		return err
 	}
-	if blocked {
-		return errors.New("cannot follow a user you have blocked")
+	if isBlocked {
+		return errors.New("cannot follow: user has blocked you or you have blocked them")
 	}
 
-	// 2. Is followerID blocked by followingID?
-	blockedBy, err := s.blockService.IsBlocked(ctx, followingID, followerID)
-	if err != nil {
-		return err
-	}
-	if blockedBy {
-		return errors.New("cannot follow this user")
+	// Check if already following
+	if isFollowing, _ := s.followRepo.IsFollowing(ctx, followerID, followingID); isFollowing {
+		log.Printf("DEBUG: User %v already follows %v, skipping follow and notification", followerID.Hex(), followingID.Hex())
+		return nil
 	}
 
 	if err := s.followRepo.Follow(ctx, followerID, followingID); err != nil {
+		log.Printf("ERROR: Follow operation failed: %v", err)
 		return err
 	}
 
 	// Create notification for the user being followed
-	// notification := &models.Notification{
-	// 	UserID:        followingID,
-	// 	Type:          "follow",
-	// 	RelatedUserID: followerID,
-	// }
-	// s.notificationRepo.CreateNotification(ctx, notification)
+	log.Printf("DEBUG: Creating follow notification for user %v from follower %v", followingID.Hex(), followerID.Hex())
+	notification := &models.Notification{
+		UserID:        followingID,
+		Type:          "follow",
+		RelatedUserID: followerID,
+	}
+	if err := s.notificationRepo.CreateNotification(ctx, notification); err != nil {
+		log.Printf("ERROR: Failed to create follow notification: %v", err)
+	}
 
 	return nil
 }
