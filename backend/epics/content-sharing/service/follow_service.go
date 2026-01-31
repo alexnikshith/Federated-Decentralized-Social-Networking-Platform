@@ -2,17 +2,22 @@ package service
 
 import (
 	"context"
+	"errors"
 	"federated-social/backend/epics/content-sharing/repository"
 	identityModels "federated-social/backend/epics/identity/models"
 	identityRepo "federated-social/backend/epics/identity/repository"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	
+	safetyRepo "federated-social/backend/epics/safety/repository"
+	safetyService "federated-social/backend/epics/safety/service"
 )
 
 type FollowService struct {
 	followRepo       *repository.FollowRepository
 	userRepo         *identityRepo.UserRepository
 	notificationRepo *repository.NotificationRepository
+	blockService     *safetyService.BlockService
 }
 
 func NewFollowService() *FollowService {
@@ -20,6 +25,7 @@ func NewFollowService() *FollowService {
 		followRepo:       repository.NewFollowRepository(),
 		userRepo:         identityRepo.NewUserRepository(),
 		notificationRepo: repository.NewNotificationRepository(),
+		blockService:     safetyService.NewBlockService(safetyRepo.NewBlockRepository()),
 	}
 }
 
@@ -67,6 +73,25 @@ func (s *FollowService) GetFollowing(ctx context.Context, userID primitive.Objec
 func (s *FollowService) Follow(ctx context.Context, followerID, followingID primitive.ObjectID) error {
 	if followerID == followingID {
 		return nil // Cannot follow yourself
+	}
+
+	// Check if blocked (Bidirectional)
+	// 1. Is followingID blocked by followerID?
+	blocked, err := s.blockService.IsBlocked(ctx, followerID, followingID)
+	if err != nil {
+		return err
+	}
+	if blocked {
+		return errors.New("cannot follow a user you have blocked")
+	}
+
+	// 2. Is followerID blocked by followingID?
+	blockedBy, err := s.blockService.IsBlocked(ctx, followingID, followerID)
+	if err != nil {
+		return err
+	}
+	if blockedBy {
+		return errors.New("cannot follow this user")
 	}
 
 	if err := s.followRepo.Follow(ctx, followerID, followingID); err != nil {

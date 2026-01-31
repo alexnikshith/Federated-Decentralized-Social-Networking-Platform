@@ -6,6 +6,8 @@ import (
 	"federated-social/backend/epics/content-sharing/dto"
 	"federated-social/backend/epics/content-sharing/models"
 	"federated-social/backend/epics/content-sharing/repository"
+	safetyRepo "federated-social/backend/epics/safety/repository"
+	safetyService "federated-social/backend/epics/safety/service"
 	"log"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -16,6 +18,7 @@ type PostService struct {
 	followRepo       *repository.FollowRepository
 	searchRepo       *repository.SearchRepository
 	notificationRepo *repository.NotificationRepository
+	blockService     *safetyService.BlockService
 }
 
 func NewPostService() *PostService {
@@ -24,6 +27,7 @@ func NewPostService() *PostService {
 		followRepo:       repository.NewFollowRepository(),
 		searchRepo:       repository.NewSearchRepository(),
 		notificationRepo: repository.NewNotificationRepository(),
+		blockService:     safetyService.NewBlockService(safetyRepo.NewBlockRepository()),
 	}
 }
 
@@ -46,30 +50,53 @@ func (s *PostService) CreatePost(ctx context.Context, userID primitive.ObjectID,
 func (s *PostService) GetFeed(ctx context.Context, userID primitive.ObjectID, limit int64) (*dto.FeedResponse, error) {
 	log.Printf("DEBUG GetFeed: Starting prioritized feed retrieval for user %v, limit=%d", userID, limit)
 
+	// Get blocking info (bidirectional)
+	blockedIDs, err := s.blockService.GetHiddenUserIDs(ctx, userID)
+	if err != nil {
+		log.Printf("ERROR GetFeed: Failed to get blocked IDs: %v", err)
+		return nil, err
+	}
+	blockedMap := make(map[primitive.ObjectID]bool)
+	for _, id := range blockedIDs {
+		blockedMap[id] = true
+	}
+
 	// Get list of users the current user follows
 	followingIDs, err := s.followRepo.GetFollowingIDs(ctx, userID)
 	if err != nil {
 		log.Printf("ERROR GetFeed: Failed to get following list: %v", err)
 		return nil, err
 	}
-	log.Printf("DEBUG GetFeed: User follows %d users", len(followingIDs))
+	
+	// Filter blocked users from following list
+	var activeFollowing []primitive.ObjectID
+	for _, id := range followingIDs {
+		if !blockedMap[id] {
+			activeFollowing = append(activeFollowing, id)
+		}
+	}
+	log.Printf("DEBUG GetFeed: User follows %d users (%d active)", len(followingIDs), len(activeFollowing))
 
 	var allPosts []models.Post
 
-	if len(followingIDs) > 0 {
-		// User follows someone - use prioritized algorithm
+	if len(activeFollowing) > 0 {
+		// User follows active users - use prioritized algorithm
 		log.Printf("DEBUG GetFeed: Fetching posts from followed users")
 
 		// Get posts from followed users (newest first)
-		followedPosts, err := s.postRepo.GetPostsByAuthors(ctx, followingIDs, limit)
+		followedPosts, err := s.postRepo.GetPostsByAuthors(ctx, activeFollowing, limit)
 		if err != nil {
 			log.Printf("ERROR GetFeed: Failed to get posts from followed users: %v", err)
 			return nil, err
 		}
 		log.Printf("DEBUG GetFeed: Retrieved %d posts from followed users", len(followedPosts))
 
+		// Calculate exclusions: activeFollowing + blockedIDs
+		exclusions := append([]primitive.ObjectID{}, activeFollowing...)
+		exclusions = append(exclusions, blockedIDs...)
+
 		// Get posts from everyone else (newest first)
-		otherPosts, err := s.postRepo.GetPostsExcludingAuthors(ctx, followingIDs, limit)
+		otherPosts, err := s.postRepo.GetPostsExcludingAuthors(ctx, exclusions, limit)
 		if err != nil {
 			log.Printf("ERROR GetFeed: Failed to get posts from other users: %v", err)
 			return nil, err
@@ -86,9 +113,9 @@ func (s *PostService) GetFeed(ctx context.Context, userID primitive.ObjectID, li
 			log.Printf("DEBUG GetFeed: Trimmed to limit: %d posts", len(allPosts))
 		}
 	} else {
-		// User follows nobody - show all posts chronologically
+		// User follows nobody (or only blocked people) - show all posts chronologically (excluding blocks)
 		log.Printf("DEBUG GetFeed: User follows nobody, showing all posts")
-		allPosts, err = s.postRepo.GetAllPosts(ctx, limit)
+		allPosts, err = s.postRepo.GetAllPosts(ctx, blockedIDs, limit)
 		if err != nil {
 			log.Printf("ERROR GetFeed: Failed to get all posts: %v", err)
 			return nil, err
@@ -112,6 +139,24 @@ func (s *PostService) GetFeed(ctx context.Context, userID primitive.ObjectID, li
 
 // GetUserPosts retrieves posts for a specific user
 func (s *PostService) GetUserPosts(ctx context.Context, userID, requestingUserID primitive.ObjectID, limit int64) (*dto.FeedResponse, error) {
+    // Check if blocked
+    isBlocked, err := s.blockService.IsBlocked(ctx, userID, requestingUserID)
+    if err != nil {
+        return nil, err
+    }
+    // Also check if requester is blocked by target (bidirectional)
+    isBlockedBy, err := s.blockService.IsBlocked(ctx, requestingUserID, userID)
+    if err != nil {
+        return nil, err
+    }
+
+    if isBlocked || isBlockedBy {
+        return &dto.FeedResponse{
+            Posts: []dto.PostResponse{},
+            Total: 0,
+        }, nil
+    }
+
 	posts, err := s.postRepo.GetPostsByAuthor(ctx, userID, limit)
 	if err != nil {
 		return nil, err
