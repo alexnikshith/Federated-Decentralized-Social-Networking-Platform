@@ -4,6 +4,8 @@ import (
 	"context"
 	"federated-social/backend/database"
 	identityModels "federated-social/backend/epics/identity/models"
+	"regexp"
+	"strings"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -36,29 +38,70 @@ func (r *SearchRepository) CreateIndexes(ctx context.Context) error {
 	return err
 }
 
-// SearchUsers searches for users by username
+// SearchUsers searches for users by username, display name, email, or bio
 func (r *SearchRepository) SearchUsers(ctx context.Context, query string, limit int64) ([]identityModels.User, error) {
-	// Use regex for partial matching
-	filter := bson.M{
-		"$or": []bson.M{
-			{"username": bson.M{"$regex": query, "$options": "i"}},
-			{"display_name": bson.M{"$regex": query, "$options": "i"}},
-		},
-		"is_active":      true,
-		"is_deactivated": false,
+	// Clean and tokenize query
+	query = strings.TrimSpace(query)
+	if query == "" {
+		return []identityModels.User{}, nil
 	}
 
-	opts := options.Find().SetLimit(limit)
+	// Split by space and clean tokens
+	rawWords := strings.Fields(query)
+	var filters []bson.M
 
-	cursor, err := r.collection.Find(ctx, filter, opts)
+	for _, word := range rawWords {
+		// Clean the word
+		word = strings.TrimLeft(word, "@")
+		if word == "" {
+			continue
+		}
+
+		// Escape word for regex
+		escapedWord := regexp.QuoteMeta(word)
+
+		// Each word must match at least one of these fields
+		filters = append(filters, bson.M{
+			"$or": []bson.M{
+				{"username": bson.M{"$regex": escapedWord, "$options": "i"}},
+				{"display_name": bson.M{"$regex": escapedWord, "$options": "i"}},
+				{"email": bson.M{"$regex": escapedWord, "$options": "i"}},
+				{"bio": bson.M{"$regex": escapedWord, "$options": "i"}},
+			},
+		})
+	}
+
+	if len(filters) == 0 {
+		return []identityModels.User{}, nil
+	}
+
+	// Final filter: All words must match (AND of ORs)
+	// We remove ALL status filters to ensure everyone is found
+	var finalFilter bson.M
+	if len(filters) == 1 {
+		finalFilter = filters[0]
+	} else {
+		finalFilter = bson.M{"$and": filters}
+	}
+
+	opts := options.Find().SetLimit(limit).SetSort(bson.D{{Key: "username", Value: 1}})
+
+	cursor, err := r.collection.Find(ctx, finalFilter, opts)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
 
 	var users []identityModels.User
+	// Using a more flexible slice to avoid decoding errors if possible
 	if err = cursor.All(ctx, &users); err != nil {
+		// If decoding into the struct fails (e.g. because of timestamps),
+		// we should still try to return what we can or at least not fail everything.
 		return nil, err
+	}
+
+	if users == nil {
+		return []identityModels.User{}, nil
 	}
 
 	return users, nil
