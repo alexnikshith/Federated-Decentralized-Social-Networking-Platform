@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"federated-social/backend/epics/content-sharing/models"
 	"federated-social/backend/epics/content-sharing/repository"
 	identityModels "federated-social/backend/epics/identity/models"
@@ -9,12 +10,16 @@ import (
 	"log"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
+
+	safetyRepo "federated-social/backend/epics/safety/repository"
+	safetyService "federated-social/backend/epics/safety/service"
 )
 
 type FollowService struct {
 	followRepo       *repository.FollowRepository
 	userRepo         *identityRepo.UserRepository
 	notificationRepo *repository.NotificationRepository
+	blockService     *safetyService.BlockService
 }
 
 func NewFollowService() *FollowService {
@@ -22,6 +27,7 @@ func NewFollowService() *FollowService {
 		followRepo:       repository.NewFollowRepository(),
 		userRepo:         identityRepo.NewUserRepository(),
 		notificationRepo: repository.NewNotificationRepository(),
+		blockService:     safetyService.NewBlockService(safetyRepo.NewBlockRepository()),
 	}
 }
 
@@ -69,6 +75,15 @@ func (s *FollowService) GetFollowing(ctx context.Context, userID primitive.Objec
 func (s *FollowService) Follow(ctx context.Context, followerID, followingID primitive.ObjectID) error {
 	if followerID == followingID {
 		return nil // Cannot follow yourself
+	}
+
+	// Check for blocks
+	isBlocked, err := s.blockService.IsBlocked(ctx, followerID, followingID)
+	if err != nil {
+		return err
+	}
+	if isBlocked {
+		return errors.New("cannot follow: user has blocked you or you have blocked them")
 	}
 
 	// Check if already following
