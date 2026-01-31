@@ -30,6 +30,11 @@ export interface LoginRequest {
     password: string;
 }
 
+export interface VerifyOTPRequest {
+    email: string;
+    code: string;
+}
+
 export interface SignupRequest {
     username: string;
     email: string;

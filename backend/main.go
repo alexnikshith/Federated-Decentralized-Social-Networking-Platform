@@ -32,6 +32,11 @@ func main() {
 		log.Printf("Warning: Failed to create user indexes: %v", err)
 	}
 
+	verificationRepo := repository.NewVerificationRepository()
+	if err := verificationRepo.CreateIndexes(ctx); err != nil {
+		log.Printf("Warning: Failed to create verification indexes: %v", err)
+	}
+
 	// Create content-sharing indexes
 	postRepo := contentRepo.NewPostRepository()
 	if err := postRepo.CreateIndexes(ctx); err != nil {
