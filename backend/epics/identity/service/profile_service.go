@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	followRepo "federated-social/backend/epics/content-sharing/repository"
 	"federated-social/backend/epics/identity/dto"
 	"federated-social/backend/epics/identity/models"
 	"federated-social/backend/epics/identity/repository"
@@ -12,14 +13,22 @@ import (
 )
 
 type ProfileService struct {
-	userRepo     *repository.UserRepository
-	activityRepo *repository.ActivityRepository
+	userRepo         *repository.UserRepository
+	activityRepo     *repository.ActivityRepository
+	sessionRepo      *repository.SessionRepository
+	verificationRepo *repository.VerificationRepository
+	followRepo       *followRepo.FollowRepository
+	postRepo         *followRepo.PostRepository
 }
 
 func NewProfileService() *ProfileService {
 	return &ProfileService{
-		userRepo:     repository.NewUserRepository(),
-		activityRepo: repository.NewActivityRepository(),
+		userRepo:         repository.NewUserRepository(),
+		activityRepo:     repository.NewActivityRepository(),
+		sessionRepo:      repository.NewSessionRepository(),
+		verificationRepo: repository.NewVerificationRepository(),
+		followRepo:       followRepo.NewFollowRepository(),
+		postRepo:         followRepo.NewPostRepository(),
 	}
 }
 
@@ -39,8 +48,10 @@ func (s *ProfileService) GetProfile(ctx context.Context, userID primitive.Object
 	if user.ProfileVisibility == "followers" || user.ProfileVisibility == "private" {
 		// If requesting user is not the owner, check if they're a follower
 		if requestingUserID == nil || *requestingUserID != userID {
-			// TODO: Check follower relationship when federation is implemented
-			return nil, errors.New("profile is private")
+			isFollowing, err := s.followRepo.IsFollowing(ctx, *requestingUserID, userID)
+			if err != nil || !isFollowing {
+				return nil, errors.New("profile is private")
+			}
 		}
 	}
 
@@ -97,6 +108,44 @@ func (s *ProfileService) DeactivateAccount(ctx context.Context, userID primitive
 
 	// Log activity
 	s.logActivity(ctx, userID, "account_deactivation", "Account deactivated")
+
+	return nil
+}
+
+// DeleteAccount permanently deletes a user account (US1.X)
+func (s *ProfileService) DeleteAccount(ctx context.Context, userID primitive.ObjectID) error {
+	// 1. Delete posts
+	if err := s.postRepo.DeletePostsByAuthor(ctx, userID); err != nil {
+		return err
+	}
+	// 2. Delete likes
+	if err := s.postRepo.DeleteLikesByUser(ctx, userID); err != nil {
+		return err
+	}
+	// 3. Delete comments
+	if err := s.postRepo.DeleteCommentsByUser(ctx, userID); err != nil {
+		return err
+	}
+	// 4. Delete follows
+	if err := s.followRepo.DeleteAllFollows(ctx, userID); err != nil {
+		return err
+	}
+	// 5. Delete sessions
+	if err := s.sessionRepo.DeleteAllUserSessions(ctx, userID); err != nil {
+		return err
+	}
+	// 6. Delete verification codes
+	if err := s.verificationRepo.DeleteVerificationCodesByUser(ctx, userID); err != nil {
+		return err
+	}
+	// 7. Delete activity logs
+	if err := s.activityRepo.DeleteUserActivity(ctx, userID); err != nil {
+		return err
+	}
+	// 8. Delete user
+	if err := s.userRepo.DeleteUser(ctx, userID); err != nil {
+		return err
+	}
 
 	return nil
 }

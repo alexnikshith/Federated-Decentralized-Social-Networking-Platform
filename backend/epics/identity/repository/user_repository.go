@@ -106,6 +106,12 @@ func (r *UserRepository) DeactivateUser(ctx context.Context, userID primitive.Ob
 	return err
 }
 
+// DeleteUser permanently deletes a user
+func (r *UserRepository) DeleteUser(ctx context.Context, userID primitive.ObjectID) error {
+	_, err := r.collection.DeleteOne(ctx, bson.M{"_id": userID})
+	return err
+}
+
 // CreateIndexes creates necessary database indexes
 func (r *UserRepository) CreateIndexes(ctx context.Context) error {
 	indexes := []mongo.IndexModel{

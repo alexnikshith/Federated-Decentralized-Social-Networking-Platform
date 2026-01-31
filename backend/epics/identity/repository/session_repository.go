@@ -79,6 +79,12 @@ func (r *SessionRepository) InvalidateAllUserSessions(ctx context.Context, userI
 	return err
 }
 
+// DeleteAllUserSessions permanently deletes all sessions for a user
+func (r *SessionRepository) DeleteAllUserSessions(ctx context.Context, userID primitive.ObjectID) error {
+	_, err := r.collection.DeleteMany(ctx, bson.M{"user_id": userID})
+	return err
+}
+
 // CleanupExpiredSessions removes expired sessions
 func (r *SessionRepository) CleanupExpiredSessions(ctx context.Context) error {
 	_, err := r.collection.DeleteMany(ctx, bson.M{
