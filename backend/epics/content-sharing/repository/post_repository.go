@@ -407,3 +407,8 @@ func (r *PostRepository) DeleteCommentsByUser(ctx context.Context, userID primit
 	_, err := r.comments.DeleteMany(ctx, bson.M{"user_id": userID})
 	return err
 }
+
+// CountPostsByAuthor returns the number of posts by a specific user
+func (r *PostRepository) CountPostsByAuthor(ctx context.Context, userID primitive.ObjectID) (int64, error) {
+	return r.posts.CountDocuments(ctx, bson.M{"author_id": userID})
+}

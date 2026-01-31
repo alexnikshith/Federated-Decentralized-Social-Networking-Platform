@@ -88,6 +88,16 @@ export const unfollowUser = async (userId: string): Promise<void> => {
     await api.delete(`/api/users/${userId}/unfollow`);
 };
 
+export const getFollowers = async (userId: string): Promise<PublicUser[]> => {
+    const response = await api.get(`/api/users/${userId}/followers`);
+    return response.data.data;
+};
+
+export const getFollowing = async (userId: string): Promise<PublicUser[]> => {
+    const response = await api.get(`/api/users/${userId}/following`);
+    return response.data.data;
+};
+
 // Notifications
 export const getNotifications = async (limit = 50): Promise<Notification[]> => {
     const response = await api.get(`/api/notifications?limit=${limit}`);
