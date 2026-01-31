@@ -47,13 +47,22 @@ func (s *NotificationService) GetNotifications(ctx context.Context, userID primi
 	notificationResponses := make([]dto.NotificationResponse, len(notifications))
 	for i, notif := range notifications {
 		user := users[notif.RelatedUserID]
+		var username, avatarURL string
+		if user != nil {
+			username = user.Username
+			avatarURL = user.AvatarURL
+		} else {
+			username = "Unknown User"
+			avatarURL = ""
+		}
+
 		notificationResponses[i] = dto.NotificationResponse{
 			ID:                notif.ID,
 			Type:              notif.Type,
 			RelatedEntityID:   notif.RelatedEntityID,
 			RelatedUserID:     notif.RelatedUserID,
-			RelatedUserName:   user.Username,
-			RelatedUserAvatar: user.AvatarURL,
+			RelatedUserName:   username,
+			RelatedUserAvatar: avatarURL,
 			IsRead:            notif.IsRead,
 			CreatedAt:         notif.CreatedAt,
 		}
