@@ -38,8 +38,18 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { blockUser, unblockUser, getBlockedUsers } from "../../safety/api/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface UserListModalProps {
   isOpen: boolean;
@@ -100,8 +110,10 @@ const ProfileUI = () => {
   const navigate = useNavigate();
   const { user: currentUser } = useAuthStore();
 
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("Posts");
   const [isFollowing, setIsFollowing] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [likedPosts, setLikedPosts] = useState<Post[]>([]);
@@ -169,10 +181,26 @@ const ProfileUI = () => {
     fetchActivityData();
   }, [activeTab, activeSubTab, profileUser]);
 
+  // Check if user is blocked
+  useEffect(() => {
+    const checkBlockStatus = async () => {
+        if (!currentUser || !profileUser) return;
+        try {
+            const blockedUsers = await getBlockedUsers();
+            const isUserBlocked = blockedUsers.some(b => b.blocked_id === profileUser.id);
+            setIsBlocked(isUserBlocked);
+        } catch (error) {
+            console.error("Failed to check block status", error);
+        }
+    };
+    checkBlockStatus();
+  }, [currentUser, profileUser]);
+
   const [isListModalOpen, setIsListModalOpen] = useState(false);
   const [listModalTitle, setListModalTitle] = useState("");
   const [listModalUsers, setListModalUsers] = useState<any[]>([]);
   const [listModalLoading, setListModalLoading] = useState(false);
+  const [showBlockConfirmation, setShowBlockConfirmation] = useState(false);
 
   const handleOpenFollowers = async () => {
     if (!profileUser) return;
@@ -206,6 +234,60 @@ const ProfileUI = () => {
 
   const handleProfileUpdated = (updatedUser: User) => {
     setProfileUser(updatedUser);
+  };
+
+  const handleBlockUser = async () => {
+    if (!profileUser) return;
+    
+    if (isBlocked) {
+      try {
+        await unblockUser(profileUser.id);
+        setIsBlocked(false);
+        toast({
+          title: "User unblocked",
+          description: `${profileUser.display_name} has been unblocked.`,
+        });
+      } catch (error: any) {
+        console.error("Failed to unblock user:", error);
+         toast({
+            title: "Error",
+            description: error.response?.data?.message || "Failed to unblock user",
+            variant: "destructive",
+        });
+      }
+    } else {
+      setShowBlockConfirmation(true);
+    }
+  };
+
+  const confirmBlockUser = async () => {
+    if (!profileUser) return;
+    try {
+      await blockUser(profileUser.id);
+      setIsBlocked(true);
+      setIsFollowing(false); // Auto unfollow
+      setShowBlockConfirmation(false);
+      // Clear posts to reflect blocked state
+      setPosts([]);
+      setLikedPosts([]);
+      setCommentedPosts([]);
+      toast({
+          title: "User blocked",
+          description: `${profileUser.display_name} has been blocked.`,
+      });
+      // Do not navigate away, show the blocked state on profile
+    } catch (error: any) {
+        console.error("Failed to block user:", error);
+        // Better error message handling
+        const errorMessage = error.response?.data?.message || 
+                             (typeof error.response?.data === 'string' ? "Route not found (404)" : "Failed to block user");
+        toast({
+            title: "Error",
+            description: errorMessage,
+            variant: "destructive",
+        });
+        setShowBlockConfirmation(false);
+    }
   };
 
   if (loading) {
@@ -282,9 +364,20 @@ const ProfileUI = () => {
                   </Button>
                 ) : (
                   <>
-                    <Button variant="ghost" size="icon" className="rounded-full h-11 w-11 hover:bg-secondary">
-                      <MoreHorizontal className="w-5 h-5" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="rounded-full h-11 w-11 hover:bg-secondary">
+                          <MoreHorizontal className="w-5 h-5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={handleBlockUser} className={isBlocked ? "font-medium cursor-pointer" : "text-red-500 font-medium cursor-pointer"}>
+                          <Shield className="w-4 h-4 mr-2" />
+                          {isBlocked ? "Unblock User" : "Block User"}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
                     <Button
                       variant={isFollowing ? "outline" : "hero"}
                       className="rounded-full px-8 h-11 shadow-lg shadow-primary/20"
@@ -363,15 +456,15 @@ const ProfileUI = () => {
                     </div>
                     <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground mt-1">Posts</div>
                   </div>
-                  <div className="group cursor-pointer text-center" onClick={handleOpenFollowers}>
-                    <div className="text-3xl font-display font-black text-foreground group-hover:text-primary transition-colors">
-                      {profileUser.followers_count || 0}
+                  <div className="group cursor-pointer text-center" onClick={isBlocked ? undefined : handleOpenFollowers}>
+                    <div className={cn("text-3xl font-display font-black transition-colors", isBlocked ? "text-muted-foreground" : "text-foreground group-hover:text-primary")}>
+                      {isBlocked ? "-" : (profileUser.followers_count || 0)}
                     </div>
                     <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground mt-1">Followers</div>
                   </div>
-                  <div className="group cursor-pointer text-center" onClick={handleOpenFollowing}>
-                    <div className="text-3xl font-display font-black text-foreground group-hover:text-primary transition-colors">
-                      {profileUser.following_count || 0}
+                  <div className="group cursor-pointer text-center" onClick={isBlocked ? undefined : handleOpenFollowing}>
+                    <div className={cn("text-3xl font-display font-black transition-colors", isBlocked ? "text-muted-foreground" : "text-foreground group-hover:text-primary")}>
+                      {isBlocked ? "-" : (profileUser.following_count || 0)}
                     </div>
                     <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground mt-1">Following</div>
                   </div>
@@ -380,6 +473,26 @@ const ProfileUI = () => {
             </div>
 
             {/* Main content */}
+            {isBlocked ? (
+                <div className="lg:col-span-8">
+                    <div className="glass-card rounded-[2rem] p-12 text-center border-destructive/20 bg-destructive/5">
+                        <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-6">
+                            <Shield className="w-8 h-8 text-destructive" />
+                        </div>
+                        <h3 className="text-2xl font-bold mb-2">You have blocked this user</h3>
+                        <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+                            You cannot see their posts, followers, or activity. To view their profile again, you must unblock them.
+                        </p>
+                        <Button 
+                            variant="outline" 
+                            className="border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            onClick={handleBlockUser}
+                        >
+                            Unblock User
+                        </Button>
+                    </div>
+                </div>
+            ) : (
             <div className="lg:col-span-8">
               {/* Tabs */}
               <div className="flex gap-2 p-1.5 bg-secondary/50 backdrop-blur-md rounded-2xl mb-8 border border-border/50 sticky top-4 z-20">
@@ -489,6 +602,7 @@ const ProfileUI = () => {
                 )}
               </div>
             </div>
+            )}
           </div>
         </div>
       </main>
@@ -499,6 +613,34 @@ const ProfileUI = () => {
         users={listModalUsers}
         loading={listModalLoading}
       />
+      
+      <Dialog open={showBlockConfirmation} onOpenChange={setShowBlockConfirmation}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Shield className="w-5 h-5" />
+              Block {profileUser?.display_name || profileUser?.username}?
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              Are you sure you want to block this user?
+              <ul className="list-disc pl-5 mt-2 space-y-1 text-left">
+                <li>They will not be able to follow you.</li>
+                <li>They will not see your posts.</li>
+                <li>You will not see their posts.</li>
+                <li>This action is reversible.</li>
+              </ul>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4 gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowBlockConfirmation(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmBlockUser}>
+              Block User
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

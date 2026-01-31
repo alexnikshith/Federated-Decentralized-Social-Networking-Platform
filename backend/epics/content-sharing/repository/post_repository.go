@@ -146,12 +146,18 @@ func (r *PostRepository) GetPostsByAuthor(ctx context.Context, authorID primitiv
 }
 
 // GetAllPosts retrieves all posts sorted by timestamp (newest first)
-func (r *PostRepository) GetAllPosts(ctx context.Context, limit int64) ([]models.Post, error) {
+// GetAllPosts retrieves all posts sorted by timestamp (newest first), excluding specific authors
+func (r *PostRepository) GetAllPosts(ctx context.Context, excludeIDs []primitive.ObjectID, limit int64) ([]models.Post, error) {
+	filter := bson.M{}
+	if len(excludeIDs) > 0 {
+		filter["author_id"] = bson.M{"$nin": excludeIDs}
+	}
+
 	opts := options.Find().
 		SetSort(bson.D{{Key: "created_at", Value: -1}}).
 		SetLimit(limit)
 
-	cursor, err := r.posts.Find(ctx, bson.M{}, opts)
+	cursor, err := r.posts.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, err
 	}
