@@ -16,6 +16,7 @@ func RegisterIdentityRoutes(router *mux.Router) {
 	// Public routes (no authentication required)
 	router.HandleFunc("/api/auth/signup", authHandler.Signup).Methods("POST", "OPTIONS")
 	router.HandleFunc("/api/auth/login", authHandler.Login).Methods("POST", "OPTIONS")
+	router.HandleFunc("/api/auth/verify-otp", authHandler.VerifyOTP).Methods("POST", "OPTIONS")
 
 	// Auth routes (protected)
 	router.Handle("/api/auth/logout", middleware.AuthMiddleware(http.HandlerFunc(authHandler.Logout))).Methods("POST", "OPTIONS")

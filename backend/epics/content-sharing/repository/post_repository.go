@@ -263,3 +263,87 @@ func (r *PostRepository) GetCommentsByPostID(ctx context.Context, postID primiti
 
 	return comments, nil
 }
+
+// GetLikedPostsByUser retrieves posts liked by a user
+func (r *PostRepository) GetLikedPostsByUser(ctx context.Context, userID primitive.ObjectID, limit int64) ([]models.Post, error) {
+	// 1. Find all likes by user
+	cursor, err := r.likes.Find(ctx, bson.M{"user_id": userID})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var likes []models.Like
+	if err = cursor.All(ctx, &likes); err != nil {
+		return nil, err
+	}
+
+	if len(likes) == 0 {
+		return []models.Post{}, nil
+	}
+
+	// 2. Extract post IDs
+	var postIDs []primitive.ObjectID
+	for _, like := range likes {
+		postIDs = append(postIDs, like.PostID)
+	}
+
+	// 3. Find posts
+	filter := bson.M{"_id": bson.M{"$in": postIDs}}
+	opts := options.Find().
+		SetSort(bson.D{{Key: "created_at", Value: -1}}).
+		SetLimit(limit)
+
+	postsCursor, err := r.posts.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer postsCursor.Close(ctx)
+
+	var posts []models.Post
+	if err = postsCursor.All(ctx, &posts); err != nil {
+		return nil, err
+	}
+
+	return posts, nil
+}
+
+// GetCommentedPostsByUser retrieves posts commented on by a user
+func (r *PostRepository) GetCommentedPostsByUser(ctx context.Context, userID primitive.ObjectID, limit int64) ([]models.Post, error) {
+	// 1. Find distinct post IDs from comments by user
+	// We can use Distinct here for efficiency
+	postIDsInterface, err := r.comments.Distinct(ctx, "post_id", bson.M{"user_id": userID})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(postIDsInterface) == 0 {
+		return []models.Post{}, nil
+	}
+
+	var postIDs []primitive.ObjectID
+	for _, id := range postIDsInterface {
+		if oid, ok := id.(primitive.ObjectID); ok {
+			postIDs = append(postIDs, oid)
+		}
+	}
+
+	// 2. Find posts
+	filter := bson.M{"_id": bson.M{"$in": postIDs}}
+	opts := options.Find().
+		SetSort(bson.D{{Key: "created_at", Value: -1}}).
+		SetLimit(limit)
+
+	cursor, err := r.posts.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var posts []models.Post
+	if err = cursor.All(ctx, &posts); err != nil {
+		return nil, err
+	}
+
+	return posts, nil
+}
