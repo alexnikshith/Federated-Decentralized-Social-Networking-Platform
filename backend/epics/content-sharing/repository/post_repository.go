@@ -347,3 +347,21 @@ func (r *PostRepository) GetCommentedPostsByUser(ctx context.Context, userID pri
 
 	return posts, nil
 }
+
+// DeletePostsByAuthor deletes all posts by a specific author
+func (r *PostRepository) DeletePostsByAuthor(ctx context.Context, authorID primitive.ObjectID) error {
+	_, err := r.posts.DeleteMany(ctx, bson.M{"author_id": authorID})
+	return err
+}
+
+// DeleteLikesByUser deletes all likes by a specific user
+func (r *PostRepository) DeleteLikesByUser(ctx context.Context, userID primitive.ObjectID) error {
+	_, err := r.likes.DeleteMany(ctx, bson.M{"user_id": userID})
+	return err
+}
+
+// DeleteCommentsByUser deletes all comments by a specific user
+func (r *PostRepository) DeleteCommentsByUser(ctx context.Context, userID primitive.ObjectID) error {
+	_, err := r.comments.DeleteMany(ctx, bson.M{"user_id": userID})
+	return err
+}

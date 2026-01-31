@@ -46,3 +46,9 @@ func (r *ActivityRepository) GetUserActivity(ctx context.Context, userID primiti
 
 	return activities, nil
 }
+
+// DeleteUserActivity permanently deletes all activity logs for a user
+func (r *ActivityRepository) DeleteUserActivity(ctx context.Context, userID primitive.ObjectID) error {
+	_, err := r.collection.DeleteMany(ctx, bson.M{"user_id": userID})
+	return err
+}
