@@ -25,6 +25,7 @@ func RegisterIdentityRoutes(router *mux.Router) {
 	// Profile routes (protected)
 	router.Handle("/api/profile/me", middleware.AuthMiddleware(http.HandlerFunc(profileHandler.GetMyProfile))).Methods("GET", "OPTIONS")
 	router.Handle("/api/profile/me", middleware.AuthMiddleware(http.HandlerFunc(profileHandler.UpdateProfile))).Methods("PUT", "OPTIONS")
+	router.Handle("/api/profile/me", middleware.AuthMiddleware(http.HandlerFunc(profileHandler.DeleteAccount))).Methods("DELETE", "OPTIONS")
 	router.Handle("/api/profile/me/deactivate", middleware.AuthMiddleware(http.HandlerFunc(profileHandler.DeactivateAccount))).Methods("POST", "OPTIONS")
 	router.Handle("/api/profile/me/activity", middleware.AuthMiddleware(http.HandlerFunc(profileHandler.GetActivity))).Methods("GET", "OPTIONS")
 

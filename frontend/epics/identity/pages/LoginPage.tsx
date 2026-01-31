@@ -13,6 +13,8 @@ export const LoginPage: React.FC = () => {
         email: '',
         password: '',
     });
+    const [step, setStep] = useState(1); // 1: Login, 2: OTP
+    const [otp, setOtp] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -22,11 +24,18 @@ export const LoginPage: React.FC = () => {
         setLoading(true);
 
         try {
-            const response = await authApi.login(formData);
-            setAuth(response.user, response.token);
-            navigate('/dashboard');
+            if (step === 1) {
+                // Step 1: Initiate Login
+                await authApi.login(formData);
+                setStep(2);
+            } else {
+                // Step 2: Verify OTP
+                const response = await authApi.verifyOTP({ email: formData.email, code: otp });
+                setAuth(response.user, response.token);
+                navigate('/dashboard');
+            }
         } catch (err: any) {
-            setError(err.response?.data?.message || 'Login failed. Please try again.');
+            setError(err.response?.data?.message || 'Authentication failed. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -36,39 +45,64 @@ export const LoginPage: React.FC = () => {
         <div className="auth-container">
             <div className="auth-card">
                 <div className="auth-header">
-                    <h1>Welcome Back</h1>
-                    <p>Sign in to your federated account</p>
+                    <h1>{step === 1 ? 'Welcome Back' : 'Verify Identity'}</h1>
+                    <p>{step === 1 ? 'Sign in to your federated account' : `Enter the code sent to ${formData.email}`}</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="auth-form">
                     {error && <div className="error-message">{error}</div>}
 
-                    <div className="form-group">
-                        <label htmlFor="email">Email</label>
-                        <input
-                            type="email"
-                            id="email"
-                            value={formData.email}
-                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                            required
-                            placeholder="your.email@example.com"
-                        />
-                    </div>
+                    {step === 1 ? (
+                        <>
+                            <div className="form-group">
+                                <label htmlFor="email">Email</label>
+                                <input
+                                    type="email"
+                                    id="email"
+                                    value={formData.email}
+                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                    required
+                                    placeholder="your.email@example.com"
+                                />
+                            </div>
 
-                    <div className="form-group">
-                        <label htmlFor="password">Password</label>
-                        <input
-                            type="password"
-                            id="password"
-                            value={formData.password}
-                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                            required
-                            placeholder="••••••••"
-                        />
-                    </div>
+                            <div className="form-group">
+                                <label htmlFor="password">Password</label>
+                                <input
+                                    type="password"
+                                    id="password"
+                                    value={formData.password}
+                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                    required
+                                    placeholder="••••••••"
+                                />
+                            </div>
+                        </>
+                    ) : (
+                        <div className="form-group">
+                            <label htmlFor="otp">Verification Code</label>
+                            <input
+                                type="text"
+                                id="otp"
+                                value={otp}
+                                onChange={(e) => setOtp(e.target.value)}
+                                required
+                                placeholder="000000"
+                                maxLength={6}
+                                className="otp-input"
+                            />
+                            <button
+                                type="button"
+                                className="back-link"
+                                onClick={() => setStep(1)}
+                            >
+                                Back to login
+                            </button>
+                        </div>
+                    )}
 
                     <button type="submit" className="btn-primary" disabled={loading}>
-                        {loading ? 'Signing in...' : 'Sign In'}
+                        {loading ? 'Processing...' : (step === 1 ? 'Sign In' : 'Verify Code')}
                     </button>
                 </form>
 

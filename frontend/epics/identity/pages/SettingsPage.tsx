@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuthStore } from "../store/authStore";
-import { profileApi } from "../api/client";
+import { profileApi, authApi } from "../api/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +12,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Loader2, User, Settings, Shield, Bell, Lock, AlertTriangle } from "lucide-react";
+import { Loader2, User, Settings, Shield, Bell, Lock, AlertTriangle, Edit } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { User as UserType, ActivityLog } from "../types";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +21,7 @@ export const SettingsPage = () => {
     const { user: currentUser, updateUser, clearAuth } = useAuthStore();
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState("profile");
+    const [isEditing, setIsEditing] = useState(false);
     const { toast } = useToast();
 
     // Form state
@@ -32,6 +33,14 @@ export const SettingsPage = () => {
         location: "",
         website: "",
     });
+
+    const [passwordData, setPasswordData] = useState({
+        old_password: "",
+        new_password: "",
+        confirm_password: "",
+    });
+
+    const [passwordLoading, setPasswordLoading] = useState(false);
 
     useEffect(() => {
         if (currentUser) {
@@ -83,6 +92,7 @@ export const SettingsPage = () => {
                     title: "Profile updated",
                     description: "Your profile settings have been saved successfully.",
                 });
+                setIsEditing(false);
             }
         } catch (error: any) {
             console.error(error);
@@ -112,11 +122,82 @@ export const SettingsPage = () => {
         }
     };
 
+    const handleDeleteAccount = async () => {
+        if (window.confirm("ARE YOU ABSOLUTELY SURE? This action CANNOT be undone. This will permanently delete your account and remove all your data.")) {
+            try {
+                await profileApi.deleteAccount();
+                clearAuth();
+                window.location.href = "/login";
+            } catch (error: any) {
+                toast({
+                    title: "Error",
+                    description: error.response?.data?.message || "Failed to delete account",
+                    variant: "destructive",
+                });
+            }
+        }
+    };
+
+    const handlePasswordSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (passwordData.new_password !== passwordData.confirm_password) {
+            toast({
+                title: "Error",
+                description: "New passwords do not match",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        if (passwordData.new_password.length < 8) {
+            toast({
+                title: "Error",
+                description: "Password must be at least 8 characters long",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        setPasswordLoading(true);
+        try {
+            await authApi.changePassword({
+                old_password: passwordData.old_password,
+                new_password: passwordData.new_password,
+            });
+
+            toast({
+                title: "Success",
+                description: "Password changed successfully. Please log in again.",
+            });
+
+            // Clear password data
+            setPasswordData({
+                old_password: "",
+                new_password: "",
+                confirm_password: "",
+            });
+
+            // Logout after a delay
+            setTimeout(() => {
+                clearAuth();
+                window.location.href = "/login";
+            }, 2000);
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.response?.data?.message || "Failed to change password",
+                variant: "destructive",
+            });
+        } finally {
+            setPasswordLoading(false);
+        }
+    };
+
     const navItems = [
         { id: "profile", label: "Profile", icon: User },
         { id: "account", label: "Account", icon: Settings },
         { id: "notifications", label: "Notifications", icon: Bell, disabled: true },
-        { id: "privacy", label: "Privacy & Security", icon: Shield, disabled: true },
+        { id: "privacy", label: "Privacy & Security", icon: Shield, disabled: false },
     ];
 
     return (
@@ -161,9 +242,21 @@ export const SettingsPage = () => {
                         <div className="glass-card rounded-3xl p-8 lg:p-10 animate-in fade-in slide-in-from-bottom-4 bg-card/50 backdrop-blur-xl border border-border/50">
                             {activeTab === "profile" && (
                                 <div className="max-w-2xl">
-                                    <div className="mb-8 pb-6 border-b border-border/50">
-                                        <h2 className="text-2xl font-bold mb-2">Profile Details</h2>
-                                        <p className="text-muted-foreground">This information will be displayed publicly on your profile.</p>
+                                    <div className="mb-8 pb-6 border-b border-border/50 flex items-center justify-between">
+                                        <div>
+                                            <h2 className="text-2xl font-bold mb-2">Profile Details</h2>
+                                            <p className="text-muted-foreground">This information will be displayed publicly on your profile.</p>
+                                        </div>
+                                        {!isEditing && (
+                                            <Button
+                                                onClick={() => setIsEditing(true)}
+                                                variant="outline"
+                                                className="gap-2"
+                                            >
+                                                <Edit className="w-4 h-4" />
+                                                Edit Profile
+                                            </Button>
+                                        )}
                                     </div>
 
                                     <form onSubmit={handleSubmit} className="space-y-8">
@@ -175,7 +268,13 @@ export const SettingsPage = () => {
                                                     value={formData.display_name}
                                                     onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
                                                     placeholder="Your name"
-                                                    className="h-11 bg-secondary/30"
+                                                    disabled={!isEditing}
+                                                    className={cn(
+                                                        "h-11 transition-all duration-200",
+                                                        isEditing
+                                                            ? "bg-background border-primary/20 focus:border-primary shadow-sm"
+                                                            : "bg-gray-100 dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-muted-foreground cursor-not-allowed"
+                                                    )}
                                                 />
                                                 <p className="text-xs text-muted-foreground">The name that will be shown to other users.</p>
                                             </div>
@@ -186,7 +285,7 @@ export const SettingsPage = () => {
                                                     id="username"
                                                     value={formData.username}
                                                     disabled
-                                                    className="h-11 bg-secondary/50 opacity-70"
+                                                    className="h-11 bg-gray-100 dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-muted-foreground cursor-not-allowed"
                                                 />
                                                 <p className="text-xs text-muted-foreground">Usernames cannot be changed freely.</p>
                                             </div>
@@ -198,7 +297,13 @@ export const SettingsPage = () => {
                                                     value={formData.bio}
                                                     onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
                                                     placeholder="Tell us a little about yourself"
-                                                    className="min-h-[120px] bg-secondary/30 resize-none"
+                                                    disabled={!isEditing}
+                                                    className={cn(
+                                                        "min-h-[120px] transition-all duration-200 resize-none",
+                                                        isEditing
+                                                            ? "bg-background border-primary/20 focus:border-primary shadow-sm"
+                                                            : "bg-gray-100 dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-muted-foreground cursor-not-allowed"
+                                                    )}
                                                 />
                                             </div>
 
@@ -206,11 +311,17 @@ export const SettingsPage = () => {
                                                 <Label htmlFor="visibility" className="text-base">Profile Visibility</Label>
                                                 <Select
                                                     value={formData.profile_visibility}
+                                                    disabled={!isEditing}
                                                     onValueChange={(value: "public" | "followers" | "private") =>
                                                         setFormData({ ...formData, profile_visibility: value })
                                                     }
                                                 >
-                                                    <SelectTrigger className="h-11 bg-secondary/30">
+                                                    <SelectTrigger className={cn(
+                                                        "h-11 transition-all duration-200",
+                                                        isEditing
+                                                            ? "bg-background border-primary/20"
+                                                            : "bg-gray-100 dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-muted-foreground cursor-not-allowed"
+                                                    )}>
                                                         <SelectValue placeholder="Select visibility" />
                                                     </SelectTrigger>
                                                     <SelectContent>
@@ -237,15 +348,34 @@ export const SettingsPage = () => {
                                             </div>
                                         </div>
 
-                                        <div className="pt-6 border-t border-border/50 flex items-center justify-end gap-4">
-                                            <Button type="button" variant="ghost" onClick={() => window.history.back()}>
-                                                Cancel
-                                            </Button>
-                                            <Button type="submit" disabled={loading} className="min-w-[120px]">
-                                                {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                                                Save Changes
-                                            </Button>
-                                        </div>
+                                        {isEditing && (
+                                            <div className="pt-6 border-t border-border/50 flex items-center justify-end gap-4">
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    onClick={() => {
+                                                        setIsEditing(false);
+                                                        // Reset form data to current user info
+                                                        if (currentUser) {
+                                                            setFormData({
+                                                                display_name: currentUser.display_name || "",
+                                                                bio: currentUser.bio || "",
+                                                                username: currentUser.username || "",
+                                                                profile_visibility: currentUser.profile_visibility as any || "public",
+                                                                location: currentUser.location || "",
+                                                                website: currentUser.website || "",
+                                                            });
+                                                        }
+                                                    }}
+                                                >
+                                                    Cancel
+                                                </Button>
+                                                <Button type="submit" disabled={loading} className="min-w-[120px]">
+                                                    {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                                                    Save Changes
+                                                </Button>
+                                            </div>
+                                        )}
                                     </form>
                                 </div>
                             )}
@@ -308,28 +438,137 @@ export const SettingsPage = () => {
                                             )}
                                         </div>
 
-                                        <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-6">
-                                            <div className="flex items-start gap-4">
-                                                <div className="p-2 bg-destructive/10 rounded-full shrink-0">
-                                                    <AlertTriangle className="w-6 h-6 text-destructive" />
+                                        <div className="space-y-6">
+                                            {/* Deactivate Section */}
+                                            <div className="rounded-xl border border-orange-200 bg-orange-50 dark:bg-orange-900/10 p-6">
+                                                <div className="flex items-start gap-4">
+                                                    <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-full shrink-0">
+                                                        <Lock className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <h3 className="font-bold text-orange-700 dark:text-orange-400 text-lg">Deactivate Account</h3>
+                                                        <p className="text-muted-foreground text-sm leading-relaxed">
+                                                            Deactivating your account will hide your profile and all your content from other users.
+                                                            You will need to contact support to reactivate your account.
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <div className="space-y-1">
-                                                    <h3 className="font-bold text-destructive text-lg">Deactivate Account</h3>
-                                                    <p className="text-muted-foreground text-sm leading-relaxed">
-                                                        Deactivating your account will hide your profile and all your content from other users.
-                                                        You can reactivate your account at any time by logging back in.
-                                                    </p>
+
+                                                <div className="mt-6 flex justify-end">
+                                                    <Button
+                                                        variant="outline"
+                                                        onClick={handleDeactivate}
+                                                        className="border-orange-200 text-orange-600 hover:text-orange-700 hover:bg-orange-100 dark:border-orange-900/50 dark:text-orange-400 dark:hover:bg-orange-900/20"
+                                                    >
+                                                        Deactivate My Account
+                                                    </Button>
                                                 </div>
                                             </div>
 
-                                            <div className="mt-6 flex justify-end">
-                                                <Button
-                                                    variant="destructive"
-                                                    onClick={handleDeactivate}
-                                                    className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-                                                >
-                                                    Deactivate My Account
-                                                </Button>
+                                            {/* Delete Section */}
+                                            <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-6">
+                                                <div className="flex items-start gap-4">
+                                                    <div className="p-2 bg-destructive/10 rounded-full shrink-0">
+                                                        <AlertTriangle className="w-6 h-6 text-destructive" />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <h3 className="font-bold text-destructive text-lg">Delete Account</h3>
+                                                        <p className="text-muted-foreground text-sm leading-relaxed">
+                                                            Permanently delete your account and all associated data. This action cannot be undone.
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="mt-6 flex justify-end">
+                                                    <Button
+                                                        variant="destructive"
+                                                        onClick={handleDeleteAccount}
+                                                        className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                                                    >
+                                                        Delete Permanently
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === "privacy" && (
+                                <div className="max-w-2xl">
+                                    <div className="mb-8 pb-6 border-b border-border/50">
+                                        <h2 className="text-2xl font-bold mb-2">Privacy & Security</h2>
+                                        <p className="text-muted-foreground">Manage your password and security settings.</p>
+                                    </div>
+
+                                    <div className="space-y-8">
+                                        <div className="space-y-6">
+                                            <h3 className="text-xl font-bold flex items-center gap-2">
+                                                <Lock className="w-5 h-5 text-primary" />
+                                                Change Password
+                                            </h3>
+
+                                            <form onSubmit={handlePasswordSubmit} className="space-y-6">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="old_password">Current Password</Label>
+                                                    <Input
+                                                        id="old_password"
+                                                        type="password"
+                                                        value={passwordData.old_password}
+                                                        onChange={(e) => setPasswordData({ ...passwordData, old_password: e.target.value })}
+                                                        placeholder="Enter current password"
+                                                        className="h-11 bg-secondary/30"
+                                                        required
+                                                    />
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="new_password">New Password</Label>
+                                                    <Input
+                                                        id="new_password"
+                                                        type="password"
+                                                        value={passwordData.new_password}
+                                                        onChange={(e) => setPasswordData({ ...passwordData, new_password: e.target.value })}
+                                                        placeholder="Enter new password"
+                                                        className="h-11 bg-secondary/30"
+                                                        required
+                                                    />
+                                                    <p className="text-xs text-muted-foreground">Password must be at least 8 characters long.</p>
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="confirm_password">Confirm New Password</Label>
+                                                    <Input
+                                                        id="confirm_password"
+                                                        type="password"
+                                                        value={passwordData.confirm_password}
+                                                        onChange={(e) => setPasswordData({ ...passwordData, confirm_password: e.target.value })}
+                                                        placeholder="Confirm new password"
+                                                        className="h-11 bg-secondary/30"
+                                                        required
+                                                    />
+                                                </div>
+
+                                                <div className="pt-4 border-t border-border/50 flex justify-end">
+                                                    <Button type="submit" disabled={passwordLoading} className="min-w-[150px]">
+                                                        {passwordLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                                                        Update Password
+                                                    </Button>
+                                                </div>
+                                            </form>
+                                        </div>
+
+                                        <div className="pt-8 border-t border-border/50">
+                                            <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                                                <Shield className="w-5 h-5 text-primary" />
+                                                Security Preferences
+                                            </h3>
+                                            <div className="p-6 rounded-2xl border border-border/50 bg-secondary/10 flex items-center justify-between">
+                                                <div>
+                                                    <h4 className="font-bold mb-1">Two-Factor Authentication</h4>
+                                                    <p className="text-sm text-muted-foreground">Add an extra layer of security to your account.</p>
+                                                </div>
+                                                <Button variant="outline" disabled size="sm">Coming Soon</Button>
                                             </div>
                                         </div>
                                     </div>

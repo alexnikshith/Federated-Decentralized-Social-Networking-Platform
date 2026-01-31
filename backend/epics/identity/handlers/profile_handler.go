@@ -110,6 +110,23 @@ func (h *ProfileHandler) DeactivateAccount(w http.ResponseWriter, r *http.Reques
 	respondSuccess(w, "Account deactivated successfully", nil, http.StatusOK)
 }
 
+// DeleteAccount permanently deletes user account
+func (h *ProfileHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
+	userIDStr := r.Context().Value(middleware.UserIDKey).(string)
+	userID, err := primitive.ObjectIDFromHex(userIDStr)
+	if err != nil {
+		respondError(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.profileService.DeleteAccount(r.Context(), userID); err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondSuccess(w, "Account deleted successfully", nil, http.StatusOK)
+}
+
 // GetActivity retrieves user activity logs (US1.7)
 func (h *ProfileHandler) GetActivity(w http.ResponseWriter, r *http.Request) {
 	userIDStr := r.Context().Value(middleware.UserIDKey).(string)

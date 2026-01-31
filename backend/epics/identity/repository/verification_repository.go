@@ -42,6 +42,12 @@ func (r *VerificationRepository) FindLatestByUserID(ctx context.Context, userID 
 	return &code, nil
 }
 
+// DeleteVerificationCodesByUser permanently deletes all verification codes for a user
+func (r *VerificationRepository) DeleteVerificationCodesByUser(ctx context.Context, userID primitive.ObjectID) error {
+	_, err := r.collection.DeleteMany(ctx, bson.M{"user_id": userID})
+	return err
+}
+
 // CreateIndexes creates necessary database indexes
 func (r *VerificationRepository) CreateIndexes(ctx context.Context) error {
 	// Index on ExpiresAt with 0 expireAfterSeconds means it expires at the time specified in ExpiresAt
