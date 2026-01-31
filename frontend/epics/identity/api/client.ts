@@ -95,6 +95,11 @@ export const profileApi = {
         return response.data;
     },
 
+    deleteAccount: async (): Promise<ApiResponse<null>> => {
+        const response = await api.delete('/api/profile/me');
+        return response.data;
+    },
+
     getActivity: async (limit: number = 50): Promise<ActivityLog[]> => {
         const response = await api.get(`/api/profile/me/activity?limit=${limit}`);
         return response.data;
