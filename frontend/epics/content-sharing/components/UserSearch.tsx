@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { PublicUser } from '../types';
 import * as api from '../api/client';
 import { Search, UserPlus, UserCheck, Globe, SearchX, Loader2 } from 'lucide-react';
@@ -7,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
 export const UserSearch: React.FC = () => {
+    const navigate = useNavigate();
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<PublicUser[]>([]);
     const [loading, setLoading] = useState(false);
@@ -109,7 +111,8 @@ export const UserSearch: React.FC = () => {
                     return (
                         <div
                             key={user.id}
-                            className="group flex items-center gap-3 p-3 rounded-xl hover:bg-secondary/30 transition-all border border-transparent hover:border-border/50"
+                            className="group flex items-center gap-3 p-3 rounded-xl hover:bg-secondary/30 transition-all border border-transparent hover:border-border/50 cursor-pointer"
+                            onClick={() => navigate(`/profile/${user.username}`)}
                         >
                             <div className="relative flex-shrink-0">
                                 {user.avatar_url ? (

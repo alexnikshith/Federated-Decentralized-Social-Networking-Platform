@@ -54,4 +54,8 @@ export interface PublicUser {
     avatar_url: string;
     profile_visibility: string;
     created_at: string;
+    followers_count?: number;
+    following_count?: number;
+    posts_count?: number;
+    is_following?: boolean;
 }

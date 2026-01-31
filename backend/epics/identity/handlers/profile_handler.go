@@ -25,13 +25,7 @@ func NewProfileHandler() *ProfileHandler {
 // GetProfile retrieves a user's profile (US1.4)
 func (h *ProfileHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	userIDStr := vars["id"]
-
-	userID, err := primitive.ObjectIDFromHex(userIDStr)
-	if err != nil {
-		respondError(w, "Invalid user ID", http.StatusBadRequest)
-		return
-	}
+	identifier := vars["id"] // This can be hex ID or username
 
 	// Get requesting user ID if authenticated
 	var requestingUserID *primitive.ObjectID
@@ -42,9 +36,9 @@ func (h *ProfileHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	profile, err := h.profileService.GetProfile(r.Context(), userID, requestingUserID)
+	profile, err := h.profileService.GetProfileByIdOrUsername(r.Context(), identifier, requestingUserID)
 	if err != nil {
-		respondError(w, err.Error(), http.StatusForbidden)
+		respondError(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
