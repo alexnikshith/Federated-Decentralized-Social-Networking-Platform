@@ -26,8 +26,15 @@ export const LoginPage: React.FC = () => {
         try {
             if (step === 1) {
                 // Step 1: Initiate Login
-                await authApi.login(formData);
-                setStep(2);
+                const response = await authApi.login(formData);
+                if (response.token) {
+                    // Direct login (2FA disabled)
+                    setAuth(response.user, response.token);
+                    navigate('/dashboard');
+                } else {
+                    // 2FA enabled
+                    setStep(2);
+                }
             } else {
                 // Step 2: Verify OTP
                 const response = await authApi.verifyOTP({ email: formData.email, code: otp });
@@ -40,6 +47,7 @@ export const LoginPage: React.FC = () => {
             setLoading(false);
         }
     };
+
 
     return (
         <div className="auth-container">
