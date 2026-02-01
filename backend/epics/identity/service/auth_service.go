@@ -11,6 +11,7 @@ import (
 	"federated-social/backend/pkg/email"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -44,6 +45,9 @@ func (s *AuthService) Signup(ctx context.Context, req dto.SignupRequest) (*model
 	if req.Username == "" || req.Email == "" || req.Password == "" {
 		return nil, errors.New("username, email, and password are required")
 	}
+
+	// Normalize email
+	req.Email = strings.ToLower(req.Email)
 
 	// Check if user already exists
 	if _, err := s.userRepo.FindByEmail(ctx, req.Email); err == nil {
@@ -84,6 +88,9 @@ func (s *AuthService) Signup(ctx context.Context, req dto.SignupRequest) (*model
 
 // InitiateLogin validates credentials and triggers 2FA or logs in directly (US1.2 updated)
 func (s *AuthService) InitiateLogin(ctx context.Context, req dto.LoginRequest, ipAddress, userAgent string) (interface{}, error) {
+	// Normalize email
+	req.Email = strings.ToLower(req.Email)
+
 	// Find user
 	user, err := s.userRepo.FindByEmail(ctx, req.Email)
 	if err != nil {
@@ -167,6 +174,9 @@ func (s *AuthService) InitiateLogin(ctx context.Context, req dto.LoginRequest, i
 
 // VerifyOTP validates the code and logs the user in
 func (s *AuthService) VerifyOTP(ctx context.Context, req dto.VerifyOTPRequest, ipAddress, userAgent string) (*dto.LoginResponse, error) {
+	// Normalize email
+	req.Email = strings.ToLower(req.Email)
+
 	// Find user
 	user, err := s.userRepo.FindByEmail(ctx, req.Email)
 	if err != nil {
