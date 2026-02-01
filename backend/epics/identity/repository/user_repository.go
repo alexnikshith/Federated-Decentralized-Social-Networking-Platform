@@ -6,6 +6,7 @@ import (
 	"federated-social/backend/database"
 	"federated-social/backend/epics/identity/models"
 	"log"
+	"regexp"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -40,10 +41,15 @@ func (r *UserRepository) CreateUser(ctx context.Context, user *models.User) erro
 	return nil
 }
 
-// FindByEmail finds a user by email
+// FindByEmail finds a user by email (case-insensitive)
 func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*models.User, error) {
 	var user models.User
-	err := r.collection.FindOne(ctx, bson.M{"email": email}).Decode(&user)
+	// Use case-insensitive regex for email lookup
+	// We escape special characters to treat them literally, though for simple emails only . and + matter mostly
+	pattern := "^" + regexp.QuoteMeta(email) + "$"
+	filter := bson.M{"email": primitive.Regex{Pattern: pattern, Options: "i"}}
+	
+	err := r.collection.FindOne(ctx, filter).Decode(&user)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, errors.New("user not found")
