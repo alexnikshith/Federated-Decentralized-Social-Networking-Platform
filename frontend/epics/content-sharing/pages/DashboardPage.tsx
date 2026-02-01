@@ -1,24 +1,35 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../../epics/identity/store/authStore';
 import { useContentStore } from '../store/contentStore';
-import { CreatePost } from '../components/CreatePost';
 import { PostCard } from '../components/PostCard';
 import { UserSearch } from '../components/UserSearch';
 import { NotificationList } from '../components/NotificationList';
+import { Button } from '@/components/ui/button';
 import {
-    LayoutDashboard,
     Rss,
     Bell,
     Users,
-    Activity,
-    Shield,
-    Globe
+    Globe,
+    Search,
+    X
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import './Dashboard.css';
 
 export const DashboardPage: React.FC = () => {
     const { user } = useAuthStore();
     const { posts, loading, error, fetchFeed, fetchUnreadCount, unreadCount } = useContentStore();
+    const [sidebarType, setSidebarType] = useState<'notifications' | 'search' | null>(null);
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    useEffect(() => {
+        if (searchParams.get('search') === 'true') {
+            setSidebarType('search');
+            // Optional: clear param if you want 'one-time' trigger, or keep it to allow back-button behavior
+            // setSearchParams({});
+        }
+    }, [searchParams]);
 
     useEffect(() => {
         fetchFeed();
@@ -32,14 +43,36 @@ export const DashboardPage: React.FC = () => {
         return () => clearInterval(interval);
     }, [fetchFeed, fetchUnreadCount]);
 
+    const toggleSidebar = (type: 'notifications' | 'search') => {
+        setSidebarType(prev => prev === type ? null : type);
+        // Clear param when manually toggling to keep state clean (optional but recommended)
+        if (searchParams.get('search')) setSearchParams({});
+    };
+
     return (
         <div className="dashboard-container">
             <main className="dashboard-content">
-                <header className="welcome-header stagger-1">
-                    <h1 className="text-gradient-gold">
-                        Welcome back, {user?.display_name || user?.username}!
-                    </h1>
-                    <p>Your federated social overview on {user?.instance || 'Nexus'}</p>
+                <header className="welcome-header stagger-1 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                    <div>
+                        <h1 className="text-gradient-gold">
+                            Welcome, {user?.display_name || user?.username}!
+                        </h1>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant={sidebarType === 'notifications' ? 'hero' : 'secondary'}
+                            size="sm"
+                            onClick={() => toggleSidebar('notifications')}
+                            className="gap-2 rounded-full relative"
+                        >
+                            <Bell className="w-4 h-4" />
+                            <span className="hidden sm:inline">Notifications</span>
+                            {unreadCount > 0 && (
+                                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-destructive rounded-full border-2 border-background" />
+                            )}
+                        </Button>
+                    </div>
                 </header>
 
                 <div className="dashboard-grid">
@@ -63,18 +96,17 @@ export const DashboardPage: React.FC = () => {
                                 </div>
                             )}
 
-                            {!loading && posts.filter(post => post.author_id !== user?.id).length === 0 && (
+                            {!loading && posts.length === 0 && (
                                 <div className="glass-card rounded-xl empty-state">
                                     <Globe className="empty-state-icon" />
-                                    <h3 className="font-display font-semibold mb-2">Nothing here yet</h3>
+                                    <h3 className="font-display font-semibold mb-2">No posts yet</h3>
                                     <p className="text-muted-foreground mb-4">
-                                        Follow interesting people to see their posts here.
+                                        Your feed is empty.
                                     </p>
                                 </div>
                             )}
 
                             {posts
-                                .filter(post => post.author_id !== user?.id)
                                 .map((post, index) => (
                                     <div key={post.id} className="opacity-0 animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
                                         <div className="glass-card rounded-xl overflow-hidden">
@@ -85,30 +117,52 @@ export const DashboardPage: React.FC = () => {
                         </div>
                     </div>
 
+                    {/* Overlay */}
+                    {sidebarType && (
+                        <div
+                            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 transition-all duration-300"
+                            onClick={() => setSidebarType(null)}
+                        />
+                    )}
+
                     {/* Sidebar section */}
-                    <div className="sidebar-section stagger-3">
-                        {/* Notifications */}
-                        <div className="glass-card rounded-xl p-6">
-                            <h2 className="section-title">
-                                <Bell className="w-5 h-5 text-primary" />
-                                Notifications
-                                {unreadCount > 0 && (
-                                    <span className="ml-auto bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded-full node-pulse">
-                                        {unreadCount}
-                                    </span>
-                                )}
+                    <div className={cn(
+                        "sidebar-section stagger-3",
+                        sidebarType ? "active" : ""
+                    )}>
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="font-display font-bold text-xl">
+                                {sidebarType === 'search' ? 'Discover People' : sidebarType === 'notifications' ? 'Notifications' : ''}
                             </h2>
-                            <NotificationList />
+                            <Button variant="ghost" size="icon" onClick={() => setSidebarType(null)} className="rounded-full">
+                                <X className="w-5 h-5" />
+                            </Button>
                         </div>
 
-                        {/* Discover */}
-                        <div className="glass-card rounded-xl p-6">
-                            <h2 className="section-title">
-                                <Users className="w-5 h-5 text-accent" />
-                                Discover
-                            </h2>
-                            <UserSearch />
-                        </div>
+                        {sidebarType === 'notifications' && (
+                            <div className="glass-card rounded-xl p-6 animate-scale-in">
+                                <div className="flex items-center gap-2 mb-6 border-b border-border/50 pb-4">
+                                    <Bell className="w-5 h-5 text-accent" />
+                                    <h2 className="font-display font-bold">Recent Activity</h2>
+                                    {unreadCount > 0 && (
+                                        <span className="ml-auto bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded-full node-pulse">
+                                            {unreadCount}
+                                        </span>
+                                    )}
+                                </div>
+                                <NotificationList />
+                            </div>
+                        )}
+
+                        {sidebarType === 'search' && (
+                            <div className="glass-card rounded-xl p-6 animate-scale-in">
+                                <div className="flex items-center gap-2 mb-6 border-b border-border/50 pb-4">
+                                    <Users className="w-5 h-5 text-accent" />
+                                    <h2 className="font-display font-bold">Discover</h2>
+                                </div>
+                                <UserSearch />
+                            </div>
+                        )}
                     </div>
                 </div>
             </main>

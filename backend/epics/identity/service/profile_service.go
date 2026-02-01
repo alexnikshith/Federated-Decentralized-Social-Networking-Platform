@@ -46,34 +46,47 @@ func (s *ProfileService) GetProfile(ctx context.Context, userID primitive.Object
 	}
 
 	// Check visibility
+	publicUser := user.ToPublicUser()
+
+	// Populate private fields if viewing own profile
+	if requestingUserID != nil && *requestingUserID == userID {
+		publicUser.Is2FAEnabled = &user.Is2FAEnabled
+	}
+
+	// Populate follow status early
+	if requestingUserID != nil {
+		isFollowing, _ := s.followRepo.IsFollowing(ctx, *requestingUserID, userID)
+		publicUser.IsFollowing = isFollowing
+	}
+
+	// Check visibility and mask data if needed
+	canViewDetails := true
 	if user.ProfileVisibility == "followers" || user.ProfileVisibility == "private" {
-		// If requesting user is not the owner, check if they're a follower
 		if requestingUserID == nil || *requestingUserID != userID {
-			isFollowing, err := s.followRepo.IsFollowing(ctx, *requestingUserID, userID)
-			if err != nil || !isFollowing {
-				return nil, errors.New("profile is private")
+			if !publicUser.IsFollowing {
+				canViewDetails = false
 			}
 		}
 	}
 
-	publicUser := user.ToPublicUser()
-
-	// Populate counts
-	followersCount, _ := s.followRepo.CountFollowers(ctx, userID)
-	followingCount, _ := s.followRepo.CountFollowing(ctx, userID)
-	postsCount, _ := s.postRepo.CountPostsByAuthor(ctx, userID)
+	// Populate counts if visible
+	var followersCount, followingCount, postsCount int64
+	if canViewDetails {
+		followersCount, _ = s.followRepo.CountFollowers(ctx, userID)
+		followingCount, _ = s.followRepo.CountFollowing(ctx, userID)
+		postsCount, _ = s.postRepo.CountPostsByAuthor(ctx, userID)
+	} else {
+		// Set to -1 to indicate restricted access
+		followersCount = -1
+		followingCount = -1
+		postsCount = -1
+	}
 
 	log.Printf("DEBUG: ProfileService.GetProfile for userID=%v: followers=%d, following=%d, posts=%d", userID.Hex(), followersCount, followingCount, postsCount)
 
 	publicUser.FollowersCount = followersCount
 	publicUser.FollowingCount = followingCount
 	publicUser.PostsCount = postsCount
-
-	// Populate follow status
-	if requestingUserID != nil {
-		isFollowing, _ := s.followRepo.IsFollowing(ctx, *requestingUserID, userID)
-		publicUser.IsFollowing = isFollowing
-	}
 
 	return &publicUser, nil
 }
@@ -92,7 +105,7 @@ func (s *ProfileService) UpdateProfile(ctx context.Context, userID primitive.Obj
 		update["avatar_url"] = *req.AvatarURL
 	}
 	if req.ProfileVisibility != nil {
-		if *req.ProfileVisibility != "public" && *req.ProfileVisibility != "followers" && *req.ProfileVisibility != "private" {
+		if *req.ProfileVisibility != "public" && *req.ProfileVisibility != "followers" {
 			return nil, errors.New("invalid profile visibility value")
 		}
 		update["profile_visibility"] = *req.ProfileVisibility

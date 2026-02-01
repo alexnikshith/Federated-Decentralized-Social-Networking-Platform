@@ -14,7 +14,7 @@
 
 @media (min-width: 1024px) {
   .feed-layout-grid {
-    grid-template-columns: 1fr 380px;
+    grid-template-columns: 1fr;
   }
 }
 
@@ -33,22 +33,33 @@
 }
 
 /* Sidebar behavior */
-.feed-sidebar-col.inactive {
-  display: none;
-}
-
-@media (min-width: 1024px) {
-  .feed-sidebar-col.inactive {
-    display: block;
-    opacity: 0.5;
-    pointer-events: none;
-    filter: grayscale(1);
-  }
+/* Sidebar behavior */
+.feed-sidebar-col {
+  position: fixed;
+  top: 0;
+  right: -100%;
+  width: 40%;
+  height: 100vh;
+  background: hsl(var(--background) / 0.95);
+  backdrop-filter: blur(10px);
+  z-index: 50;
+  transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 2rem;
+  overflow-y: auto;
+  border-left: 1px solid hsl(var(--border) / 0.5);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.1);
 }
 
 .feed-sidebar-col.active {
-  display: block;
-  animation: scaleIn 0.3s ease-out forwards;
+  right: 0;
+}
+
+@media (max-width: 1024px) {
+  .feed-sidebar-col {
+    width: 100%;
+    padding-top: 5rem;
+    /* space for header on mobile if needed */
+  }
 }
 
 /* Create Post specialized card */

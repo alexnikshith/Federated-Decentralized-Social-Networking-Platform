@@ -35,7 +35,11 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
     (response) => response,
     (error: AxiosError<ApiError>) => {
-        if (error.response?.status === 401) {
+        // Check if error is 401 and NOT from login/verify endpoints
+        if (error.response?.status === 401 &&
+            !error.config?.url?.includes('/auth/login') &&
+            !error.config?.url?.includes('/auth/verify-otp') &&
+            !error.config?.url?.includes('/auth/google')) {
             // Token expired or invalid
             localStorage.removeItem('token');
             localStorage.removeItem('user');
@@ -52,13 +56,19 @@ export const authApi = {
         return response.data;
     },
 
-    login: async (data: LoginRequest): Promise<ApiResponse<string>> => {
+    login: async (data: LoginRequest): Promise<any> => {
         const response = await api.post('/api/auth/login', data);
         return response.data;
     },
 
+
     verifyOTP: async (data: VerifyOTPRequest): Promise<LoginResponse> => {
         const response = await api.post('/api/auth/verify-otp', data);
+        return response.data;
+    },
+
+    toggle2FA: async (enable: boolean): Promise<ApiResponse<null>> => {
+        const response = await api.post('/api/auth/2fa', { enable });
         return response.data;
     },
 
