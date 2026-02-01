@@ -33,7 +33,17 @@ const Login = () => {
     try {
       if (step === 1) {
         // Step 1: Initiate Login
-        await authApi.login({ email, password });
+        const response = await authApi.login({ email, password });
+        
+        // Check if direct login (2FA disabled) - response has token
+        if (response.token) {
+          setAuth(response.user, response.token);
+          toast.success("Welcome back!");
+          navigate("/dashboard");
+          return;
+        }
+
+        // Otherwise assume 2FA flow
         setStep(2);
         toast.success(`Verification code sent to ${email}. Check your inbox and spam folder.`);
       } else {
