@@ -61,13 +61,9 @@ func (r *SearchRepository) SearchUsers(ctx context.Context, query string, limit 
 		escapedWord := regexp.QuoteMeta(word)
 
 		// Each word must match at least one of these fields
+		// Each word must match the username
 		filters = append(filters, bson.M{
-			"$or": []bson.M{
-				{"username": bson.M{"$regex": escapedWord, "$options": "i"}},
-				{"display_name": bson.M{"$regex": escapedWord, "$options": "i"}},
-				{"email": bson.M{"$regex": escapedWord, "$options": "i"}},
-				{"bio": bson.M{"$regex": escapedWord, "$options": "i"}},
-			},
+			"username": bson.M{"$regex": escapedWord, "$options": "i"},
 		})
 	}
 
@@ -76,12 +72,23 @@ func (r *SearchRepository) SearchUsers(ctx context.Context, query string, limit 
 	}
 
 	// Final filter: All words must match (AND of ORs)
-	// We remove ALL status filters to ensure everyone is found
+	// AND we must respect account status (active and not deactivated)
 	var finalFilter bson.M
+
+	statusFilter := bson.M{
+		"is_active":      true,
+		"is_deactivated": false,
+	}
+
 	if len(filters) == 1 {
-		finalFilter = filters[0]
+		// Combine the single text filter with status filter
+		finalFilter = bson.M{
+			"$and": []bson.M{filters[0], statusFilter},
+		}
 	} else {
-		finalFilter = bson.M{"$and": filters}
+		// Combine all text filters (ANDed together) with status filter
+		allFilters := append(filters, statusFilter)
+		finalFilter = bson.M{"$and": allFilters}
 	}
 
 	opts := options.Find().SetLimit(limit).SetSort(bson.D{{Key: "username", Value: 1}})
@@ -104,7 +111,20 @@ func (r *SearchRepository) SearchUsers(ctx context.Context, query string, limit 
 		return []identityModels.User{}, nil
 	}
 
-	return users, nil
+	// Filter out sensitive accounts if any (like pure admin accounts if needed)
+	// For now, we return all matches, but you could add logic here.
+
+	// Create a new slice to hold filtered users
+	var filteredUsers []identityModels.User
+	for _, user := range users {
+		// Example: Skip users with "admin" in their username if strictly desired,
+		// though typically search should just return matches.
+		// If user wants strict matching logic, we can refine the query above.
+		// For now, let's keep the exact matches.
+		filteredUsers = append(filteredUsers, user)
+	}
+
+	return filteredUsers, nil
 }
 
 // GetUserByID retrieves a user by ID

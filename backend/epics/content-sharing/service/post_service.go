@@ -9,6 +9,7 @@ import (
 	safetyRepo "federated-social/backend/epics/safety/repository"
 	safetyService "federated-social/backend/epics/safety/service"
 	"log"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -67,7 +68,7 @@ func (s *PostService) GetFeed(ctx context.Context, userID primitive.ObjectID, li
 		log.Printf("ERROR GetFeed: Failed to get following list: %v", err)
 		return nil, err
 	}
-	
+
 	// Filter blocked users from following list
 	var activeFollowing []primitive.ObjectID
 	for _, id := range followingIDs {
@@ -139,23 +140,23 @@ func (s *PostService) GetFeed(ctx context.Context, userID primitive.ObjectID, li
 
 // GetUserPosts retrieves posts for a specific user
 func (s *PostService) GetUserPosts(ctx context.Context, userID, requestingUserID primitive.ObjectID, limit int64) (*dto.FeedResponse, error) {
-    // Check if blocked
-    isBlocked, err := s.blockService.IsBlocked(ctx, userID, requestingUserID)
-    if err != nil {
-        return nil, err
-    }
-    // Also check if requester is blocked by target (bidirectional)
-    isBlockedBy, err := s.blockService.IsBlocked(ctx, requestingUserID, userID)
-    if err != nil {
-        return nil, err
-    }
+	// Check if blocked
+	isBlocked, err := s.blockService.IsBlocked(ctx, userID, requestingUserID)
+	if err != nil {
+		return nil, err
+	}
+	// Also check if requester is blocked by target (bidirectional)
+	isBlockedBy, err := s.blockService.IsBlocked(ctx, requestingUserID, userID)
+	if err != nil {
+		return nil, err
+	}
 
-    if isBlocked || isBlockedBy {
-        return &dto.FeedResponse{
-            Posts: []dto.PostResponse{},
-            Total: 0,
-        }, nil
-    }
+	if isBlocked || isBlockedBy {
+		return &dto.FeedResponse{
+			Posts: []dto.PostResponse{},
+			Total: 0,
+		}, nil
+	}
 
 	posts, err := s.postRepo.GetPostsByAuthor(ctx, userID, limit)
 	if err != nil {
@@ -223,6 +224,13 @@ func (s *PostService) CreateComment(ctx context.Context, postID, userID primitiv
 		Content: req.Content,
 	}
 
+	if req.ParentID != "" {
+		parentID, err := primitive.ObjectIDFromHex(req.ParentID)
+		if err == nil {
+			comment.ParentID = &parentID
+		}
+	}
+
 	if err := s.postRepo.CreateComment(ctx, comment); err != nil {
 		return nil, err
 	}
@@ -241,7 +249,7 @@ func (s *PostService) CreateComment(ctx context.Context, postID, userID primitiv
 	return comment, nil
 }
 
-// GetComments retrieves comments for a post with user information
+// GetComments retrieves comments for a post and returns them in a flat 2-level structure (Instagram style)
 func (s *PostService) GetComments(ctx context.Context, postID primitive.ObjectID) ([]dto.CommentResponse, error) {
 	comments, err := s.postRepo.GetCommentsByPostID(ctx, postID)
 	if err != nil {
@@ -264,28 +272,94 @@ func (s *PostService) GetComments(ctx context.Context, postID primitive.ObjectID
 		return nil, err
 	}
 
-	// Build comment responses (filter out comments from deleted users)
-	commentResponses := make([]dto.CommentResponse, 0, len(comments))
+	// Map to store all comment responses by their ID for easy lookup
+	allMap := make(map[primitive.ObjectID]*dto.CommentResponse)
+	roots := make([]*dto.CommentResponse, 0)
+	children := make([]*dto.CommentResponse, 0)
+
+	// First pass: Create all response objects
 	for _, comment := range comments {
 		user := users[comment.UserID]
-
-		// Skip comments from users who don't exist or were deleted
 		if user == nil {
 			continue
 		}
 
-		commentResponses = append(commentResponses, dto.CommentResponse{
+		resp := &dto.CommentResponse{
 			ID:         comment.ID,
 			PostID:     comment.PostID,
 			UserID:     comment.UserID,
 			UserName:   user.Username,
 			UserAvatar: user.AvatarURL,
 			Content:    comment.Content,
+			ParentID:   comment.ParentID,
+			Replies:    []dto.CommentResponse{},
 			CreatedAt:  comment.CreatedAt,
-		})
+		}
+		allMap[comment.ID] = resp
+		if comment.ParentID == nil {
+			roots = append(roots, resp)
+		} else {
+			children = append(children, resp)
+		}
 	}
 
-	return commentResponses, nil
+	// Second pass: Set ParentUserName for all children IF they are replying to another reply (Instagram style)
+	for _, child := range children {
+		if parent, exists := allMap[*child.ParentID]; exists {
+			if parent.ParentID != nil {
+				child.ParentUserName = parent.UserName
+			}
+		}
+	}
+
+	// Third pass: Flatten hierarchy to 2 levels (Instagram style)
+	// All descendants of a root comment are placed in that root's Replies list.
+	for _, child := range children {
+		// Find the ultimate root ancestor of this child
+		curr := child
+		for curr.ParentID != nil {
+			parent, exists := allMap[*curr.ParentID]
+			if !exists {
+				// Orphaned child, treat its current parent as the 'relative' root if possible
+				break
+			}
+			if parent.ParentID == nil {
+				// We found the thread root!
+				parent.Replies = append(parent.Replies, *child)
+				break
+			}
+			// Move up one level
+			curr = parent
+		}
+	}
+
+	// Build the final response list preserving root order
+	finalRoots := make([]dto.CommentResponse, 0)
+	for _, r := range roots {
+		finalRoots = append(finalRoots, *r)
+	}
+
+	return finalRoots, nil
+}
+
+// DeleteComment deletes a comment if it's within the 2-minute window
+func (s *PostService) DeleteComment(ctx context.Context, commentID, userID primitive.ObjectID) error {
+	comment, err := s.postRepo.GetCommentByID(ctx, commentID)
+	if err != nil {
+		return err
+	}
+
+	// Check ownership
+	if comment.UserID != userID {
+		return errors.New("unauthorized: you can only delete your own comments")
+	}
+
+	// Check time (2 minutes)
+	if time.Since(comment.CreatedAt).Minutes() > 2 {
+		return errors.New("cannot delete comment after 2 minutes")
+	}
+
+	return s.postRepo.DeleteComment(ctx, commentID)
 }
 
 // DeletePost deletes a post if the user is the owner
@@ -372,6 +446,9 @@ func (s *PostService) enrichPosts(ctx context.Context, posts []models.Post, curr
 
 // GetUserLikedPosts retrieves posts liked by a specific user
 func (s *PostService) GetUserLikedPosts(ctx context.Context, userID, requestingUserID primitive.ObjectID, limit int64) (*dto.FeedResponse, error) {
+	if userID != requestingUserID {
+		return nil, errors.New("activity is private")
+	}
 	posts, err := s.postRepo.GetLikedPostsByUser(ctx, userID, limit)
 	if err != nil {
 		return nil, err
@@ -390,6 +467,9 @@ func (s *PostService) GetUserLikedPosts(ctx context.Context, userID, requestingU
 
 // GetUserCommentedPosts retrieves posts commented on by a specific user
 func (s *PostService) GetUserCommentedPosts(ctx context.Context, userID, requestingUserID primitive.ObjectID, limit int64) (*dto.FeedResponse, error) {
+	if userID != requestingUserID {
+		return nil, errors.New("activity is private")
+	}
 	posts, err := s.postRepo.GetCommentedPostsByUser(ctx, userID, limit)
 	if err != nil {
 		return nil, err
@@ -404,4 +484,57 @@ func (s *PostService) GetUserCommentedPosts(ctx context.Context, userID, request
 		Posts: postResponses,
 		Total: len(postResponses),
 	}, nil
+}
+
+// GetPostLikers retrieves the users who liked a post, but only if the requesting user is the author
+func (s *PostService) GetPostLikers(ctx context.Context, postID, userID primitive.ObjectID) ([]dto.LikerResponse, error) {
+	// 1. Fetch post to check ownership
+	post, err := s.postRepo.GetPostByID(ctx, postID)
+	if err != nil {
+		return nil, errors.New("post not found")
+	}
+
+	// 2. Check authorization: only author can see the list of likers
+	if post.AuthorID != userID {
+		return nil, errors.New("unauthorized: you can only view likers of your own posts")
+	}
+
+	// 3. Get all likes for this post
+	likes, err := s.postRepo.GetLikesByPostID(ctx, postID)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(likes) == 0 {
+		return []dto.LikerResponse{}, nil
+	}
+
+	// 4. Extract unique user IDs
+	userIDs := make([]primitive.ObjectID, 0)
+	for _, like := range likes {
+		userIDs = append(userIDs, like.UserID)
+	}
+
+	// 5. Fetch user information
+	users, err := s.searchRepo.GetUsersByIDs(ctx, userIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	// 6. Build response
+	likerResponses := make([]dto.LikerResponse, 0, len(likes))
+	for _, like := range likes {
+		user := users[like.UserID]
+		if user == nil {
+			continue // Skip if user not found
+		}
+
+		likerResponses = append(likerResponses, dto.LikerResponse{
+			UserID:     like.UserID,
+			UserName:   user.Username,
+			UserAvatar: user.AvatarURL,
+		})
+	}
+
+	return likerResponses, nil
 }

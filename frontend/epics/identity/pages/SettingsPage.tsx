@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
     Select,
     SelectContent,
@@ -29,7 +30,7 @@ export const SettingsPage = () => {
         display_name: "",
         bio: "",
         username: "",
-        profile_visibility: "public" as "public" | "followers" | "private",
+        profile_visibility: "public" as "public" | "followers",
         location: "",
         website: "",
     });
@@ -41,6 +42,34 @@ export const SettingsPage = () => {
     });
 
     const [passwordLoading, setPasswordLoading] = useState(false);
+    const [is2FAEnabled, setIs2FAEnabled] = useState(false);
+
+    const handleToggle2FA = async (checked: boolean) => {
+        try {
+            await authApi.toggle2FA(checked);
+            setIs2FAEnabled(checked);
+            toast({
+                title: checked ? "2FA Enabled" : "2FA Disabled",
+                description: checked
+                    ? "Two-factor authentication has been enabled for your account."
+                    : "Two-factor authentication has been disabled.",
+            });
+            // Update local user state if needed
+            if (currentUser) {
+                // @ts-ignore
+                updateUser({ ...currentUser, is_2fa_enabled: checked });
+            }
+        } catch (error: any) {
+            console.error(error);
+            toast({
+                title: "Error",
+                description: "Failed to update 2FA settings",
+                variant: "destructive",
+            });
+            // Revert switch state on error (optional, but good UX)
+            setIs2FAEnabled(!checked);
+        }
+    };
 
     useEffect(() => {
         if (currentUser) {
@@ -53,6 +82,8 @@ export const SettingsPage = () => {
                 location: currentUser.location || "",
                 website: currentUser.website || "",
             });
+            // @ts-ignore
+            setIs2FAEnabled(currentUser.is_2fa_enabled || false);
         }
     }, [currentUser]);
 
@@ -312,7 +343,7 @@ export const SettingsPage = () => {
                                                 <Select
                                                     value={formData.profile_visibility}
                                                     disabled={!isEditing}
-                                                    onValueChange={(value: "public" | "followers" | "private") =>
+                                                    onValueChange={(value: "public" | "followers") =>
                                                         setFormData({ ...formData, profile_visibility: value })
                                                     }
                                                 >
@@ -332,12 +363,6 @@ export const SettingsPage = () => {
                                                             </div>
                                                         </SelectItem>
                                                         <SelectItem value="followers">
-                                                            <div className="flex items-center gap-2">
-                                                                <User className="w-4 h-4" />
-                                                                <span>Followers Only</span>
-                                                            </div>
-                                                        </SelectItem>
-                                                        <SelectItem value="private">
                                                             <div className="flex items-center gap-2">
                                                                 <Lock className="w-4 h-4" />
                                                                 <span>Private</span>
@@ -568,7 +593,15 @@ export const SettingsPage = () => {
                                                     <h4 className="font-bold mb-1">Two-Factor Authentication</h4>
                                                     <p className="text-sm text-muted-foreground">Add an extra layer of security to your account.</p>
                                                 </div>
-                                                <Button variant="outline" disabled size="sm">Coming Soon</Button>
+                                                <div className="flex items-center gap-3">
+                                                    <span className={cn("text-sm font-medium transition-colors", is2FAEnabled ? "text-primary" : "text-muted-foreground")}>
+                                                        {is2FAEnabled ? "Enabled" : "Disabled"}
+                                                    </span>
+                                                    <Switch
+                                                        checked={is2FAEnabled}
+                                                        onCheckedChange={handleToggle2FA}
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

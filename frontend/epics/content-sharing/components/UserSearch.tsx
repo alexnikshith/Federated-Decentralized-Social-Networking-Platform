@@ -39,7 +39,8 @@ export const UserSearch: React.FC = () => {
         }
     };
 
-    const handleFollow = async (userId: string, isCurrentlyFollowing: boolean) => {
+    const handleFollow = async (e: React.MouseEvent, userId: string, isCurrentlyFollowing: boolean) => {
+        e.stopPropagation();
         // Set loading state for this specific user
         setLoadingMap(prev => new Map(prev).set(userId, true));
 
@@ -140,7 +141,7 @@ export const UserSearch: React.FC = () => {
                                 variant={isFollowing ? "secondary" : "ghost"}
                                 size="icon"
                                 className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={() => handleFollow(user.id, isFollowing)}
+                                onClick={(e) => handleFollow(e, user.id, isFollowing)}
                                 disabled={isLoadingUser}
                             >
                                 {isLoadingUser ? (

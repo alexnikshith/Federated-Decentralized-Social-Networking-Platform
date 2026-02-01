@@ -19,6 +19,9 @@ export interface Comment {
     user_name: string;
     user_avatar: string;
     content: string;
+    parent_id?: string;
+    parent_user_name?: string;
+    replies?: Comment[];
     created_at: string;
 }
 
@@ -44,6 +47,7 @@ export interface CreatePostRequest {
 
 export interface CreateCommentRequest {
     content: string;
+    parent_id?: string;
 }
 
 export interface PublicUser {
@@ -58,4 +62,10 @@ export interface PublicUser {
     following_count?: number;
     posts_count?: number;
     is_following?: boolean;
+}
+
+export interface PostLiker {
+    user_id: string;
+    user_name: string;
+    user_avatar: string;
 }
