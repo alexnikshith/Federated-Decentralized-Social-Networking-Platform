@@ -1,44 +1,50 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Sidebar, SidebarBody, SidebarLink } from "../ui/sidebar";
 import {
-    IconArrowLeft,
-    IconBrandTabler,
-    IconSettings,
-    IconUsers,
+    IconHome,
+    IconRss,
     IconSearch,
+    IconUser,
+    IconSettings,
     IconMoon,
     IconSun,
+    IconLogout,
+    IconUsers,
+    IconWorld,
+    IconX,
+    IconLayoutList
 } from "@tabler/icons-react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "../../../epics/identity/store/authStore";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "@/components/theme-provider";
-import { MessagesSquare } from "lucide-react";
+import { FloatingDock } from "../ui/floating-dock";
+import { Home } from "lucide-react";
+import { UserSearch } from "../../../epics/content-sharing/components/UserSearch";
 
 export const MainLayout = ({ children }: { children: React.ReactNode }) => {
     const { user, clearAuth } = useAuthStore();
     const navigate = useNavigate();
     const location = useLocation();
-    const [open, setOpen] = useState(false);
     const { theme, toggleTheme } = useTheme();
+    const [open, setOpen] = useState(false);
+    const [showSearch, setShowSearch] = useState(false);
 
-    const links = [
-        {
-            label: "Dashboard",
-            href: "/dashboard",
-            icon: (
-                <IconBrandTabler className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
-            ),
-        },
-        {
-            label: "Feed",
-            href: "/feed",
-            icon: (
-                <MessagesSquare className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
-            ),
-        },
+    // If on landing page, don't show navigation
+    if (location.pathname === "/") {
+        return <>{children}</>;
+    }
+
+    const handleLogout = () => {
+        clearAuth();
+        navigate("/");
+    };
+
+    // Sidebar Links: Communities, Explore Federation
+    // Settings, Theme, Logout are in bottom section manually
+    const sidebarLinks = [
         {
             label: "Communities",
             href: "/communities",
@@ -47,24 +53,20 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
             ),
         },
         {
-            label: "Explore",
+            label: "Explore Federation",
             href: "/explore",
             icon: (
-                <IconSearch className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
-            ),
-        },
-        {
-            label: "Settings",
-            href: "/settings",
-            icon: (
-                <IconSettings className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+                <IconWorld className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
             ),
         },
     ];
 
-    const handleLogout = () => {
-        clearAuth();
-        navigate("/");
+    const settingsLink = {
+        label: "Settings",
+        href: "/settings",
+        icon: (
+            <IconSettings className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+        ),
     };
 
     const logoutLink = {
@@ -75,23 +77,51 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
             handleLogout();
         },
         icon: (
-            <IconArrowLeft className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+            <IconLogout className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
         ),
     };
 
-    // If on landing page, don't show sidebar (though App.tsx will handle routing)
-    if (location.pathname === "/") {
-        return <>{children}</>;
-    }
+    // Floating Dock Links: Home, Feed, Search, Profile
+    const dockLinks = [
+        {
+            title: "Home",
+            icon: (
+                <Home className="h-full w-full text-neutral-500 dark:text-neutral-300" />
+            ),
+            href: "/dashboard",
+        },
+        {
+            title: "Post",
+            icon: (
+                <IconLayoutList className="h-full w-full text-neutral-500 dark:text-neutral-300" />
+            ),
+            href: "/feed",
+        },
+        {
+            title: "Search",
+            icon: (
+                <IconSearch className="h-full w-full text-neutral-500 dark:text-neutral-300" />
+            ),
+            href: "#",
+            onClick: () => setShowSearch(true),
+        },
+        {
+            title: "Profile",
+            icon: (
+                <IconUser className="h-full w-full text-neutral-500 dark:text-neutral-300" />
+            ),
+            href: `/profile/${user?.username || ''}`,
+        },
+    ];
 
     return (
-        <>
+        <div className="flex w-full min-h-screen bg-background">
             <Sidebar open={open} setOpen={setOpen}>
                 <SidebarBody className="justify-between gap-10">
                     <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto">
                         {open ? <Logo /> : <LogoIcon />}
                         <div className="mt-8 flex flex-col gap-2">
-                            {links.map((link, idx) => (
+                            {sidebarLinks.map((link, idx) => (
                                 <SidebarLink
                                     key={idx}
                                     link={link}
@@ -102,6 +132,11 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                         </div>
                     </div>
                     <div className="flex flex-col gap-2">
+                        <SidebarLink
+                            link={settingsLink}
+                            onClick={() => navigate("/settings")}
+                            className={location.pathname === "/settings" ? "bg-neutral-200 dark:bg-neutral-700 rounded-md" : ""}
+                        />
                         <SidebarLink
                             link={{
                                 label: theme === "dark" ? "Dark" : "Light",
@@ -118,38 +153,64 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                             }}
                         />
                         <SidebarLink
-                            link={{
-                                label: user?.display_name || user?.username || "User",
-                                href: "/profile",
-                                icon: (
-                                    <img
-                                        src={user?.avatar_url || "https://assets.aceternity.com/manu.png"}
-                                        className="h-7 w-7 shrink-0 rounded-full"
-                                        width={50}
-                                        height={50}
-                                        alt="Avatar"
-                                    />
-                                ),
-                            }}
-                            onClick={() => navigate("/profile")}
-                        />
-                        <SidebarLink
                             link={logoutLink}
                             onClick={handleLogout}
                         />
                     </div>
                 </SidebarBody>
             </Sidebar>
-            <div
-                className={cn(
-                    "min-h-screen bg-background transition-all duration-300",
-                    "w-full md:w-[calc(100%-60px)] md:ml-[60px]",
-                    open && "md:w-[calc(100%-240px)] md:ml-[240px]"
-                )}
-            >
+
+            <div className={cn(
+                "flex-1 min-h-screen transition-all duration-300 pb-32 relative",
+                // Ensure margin accounts for fixed sidebar width to prevent overlap
+                "md:ml-[60px]",
+                open && "md:ml-[240px]"
+            )}>
                 {children}
+
+                {/* Search Modal Overlay */}
+                <AnimatePresence>
+                    {showSearch && (
+                        <>
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[70]"
+                                onClick={() => setShowSearch(false)}
+                            />
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95, y: "-40%", x: "-50%" }}
+                                animate={{ opacity: 1, scale: 1, y: "-50%", x: "-50%" }}
+                                exit={{ opacity: 0, scale: 0.95, y: "-40%", x: "-50%" }}
+                                className="fixed top-1/2 left-1/2 w-[90%] max-w-2xl h-[50vh] bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-xl z-[80] overflow-hidden flex flex-col"
+                            >
+                                <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 flex justify-between items-center">
+                                    <h2 className="text-lg font-semibold">Discover People</h2>
+                                    <button
+                                        onClick={() => setShowSearch(false)}
+                                        className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors"
+                                    >
+                                        <IconX className="w-5 h-5" />
+                                    </button>
+                                </div>
+                                <div className="flex-1 overflow-y-auto p-4">
+                                    <UserSearch />
+                                </div>
+                            </motion.div>
+                        </>
+                    )}
+                </AnimatePresence>
+
+                {/* macOS Style Full Width Footer Dock */}
+                <div className="fixed bottom-0 left-0 w-full z-50 bg-neutral-100/80 dark:bg-neutral-900/80 backdrop-blur-2xl border-t border-neutral-200 dark:border-neutral-800 py-1 flex justify-center items-center shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
+                    <FloatingDock
+                        items={dockLinks}
+                        desktopClassName="bg-transparent border-none shadow-none"
+                    />
+                </div>
             </div>
-        </>
+        </div>
     );
 };
 

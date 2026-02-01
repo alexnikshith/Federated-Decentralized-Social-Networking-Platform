@@ -45,13 +45,54 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	msg, err := h.authService.InitiateLogin(r.Context(), req)
+	ipAddress := r.RemoteAddr
+	userAgent := r.Header.Get("User-Agent")
+
+	result, err := h.authService.InitiateLogin(r.Context(), req, ipAddress, userAgent)
 	if err != nil {
 		respondError(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
-	respondSuccess(w, msg, nil, http.StatusOK)
+	// Check result type
+	switch v := result.(type) {
+	case string:
+		// OTP sent
+		respondSuccess(w, v, nil, http.StatusOK)
+	case *dto.LoginResponse:
+		// Direct Login
+		respondJSON(w, v, http.StatusOK)
+	default:
+		respondError(w, "Unexpected login response", http.StatusInternalServerError)
+	}
+}
+
+// Toggle2FA handles 2FA setting update
+func (h *AuthHandler) Toggle2FA(w http.ResponseWriter, r *http.Request) {
+	var req dto.Toggle2FARequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Get user ID from context
+	userIDStr := r.Context().Value(middleware.UserIDKey).(string)
+	userID, err := primitive.ObjectIDFromHex(userIDStr)
+	if err != nil {
+		respondError(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.authService.Toggle2FA(r.Context(), userID, req.Enable); err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	status := "disabled"
+	if req.Enable {
+		status = "enabled"
+	}
+	respondSuccess(w, "2FA "+status+" successfully", nil, http.StatusOK)
 }
 
 // VerifyOTP handles OTP verification and token issuance

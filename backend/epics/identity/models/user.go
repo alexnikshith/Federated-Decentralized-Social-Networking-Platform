@@ -22,6 +22,7 @@ type User struct {
 	// Account status
 	IsActive      bool `json:"is_active" bson:"is_active"`
 	IsDeactivated bool `json:"is_deactivated" bson:"is_deactivated"`
+	Is2FAEnabled  bool `json:"is_2fa_enabled" bson:"is_2fa_enabled"`
 
 	// Timestamps
 	CreatedAt interface{} `json:"created_at" bson:"created_at"`
@@ -42,16 +43,6 @@ type ActivityLog struct {
 	Timestamp time.Time          `json:"timestamp" bson:"timestamp"`
 }
 
-// Session represents an active user session
-type Session struct {
-	ID        primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	UserID    primitive.ObjectID `json:"user_id" bson:"user_id"`
-	Token     string             `json:"token" bson:"token"`
-	ExpiresAt time.Time          `json:"expires_at" bson:"expires_at"`
-	CreatedAt time.Time          `json:"created_at" bson:"created_at"`
-	IsValid   bool               `json:"is_valid" bson:"is_valid"`
-}
-
 // PublicUser represents user data safe to expose publicly
 type PublicUser struct {
 	ID                primitive.ObjectID `json:"id"`
@@ -65,10 +56,22 @@ type PublicUser struct {
 	FollowingCount    int64              `json:"following_count"`
 	PostsCount        int64              `json:"posts_count"`
 	IsFollowing       bool               `json:"is_following"`
+	Is2FAEnabled      *bool              `json:"is_2fa_enabled,omitempty"` // Only visible to self
+}
+
+// Session represents an active user session
+type Session struct {
+	ID        primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	UserID    primitive.ObjectID `json:"user_id" bson:"user_id"`
+	Token     string             `json:"token" bson:"token"`
+	ExpiresAt time.Time          `json:"expires_at" bson:"expires_at"`
+	CreatedAt time.Time          `json:"created_at" bson:"created_at"`
+	IsValid   bool               `json:"is_valid" bson:"is_valid"`
 }
 
 // ToPublicUser converts User to PublicUser
 func (u *User) ToPublicUser() PublicUser {
+	isEnabled := u.Is2FAEnabled
 	return PublicUser{
 		ID:                u.ID,
 		Username:          u.Username,
@@ -77,6 +80,7 @@ func (u *User) ToPublicUser() PublicUser {
 		AvatarURL:         u.AvatarURL,
 		ProfileVisibility: u.ProfileVisibility,
 		CreatedAt:         u.CreatedAt,
+		Is2FAEnabled:      &isEnabled,
 		FollowersCount:    0,
 		FollowingCount:    0,
 		PostsCount:        0,
