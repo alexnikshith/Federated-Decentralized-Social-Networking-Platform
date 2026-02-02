@@ -182,7 +182,7 @@ export const useAuthStore = create<AuthState>()(
                     // Force reload to reset other stores (cleanest way)
                     // window.location.reload(); // Optional: handled by consumer or just reload
                     // Using reload is safer for clearing other store states (content, reports etc)
-                    setTimeout(() => window.location.reload(), 100);
+                    setTimeout(() => window.location.href = '/dashboard', 100);
                 } else if (session) {
                     // Session exists but logged out
                     set({
