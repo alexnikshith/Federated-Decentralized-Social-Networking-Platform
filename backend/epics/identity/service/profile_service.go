@@ -7,6 +7,7 @@ import (
 	"federated-social/backend/epics/identity/dto"
 	"federated-social/backend/epics/identity/models"
 	"federated-social/backend/epics/identity/repository"
+	"log"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -56,6 +57,24 @@ func (s *ProfileService) GetProfile(ctx context.Context, userID primitive.Object
 	}
 
 	publicUser := user.ToPublicUser()
+
+	// Populate counts
+	followersCount, _ := s.followRepo.CountFollowers(ctx, userID)
+	followingCount, _ := s.followRepo.CountFollowing(ctx, userID)
+	postsCount, _ := s.postRepo.CountPostsByAuthor(ctx, userID)
+
+	log.Printf("DEBUG: ProfileService.GetProfile for userID=%v: followers=%d, following=%d, posts=%d", userID.Hex(), followersCount, followingCount, postsCount)
+
+	publicUser.FollowersCount = followersCount
+	publicUser.FollowingCount = followingCount
+	publicUser.PostsCount = postsCount
+
+	// Populate follow status
+	if requestingUserID != nil {
+		isFollowing, _ := s.followRepo.IsFollowing(ctx, *requestingUserID, userID)
+		publicUser.IsFollowing = isFollowing
+	}
+
 	return &publicUser, nil
 }
 
@@ -97,6 +116,16 @@ func (s *ProfileService) UpdateProfile(ctx context.Context, userID primitive.Obj
 	}
 
 	publicUser := user.ToPublicUser()
+
+	// Populate counts
+	followersCount, _ := s.followRepo.CountFollowers(ctx, userID)
+	followingCount, _ := s.followRepo.CountFollowing(ctx, userID)
+	postsCount, _ := s.postRepo.CountPostsByAuthor(ctx, userID)
+
+	publicUser.FollowersCount = followersCount
+	publicUser.FollowingCount = followingCount
+	publicUser.PostsCount = postsCount
+
 	return &publicUser, nil
 }
 
@@ -162,6 +191,28 @@ func (s *ProfileService) GetActivity(ctx context.Context, userID primitive.Objec
 	}
 
 	return activities, nil
+}
+
+// GetProfileByIdOrUsername retrieves a profile by either hex ID or username
+func (s *ProfileService) GetProfileByIdOrUsername(ctx context.Context, identifier string, requestingUserID *primitive.ObjectID) (*models.PublicUser, error) {
+	var user *models.User
+	var err error
+
+	// Try as ObjectID first
+	if userID, idErr := primitive.ObjectIDFromHex(identifier); idErr == nil {
+		user, err = s.userRepo.FindByID(ctx, userID)
+	}
+
+	// If not found or not a valid ObjectID, try as username
+	if user == nil {
+		user, err = s.userRepo.FindByUsername(ctx, identifier)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return s.GetProfile(ctx, user.ID, requestingUserID)
 }
 
 // Helper function to log activity

@@ -21,10 +21,78 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { profileApi } from "../api/client";
-import { getUserPosts, getUserLikedPosts, getUserCommentedPosts } from "../../content-sharing/api/client";
+import {
+  getUserPosts,
+  getUserLikedPosts,
+  getUserCommentedPosts,
+  followUser,
+  unfollowUser,
+  getFollowers,
+  getFollowing
+} from "../../content-sharing/api/client";
 import type { Post } from "../../content-sharing/types";
 import type { User } from "../types";
 import { PostCard } from "../../content-sharing/components/PostCard";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+interface UserListModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  users: any[];
+  loading: boolean;
+}
+
+const UserListModal = ({ isOpen, onClose, title, users, loading }: UserListModalProps) => {
+  const navigate = useNavigate();
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <div className="max-h-[60vh] overflow-y-auto py-4">
+          {loading ? (
+            <div className="flex justify-center p-4">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : users.length === 0 ? (
+            <p className="text-center text-muted-foreground py-4">No users found.</p>
+          ) : (
+            <div className="space-y-4">
+              {users.map((user) => (
+                <div
+                  key={user.id}
+                  className="flex items-center gap-3 p-2 hover:bg-secondary/50 rounded-lg cursor-pointer transition-colors"
+                  onClick={() => {
+                    navigate(`/profile/${user.username}`);
+                    onClose();
+                  }}
+                >
+                  <Avatar>
+                    <AvatarImage src={user.avatar_url} />
+                    <AvatarFallback>{user.display_name?.[0] || user.username[0]}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-sm">{user.display_name || user.username}</span>
+                    <span className="text-xs text-muted-foreground">@{user.username}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 
 const ProfileUI = () => {
@@ -63,6 +131,7 @@ const ProfileUI = () => {
         }
 
         setProfileUser(userToDisplay);
+        setIsFollowing(!!userToDisplay.is_following);
 
         // Fetch posts for this user
         const postsData = await getUserPosts(userToDisplay.id);
@@ -99,6 +168,41 @@ const ProfileUI = () => {
     };
     fetchActivityData();
   }, [activeTab, activeSubTab, profileUser]);
+
+  const [isListModalOpen, setIsListModalOpen] = useState(false);
+  const [listModalTitle, setListModalTitle] = useState("");
+  const [listModalUsers, setListModalUsers] = useState<any[]>([]);
+  const [listModalLoading, setListModalLoading] = useState(false);
+
+  const handleOpenFollowers = async () => {
+    if (!profileUser) return;
+    setListModalTitle("Followers");
+    setIsListModalOpen(true);
+    setListModalLoading(true);
+    try {
+      const data = await getFollowers(profileUser.id);
+      setListModalUsers(data);
+    } catch (err) {
+      console.error("Failed to fetch followers", err);
+    } finally {
+      setListModalLoading(false);
+    }
+  };
+
+  const handleOpenFollowing = async () => {
+    if (!profileUser) return;
+    setListModalTitle("Following");
+    setIsListModalOpen(true);
+    setListModalLoading(true);
+    try {
+      const data = await getFollowing(profileUser.id);
+      setListModalUsers(data);
+    } catch (err) {
+      console.error("Failed to fetch following", err);
+    } finally {
+      setListModalLoading(false);
+    }
+  };
 
   const handleProfileUpdated = (updatedUser: User) => {
     setProfileUser(updatedUser);
@@ -184,7 +288,22 @@ const ProfileUI = () => {
                     <Button
                       variant={isFollowing ? "outline" : "hero"}
                       className="rounded-full px-8 h-11 shadow-lg shadow-primary/20"
-                      onClick={() => setIsFollowing(!isFollowing)}
+                      onClick={async () => {
+                        if (!profileUser) return;
+                        try {
+                          if (isFollowing) {
+                            await unfollowUser(profileUser.id);
+                            setIsFollowing(false);
+                            setProfileUser(prev => prev ? { ...prev, followers_count: (prev.followers_count || 0) - 1 } : null);
+                          } else {
+                            await followUser(profileUser.id);
+                            setIsFollowing(true);
+                            setProfileUser(prev => prev ? { ...prev, followers_count: (prev.followers_count || 0) + 1 } : null);
+                          }
+                        } catch (err) {
+                          console.error("Follow/unfollow failed:", err);
+                        }
+                      }}
                     >
                       {isFollowing ? "Following" : (
                         <span className="flex items-center gap-2">
@@ -244,13 +363,13 @@ const ProfileUI = () => {
                     </div>
                     <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground mt-1">Posts</div>
                   </div>
-                  <div className="group cursor-pointer text-center">
+                  <div className="group cursor-pointer text-center" onClick={handleOpenFollowers}>
                     <div className="text-3xl font-display font-black text-foreground group-hover:text-primary transition-colors">
                       {profileUser.followers_count || 0}
                     </div>
                     <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground mt-1">Followers</div>
                   </div>
-                  <div className="group cursor-pointer text-center">
+                  <div className="group cursor-pointer text-center" onClick={handleOpenFollowing}>
                     <div className="text-3xl font-display font-black text-foreground group-hover:text-primary transition-colors">
                       {profileUser.following_count || 0}
                     </div>
@@ -373,6 +492,13 @@ const ProfileUI = () => {
           </div>
         </div>
       </main>
+      <UserListModal
+        isOpen={isListModalOpen}
+        onClose={() => setIsListModalOpen(false)}
+        title={listModalTitle}
+        users={listModalUsers}
+        loading={listModalLoading}
+      />
     </div>
   );
 };
