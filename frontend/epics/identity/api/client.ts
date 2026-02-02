@@ -43,9 +43,6 @@ api.interceptors.response.use(
             !error.config?.url?.includes('/auth/google')) {
             // Token expired or invalid
             useAuthStore.getState().clearAuth();
-            if (window.location.pathname !== '/login' && window.location.pathname !== '/register' && window.location.pathname !== '/') {
-                window.location.href = '/login';
-            }
         }
         return Promise.reject(error);
     }
