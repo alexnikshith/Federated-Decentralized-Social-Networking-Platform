@@ -7,6 +7,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { ThemeProvider } from './components/theme-provider';
 import { MainLayout } from './components/layout/MainLayout';
 import { useAutoLogout } from './hooks/useAutoLogout';
+import { useActivityHeartbeat } from './hooks/useActivityHeartbeat';
 
 import { useAuthStore } from '../epics/identity/store/authStore';
 import { ProfilePage } from '../epics/identity/pages/ProfilePage';
@@ -25,6 +26,7 @@ import Explore from '../epics/federation/pages/Explore';
 
 // Epic 4: Reports - Import pages
 import About from '../epics/reports/pages/About';
+import { RefinedReportsPage } from '../epics/reports/pages/RefinedReportsPage';
 
 // Global pages
 import Index from './pages/Index';
@@ -37,6 +39,7 @@ const queryClient = new QueryClient();
 // Auto-logout wrapper component
 const AutoLogoutWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     useAutoLogout();
+    useActivityHeartbeat();
     return <>{children}</>;
 };
 
@@ -154,6 +157,14 @@ function App() {
                                     element={
                                         <ProtectedRoute>
                                             <Explore />
+                                        </ProtectedRoute>
+                                    }
+                                />
+                                <Route
+                                    path="/reports"
+                                    element={
+                                        <ProtectedRoute>
+                                            <RefinedReportsPage />
                                         </ProtectedRoute>
                                     }
                                 />

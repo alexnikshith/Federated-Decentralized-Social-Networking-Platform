@@ -13,7 +13,20 @@ services:
       - ./backend/.env
     environment:
       - INSTANCE_ID=default-instance
-    depends_on: []
+    depends_on:
+      - mongodb
+    networks:
+      - federated_network
+
+  # MongoDB
+  mongodb:
+    image: mongo:7.0
+    container_name: federated_social_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
     networks:
       - federated_network
 
@@ -39,3 +52,6 @@ services:
 networks:
   federated_network:
     driver: bridge
+
+volumes:
+  mongodb_data:
