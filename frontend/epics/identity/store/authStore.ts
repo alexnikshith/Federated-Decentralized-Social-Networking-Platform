@@ -79,23 +79,37 @@ export const useAuthStore = create<AuthState>()(
 
             clearAuth: () => {
                 // Logout active user: keep in sessions but nullify token
-                set((state) => {
-                    if (!state.user) return state;
+                const state = get();
+                const currentUserId = state.user?.id;
 
-                    const newSessions = state.sessions.map(s =>
-                        s.user.id === state.user?.id
-                            ? { ...s, token: null }
-                            : s
-                    );
+                const newSessions = state.sessions.map(s =>
+                    s.user.id === currentUserId
+                        ? { ...s, token: null }
+                        : s
+                );
 
-                    return {
+                // Find next active session (first one that isn't the one we just logged out of, although map handled token nulling)
+                const nextActiveSession = newSessions.find(s => s.token !== null);
+
+                if (nextActiveSession) {
+                    set({
+                        user: nextActiveSession.user,
+                        token: nextActiveSession.token,
+                        isAuthenticated: true,
+                        lastActivity: Date.now(),
+                        sessions: newSessions
+                    });
+                    setTimeout(() => window.location.href = '/dashboard', 100);
+                } else {
+                    set({
                         user: null,
                         token: null,
                         isAuthenticated: false,
                         lastActivity: null,
                         sessions: newSessions
-                    };
-                });
+                    });
+                    setTimeout(() => window.location.href = '/login', 100);
+                }
             },
 
             clearAllSessions: () => {
@@ -182,7 +196,7 @@ export const useAuthStore = create<AuthState>()(
                     // Force reload to reset other stores (cleanest way)
                     // window.location.reload(); // Optional: handled by consumer or just reload
                     // Using reload is safer for clearing other store states (content, reports etc)
-                    setTimeout(() => window.location.reload(), 100);
+                    setTimeout(() => window.location.href = '/dashboard', 100);
                 } else if (session) {
                     // Session exists but logged out
                     set({
