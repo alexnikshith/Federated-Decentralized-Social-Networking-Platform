@@ -14,11 +14,13 @@ import {
     IconWorld,
     IconX,
     IconLayoutList,
-    IconChartBar
+    IconChartBar,
+    IconBell
 } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "../../../epics/identity/store/authStore";
+import { useContentStore } from "../../../epics/content-sharing/store/contentStore";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "@/components/theme-provider";
 import { FloatingDock } from "../ui/floating-dock";
@@ -27,6 +29,7 @@ import { UserSearch } from "../../../epics/content-sharing/components/UserSearch
 
 export const MainLayout = ({ children }: { children: React.ReactNode }) => {
     const { user, clearAuth } = useAuthStore();
+    const { unreadCount } = useContentStore();
     const navigate = useNavigate();
     const location = useLocation();
     const { theme, toggleTheme } = useTheme();
@@ -65,6 +68,18 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
             href: "/reports",
             icon: (
                 <IconChartBar className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+            ),
+        },
+        {
+            label: "Notifications",
+            href: "/notifications",
+            icon: (
+                <div className="relative">
+                    <IconBell className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+                    {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-neutral-900" />
+                    )}
+                </div>
             ),
         },
     ];

@@ -1,102 +1,76 @@
-import React, { useState } from 'react';
-import { format, subDays } from 'date-fns';
-import { Calendar as CalendarIcon } from 'lucide-react';
-import { DateRange } from 'react-day-picker';
+import React, { useState, useMemo } from 'react';
+import {
+    format,
+    startOfWeek,
+    endOfWeek,
+    startOfMonth,
+    endOfMonth,
+    addWeeks,
+    subWeeks,
+    addMonths,
+    subMonths
+} from 'date-fns';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { useReportsApi } from '../api/reportsApi';
 import TimeUsageChart from '../components/TimeUsageChart';
-
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from '@/components/ui/popover';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export const RefinedReportsPage: React.FC = () => {
     const { useActivityReport } = useReportsApi();
 
-    // Default to last 30 days
-    const [date, setDate] = useState<DateRange | undefined>({
-        from: subDays(new Date(), 30),
-        to: new Date(),
-    });
+    const [currentDate, setCurrentDate] = useState(new Date());
+    const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
 
-    const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+    // Calculate range based on view mode and current date
+    const range = useMemo(() => {
+        if (viewMode === 'weekly') {
+            return {
+                start: startOfWeek(currentDate, { weekStartsOn: 1 }), // Monday
+                end: endOfWeek(currentDate, { weekStartsOn: 1 })
+            };
+        } else {
+            return {
+                start: startOfMonth(currentDate),
+                end: endOfMonth(currentDate)
+            };
+        }
+    }, [currentDate, viewMode]);
+
+    // Navigation handlers
+    const handlePrev = () => {
+        if (viewMode === 'weekly') {
+            setCurrentDate(d => subWeeks(d, 1));
+        } else {
+            setCurrentDate(d => subMonths(d, 1));
+        }
+    };
+
+    const handleNext = () => {
+        if (viewMode === 'weekly') {
+            setCurrentDate(d => addWeeks(d, 1));
+        } else {
+            setCurrentDate(d => addMonths(d, 1));
+        }
+    };
 
     // Format dates for API
-    const startDateStr = date?.from ? format(date.from, 'yyyy-MM-dd') : undefined;
-    const endDateStr = date?.to ? format(date.to, 'yyyy-MM-dd') : undefined;
+    const startDateStr = format(range.start, 'yyyy-MM-dd');
+    const endDateStr = format(range.end, 'yyyy-MM-dd');
 
     const { data: report, isLoading, error } = useActivityReport(startDateStr, endDateStr);
 
     return (
         <div className="container mx-auto p-6 space-y-8">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Time Usage Reports</h1>
-                    <p className="text-muted-foreground">
-                        Monitor your activity and usage patterns over time.
-                    </p>
-                </div>
 
-                <div className="flex flex-col sm:flex-row gap-2">
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button
-                                id="date"
-                                variant={"outline"}
-                                className={cn(
-                                    "w-[300px] justify-start text-left font-normal",
-                                    !date && "text-muted-foreground"
-                                )}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {date?.from ? (
-                                    date.to ? (
-                                        <>
-                                            {format(date.from, "LLL dd, y")} -{" "}
-                                            {format(date.to, "LLL dd, y")}
-                                        </>
-                                    ) : (
-                                        format(date.from, "LLL dd, y")
-                                    )
-                                ) : (
-                                    <span>Pick a date range</span>
-                                )}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="end">
-                            <Calendar
-                                initialFocus
-                                mode="range"
-                                defaultMonth={date?.from}
-                                selected={date}
-                                onSelect={setDate}
-                                numberOfMonths={2}
-                            />
-                        </PopoverContent>
-                    </Popover>
-
-                    <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)} className="w-[400px]">
-                        <TabsList>
-                            <TabsTrigger value="daily">Daily</TabsTrigger>
-                            <TabsTrigger value="weekly">Weekly</TabsTrigger>
-                            <TabsTrigger value="monthly">Monthly</TabsTrigger>
-                        </TabsList>
-                    </Tabs>
-                </div>
+            {/* 1. Full-width Title Header */}
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight">Time Usage Reports</h1>
+                <p className="text-muted-foreground">
+                    Monitor your activity and usage patterns over time.
+                </p>
             </div>
 
             {isLoading ? (
@@ -115,15 +89,17 @@ export const RefinedReportsPage: React.FC = () => {
                     Error loading report data. Please try again later.
                 </div>
             ) : (
-                <div className="space-y-4">
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                /* 2. Side-by-side layout: Stats Card + Chart */
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    {/* "Total Time" Card - takes up 1 column on large screens */}
+                    <div className="lg:col-span-1">
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Total Hours</CardTitle>
+                                <CardTitle className="text-sm font-medium">Total time spent</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <div className="text-2xl font-bold">
-                                    {report?.total_hours.toFixed(1)}h
+                                    {Math.floor(report?.total_hours || 0)}h {Math.round(((report?.total_hours || 0) % 1) * 60)}m
                                 </div>
                                 <p className="text-xs text-muted-foreground">
                                     Total activity in selected period
@@ -132,7 +108,22 @@ export const RefinedReportsPage: React.FC = () => {
                         </Card>
                     </div>
 
-                    <TimeUsageChart data={report?.daily_stats || []} view={viewMode} />
+                    {/* Chart - takes up 3 columns on large screens */}
+                    <div className="lg:col-span-3">
+                        <TimeUsageChart
+                            data={report?.daily_stats || []}
+                            view={viewMode}
+                            startDate={range.start}
+                            endDate={range.end}
+                            onPrevClick={handlePrev}
+                            onNextClick={handleNext}
+                            currentLabel={viewMode === 'weekly'
+                                ? `${format(range.start, 'MMM d')} - ${format(range.end, 'MMM d')}`
+                                : format(currentDate, 'MMMM yyyy')
+                            }
+                            onViewChange={(v) => setViewMode(v)}
+                        />
+                    </div>
                 </div>
             )}
         </div>

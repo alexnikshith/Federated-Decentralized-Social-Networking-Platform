@@ -31,6 +31,7 @@ import { RefinedReportsPage } from '../epics/reports/pages/RefinedReportsPage';
 // Global pages
 import Index from './pages/Index';
 import NotFound from './pages/NotFound';
+import { NotificationsPage } from './pages/NotificationsPage';
 
 import './App.css';
 
@@ -141,6 +142,14 @@ function App() {
                                     element={
                                         <ProtectedRoute>
                                             <DashboardPage />
+                                        </ProtectedRoute>
+                                    }
+                                />
+                                <Route
+                                    path="/notifications"
+                                    element={
+                                        <ProtectedRoute>
+                                            <NotificationsPage />
                                         </ProtectedRoute>
                                     }
                                 />
