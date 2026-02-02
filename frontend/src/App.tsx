@@ -72,11 +72,7 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 };
 
 function App() {
-    const hydrate = useAuthStore((state) => state.hydrate);
-
-    useEffect(() => {
-        hydrate();
-    }, [hydrate]);
+    // Hydration is handled automatically by zustand persist middleware
 
     return (
         <ThemeProvider>
