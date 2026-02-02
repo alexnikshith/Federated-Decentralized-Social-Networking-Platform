@@ -9,6 +9,7 @@ import type {
     PublicUser,
     PostLiker,
 } from '../types';
+import { useAuthStore } from '../../identity/store/authStore';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
@@ -21,12 +22,29 @@ const api = axios.create({
 
 // Add token to requests
 api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('token');
+    const token = useAuthStore.getState().token;
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
 });
+
+// Handle 401 Unauthorized globally
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401) {
+            // Token expired or server reset
+            useAuthStore.getState().clearAuth(); // Use clearAuth to keep session but invalidate token
+            // Redirect to login if not already there
+            if (window.location.pathname !== '/login' && window.location.pathname !== '/register' && window.location.pathname !== '/') {
+                window.location.href = '/login';
+            }
+        }
+        return Promise.reject(error);
+    }
+);
+
 
 // Posts
 export const createPost = async (data: CreatePostRequest): Promise<Post> => {

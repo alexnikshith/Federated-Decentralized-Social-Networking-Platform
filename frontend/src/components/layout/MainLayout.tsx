@@ -27,14 +27,26 @@ import { FloatingDock } from "../ui/floating-dock";
 import { Home } from "lucide-react";
 import { UserSearch } from "../../../epics/content-sharing/components/UserSearch";
 
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { LogOut, User as LucideUser, Plus } from "lucide-react";
+
 export const MainLayout = ({ children }: { children: React.ReactNode }) => {
-    const { user, clearAuth } = useAuthStore();
+    const { user, clearAuth, sessions, switchAccount, pauseSession, clearAllSessions } = useAuthStore();
     const { unreadCount } = useContentStore();
     const navigate = useNavigate();
     const location = useLocation();
     const { theme, toggleTheme } = useTheme();
     const [open, setOpen] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
     // If on landing page, don't show navigation
     if (location.pathname === "/") {
@@ -80,18 +92,6 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
         ),
     };
 
-    const logoutLink = {
-        label: "Logout",
-        href: "#",
-        onClick: (e: React.MouseEvent) => {
-            e.preventDefault();
-            handleLogout();
-        },
-        icon: (
-            <IconLogout className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
-        ),
-    };
-
     // Floating Dock Links: Home, Feed, Search, Profile
     const dockLinks = [
         {
@@ -128,21 +128,14 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
             ),
             href: "/notifications",
         },
-        {
-            title: "Profile",
-            icon: (
-                <IconUser className="h-full w-full text-neutral-500 dark:text-neutral-300" />
-            ),
-            href: `/profile/${user?.username || ''}`,
-        },
     ];
 
     return (
         <div className="flex w-full min-h-screen bg-background">
-            <Sidebar open={open} setOpen={setOpen}>
+            <Sidebar open={open || isDropdownOpen} setOpen={setOpen}>
                 <SidebarBody className="justify-between gap-10">
                     <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto">
-                        {open ? <Logo /> : <LogoIcon />}
+                        {(open || isDropdownOpen) ? <Logo /> : <LogoIcon />}
                         <div className="mt-8 flex flex-col gap-2">
                             {sidebarLinks.map((link, idx) => (
                                 <SidebarLink
@@ -155,6 +148,17 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                         </div>
                     </div>
                     <div className="flex flex-col gap-2">
+                        <SidebarLink
+                            link={{
+                                label: "Profile",
+                                href: `/profile/${user?.username}`,
+                                icon: (
+                                    <LucideUser className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+                                ),
+                            }}
+                            onClick={() => navigate(`/profile/${user?.username}`)}
+                            className={location.pathname === `/profile/${user?.username}` ? "bg-neutral-200 dark:bg-neutral-700 rounded-md" : ""}
+                        />
                         <SidebarLink
                             link={settingsLink}
                             onClick={() => navigate("/settings")}
@@ -175,10 +179,103 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                                 toggleTheme();
                             }}
                         />
-                        <SidebarLink
-                            link={logoutLink}
-                            onClick={handleLogout}
-                        />
+
+                        <DropdownMenu onOpenChange={setIsDropdownOpen}>
+                            <DropdownMenuTrigger asChild>
+                                <button
+                                    className="flex items-center justify-start gap-2 group/sidebar py-2 cursor-pointer w-full text-left outline-none hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md transition-colors px-1"
+                                    onMouseEnter={() => setOpen(true)}
+                                >
+                                    <Avatar className="h-6 w-6 shrink-0">
+                                        <AvatarImage src={user?.avatar_url} alt={user?.username} />
+                                        <AvatarFallback className="text-[10px] bg-neutral-200 dark:bg-neutral-700">
+                                            {user?.username?.substring(0, 2).toUpperCase()}
+                                        </AvatarFallback>
+                                    </Avatar>
+
+                                    <motion.span
+                                        animate={{
+                                            display: (open || isDropdownOpen) ? "inline-block" : "none",
+                                            opacity: (open || isDropdownOpen) ? 1 : 0,
+                                        }}
+                                        className="text-neutral-700 dark:text-neutral-200 text-sm font-medium group-hover/sidebar:translate-x-1 transition duration-150 whitespace-pre inline-block truncate"
+                                    >
+                                        {user?.username}
+                                    </motion.span>
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="w-60 mb-2 z-[100]" side="top" align="center" forceMount>
+                                <DropdownMenuLabel className="font-normal">
+                                    <div className="flex flex-col space-y-1">
+                                        <p className="text-sm font-medium leading-none">{user?.username}</p>
+                                        <p className="text-xs leading-none text-muted-foreground">
+                                            {user?.email}
+                                        </p>
+                                    </div>
+                                </DropdownMenuLabel>
+
+                                <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-2">
+                                    Switch Accounts
+                                </DropdownMenuLabel>
+                                {sessions
+                                    .filter(s => s.user.id !== user?.id)
+                                    .map((session) => (
+                                        <DropdownMenuItem
+                                            key={session.user.id}
+                                            onClick={() => {
+                                                if (session.token) {
+                                                    switchAccount(session.user.id);
+                                                } else {
+                                                    // If signed out, we need to log in again
+                                                    // For now, clear current and go to login
+                                                    // Ideally we'd pass an email hint
+                                                    clearAuth();
+                                                    navigate("/login");
+                                                }
+                                            }}
+                                            className="cursor-pointer flex items-center justify-between"
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <Avatar className="h-5 w-5">
+                                                    <AvatarImage src={session.user.avatar_url} />
+                                                    <AvatarFallback className="text-[9px]">
+                                                        {session.user.username?.substring(0, 2).toUpperCase()}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <span className="truncate max-w-[120px]">{session.user.username}</span>
+                                            </div>
+                                            {!session.token && <span className="text-[10px] text-muted-foreground uppercase">Logged out</span>}
+                                        </DropdownMenuItem>
+                                    ))}
+
+                                <DropdownMenuItem
+                                    onClick={() => {
+                                        pauseSession();
+                                        navigate("/login");
+                                    }}
+                                    className="cursor-pointer text-muted-foreground mt-1"
+                                >
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    <span>Add an account</span>
+                                </DropdownMenuItem>
+
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-500 focus:text-red-500">
+                                    <LogOut className="mr-2 h-4 w-4" />
+                                    <span>Log out of {user?.username}</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    onClick={() => {
+                                        clearAllSessions();
+                                        navigate("/");
+                                    }}
+                                    className="cursor-pointer text-red-500 focus:text-red-500"
+                                >
+                                    <LogOut className="mr-2 h-4 w-4" />
+                                    <span>Log out of all accounts</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </SidebarBody>
             </Sidebar>
@@ -187,7 +284,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                 "flex-1 min-h-screen transition-all duration-300 pb-32 relative",
                 // Ensure margin accounts for fixed sidebar width to prevent overlap
                 "md:ml-[60px]",
-                open && "md:ml-[240px]"
+                (open || isDropdownOpen) && "md:ml-[240px]"
             )}>
                 {children}
 
