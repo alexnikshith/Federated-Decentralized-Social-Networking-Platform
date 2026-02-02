@@ -13,7 +13,8 @@ import {
     IconUsers,
     IconWorld,
     IconX,
-    IconLayoutList
+    IconLayoutList,
+    IconChartBar
 } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
@@ -63,7 +64,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
             label: "Reports",
             href: "/reports",
             icon: (
-                <IconBrandTabler className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+                <IconChartBar className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
             ),
         },
     ];
