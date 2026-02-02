@@ -11,6 +11,7 @@ import type {
     ApiError,
     VerifyOTPRequest,
 } from '../types';
+import { useAuthStore } from '../store/authStore';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
@@ -24,7 +25,7 @@ const api = axios.create({
 
 // Add token to requests
 api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('token');
+    const token = useAuthStore.getState().token;
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
@@ -41,9 +42,10 @@ api.interceptors.response.use(
             !error.config?.url?.includes('/auth/verify-otp') &&
             !error.config?.url?.includes('/auth/google')) {
             // Token expired or invalid
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.location.href = '/login';
+            useAuthStore.getState().clearAuth();
+            if (window.location.pathname !== '/login' && window.location.pathname !== '/register' && window.location.pathname !== '/') {
+                window.location.href = '/login';
+            }
         }
         return Promise.reject(error);
     }

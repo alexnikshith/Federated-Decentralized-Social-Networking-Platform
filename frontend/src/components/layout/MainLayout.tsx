@@ -36,10 +36,10 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut, User as LucideUser } from "lucide-react";
+import { LogOut, User as LucideUser, Plus } from "lucide-react";
 
 export const MainLayout = ({ children }: { children: React.ReactNode }) => {
-    const { user, clearAuth } = useAuthStore();
+    const { user, clearAuth, sessions, switchAccount, pauseSession, clearAllSessions } = useAuthStore();
     const { unreadCount } = useContentStore();
     const navigate = useNavigate();
     const location = useLocation();
@@ -149,6 +149,17 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                     </div>
                     <div className="flex flex-col gap-2">
                         <SidebarLink
+                            link={{
+                                label: "Profile",
+                                href: `/profile/${user?.username}`,
+                                icon: (
+                                    <LucideUser className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+                                ),
+                            }}
+                            onClick={() => navigate(`/profile/${user?.username}`)}
+                            className={location.pathname === `/profile/${user?.username}` ? "bg-neutral-200 dark:bg-neutral-700 rounded-md" : ""}
+                        />
+                        <SidebarLink
                             link={settingsLink}
                             onClick={() => navigate("/settings")}
                             className={location.pathname === "/settings" ? "bg-neutral-200 dark:bg-neutral-700 rounded-md" : ""}
@@ -193,7 +204,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                                     </motion.span>
                                 </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent className="w-56 mb-2 z-[100]" side="top" align="center" forceMount>
+                            <DropdownMenuContent className="w-60 mb-2 z-[100]" side="top" align="center" forceMount>
                                 <DropdownMenuLabel className="font-normal">
                                     <div className="flex flex-col space-y-1">
                                         <p className="text-sm font-medium leading-none">{user?.username}</p>
@@ -202,15 +213,66 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                                         </p>
                                     </div>
                                 </DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => navigate(`/profile/${user?.username}`)} className="cursor-pointer">
-                                    <LucideUser className="mr-2 h-4 w-4" />
-                                    <span>Profile</span>
+
+                                <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-2">
+                                    Switch Accounts
+                                </DropdownMenuLabel>
+                                {sessions
+                                    .filter(s => s.user.id !== user?.id)
+                                    .map((session) => (
+                                        <DropdownMenuItem
+                                            key={session.user.id}
+                                            onClick={() => {
+                                                if (session.token) {
+                                                    switchAccount(session.user.id);
+                                                } else {
+                                                    // If signed out, we need to log in again
+                                                    // For now, clear current and go to login
+                                                    // Ideally we'd pass an email hint
+                                                    clearAuth();
+                                                    navigate("/login");
+                                                }
+                                            }}
+                                            className="cursor-pointer flex items-center justify-between"
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <Avatar className="h-5 w-5">
+                                                    <AvatarImage src={session.user.avatar_url} />
+                                                    <AvatarFallback className="text-[9px]">
+                                                        {session.user.username?.substring(0, 2).toUpperCase()}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <span className="truncate max-w-[120px]">{session.user.username}</span>
+                                            </div>
+                                            {!session.token && <span className="text-[10px] text-muted-foreground uppercase">Logged out</span>}
+                                        </DropdownMenuItem>
+                                    ))}
+
+                                <DropdownMenuItem
+                                    onClick={() => {
+                                        pauseSession();
+                                        navigate("/login");
+                                    }}
+                                    className="cursor-pointer text-muted-foreground mt-1"
+                                >
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    <span>Add an account</span>
                                 </DropdownMenuItem>
+
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-500 focus:text-red-500">
                                     <LogOut className="mr-2 h-4 w-4" />
-                                    <span>Log out</span>
+                                    <span>Log out of {user?.username}</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    onClick={() => {
+                                        clearAllSessions();
+                                        navigate("/");
+                                    }}
+                                    className="cursor-pointer text-red-500 focus:text-red-500"
+                                >
+                                    <LogOut className="mr-2 h-4 w-4" />
+                                    <span>Log out of all accounts</span>
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
