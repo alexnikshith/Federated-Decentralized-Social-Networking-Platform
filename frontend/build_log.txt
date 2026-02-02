@@ -1,0 +1,11 @@
+[36mvite v5.4.21 [32mbuilding for production...[36m[39m
+transforming...
+[32m✓[39m 5 modules transformed.
+[31mx[39m Build failed in 743ms
+[31merror during build:
+[31mCould not resolve "../epics/reports/pages/About" from "src/App.tsx"[31m
+file: [36mC:/Users/DELL/OneDrive/Desktop/Federated-Decentralized-Social-Networking-Platform/frontend/src/App.tsx[31m
+    at getRollupError (file:///C:/Users/DELL/OneDrive/Desktop/Federated-Decentralized-Social-Networking-Platform/frontend/node_modules/rollup/dist/es/shared/parseAst.js:402:41)
+    at error (file:///C:/Users/DELL/OneDrive/Desktop/Federated-Decentralized-Social-Networking-Platform/frontend/node_modules/rollup/dist/es/shared/parseAst.js:398:42)
+    at ModuleLoader.handleInvalidResolvedId (file:///C:/Users/DELL/OneDrive/Desktop/Federated-Decentralized-Social-Networking-Platform/frontend/node_modules/rollup/dist/es/shared/node-entry.js:21684:24)
+    at file:///C:/Users/DELL/OneDrive/Desktop/Federated-Decentralized-Social-Networking-Platform/frontend/node_modules/rollup/dist/es/shared/node-entry.js:21644:26[39m

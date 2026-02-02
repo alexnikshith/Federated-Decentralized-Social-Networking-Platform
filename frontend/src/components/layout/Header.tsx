@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Globe, Menu, X, Shield, Users, Bell, User, LayoutDashboard, Rss, Sun, Moon } from "lucide-react";
+import { Globe, Menu, X, Shield, Users, Bell, User, LayoutDashboard, Rss, Sun, Moon, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "../../../epics/identity/store/authStore";
@@ -15,6 +15,7 @@ const navigation = [
 const authNavigation = [
   { name: "Feed", href: "/feed", icon: Rss },
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Reports", href: "/reports", icon: TrendingUp },
 ];
 
 export function Header() {
