@@ -59,20 +59,6 @@ export const DashboardPage: React.FC = () => {
                         </h1>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                        <Button
-                            variant={sidebarType === 'notifications' ? 'hero' : 'secondary'}
-                            size="sm"
-                            onClick={() => toggleSidebar('notifications')}
-                            className="gap-2 rounded-full relative"
-                        >
-                            <Bell className="w-4 h-4" />
-                            <span className="hidden sm:inline">Notifications</span>
-                            {unreadCount > 0 && (
-                                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-destructive rounded-full border-2 border-background" />
-                            )}
-                        </Button>
-                    </div>
                 </header>
 
                 <div className="dashboard-grid">
@@ -139,20 +125,7 @@ export const DashboardPage: React.FC = () => {
                             </Button>
                         </div>
 
-                        {sidebarType === 'notifications' && (
-                            <div className="glass-card rounded-xl p-6 animate-scale-in">
-                                <div className="flex items-center gap-2 mb-6 border-b border-border/50 pb-4">
-                                    <Bell className="w-5 h-5 text-accent" />
-                                    <h2 className="font-display font-bold">Recent Activity</h2>
-                                    {unreadCount > 0 && (
-                                        <span className="ml-auto bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded-full node-pulse">
-                                            {unreadCount}
-                                        </span>
-                                    )}
-                                </div>
-                                <NotificationList />
-                            </div>
-                        )}
+
 
                         {sidebarType === 'search' && (
                             <div className="glass-card rounded-xl p-6 animate-scale-in">
@@ -166,6 +139,6 @@ export const DashboardPage: React.FC = () => {
                     </div>
                 </div>
             </main>
-        </div>
+        </div >
     );
 };

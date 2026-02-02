@@ -1,12 +1,22 @@
 import React from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { format, startOfWeek, endOfWeek, startOfMonth, parseISO, eachDayOfInterval, addDays } from 'date-fns';
+import { format, parseISO, eachDayOfInterval } from 'date-fns';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DailyActivity } from '../api/reportsApi';
 
 interface TimeUsageChartProps {
     data: DailyActivity[];
-    view: 'daily' | 'weekly' | 'monthly';
+    view: 'weekly' | 'monthly';
+    startDate?: Date;
+    endDate?: Date;
+    onPrevClick: () => void;
+    onNextClick: () => void;
+    currentLabel: string;
+    onViewChange: (view: 'weekly' | 'monthly') => void;
 }
 
 interface ChartData {
@@ -15,14 +25,25 @@ interface ChartData {
     fullDate?: string;
 }
 
-const TimeUsageChart: React.FC<TimeUsageChartProps> = ({ data, view }) => {
+const TimeUsageChart: React.FC<TimeUsageChartProps> = ({
+    data,
+    view,
+    startDate,
+    endDate,
+    onPrevClick,
+    onNextClick,
+    currentLabel,
+    onViewChange
+}) => {
 
     const processData = (): ChartData[] => {
-        if (!data || data.length === 0) return [];
+        // Since we now always want a daily breakdown (regardless of whether the "view" is Weekly or Monthly),
+        // we essentially treat everything as a "Daily" chart over a specific range.
 
-        const sortedData = [...data].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-        if (view === 'daily') {
+        // If the parent didn't provide dates (legacy fallback), utilize the data we have.
+        if (!startDate || !endDate) {
+            if (!data || data.length === 0) return [];
+            const sortedData = [...data].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
             return sortedData.map(item => ({
                 name: format(parseISO(item.date), 'MMM d'),
                 minutes: item.minutes,
@@ -30,59 +51,91 @@ const TimeUsageChart: React.FC<TimeUsageChartProps> = ({ data, view }) => {
             }));
         }
 
-        if (view === 'weekly') {
-            const weeks: { [key: string]: number } = {};
-            sortedData.forEach(item => {
-                const date = parseISO(item.date);
-                const weekStart = startOfWeek(date, { weekStartsOn: 1 });
-                const weekKey = format(weekStart, 'yyyy-MM-dd');
-                weeks[weekKey] = (weeks[weekKey] || 0) + item.minutes;
-            });
+        // 1. Create a map of existing data for quick lookup
+        const dataMap = new Map<string, number>();
+        (data || []).forEach(item => {
+            const key = format(parseISO(item.date), 'yyyy-MM-dd');
+            dataMap.set(key, item.minutes);
+        });
 
-            return Object.keys(weeks).map(weekStart => {
-                const start = parseISO(weekStart);
-                const end = endOfWeek(start, { weekStartsOn: 1 });
-                return {
-                    name: `${format(start, 'MMM d')} - ${format(end, 'MMM d')}`,
-                    minutes: weeks[weekStart]
-                };
-            });
+        // 2. Generate every single day in the interval
+        let days: Date[] = [];
+        try {
+            days = eachDayOfInterval({ start: startDate, end: endDate });
+        } catch (e) {
+            console.error("Invalid date interval", e);
+            return [];
         }
 
-        if (view === 'monthly') {
-            const months: { [key: string]: number } = {};
-            sortedData.forEach(item => {
-                const date = parseISO(item.date);
-                const monthKey = format(startOfMonth(date), 'yyyy-MM');
-                months[monthKey] = (months[monthKey] || 0) + item.minutes;
-            });
+        // 3. Map each day to a bar
+        return days.map(day => {
+            const dateKey = format(day, 'yyyy-MM-dd');
 
-            return Object.keys(months).map(monthKey => {
-                const date = parseISO(monthKey + '-01');
-                return {
-                    name: format(date, 'MMMM yyyy'),
-                    minutes: months[monthKey]
-                };
-            });
-        }
+            // Format labels differently based on view context
+            // Weekly: "Mon", "Tue" (or "Mon 2")
+            // Monthly: "1", "2" (or "Oct 1")
+            let label = '';
+            if (view === 'weekly') {
+                label = format(day, 'EEE'); // Mon, Tue, Wed
+            } else {
+                label = format(day, 'd'); // 1, 2, 3
+            }
 
-        return [];
+            return {
+                name: label,
+                minutes: dataMap.get(dateKey) || 0, // Fill 0 if no data
+                fullDate: format(day, 'MMM d, yyyy') // For tooltip
+            };
+        });
     };
 
     const chartData = processData();
 
-    // Fill in gaps if daily view and we have a start/end (optional refinement, skip for now for simplicity, 
-    // or just rely on what the API returns. The API returns all days in range usually, ensuring 0s)
+    const maxMinutes = Math.max(...chartData.map(d => d.minutes), 0);
+    // Determine ticks: at least every 30 mins, covering max value
+    const tickStep = 30; // 0.5 hours
+    const calculatedMax = Math.ceil(maxMinutes / tickStep) * tickStep;
+
+    // Default to at least 1 hour (60 minutes) if data is smaller
+    const finalMax = Math.max(calculatedMax, 60);
+
+    // Generate ticks array: 0, 30, 60, ... finalMax
+    const ticks = [];
+    for (let i = 0; i <= finalMax; i += tickStep) {
+        ticks.push(i);
+    }
 
     return (
         <Card className="w-full">
-            <CardHeader>
-                <CardTitle>Activity Overview</CardTitle>
-                <CardDescription>
-                    {view === 'daily' && 'Daily usage statistics'}
-                    {view === 'weekly' && 'Weekly usage aggregation'}
-                    {view === 'monthly' && 'Monthly usage aggregation'}
-                </CardDescription>
+            <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0 pb-8">
+                <div>
+                    <CardTitle>Activity Overview</CardTitle>
+                    <CardDescription>
+                        {view === 'weekly' && 'Daily usage for the selected week'}
+                        {view === 'monthly' && 'Daily usage for the selected month'}
+                    </CardDescription>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-4 items-center w-full md:w-auto">
+                    <div className="flex items-center gap-2 bg-secondary/50 p-1 rounded-lg">
+                        <Button variant="ghost" size="icon" onClick={onPrevClick} className="h-8 w-8 hover:bg-background">
+                            <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <span className="text-sm font-medium min-w-[140px] text-center">
+                            {currentLabel}
+                        </span>
+                        <Button variant="ghost" size="icon" onClick={onNextClick} className="h-8 w-8 hover:bg-background">
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                    </div>
+
+                    <Tabs value={view} onValueChange={(v) => onViewChange(v as 'weekly' | 'monthly')} className="w-[200px]">
+                        <TabsList className="grid w-full grid-cols-2 h-10">
+                            <TabsTrigger value="weekly">Weekly</TabsTrigger>
+                            <TabsTrigger value="monthly">Monthly</TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                </div>
             </CardHeader>
             <CardContent>
                 <div className="h-[300px] w-full">
@@ -102,13 +155,40 @@ const TimeUsageChart: React.FC<TimeUsageChartProps> = ({ data, view }) => {
                                     fontSize={12}
                                     tickLine={false}
                                     axisLine={false}
+                                    ticks={ticks}
+                                    domain={[0, finalMax]}
                                     tickFormatter={(value: number) => {
-                                        const hours = Math.floor(value / 60);
-                                        return `${hours}h`;
+                                        const hours = value / 60;
+                                        return `${Number(hours.toFixed(1))}h`;
                                     }}
                                 />
                                 <Tooltip
-                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                    cursor={{
+                                        fill: 'hsl(var(--muted) / 0.4)',
+                                    }}
+                                    contentStyle={{
+                                        borderRadius: '8px',
+                                        border: '1px solid hsl(var(--border))',
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                        backgroundColor: 'hsl(var(--popover))',
+                                        color: 'hsl(var(--popover-foreground))',
+                                        padding: '12px'
+                                    }}
+                                    labelStyle={{
+                                        color: 'hsl(var(--muted-foreground))',
+                                        marginBottom: '4px'
+                                    }}
+                                    itemStyle={{
+                                        color: 'hsl(var(--popover-foreground))',
+                                        fontWeight: 500
+                                    }}
+                                    // Custom label to show full date instead of just "Mon" or "1"
+                                    labelFormatter={(label, payload) => {
+                                        if (payload && payload.length > 0) {
+                                            return payload[0].payload.fullDate;
+                                        }
+                                        return label;
+                                    }}
                                     formatter={(value: number) => [`${Math.floor(value / 60)}h ${value % 60}m`, 'Time Spent']}
                                 />
                                 <Bar

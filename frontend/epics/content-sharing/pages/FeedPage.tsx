@@ -41,31 +41,21 @@ export const FeedPage: React.FC = () => {
             <main className="feed-content-container">
                 <div className="feed-layout-grid">
                     {/* Left/Main Column */}
-                    <div className="feed-main-col stagger-1">
+                    <div className="feed-main-col stagger-1 max-w-2xl mx-auto w-full">
                         <header className="feed-page-header mb-8">
                             <div>
                                 <h1 className="text-gradient-gold">New Post</h1>
                                 <p className="text-sm text-muted-foreground">Share your thoughts with the federation</p>
                             </div>
-
-                            <div className="flex items-center gap-2">
-                                <Button
-                                    variant={sidebarType === 'notifications' ? 'hero' : 'secondary'}
-                                    size="sm"
-                                    onClick={() => toggleSidebar('notifications')}
-                                    className="gap-2 rounded-full relative"
-                                >
-                                    <Bell className="w-4 h-4" />
-                                    <span className="hidden sm:inline">Notifications</span>
-                                    {unreadCount > 0 && (
-                                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-destructive rounded-full border-2 border-background" />
-                                    )}
-                                </Button>
-                            </div>
                         </header>
 
-                        <div className="create-post-container max-w-2xl mx-auto">
+                        <div className="create-post-container mb-8">
                             <CreatePost />
+                        </div>
+                        <div className="space-y-6">
+                            {posts.map((post) => (
+                                <PostCard key={post.id} post={post} />
+                            ))}
                         </div>
                     </div>
 
@@ -105,8 +95,8 @@ export const FeedPage: React.FC = () => {
                             )}
                         </div>
                     </div>
-                </div>
-            </main>
-        </div>
+                </div >
+            </main >
+        </div >
     );
 };
