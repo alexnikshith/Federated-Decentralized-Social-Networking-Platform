@@ -11,6 +11,7 @@ import (
 	"federated-social/backend/pkg/email"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -45,6 +46,9 @@ func (s *AuthService) Signup(ctx context.Context, req dto.SignupRequest) (*model
 		return nil, errors.New("username, email, and password are required")
 	}
 
+	// Normalize email
+	req.Email = strings.ToLower(req.Email)
+
 	// Check if user already exists
 	if _, err := s.userRepo.FindByEmail(ctx, req.Email); err == nil {
 		return nil, errors.New("email already registered")
@@ -68,6 +72,8 @@ func (s *AuthService) Signup(ctx context.Context, req dto.SignupRequest) (*model
 		DisplayName:       req.DisplayName,
 		ProfileVisibility: "public",
 		InstanceID:        "default", // TODO: Get from config
+		Is2FAEnabled:      true,      // Default to enabled
+		IsActive:          true,
 	}
 
 	if err := s.userRepo.CreateUser(ctx, user); err != nil {
@@ -80,53 +86,97 @@ func (s *AuthService) Signup(ctx context.Context, req dto.SignupRequest) (*model
 	return user, nil
 }
 
-// InitiateLogin validates credentials and triggers 2FA (US1.2 updated)
-func (s *AuthService) InitiateLogin(ctx context.Context, req dto.LoginRequest) (string, error) {
+// InitiateLogin validates credentials and triggers 2FA or logs in directly (US1.2 updated)
+func (s *AuthService) InitiateLogin(ctx context.Context, req dto.LoginRequest, ipAddress, userAgent string) (interface{}, error) {
+	// Normalize email
+	req.Email = strings.ToLower(req.Email)
+
 	// Find user
 	user, err := s.userRepo.FindByEmail(ctx, req.Email)
 	if err != nil {
-		return "", errors.New("invalid credentials")
+		return nil, errors.New("invalid credentials")
 	}
 
 	// Check if account is deactivated
 	if user.IsDeactivated {
-		return "", errors.New("account is deactivated")
+		return nil, errors.New("account is deactivated")
 	}
 
 	// Verify password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
-		return "", errors.New("invalid credentials")
+		return nil, errors.New("invalid credentials")
 	}
 
-	// Generate OTP
-	code, err := generateRandomCode(6)
+	// Check if 2FA is enabled
+	fmt.Printf("DEBUG: Login attempt for %s, Is2FAEnabled: %v\n", user.Email, user.Is2FAEnabled)
+	if user.Is2FAEnabled {
+		// Generate OTP
+		code, err := generateRandomCode(6)
+		if err != nil {
+			return nil, err
+		}
+
+		// Save verification code
+		verificationCode := &models.VerificationCode{
+			UserID:    user.ID,
+			Code:      code,
+			ExpiresAt: time.Now().Add(10 * time.Minute),
+		}
+
+		if err := s.verificationRepo.CreateVerificationCode(ctx, verificationCode); err != nil {
+			return nil, err
+		}
+
+		// Send email
+		if err := s.emailSender.SendVerificationEmail(user.Email, code); err != nil {
+			return nil, fmt.Errorf("failed to send verification email: %v", err)
+		}
+
+		return "Verification code sent to your email", nil
+	}
+
+	// 2FA Disabled - Direct Login
+	// Generate JWT token
+	expiresAt := time.Now().Add(24 * time.Hour)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user_id": user.ID.Hex(),
+		"email":   user.Email,
+		"exp":     expiresAt.Unix(),
+	})
+
+	tokenString, err := token.SignedString([]byte(config.AppConfig.JWTSecret))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	// Save verification code
-	verificationCode := &models.VerificationCode{
+	// Store session
+	session := &models.Session{
 		UserID:    user.ID,
-		Code:      code,
-		ExpiresAt: time.Now().Add(10 * time.Minute),
+		Token:     tokenString,
+		ExpiresAt: expiresAt,
+	}
+	if err := s.sessionRepo.CreateSession(ctx, session); err != nil {
+		return nil, err
 	}
 
-	if err := s.verificationRepo.CreateVerificationCode(ctx, verificationCode); err != nil {
-		return "", err
-	}
+	// Log activity
+	s.logActivity(ctx, user.ID, "login", "User logged in (2FA disabled)", ipAddress, userAgent)
 
-	// Send email
-	if err := s.emailSender.SendVerificationEmail(user.Email, code); err != nil {
-		// Log error but maybe don't fail the request completely if email fails?
-		// Ideally we should fail because user can't login otherwise.
-		return "", fmt.Errorf("failed to send verification email: %v", err)
-	}
+	publicUser := user.ToPublicUser()
+	publicUser.Is2FAEnabled = &user.Is2FAEnabled
 
-	return "Verification code sent to your email", nil
+	return &dto.LoginResponse{
+		Token:     tokenString,
+		ExpiresAt: expiresAt.Format(time.RFC3339),
+		User:      publicUser,
+	}, nil
 }
 
 // VerifyOTP validates the code and logs the user in
 func (s *AuthService) VerifyOTP(ctx context.Context, req dto.VerifyOTPRequest, ipAddress, userAgent string) (*dto.LoginResponse, error) {
+	// Normalize email
+	req.Email = strings.ToLower(req.Email)
+
 	// Find user
 	user, err := s.userRepo.FindByEmail(ctx, req.Email)
 	if err != nil {
@@ -175,10 +225,13 @@ func (s *AuthService) VerifyOTP(ctx context.Context, req dto.VerifyOTPRequest, i
 	// Log activity
 	s.logActivity(ctx, user.ID, "login", "User logged in via 2FA", ipAddress, userAgent)
 
+	publicUser := user.ToPublicUser()
+	publicUser.Is2FAEnabled = &user.Is2FAEnabled
+
 	return &dto.LoginResponse{
 		Token:     tokenString,
 		ExpiresAt: expiresAt.Format(time.RFC3339),
-		User:      user.ToPublicUser(),
+		User:      publicUser,
 	}, nil
 }
 
@@ -238,6 +291,17 @@ func (s *AuthService) ChangePassword(ctx context.Context, userID primitive.Objec
 	// Log activity
 	s.logActivity(ctx, userID, "password_change", "Password changed", "", "")
 
+	return nil
+}
+
+// Toggle2FA updates user 2FA status
+func (s *AuthService) Toggle2FA(ctx context.Context, userID primitive.ObjectID, enable bool) error {
+	fmt.Printf("DEBUG: Toggle2FA called for user %s, setting to %v\n", userID.Hex(), enable)
+	update := bson.M{"is_2fa_enabled": enable}
+	if err := s.userRepo.UpdateUser(ctx, userID, update); err != nil {
+		return err
+	}
+	s.logActivity(ctx, userID, "toggle_2fa", fmt.Sprintf("2FA enabled: %v", enable), "", "")
 	return nil
 }
 

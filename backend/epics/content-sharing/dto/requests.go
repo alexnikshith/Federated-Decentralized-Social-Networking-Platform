@@ -7,5 +7,6 @@ type CreatePostRequest struct {
 
 // CreateCommentRequest represents the request to create a comment
 type CreateCommentRequest struct {
-	Content string `json:"content" binding:"required,min=1,max=1000"`
+	Content  string `json:"content" binding:"required,min=1,max=1000"`
+	ParentID string `json:"parent_id,omitempty"`
 }

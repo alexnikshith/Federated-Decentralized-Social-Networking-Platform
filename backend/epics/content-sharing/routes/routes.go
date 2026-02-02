@@ -25,6 +25,8 @@ func RegisterContentSharingRoutes(router *mux.Router) {
 	router.Handle("/api/posts/{id}/like", middleware.AuthMiddleware(http.HandlerFunc(postHandler.UnlikePost))).Methods("DELETE", "OPTIONS")
 	router.Handle("/api/posts/{id}/comments", middleware.AuthMiddleware(http.HandlerFunc(postHandler.CreateComment))).Methods("POST", "OPTIONS")
 	router.Handle("/api/posts/{id}/comments", middleware.AuthMiddleware(http.HandlerFunc(postHandler.GetComments))).Methods("GET", "OPTIONS")
+	router.Handle("/api/comments/{id}", middleware.AuthMiddleware(http.HandlerFunc(postHandler.DeleteComment))).Methods("DELETE", "OPTIONS")
+	router.Handle("/api/posts/{id}/likers", middleware.AuthMiddleware(http.HandlerFunc(postHandler.GetPostLikers))).Methods("GET", "OPTIONS")
 	router.Handle("/api/posts/{id}", middleware.AuthMiddleware(http.HandlerFunc(postHandler.DeletePost))).Methods("DELETE", "OPTIONS")
 
 	// Follow routes

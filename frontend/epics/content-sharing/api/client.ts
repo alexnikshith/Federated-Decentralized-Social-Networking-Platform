@@ -7,6 +7,7 @@ import type {
     CreatePostRequest,
     CreateCommentRequest,
     PublicUser,
+    PostLiker,
 } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
@@ -65,6 +66,11 @@ export const deletePost = async (postId: string): Promise<void> => {
     await api.delete(`/api/posts/${postId}`);
 };
 
+export const getPostLikers = async (postId: string): Promise<PostLiker[]> => {
+    const response = await api.get(`/api/posts/${postId}/likers`);
+    return response.data.data;
+};
+
 // Comments
 export const createComment = async (
     postId: string,
@@ -77,6 +83,10 @@ export const createComment = async (
 export const getComments = async (postId: string): Promise<Comment[]> => {
     const response = await api.get(`/api/posts/${postId}/comments`);
     return response.data.data;
+};
+
+export const deleteComment = async (commentId: string): Promise<void> => {
+    await api.delete(`/api/comments/${commentId}`);
 };
 
 // Follow

@@ -14,6 +14,7 @@ export interface User {
     posts_count?: number;
     is_following?: boolean;
     instance?: string;
+    is_2fa_enabled?: boolean;
 }
 
 export interface ActivityLog {

@@ -49,10 +49,10 @@ export const SignupPage: React.FC = () => {
             navigate('/dashboard');
         } catch (err: any) {
             setError(err.response?.data?.message || 'Signup failed. Please try again.');
-        } finally {
             setLoading(false);
         }
     };
+
 
     return (
         <div className="auth-container">

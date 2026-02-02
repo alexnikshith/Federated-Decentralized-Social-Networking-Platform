@@ -5,6 +5,8 @@ import (
 	"errors"
 	"federated-social/backend/database"
 	"federated-social/backend/epics/identity/models"
+	"log"
+	"regexp"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -39,10 +41,15 @@ func (r *UserRepository) CreateUser(ctx context.Context, user *models.User) erro
 	return nil
 }
 
-// FindByEmail finds a user by email
+// FindByEmail finds a user by email (case-insensitive)
 func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*models.User, error) {
 	var user models.User
-	err := r.collection.FindOne(ctx, bson.M{"email": email}).Decode(&user)
+	// Use case-insensitive regex for email lookup
+	// We escape special characters to treat them literally, though for simple emails only . and + matter mostly
+	pattern := "^" + regexp.QuoteMeta(email) + "$"
+	filter := bson.M{"email": primitive.Regex{Pattern: pattern, Options: "i"}}
+	
+	err := r.collection.FindOne(ctx, filter).Decode(&user)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, errors.New("user not found")
@@ -82,11 +89,14 @@ func (r *UserRepository) FindByID(ctx context.Context, id primitive.ObjectID) (*
 func (r *UserRepository) UpdateUser(ctx context.Context, userID primitive.ObjectID, update bson.M) error {
 	update["updated_at"] = time.Now()
 
-	_, err := r.collection.UpdateOne(
+	result, err := r.collection.UpdateOne(
 		ctx,
 		bson.M{"_id": userID},
 		bson.M{"$set": update},
 	)
+	if err == nil {
+		log.Printf("DEBUG: UpdateUser for %s matched %d and modified %d docs", userID.Hex(), result.MatchedCount, result.ModifiedCount)
+	}
 	return err
 }
 
@@ -148,4 +158,21 @@ func (r *UserRepository) CreateIndexes(ctx context.Context) error {
 
 	_, err := r.collection.Indexes().CreateMany(ctx, indexes)
 	return err
+}
+
+// Enable2FAForAll enables 2FA for all existing users (Migration)
+func (r *UserRepository) Enable2FAForAll(ctx context.Context) error {
+	// Set is_2fa_enabled = true for all users where it is not already true
+	filter := bson.M{"is_2fa_enabled": bson.M{"$ne": true}}
+	update := bson.M{"$set": bson.M{"is_2fa_enabled": true}}
+
+	result, err := r.collection.UpdateMany(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+
+	if result.ModifiedCount > 0 {
+		// Log migration result?
+	}
+	return nil
 }

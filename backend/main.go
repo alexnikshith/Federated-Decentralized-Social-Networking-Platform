@@ -9,6 +9,8 @@ import (
 	"federated-social/backend/epics/identity/repository"
 	"federated-social/backend/epics/identity/routes"
 	reportRoutes "federated-social/backend/epics/reports/routes"
+	safetyRepo "federated-social/backend/epics/safety/repository"
+	safetyRoutes "federated-social/backend/epics/safety/routes"
 	"federated-social/backend/middleware"
 	"log"
 	"net/http"
@@ -59,6 +61,12 @@ func main() {
 		log.Printf("Warning: Failed to create search indexes: %v", err)
 	}
 
+	// Create safety indexes
+	blockRepo := safetyRepo.NewBlockRepository()
+	if err := blockRepo.CreateIndexes(ctx); err != nil {
+		log.Printf("Warning: Failed to create block indexes: %v", err)
+	}
+
 	// Setup router
 	router := mux.NewRouter()
 
@@ -69,6 +77,7 @@ func main() {
 	routes.RegisterIdentityRoutes(router)
 	contentRoutes.RegisterContentSharingRoutes(router)
 	reportRoutes.RegisterReportRoutes(router)
+	safetyRoutes.RegisterSafetyRoutes(router)
 
 	// Health check endpoint
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {

@@ -61,7 +61,10 @@ export const NotificationList: React.FC = () => {
                 {notifications.map((notif) => (
                     <div
                         key={notif.id}
-                        onClick={() => !notif.is_read && handleMarkAsRead(notif.id)}
+                        onClick={() => {
+                            if (!notif.is_read) handleMarkAsRead(notif.id);
+                            window.location.href = `/profile/${notif.related_user_name}`;
+                        }}
                         className={cn(
                             "group relative flex gap-3 p-3 rounded-xl transition-all cursor-pointer border border-transparent",
                             notif.is_read
