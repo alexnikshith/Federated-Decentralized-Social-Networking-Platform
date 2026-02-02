@@ -76,6 +76,11 @@ func (s *NotificationService) MarkAsRead(ctx context.Context, notificationID pri
 	return s.notificationRepo.MarkAsRead(ctx, notificationID)
 }
 
+// MarkAllAsRead marks all notifications for a user as read
+func (s *NotificationService) MarkAllAsRead(ctx context.Context, userID primitive.ObjectID) error {
+	return s.notificationRepo.MarkAllAsRead(ctx, userID)
+}
+
 // GetUnreadCount returns the count of unread notifications
 func (s *NotificationService) GetUnreadCount(ctx context.Context, userID primitive.ObjectID) (int64, error) {
 	return s.notificationRepo.GetUnreadCount(ctx, userID)
