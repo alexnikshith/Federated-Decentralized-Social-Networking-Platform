@@ -11,7 +11,8 @@ import {
     Rss,
     AlertCircle,
     Loader2,
-    WifiOff
+    WifiOff,
+    X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import './Feed.css';
@@ -41,22 +42,13 @@ export const FeedPage: React.FC = () => {
                 <div className="feed-layout-grid">
                     {/* Left/Main Column */}
                     <div className="feed-main-col stagger-1">
-                        <header className="feed-page-header">
+                        <header className="feed-page-header mb-8">
                             <div>
-                                <h1 className="text-gradient-gold">Global Feed</h1>
-                                <p className="text-sm text-muted-foreground">Catch up with the federation</p>
+                                <h1 className="text-gradient-gold">New Post</h1>
+                                <p className="text-sm text-muted-foreground">Share your thoughts with the federation</p>
                             </div>
 
                             <div className="flex items-center gap-2">
-                                <Button
-                                    variant={sidebarType === 'search' ? 'hero' : 'secondary'}
-                                    size="sm"
-                                    onClick={() => toggleSidebar('search')}
-                                    className="gap-2 rounded-full"
-                                >
-                                    <Search className="w-4 h-4" />
-                                    <span className="hidden sm:inline">Search</span>
-                                </Button>
                                 <Button
                                     variant={sidebarType === 'notifications' ? 'hero' : 'secondary'}
                                     size="sm"
@@ -72,93 +64,43 @@ export const FeedPage: React.FC = () => {
                             </div>
                         </header>
 
-                        <div className="create-post-container mb-12">
+                        <div className="create-post-container max-w-2xl mx-auto">
                             <CreatePost />
-                        </div>
-
-                        {error && (
-                            <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm flex items-center gap-3 mb-8">
-                                <WifiOff className="w-5 h-5 flex-shrink-0" />
-                                <p>{error}</p>
-                                <Button variant="ghost" size="sm" onClick={() => fetchFeed()} className="ml-auto text-xs uppercase font-bold tracking-wider">
-                                    Retry
-                                </Button>
-                            </div>
-                        )}
-
-                        <div className="flex items-center gap-4 mb-8">
-                            <div className="h-px flex-1 bg-border/50" />
-                            <h2 className="font-display font-bold text-xs uppercase tracking-[0.3em] text-muted-foreground/60 whitespace-nowrap">
-                                Federated Timeline
-                            </h2>
-                            <div className="h-px flex-1 bg-border/50" />
-                        </div>
-
-                        <div className="space-y-6">
-                            {loading && posts.length === 0 && (
-                                <div className="flex flex-col items-center justify-center py-20 animate-in fade-in">
-                                    <Loader2 className="w-8 h-8 text-primary animate-spin mb-4" />
-                                    <p className="text-sm text-muted-foreground uppercase tracking-widest font-medium">Syncing Feed...</p>
-                                </div>
-                            )}
-
-                            {!loading && posts.length === 0 && !error && (
-                                <div className="glass-card rounded-xl py-20 px-6 text-center">
-                                    <AlertCircle className="w-10 h-10 text-muted-foreground mx-auto mb-4 opacity-20" />
-                                    <h3 className="text-lg font-display font-bold mb-1">Silence in the Federation</h3>
-                                    <p className="text-sm text-muted-foreground">There are no global posts yet. Be the first to start the conversation!</p>
-                                </div>
-                            )}
-
-                            {posts.map((post, index) => (
-                                <div
-                                    key={post.id}
-                                    className="opacity-0 animate-fade-in-up"
-                                    style={{ animationDelay: `${index * 0.05}s` }}
-                                >
-                                    <PostCard post={post} />
-                                </div>
-                            ))}
                         </div>
                     </div>
 
+                    {/* Overlay */}
+                    {sidebarType && (
+                        <div
+                            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 transition-all duration-300"
+                            onClick={() => setSidebarType(null)}
+                        />
+                    )}
+
                     {/* Right Column / Sidebar */}
                     <div className={cn(
-                        "feed-sidebar-col stagger-2",
-                        sidebarType ? "active" : "inactive"
+                        "feed-sidebar-col",
+                        sidebarType ? "active" : ""
                     )}>
-                        <div className="sticky top-24 space-y-6">
+                        <div className="sticky top-6 space-y-6">
+                            <div className="flex items-center justify-between mb-2 lg:mb-6">
+                                <h2 className="font-display font-bold text-xl">
+                                    {sidebarType === 'search' ? 'Discover People' : sidebarType === 'notifications' ? 'Notifications' : ''}
+                                </h2>
+                                <Button variant="ghost" size="icon" onClick={() => setSidebarType(null)} className="rounded-full">
+                                    <X className="w-5 h-5" />
+                                </Button>
+                            </div>
+
                             {sidebarType === 'search' && (
-                                <div className="glass-card rounded-xl p-6 animate-scale-in">
-                                    <div className="flex items-center gap-2 mb-6 border-b border-border/50 pb-4">
-                                        <Search className="w-5 h-5 text-primary" />
-                                        <h2 className="font-display font-bold">Discover People</h2>
-                                    </div>
+                                <div className="animate-scale-in">
                                     <UserSearch />
                                 </div>
                             )}
 
                             {sidebarType === 'notifications' && (
-                                <div className="glass-card rounded-xl p-6 animate-scale-in">
-                                    <div className="flex items-center gap-2 mb-6 border-b border-border/50 pb-4">
-                                        <Bell className="w-5 h-5 text-accent" />
-                                        <h2 className="font-display font-bold">Recent Activity</h2>
-                                    </div>
+                                <div className="animate-scale-in">
                                     <NotificationList />
-                                </div>
-                            )}
-
-                            {!sidebarType && (
-                                <div className="hidden lg:block space-y-6">
-                                    <div className="glass-card rounded-xl p-6 bg-gradient-gold/5 border-primary/20">
-                                        <div className="flex items-center gap-3 mb-3">
-                                            <Rss className="w-6 h-6 text-primary" />
-                                            <h3 className="font-display font-bold">Federated View</h3>
-                                        </div>
-                                        <p className="text-xs text-muted-foreground leading-relaxed">
-                                            You are currently viewing the global federated feed. Posts from all connected instances are synchronized here in real-time.
-                                        </p>
-                                    </div>
                                 </div>
                             )}
                         </div>

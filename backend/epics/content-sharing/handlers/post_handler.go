@@ -252,3 +252,50 @@ func (h *PostHandler) GetUserCommentedPosts(w http.ResponseWriter, r *http.Reque
 
 	respondSuccess(w, "User commented posts retrieved successfully", feed, http.StatusOK)
 }
+
+// GetPostLikers handles GET /api/posts/:id/likers
+func (h *PostHandler) GetPostLikers(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserIDFromContext(r.Context())
+	vars := mux.Vars(r)
+
+	postID, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		respondError(w, "Invalid post ID", http.StatusBadRequest)
+		return
+	}
+
+	likers, err := h.postService.GetPostLikers(r.Context(), postID, userID)
+	if err != nil {
+		if err.Error() == "unauthorized: you can only view likers of your own posts" {
+			respondError(w, err.Error(), http.StatusForbidden)
+			return
+		}
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondSuccess(w, "Post likers retrieved successfully", likers, http.StatusOK)
+}
+
+// DeleteComment handles DELETE /api/comments/:id
+func (h *PostHandler) DeleteComment(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserIDFromContext(r.Context())
+	vars := mux.Vars(r)
+
+	commentID, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		respondError(w, "Invalid comment ID", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.postService.DeleteComment(r.Context(), commentID, userID); err != nil {
+		if err.Error() == "unauthorized: you can only delete your own comments" {
+			respondError(w, err.Error(), http.StatusForbidden)
+			return
+		}
+		respondError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	respondSuccess(w, "Comment deleted successfully", nil, http.StatusOK)
+}

@@ -22,13 +22,16 @@ type PostResponse struct {
 
 // CommentResponse represents a comment with user information
 type CommentResponse struct {
-	ID         primitive.ObjectID `json:"id"`
-	PostID     primitive.ObjectID `json:"post_id"`
-	UserID     primitive.ObjectID `json:"user_id"`
-	UserName   string             `json:"user_name"`
-	UserAvatar string             `json:"user_avatar"`
-	Content    string             `json:"content"`
-	CreatedAt  time.Time          `json:"created_at"`
+	ID             primitive.ObjectID  `json:"id"`
+	PostID         primitive.ObjectID  `json:"post_id"`
+	UserID         primitive.ObjectID  `json:"user_id"`
+	UserName       string              `json:"user_name"`
+	UserAvatar     string              `json:"user_avatar"`
+	Content        string              `json:"content"`
+	ParentID       *primitive.ObjectID `json:"parent_id,omitempty"`
+	ParentUserName string              `json:"parent_user_name,omitempty"`
+	Replies        []CommentResponse   `json:"replies,omitempty"`
+	CreatedAt      time.Time           `json:"created_at"`
 }
 
 // NotificationResponse represents a notification with related user info
@@ -47,4 +50,11 @@ type NotificationResponse struct {
 type FeedResponse struct {
 	Posts []PostResponse `json:"posts"`
 	Total int            `json:"total"`
+}
+
+// LikerResponse represents a user who liked a post
+type LikerResponse struct {
+	UserID     primitive.ObjectID `json:"user_id"`
+	UserName   string             `json:"user_name"`
+	UserAvatar string             `json:"user_avatar"`
 }

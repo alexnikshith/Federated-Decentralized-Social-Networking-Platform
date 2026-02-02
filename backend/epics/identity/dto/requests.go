@@ -41,6 +41,11 @@ type ChangePasswordRequest struct {
 	NewPassword string `json:"new_password"`
 }
 
+// Toggle2FARequest represents 2FA toggle payload
+type Toggle2FARequest struct {
+	Enable bool `json:"enable"`
+}
+
 // ErrorResponse represents error response
 type ErrorResponse struct {
 	Error   string `json:"error"`

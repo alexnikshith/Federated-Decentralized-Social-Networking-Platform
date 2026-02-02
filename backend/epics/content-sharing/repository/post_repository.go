@@ -146,12 +146,18 @@ func (r *PostRepository) GetPostsByAuthor(ctx context.Context, authorID primitiv
 }
 
 // GetAllPosts retrieves all posts sorted by timestamp (newest first)
-func (r *PostRepository) GetAllPosts(ctx context.Context, limit int64) ([]models.Post, error) {
+// GetAllPosts retrieves all posts sorted by timestamp (newest first), excluding specific authors
+func (r *PostRepository) GetAllPosts(ctx context.Context, excludeIDs []primitive.ObjectID, limit int64) ([]models.Post, error) {
+	filter := bson.M{}
+	if len(excludeIDs) > 0 {
+		filter["author_id"] = bson.M{"$nin": excludeIDs}
+	}
+
 	opts := options.Find().
 		SetSort(bson.D{{Key: "created_at", Value: -1}}).
 		SetLimit(limit)
 
-	cursor, err := r.posts.Find(ctx, bson.M{}, opts)
+	cursor, err := r.posts.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -266,6 +272,22 @@ func (r *PostRepository) CheckIfLiked(ctx context.Context, postID, userID primit
 	return count > 0, nil
 }
 
+// GetLikesByPostID retrieves all likes for a post
+func (r *PostRepository) GetLikesByPostID(ctx context.Context, postID primitive.ObjectID) ([]models.Like, error) {
+	filter := bson.M{"post_id": postID}
+	cursor, err := r.likes.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var likes []models.Like
+	if err = cursor.All(ctx, &likes); err != nil {
+		return nil, err
+	}
+	return likes, nil
+}
+
 // CreateComment creates a comment on a post
 func (r *PostRepository) CreateComment(ctx context.Context, comment *models.Comment) error {
 	comment.CreatedAt = time.Now()
@@ -304,6 +326,33 @@ func (r *PostRepository) GetCommentsByPostID(ctx context.Context, postID primiti
 	}
 
 	return comments, nil
+}
+
+// GetCommentByID retrieves a single comment by ID
+func (r *PostRepository) GetCommentByID(ctx context.Context, id primitive.ObjectID) (*models.Comment, error) {
+	var comment models.Comment
+	err := r.comments.FindOne(ctx, bson.M{"_id": id}).Decode(&comment)
+	if err != nil {
+		return nil, err
+	}
+	return &comment, nil
+}
+
+// DeleteComment deletes a comment and decrements post comment count
+func (r *PostRepository) DeleteComment(ctx context.Context, commentID primitive.ObjectID) error {
+	var comment models.Comment
+	err := r.comments.FindOne(ctx, bson.M{"_id": commentID}).Decode(&comment)
+	if err != nil {
+		return err
+	}
+
+	_, err = r.comments.DeleteOne(ctx, bson.M{"_id": commentID})
+	if err != nil {
+		return err
+	}
+
+	_, _ = r.posts.UpdateOne(ctx, bson.M{"_id": comment.PostID}, bson.M{"$inc": bson.M{"comment_count": -1}})
+	return nil
 }
 
 // GetLikedPostsByUser retrieves posts liked by a user
