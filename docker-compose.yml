@@ -38,7 +38,7 @@ services:
     container_name: federated_social_frontend
     restart: unless-stopped
     ports:
-      - "5174:5173"
+      - "5173:5173"
     environment:
       - VITE_API_URL=http://localhost:8080
     depends_on:

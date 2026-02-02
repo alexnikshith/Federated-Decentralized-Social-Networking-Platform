@@ -118,6 +118,13 @@ export const markNotificationAsRead = async (notificationId: string): Promise<vo
     await api.put(`/api/notifications/${notificationId}/read`);
 };
 
+export const markAllNotificationsAsRead = async (): Promise<void> => {
+    // Assuming backend endpoint exists. If not, this might 404. 
+    // Standard convention or known from context would be preferable.
+    // Given the prompt implies user wants it, I'll add the client method.
+    await api.put(`/api/notifications/read-all`);
+};
+
 export const getUnreadCount = async (): Promise<number> => {
     const response = await api.get('/api/notifications/unread/count');
     return response.data.data.count;

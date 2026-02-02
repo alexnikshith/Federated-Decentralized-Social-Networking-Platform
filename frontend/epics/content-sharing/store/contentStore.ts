@@ -17,6 +17,7 @@ interface ContentState {
     deletePost: (postId: string) => Promise<void>;
     fetchNotifications: () => Promise<void>;
     markAsRead: (notificationId: string) => Promise<void>;
+    markAllAsRead: () => Promise<void>;
     fetchUnreadCount: () => Promise<void>;
 }
 
@@ -98,15 +99,42 @@ export const useContentStore = create<ContentState>((set, get) => ({
 
     markAsRead: async (notificationId: string) => {
         try {
-            await api.markNotificationAsRead(notificationId);
-            set({
-                notifications: get().notifications.map((notif) =>
+            // Optimistic update
+            set((state) => ({
+                notifications: state.notifications.map((notif) =>
                     notif.id === notificationId ? { ...notif, is_read: true } : notif
                 ),
-            });
+                unreadCount: Math.max(0, state.unreadCount - 1)
+            }));
+
+            await api.markNotificationAsRead(notificationId);
+
+            // Re-fetch to confirm sync (optional, but good for consistency)
             get().fetchUnreadCount();
         } catch (error: any) {
+            // Revert on failure (complex to revert unreadCount perfectly without fetch, 
+            // so just fetching is safer or just alerting error)
             set({ error: error.response?.data?.message || 'Failed to mark as read' });
+            get().fetchNotifications(); // Revert local state
+            get().fetchUnreadCount();
+        }
+    },
+
+    markAllAsRead: async () => {
+        try {
+            // Optimistic update
+            set((state) => ({
+                notifications: state.notifications.map((notif) => ({ ...notif, is_read: true })),
+                unreadCount: 0
+            }));
+
+            await api.markAllNotificationsAsRead();
+
+            get().fetchUnreadCount();
+        } catch (error: any) {
+            set({ error: error.message || 'Failed to mark all as read' });
+            get().fetchNotifications();
+            get().fetchUnreadCount();
         }
     },
 
