@@ -13,11 +13,6 @@ export function HeroSection() {
 
       <div className="container mx-auto px-4 lg:px-8 pt-32 pb-20 relative z-10">
         <div className="max-w-4xl mx-auto text-center flex flex-col items-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary border border-border mb-8 opacity-0 animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
-            <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-            <span className="text-sm text-muted-foreground">Decentralized by design</span>
-          </div>
-
           <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold leading-[1.1] mb-8 opacity-0 animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
             Social networking,{" "}
             <span className="text-gradient-gold">reimagined</span>

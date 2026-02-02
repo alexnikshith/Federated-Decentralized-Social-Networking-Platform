@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useContentStore } from '../store/contentStore';
 import {
     Heart,
@@ -10,6 +11,7 @@ import {
 import { cn } from '@/lib/utils';
 
 export const NotificationList: React.FC = () => {
+    const navigate = useNavigate();
     const { notifications, fetchNotifications, markAsRead, fetchUnreadCount } =
         useContentStore();
 
@@ -63,7 +65,7 @@ export const NotificationList: React.FC = () => {
                         key={notif.id}
                         onClick={() => {
                             if (!notif.is_read) handleMarkAsRead(notif.id);
-                            window.location.href = `/profile/${notif.related_user_name}`;
+                            navigate(`/profile/${notif.related_user_name}`);
                         }}
                         className={cn(
                             "group relative flex gap-3 p-3 rounded-xl transition-all cursor-pointer border border-transparent",
