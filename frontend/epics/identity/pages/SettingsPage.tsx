@@ -142,7 +142,6 @@ export const SettingsPage = () => {
             try {
                 await profileApi.deactivateAccount();
                 clearAuth();
-                window.location.href = "/login";
             } catch (error: any) {
                 toast({
                     title: "Error",
@@ -158,7 +157,6 @@ export const SettingsPage = () => {
             try {
                 await profileApi.deleteAccount();
                 clearAuth();
-                window.location.href = "/login";
             } catch (error: any) {
                 toast({
                     title: "Error",
@@ -211,7 +209,6 @@ export const SettingsPage = () => {
             // Logout after a delay
             setTimeout(() => {
                 clearAuth();
-                window.location.href = "/login";
             }, 2000);
         } catch (error: any) {
             toast({

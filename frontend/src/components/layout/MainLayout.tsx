@@ -55,7 +55,6 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
 
     const handleLogout = () => {
         clearAuth();
-        navigate("/");
     };
 
     // Sidebar Links: Communities, Explore Federation
