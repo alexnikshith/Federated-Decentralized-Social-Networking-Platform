@@ -12,6 +12,7 @@ export interface User {
     followers_count?: number;
     following_count?: number;
     posts_count?: number;
+    is_following?: boolean;
     instance?: string;
 }
 
