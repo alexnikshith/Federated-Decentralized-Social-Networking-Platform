@@ -37,6 +37,7 @@ func RegisterContentSharingRoutes(router *mux.Router) {
 
 	// Notification routes
 	router.Handle("/api/notifications", middleware.AuthMiddleware(http.HandlerFunc(notificationHandler.GetNotifications))).Methods("GET", "OPTIONS")
+	router.Handle("/api/notifications/read-all", middleware.AuthMiddleware(http.HandlerFunc(notificationHandler.MarkAllAsRead))).Methods("PUT", "OPTIONS")
 	router.Handle("/api/notifications/{id}/read", middleware.AuthMiddleware(http.HandlerFunc(notificationHandler.MarkAsRead))).Methods("PUT", "OPTIONS")
 	router.Handle("/api/notifications/unread/count", middleware.AuthMiddleware(http.HandlerFunc(notificationHandler.GetUnreadCount))).Methods("GET", "OPTIONS")
 
