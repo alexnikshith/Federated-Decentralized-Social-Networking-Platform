@@ -70,18 +70,6 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                 <IconChartBar className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
             ),
         },
-        {
-            label: "Notifications",
-            href: "/notifications",
-            icon: (
-                <div className="relative">
-                    <IconBell className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
-                    {unreadCount > 0 && (
-                        <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-neutral-900" />
-                    )}
-                </div>
-            ),
-        },
     ];
 
     const settingsLink = {
@@ -127,6 +115,18 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
             ),
             href: "#",
             onClick: () => setShowSearch(true),
+        },
+        {
+            title: "Notifications",
+            icon: (
+                <div className="relative h-full w-full">
+                    <IconBell className="h-full w-full text-neutral-500 dark:text-neutral-300" />
+                    {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 ring-2 ring-white dark:ring-neutral-900 animate-pulse" />
+                    )}
+                </div>
+            ),
+            href: "/notifications",
         },
         {
             title: "Profile",

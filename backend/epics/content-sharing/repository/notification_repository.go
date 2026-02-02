@@ -88,6 +88,16 @@ func (r *NotificationRepository) MarkAsRead(ctx context.Context, notificationID 
 	return err
 }
 
+// MarkAllAsRead marks all notifications for a user as read
+func (r *NotificationRepository) MarkAllAsRead(ctx context.Context, userID primitive.ObjectID) error {
+	_, err := r.collection.UpdateMany(
+		ctx,
+		bson.M{"user_id": userID, "is_read": false},
+		bson.M{"$set": bson.M{"is_read": true}},
+	)
+	return err
+}
+
 // GetUnreadCount returns the count of unread notifications for a user
 func (r *NotificationRepository) GetUnreadCount(ctx context.Context, userID primitive.ObjectID) (int64, error) {
 	count, err := r.collection.CountDocuments(ctx, bson.M{

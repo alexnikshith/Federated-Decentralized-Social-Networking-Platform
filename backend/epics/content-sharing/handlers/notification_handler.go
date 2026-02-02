@@ -59,6 +59,18 @@ func (h *NotificationHandler) MarkAsRead(w http.ResponseWriter, r *http.Request)
 	respondSuccess(w, "Notification marked as read", nil, http.StatusOK)
 }
 
+// MarkAllAsRead handles PUT /api/notifications/read-all
+func (h *NotificationHandler) MarkAllAsRead(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserIDFromContext(r.Context())
+
+	if err := h.notificationService.MarkAllAsRead(r.Context(), userID); err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondSuccess(w, "All notifications marked as read", nil, http.StatusOK)
+}
+
 // GetUnreadCount handles GET /api/notifications/unread/count
 func (h *NotificationHandler) GetUnreadCount(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserIDFromContext(r.Context())
