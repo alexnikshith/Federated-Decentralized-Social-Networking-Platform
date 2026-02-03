@@ -12,20 +12,24 @@ import (
 )
 
 type AdminHandler struct {
-	userRepo     *identityRepo.UserRepository
-	postRepo     *contentRepo.PostRepository
-	activityRepo *identityRepo.ActivityRepository
-	sessionRepo  *identityRepo.SessionRepository
-	emailSender  *email.EmailSender
+	userRepo         *identityRepo.UserRepository
+	postRepo         *contentRepo.PostRepository
+	activityRepo     *identityRepo.ActivityRepository
+	sessionRepo      *identityRepo.SessionRepository
+	followRepo       *contentRepo.FollowRepository
+	notificationRepo *contentRepo.NotificationRepository
+	emailSender      *email.EmailSender
 }
 
 func NewAdminHandler() *AdminHandler {
 	return &AdminHandler{
-		userRepo:     identityRepo.NewUserRepository(),
-		postRepo:     contentRepo.NewPostRepository(),
-		activityRepo: identityRepo.NewActivityRepository(),
-		sessionRepo:  identityRepo.NewSessionRepository(),
-		emailSender:  email.NewEmailSender(),
+		userRepo:         identityRepo.NewUserRepository(),
+		postRepo:         contentRepo.NewPostRepository(),
+		activityRepo:     identityRepo.NewActivityRepository(),
+		sessionRepo:      identityRepo.NewSessionRepository(),
+		followRepo:       contentRepo.NewFollowRepository(),
+		notificationRepo: contentRepo.NewNotificationRepository(),
+		emailSender:      email.NewEmailSender(),
 	}
 }
 
@@ -127,6 +131,47 @@ func (h *AdminHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 
 	oid, _ := primitive.ObjectIDFromHex(postID)
 	if err := h.postRepo.DeletePost(r.Context(), oid); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *AdminHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	userID := r.URL.Query().Get("id")
+	if userID == "" {
+		http.Error(w, "User ID required", http.StatusBadRequest)
+		return
+	}
+
+	oid, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		http.Error(w, "Invalid User ID", http.StatusBadRequest)
+		return
+	}
+
+	ctx := r.Context()
+
+	// Nuclear wipe in order:
+
+	// 1. Posts, Likes, Comments
+	_ = h.postRepo.DeletePostsByAuthor(ctx, oid)
+	_ = h.postRepo.DeleteLikesByUser(ctx, oid)
+	_ = h.postRepo.DeleteCommentsByUser(ctx, oid)
+
+	// 2. Follows
+	_ = h.followRepo.DeleteAllFollows(ctx, oid)
+
+	// 3. Notifications
+	_ = h.notificationRepo.DeleteUserNotifications(ctx, oid)
+
+	// 4. Sessions & Activity
+	_ = h.sessionRepo.InvalidateAllUserSessions(ctx, oid)
+	_ = h.activityRepo.DeleteUserActivity(ctx, oid)
+
+	// 5. Finally, the User record
+	if err := h.userRepo.DeleteUser(ctx, oid); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

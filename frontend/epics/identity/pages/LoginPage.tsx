@@ -41,7 +41,7 @@ export const LoginPage: React.FC = () => {
                 setAuth(response.user, response.token);
                 navigate('/dashboard');
             }
-        } catch (err: any) {
+        } catch (err) {
             setError(err.response?.data?.message || 'Authentication failed. Please try again.');
         } finally {
             setLoading(false);

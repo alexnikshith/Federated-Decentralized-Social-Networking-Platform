@@ -174,6 +174,37 @@ func (s *PostService) GetUserPosts(ctx context.Context, userID, requestingUserID
 	}, nil
 }
 
+// GetPostByID retrieves a single post by ID with privacy checks
+func (s *PostService) GetPostByID(ctx context.Context, postID, requestingUserID primitive.ObjectID) (*dto.PostResponse, error) {
+	// Fetch the post
+	post, err := s.postRepo.GetPostByID(ctx, postID)
+	if err != nil {
+		return nil, errors.New("post not found")
+	}
+
+	// Check if requesting user is blocked by post author or has blocked the author
+	isBlocked, err := s.blockService.IsBlocked(ctx, post.AuthorID, requestingUserID)
+	if err != nil {
+		return nil, err
+	}
+	isBlockedBy, err := s.blockService.IsBlocked(ctx, requestingUserID, post.AuthorID)
+	if err != nil {
+		return nil, err
+	}
+
+	if isBlocked || isBlockedBy {
+		return nil, errors.New("access denied")
+	}
+
+	// Enrich the post with author info and like status
+	enrichedPosts, err := s.enrichPosts(ctx, []models.Post{*post}, requestingUserID)
+	if err != nil || len(enrichedPosts) == 0 {
+		return nil, errors.New("failed to load post")
+	}
+
+	return &enrichedPosts[0], nil
+}
+
 // LikePost likes a post and creates a notification
 func (s *PostService) LikePost(ctx context.Context, postID, userID primitive.ObjectID) error {
 	// Check if post exists
@@ -224,10 +255,13 @@ func (s *PostService) CreateComment(ctx context.Context, postID, userID primitiv
 		Content: req.Content,
 	}
 
+	var parentComment *models.Comment
 	if req.ParentID != "" {
 		parentID, err := primitive.ObjectIDFromHex(req.ParentID)
 		if err == nil {
 			comment.ParentID = &parentID
+			// Fetch parent comment for notification
+			parentComment, _ = s.postRepo.GetCommentByID(ctx, parentID)
 		}
 	}
 
@@ -236,13 +270,38 @@ func (s *PostService) CreateComment(ctx context.Context, postID, userID primitiv
 	}
 
 	// Create notification for post author (if not commenting on own post)
-	if post.AuthorID != userID {
+	// OR for parent comment author (if replying to someone else's comment)
+	var notificationRecipientID primitive.ObjectID
+	if parentComment != nil && parentComment.UserID != userID {
+		// This is a reply to someone else's comment
+		notificationRecipientID = parentComment.UserID
+	} else if post.AuthorID != userID {
+		// This is a comment on someone else's post
+		notificationRecipientID = post.AuthorID
+	}
+
+	// Only create notification if there's a valid recipient
+	if !notificationRecipientID.IsZero() {
 		notification := &models.Notification{
-			UserID:          post.AuthorID,
+			UserID:          notificationRecipientID,
 			Type:            "comment",
 			RelatedEntityID: postID,
 			RelatedUserID:   userID,
+			CommentContent:  req.Content,
 		}
+
+		// If this is a reply, add parent comment info
+		if parentComment != nil {
+			notification.ParentCommentID = comment.ParentID
+			notification.ParentCommentContent = parentComment.Content
+			// Get parent comment author's username
+			if parentUser, err := s.searchRepo.GetUsersByIDs(ctx, []primitive.ObjectID{parentComment.UserID}); err == nil {
+				if user := parentUser[parentComment.UserID]; user != nil {
+					notification.ParentUserName = user.Username
+				}
+			}
+		}
+
 		s.notificationRepo.CreateNotification(ctx, notification)
 	}
 

@@ -1,6 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useContentStore } from '../store/contentStore';
+import { useAuthStore } from '../../identity/store/authStore';
+import { Notification as AppNotification } from '../types';
+import { PostDetailDialog } from './PostDetailDialog';
 import {
     Heart,
     MessageSquare,
@@ -14,6 +17,10 @@ export const NotificationList: React.FC = () => {
     const navigate = useNavigate();
     const { notifications, fetchNotifications, markAsRead, fetchUnreadCount } =
         useContentStore();
+    const { user: currentUser } = useAuthStore();
+    const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+    const [showPostDialog, setShowPostDialog] = useState(false);
+    const [openCommentsOnPost, setOpenCommentsOnPost] = useState(false);
 
     useEffect(() => {
         fetchNotifications();
@@ -37,14 +44,60 @@ export const NotificationList: React.FC = () => {
         }
     };
 
-    const getNotificationText = (notif: any) => {
+    const getNotificationText = (notif: AppNotification) => {
+        const handleUserClick = (e: React.MouseEvent) => {
+            e.stopPropagation();
+            navigate(`/profile/${notif.related_user_name}`);
+        };
+
+        const usernameElement = (
+            <b
+                className="text-foreground hover:text-primary hover:underline cursor-pointer transition-colors"
+                onClick={handleUserClick}
+            >
+                {notif.related_user_name}
+            </b>
+        );
+
+        // Helper function to truncate text
+        const truncateText = (text: string, maxLength: number = 50) => {
+            if (text.length <= maxLength) return text;
+            return text.substring(0, maxLength) + '...';
+        };
+
         switch (notif.type) {
             case 'like':
-                return <span><b className="text-foreground">{notif.related_user_name}</b> liked your post</span>;
+                return <span>{usernameElement} liked your post</span>;
             case 'comment':
-                return <span><b className="text-foreground">{notif.related_user_name}</b> commented on your post</span>;
+                // Check if this is a reply to a comment
+                if (notif.parent_comment_id && notif.parent_comment_content) {
+                    const truncatedParentComment = truncateText(notif.parent_comment_content, 30);
+                    return (
+                        <span>
+                            {usernameElement} replied to your comment{' '}
+                            <span className="italic text-muted-foreground">
+                                "{truncatedParentComment}"
+                            </span>
+                        </span>
+                    );
+                }
+                // Regular comment on post
+                if (notif.comment_content) {
+                    const truncatedComment = truncateText(notif.comment_content);
+                    return (
+                        <span>
+                            {usernameElement} commented{' '}
+                            <span className="italic text-muted-foreground">
+                                "{truncatedComment}"
+                            </span>
+                            {' '}on your post
+                        </span>
+                    );
+                }
+                // Fallback if no comment content
+                return <span>{usernameElement} commented on your post</span>;
             case 'follow':
-                return <span><b className="text-foreground">{notif.related_user_name}</b> followed you</span>;
+                return <span>{usernameElement} followed you</span>;
             default:
                 return 'New interaction';
         }
@@ -65,7 +118,20 @@ export const NotificationList: React.FC = () => {
                         key={notif.id}
                         onClick={() => {
                             if (!notif.is_read) handleMarkAsRead(notif.id);
-                            navigate(`/profile/${notif.related_user_name}`);
+
+                            if (notif.type === 'follow') {
+                                navigate(`/profile/${notif.related_user_name}`);
+                            } else if (notif.type === 'like') {
+                                // Open post in dialog
+                                setSelectedPostId(notif.related_entity_id);
+                                setOpenCommentsOnPost(false);
+                                setShowPostDialog(true);
+                            } else if (notif.type === 'comment') {
+                                // Open post in dialog with comments expanded
+                                setSelectedPostId(notif.related_entity_id);
+                                setOpenCommentsOnPost(true);
+                                setShowPostDialog(true);
+                            }
                         }}
                         className={cn(
                             "group relative flex gap-3 p-3 rounded-xl transition-all cursor-pointer border border-transparent",
@@ -106,6 +172,14 @@ export const NotificationList: React.FC = () => {
                     </div>
                 ))}
             </div>
+
+            {/* Post Detail Dialog */}
+            <PostDetailDialog
+                postId={selectedPostId}
+                open={showPostDialog}
+                onOpenChange={setShowPostDialog}
+                initialShowComments={openCommentsOnPost}
+            />
         </div>
     );
 };

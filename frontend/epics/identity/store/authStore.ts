@@ -59,7 +59,7 @@ export const useAuthStore = create<AuthState>()(
 
                     // Update or add session
                     const existingSessionIndex = state.sessions.findIndex(s => s.user.id === user.id);
-                    let newSessions = [...state.sessions];
+                    const newSessions = [...state.sessions];
 
                     if (existingSessionIndex >= 0) {
                         newSessions[existingSessionIndex] = { user, token, lastActivity: now };
@@ -249,7 +249,7 @@ export const useAuthStore = create<AuthState>()(
             name: 'auth-storage',
             storage: createJSONStorage(() => localStorage),
             version: 2, // Increment version to force clear old state
-            migrate: (persistedState: any, version: number) => {
+            migrate: (persistedState: unknown, version: number) => {
                 if (version < 2) {
                     // Critical schema change, wipe old state
                     return {

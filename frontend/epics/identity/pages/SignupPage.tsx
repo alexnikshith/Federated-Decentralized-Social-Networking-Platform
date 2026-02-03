@@ -47,8 +47,11 @@ export const SignupPage: React.FC = () => {
 
             setAuth(loginResponse.user, loginResponse.token);
             navigate('/dashboard');
-        } catch (err: any) {
-            setError(err.response?.data?.message || 'Signup failed. Please try again.');
+        } catch (error) {
+            const errorMessage = error && typeof error === 'object' && 'response' in error
+                ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+                : undefined;
+            setError(errorMessage || 'Signup failed. Please try again.');
             setLoading(false);
         }
     };

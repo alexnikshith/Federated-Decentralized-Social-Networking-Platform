@@ -24,4 +24,8 @@ export const adminApi = {
     deletePost: async (postId: string): Promise<void> => {
         await api.delete(`/api/admin/posts?id=${postId}`);
     },
+
+    deleteUser: async (userId: string): Promise<void> => {
+        await api.delete(`/api/admin/users?id=${userId}`);
+    },
 };

@@ -11,7 +11,18 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { UserCog, Ban, CheckCircle } from 'lucide-react';
+import { UserCog, Ban, CheckCircle, Trash2 } from 'lucide-react';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
     Tooltip,
     TooltipContent,
@@ -26,10 +37,11 @@ interface UserManagementProps {
     users: User[];
     loading: boolean;
     onToggleStatus: (userId: string, currentStatus: boolean) => void;
+    onDeleteUser: (userId: string) => void;
     onRefresh: () => void;
 }
 
-const UserManagement: React.FC<UserManagementProps> = ({ users, loading, onToggleStatus, onRefresh }) => {
+const UserManagement: React.FC<UserManagementProps> = ({ users, loading, onToggleStatus, onDeleteUser, onRefresh }) => {
     const { user: currentUser } = useAuthStore();
     const [selectedUser, setSelectedUser] = React.useState<User | null>(null);
     const [isModalOpen, setIsModalOpen] = React.useState(false);
@@ -85,14 +97,45 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, loading, onToggl
                         <div className="flex justify-end gap-1">
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => onToggleStatus(user.id, user.is_active || false)}
-                                        className={user.is_active ? "text-destructive hover:text-destructive hover:bg-destructive/10" : "text-green-500 hover:text-green-500 hover:bg-green-500/10"}
-                                    >
-                                        {user.is_active ? <Ban className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
-                                    </Button>
+                                    {user.is_active ? (
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                >
+                                                    <Ban className="h-4 w-4" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Ban User @{user.username}?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This will prevent the user from logging in and interacting with the platform. You can re-enable their account at any time.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction
+                                                        onClick={() => onToggleStatus(user.id, true)}
+                                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                    >
+                                                        Deactivate Account
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    ) : (
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => onToggleStatus(user.id, false)}
+                                            className="text-green-500 hover:text-green-500 hover:bg-green-500/10"
+                                        >
+                                            <CheckCircle className="h-4 w-4" />
+                                        </Button>
+                                    )}
                                 </TooltipTrigger>
                                 <TooltipContent>
                                     <p>{user.is_active ? 'Ban User' : 'Enable User'}</p>
@@ -109,6 +152,35 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, loading, onToggl
                                     <p>Manage Permissions</p>
                                 </TooltipContent>
                             </Tooltip>
+
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This will permanently delete <span className="font-bold">@{user.username}</span> and all associated data including posts, follows, and activity logs. This action cannot be undone.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction
+                                            onClick={() => onDeleteUser(user.id)}
+                                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                        >
+                                            Delete User Account
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
                         </div>
                     </TooltipProvider>
                 ) : (
