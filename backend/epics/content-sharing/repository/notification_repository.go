@@ -106,3 +106,9 @@ func (r *NotificationRepository) GetUnreadCount(ctx context.Context, userID prim
 	})
 	return count, err
 }
+
+// DeleteUserNotifications permanently deletes all notifications for a user
+func (r *NotificationRepository) DeleteUserNotifications(ctx context.Context, userID primitive.ObjectID) error {
+	_, err := r.collection.DeleteMany(ctx, bson.M{"user_id": userID})
+	return err
+}

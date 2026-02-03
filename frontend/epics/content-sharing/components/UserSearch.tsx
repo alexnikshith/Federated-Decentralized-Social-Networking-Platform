@@ -12,8 +12,6 @@ export const UserSearch: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<PublicUser[]>([]);
     const [loading, setLoading] = useState(false);
-    const [followingMap, setFollowingMap] = useState<Map<string, boolean>>(new Map());
-    const [loadingMap, setLoadingMap] = useState<Map<string, boolean>>(new Map());
     const { toast } = useToast();
 
     const handleSearch = async (searchQuery: string) => {
@@ -39,51 +37,7 @@ export const UserSearch: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
         }
     };
 
-    const handleFollow = async (e: React.MouseEvent, userId: string, isCurrentlyFollowing: boolean) => {
-        e.stopPropagation();
-        // Set loading state for this specific user
-        setLoadingMap(prev => new Map(prev).set(userId, true));
 
-        try {
-            if (isCurrentlyFollowing) {
-                await api.unfollowUser(userId);
-                setFollowingMap(prev => {
-                    const newMap = new Map(prev);
-                    newMap.set(userId, false);
-                    return newMap;
-                });
-                toast({
-                    title: "Unfollowed",
-                    description: "You have unfollowed this user.",
-                });
-            } else {
-                await api.followUser(userId);
-                setFollowingMap(prev => {
-                    const newMap = new Map(prev);
-                    newMap.set(userId, true);
-                    return newMap;
-                });
-                toast({
-                    title: "Following",
-                    description: "You are now following this user.",
-                });
-            }
-        } catch (error) {
-            console.error('Failed to follow/unfollow:', error);
-            toast({
-                variant: "destructive",
-                title: "Action failed",
-                description: "Unable to update follow status. Please try again.",
-            });
-        } finally {
-            // Remove loading state for this user
-            setLoadingMap(prev => {
-                const newMap = new Map(prev);
-                newMap.delete(userId);
-                return newMap;
-            });
-        }
-    };
 
     return (
         <div className="space-y-4">
@@ -106,8 +60,6 @@ export const UserSearch: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
                 )}
 
                 {results.map((user) => {
-                    const isFollowing = followingMap.get(user.id) || false;
-                    const isLoadingUser = loadingMap.get(user.id) || false;
 
                     return (
                         <div
@@ -140,21 +92,7 @@ export const UserSearch: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
                                 </div>
                             </div>
 
-                            <Button
-                                variant={isFollowing ? "secondary" : "ghost"}
-                                size="icon"
-                                className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={(e) => handleFollow(e, user.id, isFollowing)}
-                                disabled={isLoadingUser}
-                            >
-                                {isLoadingUser ? (
-                                    <Loader2 className="w-4 h-4 text-primary animate-spin" />
-                                ) : isFollowing ? (
-                                    <UserCheck className="w-4 h-4 text-primary" />
-                                ) : (
-                                    <UserPlus className="w-4 h-4 text-primary" />
-                                )}
-                            </Button>
+
                         </div>
                     );
                 })}

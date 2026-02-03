@@ -1,11 +1,0 @@
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
-HTTP/1.1 405 Method Not Allowed
-Access-Control-Allow-Credentials: true
-Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With
-Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS, PATCH
-Access-Control-Allow-Origin: *
-Access-Control-Max-Age: 3600
-Date: Sat, 31 Jan 2026 18:18:36 GMT
-

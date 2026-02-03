@@ -45,6 +45,16 @@ const AdminDashboard: React.FC = () => {
         }
     };
 
+    const handleDeleteUser = async (userId: string) => {
+        try {
+            await adminApi.deleteUser(userId);
+            toast.success('User and all associated data permanently deleted');
+            fetchData();
+        } catch (error) {
+            toast.error('Failed to delete user');
+        }
+    };
+
     return (
         <div className="container mx-auto p-6 space-y-8 min-h-screen bg-transparent">
             {/* Header Section */}
@@ -105,6 +115,7 @@ const AdminDashboard: React.FC = () => {
                             users={users}
                             loading={loading}
                             onToggleStatus={handleToggleStatus}
+                            onDeleteUser={handleDeleteUser}
                             onRefresh={fetchData}
                         />
                     </TabsContent>

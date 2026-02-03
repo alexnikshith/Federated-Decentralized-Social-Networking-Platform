@@ -69,7 +69,7 @@ export const authApi = {
         return response.data;
     },
 
-    login: async (data: LoginRequest): Promise<any> => {
+    login: async (data: LoginRequest): Promise<LoginResponse> => {
         const response = await api.post('/api/auth/login', data);
         return response.data;
     },

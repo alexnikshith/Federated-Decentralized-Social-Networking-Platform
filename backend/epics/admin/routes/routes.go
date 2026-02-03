@@ -18,5 +18,6 @@ func RegisterAdminRoutes(router *mux.Router) {
 	adminSubrouter.HandleFunc("/users", h.ListUsers).Methods("GET", "OPTIONS")
 	adminSubrouter.HandleFunc("/users/status", h.ToggleUserStatus).Methods("POST", "OPTIONS")
 	adminSubrouter.HandleFunc("/users/role", h.UpdateUserRole).Methods("POST", "OPTIONS")
+	adminSubrouter.HandleFunc("/users", h.DeleteUser).Methods("DELETE", "OPTIONS")
 	adminSubrouter.HandleFunc("/posts", h.DeletePost).Methods("DELETE", "OPTIONS")
 }
