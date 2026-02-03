@@ -22,6 +22,7 @@ func RegisterIdentityRoutes(router *mux.Router) {
 	router.Handle("/api/auth/logout", middleware.AuthMiddleware(http.HandlerFunc(authHandler.Logout))).Methods("POST", "OPTIONS")
 	router.Handle("/api/auth/change-password", middleware.AuthMiddleware(http.HandlerFunc(authHandler.ChangePassword))).Methods("POST", "OPTIONS")
 	router.Handle("/api/auth/2fa", middleware.AuthMiddleware(http.HandlerFunc(authHandler.Toggle2FA))).Methods("POST", "OPTIONS")
+	router.Handle("/api/auth/me", middleware.AuthMiddleware(http.HandlerFunc(authHandler.Me))).Methods("GET", "OPTIONS")
 
 	// Profile routes (protected)
 	router.Handle("/api/profile/me", middleware.AuthMiddleware(http.HandlerFunc(profileHandler.GetMyProfile))).Methods("GET", "OPTIONS")

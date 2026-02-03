@@ -83,6 +83,11 @@ export const authApi = {
         const response = await api.post('/api/auth/change-password', data);
         return response.data;
     },
+
+    syncSession: async (): Promise<LoginResponse> => {
+        const response = await api.get('/api/auth/me');
+        return response.data;
+    },
 };
 
 // Profile API

@@ -4,6 +4,7 @@ import (
 	"context"
 	"federated-social/backend/config"
 	"federated-social/backend/database"
+	adminRoutes "federated-social/backend/epics/admin/routes"
 	contentRepo "federated-social/backend/epics/content-sharing/repository"
 	contentRoutes "federated-social/backend/epics/content-sharing/routes"
 	"federated-social/backend/epics/identity/repository"
@@ -78,6 +79,7 @@ func main() {
 	contentRoutes.RegisterContentSharingRoutes(router)
 	reportRoutes.RegisterReportRoutes(router)
 	safetyRoutes.RegisterSafetyRoutes(router)
+	adminRoutes.RegisterAdminRoutes(router)
 
 	// Health check endpoint
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {

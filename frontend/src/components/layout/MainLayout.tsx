@@ -15,7 +15,8 @@ import {
     IconX,
     IconLayoutList,
     IconChartBar,
-    IconBell
+    IconBell,
+    IconShieldLock
 } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
@@ -55,7 +56,13 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
 
     const handleLogout = () => {
         clearAuth();
-        navigate("/");
+        // Check if we switched to another session instead of fully logging out
+        const isStillAuthenticated = useAuthStore.getState().token !== null;
+        if (isStillAuthenticated) {
+            window.location.reload();
+        } else {
+            navigate("/");
+        }
     };
 
     // Sidebar Links: Communities, Explore Federation
@@ -82,6 +89,15 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                 <IconChartBar className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
             ),
         },
+        ...(user?.role === "admin" ? [
+            {
+                label: "Admin Panel",
+                href: "/admin",
+                icon: (
+                    <IconShieldLock className="h-5 w-5 shrink-0 text-primary" />
+                ),
+            },
+        ] : []),
     ];
 
     const settingsLink = {
@@ -225,11 +241,11 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                                             onClick={() => {
                                                 if (session.token) {
                                                     switchAccount(session.user.id);
+                                                    navigate("/dashboard");
+                                                    window.location.reload();
                                                 } else {
-                                                    // If signed out, we need to log in again
-                                                    // For now, clear current and go to login
-                                                    // Ideally we'd pass an email hint
-                                                    clearAuth();
+                                                    // Just go to login for this specific account
+                                                    switchAccount(session.user.id, true);
                                                     navigate("/login");
                                                 }
                                             }}
@@ -315,7 +331,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                                     </button>
                                 </div>
                                 <div className="flex-1 overflow-y-auto p-4">
-                                    <UserSearch />
+                                    <UserSearch onClose={() => setShowSearch(false)} />
                                 </div>
                             </motion.div>
                         </>

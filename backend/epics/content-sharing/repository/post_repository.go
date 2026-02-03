@@ -461,3 +461,23 @@ func (r *PostRepository) DeleteCommentsByUser(ctx context.Context, userID primit
 func (r *PostRepository) CountPostsByAuthor(ctx context.Context, userID primitive.ObjectID) (int64, error) {
 	return r.posts.CountDocuments(ctx, bson.M{"author_id": userID})
 }
+
+// CountAll returns the total number of posts
+func (r *PostRepository) CountAll(ctx context.Context) (int64, error) {
+	return r.posts.CountDocuments(ctx, bson.M{})
+}
+
+// FindAll returns all posts
+func (r *PostRepository) FindAll(ctx context.Context) ([]models.Post, error) {
+	cursor, err := r.posts.Find(ctx, bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var posts []models.Post
+	if err = cursor.All(ctx, &posts); err != nil {
+		return nil, err
+	}
+	return posts, nil
+}

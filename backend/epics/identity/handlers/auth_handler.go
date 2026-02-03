@@ -165,6 +165,24 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	respondSuccess(w, "Password changed successfully", nil, http.StatusOK)
 }
 
+// Me returns the current user profile and a fresh token
+func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
+	userIDStr := r.Context().Value(middleware.UserIDKey).(string)
+	userID, err := primitive.ObjectIDFromHex(userIDStr)
+	if err != nil {
+		respondError(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	loginResp, err := h.authService.SyncProfile(r.Context(), userID)
+	if err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondJSON(w, loginResp, http.StatusOK)
+}
+
 // Helper to extract token from Authorization header
 func extractToken(r *http.Request) string {
 	authHeader := r.Header.Get("Authorization")

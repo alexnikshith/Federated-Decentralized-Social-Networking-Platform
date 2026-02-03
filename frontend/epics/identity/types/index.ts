@@ -15,6 +15,8 @@ export interface User {
     is_following?: boolean;
     instance?: string;
     is_2fa_enabled?: boolean;
+    role?: 'user' | 'admin';
+    is_active?: boolean;
 }
 
 export interface ActivityLog {
