@@ -140,7 +140,7 @@ export const SettingsPage = () => {
                 await profileApi.deactivateAccount();
                 clearAuth();
                 window.location.href = "/login";
-            } catch (error) {
+            } catch (error: any) {
                 toast({
                     title: "Error",
                     description: error.response?.data?.message || "Failed to deactivate account",
@@ -156,7 +156,7 @@ export const SettingsPage = () => {
                 await profileApi.deleteAccount();
                 clearAuth();
                 window.location.href = "/login";
-            } catch (error) {
+            } catch (error: any) {
                 toast({
                     title: "Error",
                     description: error.response?.data?.message || "Failed to delete account",
@@ -208,7 +208,6 @@ export const SettingsPage = () => {
             // Logout after a delay
             setTimeout(() => {
                 clearAuth();
-                window.location.href = "/login";
             }, 2000);
         } catch (error) {
             toast({
