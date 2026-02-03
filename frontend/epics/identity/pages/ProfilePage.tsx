@@ -109,7 +109,7 @@ export const ProfilePage: React.FC = () => {
             await profileApi.deactivateAccount();
             clearAuth();
             navigate('/login');
-        } catch (err) {
+        } catch (err: any) {
             setError(err.response?.data?.message || 'Failed to deactivate account');
         }
     };
@@ -121,7 +121,6 @@ export const ProfilePage: React.FC = () => {
             // Ignore errors
         }
         clearAuth();
-        navigate('/login');
     };
 
     return (

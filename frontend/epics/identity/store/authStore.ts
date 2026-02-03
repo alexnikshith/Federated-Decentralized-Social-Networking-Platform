@@ -84,9 +84,10 @@ export const useAuthStore = create<AuthState>()(
                 }
 
                 // Logout active user: keep in sessions but nullify token
-                set((state) => {
-                    if (!state.user) return state;
+                const state = get();
+                const currentUserId = state.user?.id;
 
+<<<<<<< HEAD
                     const currentUserId = state.user.id;
                     const newSessions = state.sessions.map(s =>
                         s.user.id === currentUserId
@@ -108,13 +109,36 @@ export const useAuthStore = create<AuthState>()(
                     }
 
                     return {
+=======
+                const newSessions = state.sessions.map(s =>
+                    s.user.id === currentUserId
+                        ? { ...s, token: null }
+                        : s
+                );
+
+                // Find next active session (first one that isn't the one we just logged out of, although map handled token nulling)
+                const nextActiveSession = newSessions.find(s => s.token !== null);
+
+                if (nextActiveSession) {
+                    set({
+                        user: nextActiveSession.user,
+                        token: nextActiveSession.token,
+                        isAuthenticated: true,
+                        lastActivity: Date.now(),
+                        sessions: newSessions
+                    });
+                    setTimeout(() => window.location.href = '/dashboard', 100);
+                } else {
+                    set({
+>>>>>>> origin/main
                         user: null,
                         token: null,
                         isAuthenticated: false,
                         lastActivity: null,
                         sessions: newSessions
-                    };
-                });
+                    });
+                    setTimeout(() => window.location.href = '/login', 100);
+                }
             },
 
             clearAllSessions: () => {
@@ -190,6 +214,7 @@ export const useAuthStore = create<AuthState>()(
                 set((state) => {
                     const session = state.sessions.find(s => s.user.id === userId);
 
+<<<<<<< HEAD
                     if (session && session.token) {
                         // Switch to active session
                         const now = Date.now();
@@ -226,6 +251,30 @@ export const useAuthStore = create<AuthState>()(
                     }
                     return {};
                 });
+=======
+                if (session && session.token) {
+                    // Switch to active session
+                    set({
+                        user: session.user,
+                        token: session.token,
+                        isAuthenticated: true,
+                        lastActivity: Date.now()
+                    });
+                    // Force reload to reset other stores (cleanest way)
+                    // window.location.reload(); // Optional: handled by consumer or just reload
+                    // Using reload is safer for clearing other store states (content, reports etc)
+                    setTimeout(() => window.location.href = '/dashboard', 100);
+                } else if (session) {
+                    // Session exists but logged out
+                    set({
+                        user: null,
+                        token: null,
+                        isAuthenticated: false,
+                        lastActivity: null
+                    });
+                    // Consumer should redirect to login
+                }
+>>>>>>> origin/main
             },
 
             removeAccount: (userId: string) => {

@@ -36,10 +36,6 @@ api.interceptors.response.use(
         if (error.response?.status === 401) {
             // Token expired or server reset
             useAuthStore.getState().clearAuth(); // Use clearAuth to keep session but invalidate token
-            // Redirect to login if not already there
-            if (window.location.pathname !== '/login' && window.location.pathname !== '/register' && window.location.pathname !== '/') {
-                window.location.href = '/login';
-            }
         }
         return Promise.reject(error);
     }

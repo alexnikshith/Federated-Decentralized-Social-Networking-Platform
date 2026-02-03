@@ -56,14 +56,8 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
 
     const handleLogout = () => {
         clearAuth();
-        // Check if we switched to another session instead of fully logging out
-        const isStillAuthenticated = useAuthStore.getState().token !== null;
-        if (isStillAuthenticated) {
-            window.location.reload();
-        } else {
-            navigate("/");
-        }
     };
+
 
     // Sidebar Links: Communities, Explore Federation
     // Settings, Theme, Logout are in bottom section manually
