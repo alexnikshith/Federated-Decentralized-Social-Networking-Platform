@@ -15,7 +15,8 @@ import {
     IconX,
     IconLayoutList,
     IconChartBar,
-    IconBell
+    IconBell,
+    IconShieldLock
 } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
@@ -57,6 +58,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
         clearAuth();
     };
 
+
     // Sidebar Links: Communities, Explore Federation
     // Settings, Theme, Logout are in bottom section manually
     const sidebarLinks = [
@@ -81,6 +83,15 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                 <IconChartBar className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
             ),
         },
+        ...(user?.role === "admin" ? [
+            {
+                label: "Admin Panel",
+                href: "/admin",
+                icon: (
+                    <IconShieldLock className="h-5 w-5 shrink-0 text-primary" />
+                ),
+            },
+        ] : []),
     ];
 
     const settingsLink = {
@@ -224,11 +235,11 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                                             onClick={() => {
                                                 if (session.token) {
                                                     switchAccount(session.user.id);
+                                                    navigate("/dashboard");
+                                                    window.location.reload();
                                                 } else {
-                                                    // If signed out, we need to log in again
-                                                    // For now, clear current and go to login
-                                                    // Ideally we'd pass an email hint
-                                                    clearAuth();
+                                                    // Just go to login for this specific account
+                                                    switchAccount(session.user.id, true);
                                                     navigate("/login");
                                                 }
                                             }}
@@ -314,7 +325,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                                     </button>
                                 </div>
                                 <div className="flex-1 overflow-y-auto p-4">
-                                    <UserSearch />
+                                    <UserSearch onClose={() => setShowSearch(false)} />
                                 </div>
                             </motion.div>
                         </>
@@ -334,10 +345,11 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
 };
 
 export const Logo = () => {
+    const navigate = useNavigate();
     return (
-        <a
-            href="/"
-            className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal text-black"
+        <div
+            onClick={() => navigate("/dashboard")}
+            className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal text-black cursor-pointer"
         >
             <div className="h-5 w-6 shrink-0 rounded-tl-lg rounded-tr-sm rounded-br-lg rounded-bl-sm bg-black dark:bg-white" />
             <motion.span
@@ -347,17 +359,18 @@ export const Logo = () => {
             >
                 Nexus Social
             </motion.span>
-        </a>
+        </div>
     );
 };
 
 export const LogoIcon = () => {
+    const navigate = useNavigate();
     return (
-        <a
-            href="/"
-            className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal text-black"
+        <div
+            onClick={() => navigate("/dashboard")}
+            className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal text-black cursor-pointer"
         >
             <div className="h-5 w-6 shrink-0 rounded-tl-lg rounded-tr-sm rounded-br-lg rounded-bl-sm bg-black dark:bg-white" />
-        </a>
+        </div>
     );
 };

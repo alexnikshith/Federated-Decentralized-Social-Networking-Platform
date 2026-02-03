@@ -7,13 +7,11 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
-export const UserSearch: React.FC = () => {
+export const UserSearch: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
     const navigate = useNavigate();
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<PublicUser[]>([]);
     const [loading, setLoading] = useState(false);
-    const [followingMap, setFollowingMap] = useState<Map<string, boolean>>(new Map());
-    const [loadingMap, setLoadingMap] = useState<Map<string, boolean>>(new Map());
     const { toast } = useToast();
 
     const handleSearch = async (searchQuery: string) => {
@@ -39,51 +37,7 @@ export const UserSearch: React.FC = () => {
         }
     };
 
-    const handleFollow = async (e: React.MouseEvent, userId: string, isCurrentlyFollowing: boolean) => {
-        e.stopPropagation();
-        // Set loading state for this specific user
-        setLoadingMap(prev => new Map(prev).set(userId, true));
 
-        try {
-            if (isCurrentlyFollowing) {
-                await api.unfollowUser(userId);
-                setFollowingMap(prev => {
-                    const newMap = new Map(prev);
-                    newMap.set(userId, false);
-                    return newMap;
-                });
-                toast({
-                    title: "Unfollowed",
-                    description: "You have unfollowed this user.",
-                });
-            } else {
-                await api.followUser(userId);
-                setFollowingMap(prev => {
-                    const newMap = new Map(prev);
-                    newMap.set(userId, true);
-                    return newMap;
-                });
-                toast({
-                    title: "Following",
-                    description: "You are now following this user.",
-                });
-            }
-        } catch (error) {
-            console.error('Failed to follow/unfollow:', error);
-            toast({
-                variant: "destructive",
-                title: "Action failed",
-                description: "Unable to update follow status. Please try again.",
-            });
-        } finally {
-            // Remove loading state for this user
-            setLoadingMap(prev => {
-                const newMap = new Map(prev);
-                newMap.delete(userId);
-                return newMap;
-            });
-        }
-    };
 
     return (
         <div className="space-y-4">
@@ -106,14 +60,15 @@ export const UserSearch: React.FC = () => {
                 )}
 
                 {results.map((user) => {
-                    const isFollowing = followingMap.get(user.id) || false;
-                    const isLoadingUser = loadingMap.get(user.id) || false;
 
                     return (
                         <div
                             key={user.id}
                             className="group flex items-center gap-3 p-3 rounded-xl hover:bg-secondary/30 transition-all border border-transparent hover:border-border/50 cursor-pointer"
-                            onClick={() => navigate(`/profile/${user.username}`)}
+                            onClick={() => {
+                                navigate(`/profile/${user.username}`);
+                                if (onClose) onClose();
+                            }}
                         >
                             <div className="relative flex-shrink-0">
                                 {user.avatar_url ? (
@@ -137,21 +92,7 @@ export const UserSearch: React.FC = () => {
                                 </div>
                             </div>
 
-                            <Button
-                                variant={isFollowing ? "secondary" : "ghost"}
-                                size="icon"
-                                className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={(e) => handleFollow(e, user.id, isFollowing)}
-                                disabled={isLoadingUser}
-                            >
-                                {isLoadingUser ? (
-                                    <Loader2 className="w-4 h-4 text-primary animate-spin" />
-                                ) : isFollowing ? (
-                                    <UserCheck className="w-4 h-4 text-primary" />
-                                ) : (
-                                    <UserPlus className="w-4 h-4 text-primary" />
-                                )}
-                            </Button>
+
                         </div>
                     );
                 })}

@@ -20,6 +20,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, postId, onCommentUpd
     const [replyContent, setReplyContent] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [showReplies, setShowReplies] = useState(false);
     const { user } = useAuthStore();
 
     const handleReply = async (e: React.FormEvent) => {
@@ -34,6 +35,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, postId, onCommentUpd
             });
             setReplyContent('');
             setIsReplyOpen(false);
+            setShowReplies(true); // Auto-expand replies after posting
             onCommentUpdated();
         } catch (error) {
             console.error('Failed to post reply:', error);
@@ -69,6 +71,8 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, postId, onCommentUpd
 
     const canDelete = user?.id === comment.user_id &&
         (new Date().getTime() - new Date(comment.created_at).getTime()) < 120000;
+
+    const replyCount = comment.replies?.length || 0;
 
     return (
         <div className={cn(
@@ -119,6 +123,16 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, postId, onCommentUpd
                                 Delete
                             </button>
                         )}
+                        {/* View Replies Button - Instagram Style */}
+                        {!isReply && replyCount > 0 && (
+                            <button
+                                className="text-[11px] font-bold text-muted-foreground hover:text-foreground transition-colors cursor-pointer flex items-center gap-1.5"
+                                onClick={() => setShowReplies(!showReplies)}
+                            >
+                                <div className="w-5 h-[1px] bg-muted-foreground/30" />
+                                {showReplies ? 'Hide' : 'View'} {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
+                            </button>
+                        )}
                     </div>
 
                     {isReplyOpen && (
@@ -145,8 +159,8 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, postId, onCommentUpd
                         </div>
                     )}
 
-                    {/* Replies - Flat structure under the root */}
-                    {comment.replies && comment.replies.length > 0 && (
+                    {/* Replies - Hidden by default, Instagram style */}
+                    {!isReply && showReplies && comment.replies && comment.replies.length > 0 && (
                         <div className="pt-1 space-y-1 ml-1 pl-4 border-l border-border/20">
                             {comment.replies.map(reply => (
                                 <CommentItem

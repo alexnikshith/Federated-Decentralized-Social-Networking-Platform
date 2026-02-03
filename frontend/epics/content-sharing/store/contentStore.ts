@@ -33,7 +33,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
         try {
             const feed = await api.getFeed();
             set({ posts: feed.posts, loading: false });
-        } catch (error: any) {
+        } catch (error) {
             set({ error: error.response?.data?.message || 'Failed to fetch feed', loading: false });
         }
     },
@@ -44,7 +44,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
             await api.createPost({ content });
             // Refresh the entire feed to get the enriched post with author data
             await get().fetchFeed();
-        } catch (error: any) {
+        } catch (error) {
             set({ error: error.response?.data?.message || 'Failed to create post', loading: false });
         }
     },
@@ -59,7 +59,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
                         : post
                 ),
             });
-        } catch (error: any) {
+        } catch (error) {
             set({ error: error.response?.data?.message || 'Failed to like post' });
         }
     },
@@ -74,7 +74,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
                         : post
                 ),
             });
-        } catch (error: any) {
+        } catch (error) {
             set({ error: error.response?.data?.message || 'Failed to unlike post' });
         }
     },
@@ -83,7 +83,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
         try {
             await api.deletePost(postId);
             set({ posts: get().posts.filter((post) => post.id !== postId) });
-        } catch (error: any) {
+        } catch (error) {
             set({ error: error.response?.data?.message || 'Failed to delete post' });
         }
     },
@@ -92,7 +92,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
         try {
             const notifications = await api.getNotifications();
             set({ notifications });
-        } catch (error: any) {
+        } catch (error) {
             set({ error: error.response?.data?.message || 'Failed to fetch notifications' });
         }
     },
@@ -111,7 +111,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
 
             // Re-fetch to confirm sync (optional, but good for consistency)
             get().fetchUnreadCount();
-        } catch (error: any) {
+        } catch (error) {
             // Revert on failure (complex to revert unreadCount perfectly without fetch, 
             // so just fetching is safer or just alerting error)
             set({ error: error.response?.data?.message || 'Failed to mark as read' });
@@ -131,7 +131,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
             await api.markAllNotificationsAsRead();
 
             get().fetchUnreadCount();
-        } catch (error: any) {
+        } catch (error) {
             set({ error: error.message || 'Failed to mark all as read' });
             get().fetchNotifications();
             get().fetchUnreadCount();
@@ -142,7 +142,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
         try {
             const count = await api.getUnreadCount();
             set({ unreadCount: count });
-        } catch (error: any) {
+        } catch (error) {
             console.error('Failed to fetch unread count:', error);
         }
     },

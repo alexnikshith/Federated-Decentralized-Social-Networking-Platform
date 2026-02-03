@@ -48,7 +48,7 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*models
 	// We escape special characters to treat them literally, though for simple emails only . and + matter mostly
 	pattern := "^" + regexp.QuoteMeta(email) + "$"
 	filter := bson.M{"email": primitive.Regex{Pattern: pattern, Options: "i"}}
-	
+
 	err := r.collection.FindOne(ctx, filter).Decode(&user)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
@@ -175,4 +175,24 @@ func (r *UserRepository) Enable2FAForAll(ctx context.Context) error {
 		// Log migration result?
 	}
 	return nil
+}
+
+// CountAll returns the total number of users
+func (r *UserRepository) CountAll(ctx context.Context) (int64, error) {
+	return r.collection.CountDocuments(ctx, bson.M{})
+}
+
+// FindAll returns all users
+func (r *UserRepository) FindAll(ctx context.Context) ([]models.User, error) {
+	cursor, err := r.collection.Find(ctx, bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var users []models.User
+	if err = cursor.All(ctx, &users); err != nil {
+		return nil, err
+	}
+	return users, nil
 }

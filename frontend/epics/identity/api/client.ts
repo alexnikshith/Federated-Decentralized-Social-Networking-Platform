@@ -42,7 +42,21 @@ api.interceptors.response.use(
             !error.config?.url?.includes('/auth/verify-otp') &&
             !error.config?.url?.includes('/auth/google')) {
             // Token expired or invalid
-            useAuthStore.getState().clearAuth();
+            const store = useAuthStore.getState();
+            store.clearAuth();
+
+            // Check if we switched to another active session or are now fully unauthenticated
+            const stillAuthenticated = useAuthStore.getState().isAuthenticated;
+
+            if (!stillAuthenticated) {
+                if (window.location.pathname !== '/login' && window.location.pathname !== '/register' && window.location.pathname !== '/') {
+                    window.location.href = '/login';
+                }
+            } else {
+                // We switched to another valid session (e.g. from an expired secondary account back to primary admin)
+                // Reload to dashboard or current page with new identity context
+                window.location.reload();
+            }
         }
         return Promise.reject(error);
     }
@@ -55,7 +69,7 @@ export const authApi = {
         return response.data;
     },
 
-    login: async (data: LoginRequest): Promise<any> => {
+    login: async (data: LoginRequest): Promise<LoginResponse> => {
         const response = await api.post('/api/auth/login', data);
         return response.data;
     },
@@ -78,6 +92,11 @@ export const authApi = {
 
     changePassword: async (data: ChangePasswordRequest): Promise<ApiResponse<null>> => {
         const response = await api.post('/api/auth/change-password', data);
+        return response.data;
+    },
+
+    syncSession: async (): Promise<LoginResponse> => {
+        const response = await api.get('/api/auth/me');
         return response.data;
     },
 };

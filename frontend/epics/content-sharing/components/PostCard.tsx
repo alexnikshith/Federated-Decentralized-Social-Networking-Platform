@@ -12,7 +12,8 @@ import {
     MoreHorizontal,
     Globe,
     ExternalLink,
-    Users
+    Users,
+    AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -24,16 +25,29 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { showToast } from "@/lib/toast";
 
 interface PostCardProps {
     post: Post;
+    initialShowComments?: boolean;
 }
 
-export const PostCard: React.FC<PostCardProps> = ({ post }) => {
-    const [showComments, setShowComments] = useState(false);
+export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = false }) => {
+    const [showComments, setShowComments] = useState(initialShowComments);
     const [showLikers, setShowLikers] = useState(false);
     const [likers, setLikers] = useState<PostLiker[]>([]);
     const [isLoadingLikers, setIsLoadingLikers] = useState(false);
+    const [showDeleteAlert, setShowDeleteAlert] = useState(false);
 
     const { likePost, unlikePost, deletePost } = useContentStore();
     const { user } = useAuthStore();
@@ -61,9 +75,13 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
         }
     };
 
-    const handleDelete = () => {
-        if (window.confirm('Are you sure you want to delete this post?')) {
-            deletePost(post.id);
+    const handleDelete = async () => {
+        try {
+            await deletePost(post.id);
+            setShowDeleteAlert(false);
+            showToast.postDeleted();
+        } catch (error) {
+            showToast.error("Failed to delete post", "Please try again later.");
         }
     };
 
@@ -113,7 +131,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
                                 variant="ghost"
                                 size="icon"
                                 className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors rounded-xl"
-                                onClick={handleDelete}
+                                onClick={() => setShowDeleteAlert(true)}
                             >
                                 <Trash2 className="w-4 h-4" />
                             </Button>
@@ -236,6 +254,32 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* Delete Confirmation Alert */}
+            <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
+                <AlertDialogContent className="max-w-md">
+                    <AlertDialogHeader>
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+                                <AlertTriangle className="h-6 w-6 text-destructive" />
+                            </div>
+                            <AlertDialogTitle className="text-xl">Delete Post?</AlertDialogTitle>
+                        </div>
+                        <AlertDialogDescription className="text-base leading-relaxed">
+                            This action cannot be undone. Your post will be permanently deleted from the platform.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDelete}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            Delete Post
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };

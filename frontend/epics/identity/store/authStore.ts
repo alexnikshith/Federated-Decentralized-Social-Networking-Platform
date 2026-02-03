@@ -19,13 +19,13 @@ interface AuthState {
 
     // Actions
     setAuth: (user: User, token: string) => void;
-    clearAuth: () => void; // Logout current
+    clearAuth: (logoutAll?: boolean) => void; // Logout current
     updateUser: (user: User) => void;
     updateActivity: () => void;
     checkAutoLogout: () => boolean;
 
     // Multi-session actions
-    switchAccount: (userId: string) => void;
+    switchAccount: (userId: string, intentToLogin?: boolean) => void;
     removeAccount: (userId: string) => void;
     pauseSession: () => void;
     clearAllSessions: () => void;
@@ -59,7 +59,7 @@ export const useAuthStore = create<AuthState>()(
 
                     // Update or add session
                     const existingSessionIndex = state.sessions.findIndex(s => s.user.id === user.id);
-                    let newSessions = [...state.sessions];
+                    const newSessions = [...state.sessions];
 
                     if (existingSessionIndex >= 0) {
                         newSessions[existingSessionIndex] = { user, token, lastActivity: now };
@@ -77,7 +77,12 @@ export const useAuthStore = create<AuthState>()(
                 });
             },
 
-            clearAuth: () => {
+            clearAuth: (logoutAll: boolean = false) => {
+                if (logoutAll) {
+                    get().clearAllSessions();
+                    return;
+                }
+
                 // Logout active user: keep in sessions but nullify token
                 const state = get();
                 const currentUserId = state.user?.id;
@@ -181,32 +186,46 @@ export const useAuthStore = create<AuthState>()(
                 return false;
             },
 
-            switchAccount: (userId: string) => {
-                const state = get();
-                const session = state.sessions.find(s => s.user.id === userId);
+            switchAccount: (userId: string, intentToLogin: boolean = false) => {
+                set((state) => {
+                    const session = state.sessions.find(s => s.user.id === userId);
 
-                if (session && session.token) {
-                    // Switch to active session
-                    set({
-                        user: session.user,
-                        token: session.token,
-                        isAuthenticated: true,
-                        lastActivity: Date.now()
-                    });
-                    // Force reload to reset other stores (cleanest way)
-                    // window.location.reload(); // Optional: handled by consumer or just reload
-                    // Using reload is safer for clearing other store states (content, reports etc)
-                    setTimeout(() => window.location.href = '/dashboard', 100);
-                } else if (session) {
-                    // Session exists but logged out
-                    set({
-                        user: null,
-                        token: null,
-                        isAuthenticated: false,
-                        lastActivity: null
-                    });
-                    // Consumer should redirect to login
-                }
+                    if (session && session.token) {
+                        // Switch to active session
+                        const now = Date.now();
+                        const newSessions = state.sessions.map(s =>
+                            s.user.id === userId
+                                ? { ...s, lastActivity: now }
+                                : s
+                        );
+
+                        return {
+                            user: session.user,
+                            token: session.token,
+                            isAuthenticated: true,
+                            lastActivity: now,
+                            sessions: newSessions
+                        };
+                    } else if (session && intentToLogin) {
+                        // Return the user object so the UI can pre-fill email/instance, 
+                        // but stay unauthenticated
+                        return {
+                            user: session.user,
+                            token: null,
+                            isAuthenticated: false,
+                            lastActivity: null
+                        };
+                    } else if (session) {
+                        // Session exists but logged out, and no intent to login via switcher
+                        return {
+                            user: null,
+                            token: null,
+                            isAuthenticated: false,
+                            lastActivity: null
+                        };
+                    }
+                    return {};
+                });
             },
 
             removeAccount: (userId: string) => {
@@ -229,6 +248,20 @@ export const useAuthStore = create<AuthState>()(
         {
             name: 'auth-storage',
             storage: createJSONStorage(() => localStorage),
+            version: 2, // Increment version to force clear old state
+            migrate: (persistedState: unknown, version: number) => {
+                if (version < 2) {
+                    // Critical schema change, wipe old state
+                    return {
+                        user: null,
+                        token: null,
+                        isAuthenticated: false,
+                        lastActivity: null,
+                        sessions: []
+                    };
+                }
+                return persistedState as AuthState;
+            },
             partialize: (state) => ({
                 user: state.user,
                 token: state.token,

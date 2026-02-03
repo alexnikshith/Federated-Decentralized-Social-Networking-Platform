@@ -52,3 +52,9 @@ func (r *ActivityRepository) DeleteUserActivity(ctx context.Context, userID prim
 	_, err := r.collection.DeleteMany(ctx, bson.M{"user_id": userID})
 	return err
 }
+// CountDailyActivity returns the number of activity logs in the last 24 hours
+func (r *ActivityRepository) CountDailyActivity(ctx context.Context) (int64, error) {
+	yesterday := time.Now().Add(-24 * time.Hour)
+	filter := bson.M{"timestamp": bson.M{"$gte": yesterday}}
+	return r.collection.CountDocuments(ctx, filter)
+}
