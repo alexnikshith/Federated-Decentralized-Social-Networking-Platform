@@ -83,10 +83,10 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     );
 };
 
-// Public Route Component - redirects to dashboard if already logged in
 const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { isAuthenticated, token } = useAuthStore();
 
+    // Only redirect to dashboard if we HAVE a valid token (active session)
     if (isAuthenticated && token) {
         return <Navigate to="/dashboard" replace />;
     }
@@ -95,7 +95,7 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 };
 
 const AppContent: React.FC = () => {
-    const { isAuthenticated, user, token, setAuth, clearAllSessions } = useAuthStore();
+    const { isAuthenticated, user, token, setAuth, clearAuth, clearAllSessions } = useAuthStore();
 
     // Session Sync: Ensure user data and token are fresh
     useEffect(() => {
@@ -113,14 +113,13 @@ const AppContent: React.FC = () => {
         sync();
     }, [isAuthenticated, token, setAuth]);
 
-    // Safety Valve: Detect corrupted localStorage state during schema migrations
+    // Safety Valve: Recover from corrupted login state without wiping other background sessions
     useEffect(() => {
         if (isAuthenticated && (!user || !user.id || !user.username)) {
-            console.warn("Corrupted or legacy session detected. Clearing state for safety.");
-            clearAllSessions();
-            window.location.reload();
+            console.warn("Targeted session recovery triggered for corrupted state.");
+            clearAuth();
         }
-    }, [isAuthenticated, user, clearAllSessions]);
+    }, [isAuthenticated, user, clearAuth]);
 
     return (
         <div className="h-full">

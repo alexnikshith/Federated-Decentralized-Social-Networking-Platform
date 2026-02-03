@@ -19,7 +19,7 @@ interface AuthState {
 
     // Actions
     setAuth: (user: User, token: string) => void;
-    clearAuth: () => void; // Logout current
+    clearAuth: (logoutAll?: boolean) => void; // Logout current
     updateUser: (user: User) => void;
     updateActivity: () => void;
     checkAutoLogout: () => boolean;
@@ -77,7 +77,12 @@ export const useAuthStore = create<AuthState>()(
                 });
             },
 
-            clearAuth: () => {
+            clearAuth: (logoutAll: boolean = false) => {
+                if (logoutAll) {
+                    get().clearAllSessions();
+                    return;
+                }
+
                 // Logout active user: keep in sessions but nullify token
                 set((state) => {
                     if (!state.user) return state;

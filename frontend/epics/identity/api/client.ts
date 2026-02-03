@@ -42,9 +42,20 @@ api.interceptors.response.use(
             !error.config?.url?.includes('/auth/verify-otp') &&
             !error.config?.url?.includes('/auth/google')) {
             // Token expired or invalid
-            useAuthStore.getState().clearAuth();
-            if (window.location.pathname !== '/login' && window.location.pathname !== '/register' && window.location.pathname !== '/') {
-                window.location.href = '/login';
+            const store = useAuthStore.getState();
+            store.clearAuth();
+
+            // Check if we switched to another active session or are now fully unauthenticated
+            const stillAuthenticated = useAuthStore.getState().isAuthenticated;
+
+            if (!stillAuthenticated) {
+                if (window.location.pathname !== '/login' && window.location.pathname !== '/register' && window.location.pathname !== '/') {
+                    window.location.href = '/login';
+                }
+            } else {
+                // We switched to another valid session (e.g. from an expired secondary account back to primary admin)
+                // Reload to dashboard or current page with new identity context
+                window.location.reload();
             }
         }
         return Promise.reject(error);

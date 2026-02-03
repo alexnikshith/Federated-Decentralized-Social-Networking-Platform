@@ -351,10 +351,11 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
 };
 
 export const Logo = () => {
+    const navigate = useNavigate();
     return (
-        <a
-            href="/"
-            className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal text-black"
+        <div
+            onClick={() => navigate("/dashboard")}
+            className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal text-black cursor-pointer"
         >
             <div className="h-5 w-6 shrink-0 rounded-tl-lg rounded-tr-sm rounded-br-lg rounded-bl-sm bg-black dark:bg-white" />
             <motion.span
@@ -364,17 +365,18 @@ export const Logo = () => {
             >
                 Nexus Social
             </motion.span>
-        </a>
+        </div>
     );
 };
 
 export const LogoIcon = () => {
+    const navigate = useNavigate();
     return (
-        <a
-            href="/"
-            className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal text-black"
+        <div
+            onClick={() => navigate("/dashboard")}
+            className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal text-black cursor-pointer"
         >
             <div className="h-5 w-6 shrink-0 rounded-tl-lg rounded-tr-sm rounded-br-lg rounded-bl-sm bg-black dark:bg-white" />
-        </a>
+        </div>
     );
 };
