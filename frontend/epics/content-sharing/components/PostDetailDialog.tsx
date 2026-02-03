@@ -68,10 +68,10 @@ export const PostDetailDialog: React.FC<PostDetailDialogProps> = ({
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute right-4 top-4 z-10 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background"
+                    className="absolute right-4 top-4 z-50 rounded-full bg-black/50 hover:bg-black/70 text-white hover:text-white border border-white/10 backdrop-blur-md shadow-sm transition-all duration-200"
                     onClick={() => onOpenChange(false)}
                 >
-                    <X className="h-4 w-4" />
+                    <X className="h-5 w-5 stroke-[2.5]" />
                 </Button>
 
                 {/* Content */}
