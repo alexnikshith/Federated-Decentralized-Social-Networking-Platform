@@ -36,14 +36,18 @@ type CommentResponse struct {
 
 // NotificationResponse represents a notification with related user info
 type NotificationResponse struct {
-	ID                primitive.ObjectID `json:"id"`
-	Type              string             `json:"type"`
-	RelatedEntityID   primitive.ObjectID `json:"related_entity_id"`
-	RelatedUserID     primitive.ObjectID `json:"related_user_id"`
-	RelatedUserName   string             `json:"related_user_name"`
-	RelatedUserAvatar string             `json:"related_user_avatar"`
-	IsRead            bool               `json:"is_read"`
-	CreatedAt         time.Time          `json:"created_at"`
+	ID                   primitive.ObjectID  `json:"id"`
+	Type                 string              `json:"type"`
+	RelatedEntityID      primitive.ObjectID  `json:"related_entity_id"`
+	RelatedUserID        primitive.ObjectID  `json:"related_user_id"`
+	RelatedUserName      string              `json:"related_user_name"`
+	RelatedUserAvatar    string              `json:"related_user_avatar"`
+	CommentContent       string              `json:"comment_content,omitempty"`
+	ParentCommentID      *primitive.ObjectID `json:"parent_comment_id,omitempty"`
+	ParentCommentContent string              `json:"parent_comment_content,omitempty"`
+	ParentUserName       string              `json:"parent_user_name,omitempty"`
+	IsRead               bool                `json:"is_read"`
+	CreatedAt            time.Time           `json:"created_at"`
 }
 
 // FeedResponse represents the feed with posts

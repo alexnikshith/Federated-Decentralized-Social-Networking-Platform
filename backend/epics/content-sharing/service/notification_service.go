@@ -57,14 +57,18 @@ func (s *NotificationService) GetNotifications(ctx context.Context, userID primi
 		}
 
 		notificationResponses[i] = dto.NotificationResponse{
-			ID:                notif.ID,
-			Type:              notif.Type,
-			RelatedEntityID:   notif.RelatedEntityID,
-			RelatedUserID:     notif.RelatedUserID,
-			RelatedUserName:   userName,
-			RelatedUserAvatar: userAvatar,
-			IsRead:            notif.IsRead,
-			CreatedAt:         notif.CreatedAt,
+			ID:                   notif.ID,
+			Type:                 notif.Type,
+			RelatedEntityID:      notif.RelatedEntityID,
+			RelatedUserID:        notif.RelatedUserID,
+			RelatedUserName:      userName,
+			RelatedUserAvatar:    userAvatar,
+			CommentContent:       notif.CommentContent,
+			ParentCommentID:      notif.ParentCommentID,
+			ParentCommentContent: notif.ParentCommentContent,
+			ParentUserName:       notif.ParentUserName,
+			IsRead:               notif.IsRead,
+			CreatedAt:            notif.CreatedAt,
 		}
 	}
 

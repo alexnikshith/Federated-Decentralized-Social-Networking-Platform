@@ -56,10 +56,9 @@ export const SettingsPage = () => {
             });
             // Update local user state if needed
             if (currentUser) {
-                // @ts-ignore
-                updateUser({ ...currentUser, is_2fa_enabled: checked });
+                updateUser({ ...currentUser, is_2fa_enabled: checked } as UserType);
             }
-        } catch (error: any) {
+        } catch (error) {
             console.error(error);
             toast({
                 title: "Error",
@@ -77,13 +76,11 @@ export const SettingsPage = () => {
                 display_name: currentUser.display_name || "",
                 bio: currentUser.bio || "",
                 username: currentUser.username || "",
-                // @ts-ignore - handling potential mismatch in types
-                profile_visibility: currentUser.profile_visibility || "public",
+                profile_visibility: (currentUser.profile_visibility || "public") as "public" | "followers",
                 location: currentUser.location || "",
                 website: currentUser.website || "",
             });
-            // @ts-ignore
-            setIs2FAEnabled(currentUser.is_2fa_enabled || false);
+            setIs2FAEnabled((currentUser as UserType & { is_2fa_enabled?: boolean }).is_2fa_enabled || false);
         }
     }, [currentUser]);
 
@@ -125,7 +122,7 @@ export const SettingsPage = () => {
                 });
                 setIsEditing(false);
             }
-        } catch (error: any) {
+        } catch (error) {
             console.error(error);
             toast({
                 title: "Error",
@@ -142,6 +139,7 @@ export const SettingsPage = () => {
             try {
                 await profileApi.deactivateAccount();
                 clearAuth();
+                window.location.href = "/login";
             } catch (error: any) {
                 toast({
                     title: "Error",
@@ -157,6 +155,7 @@ export const SettingsPage = () => {
             try {
                 await profileApi.deleteAccount();
                 clearAuth();
+                window.location.href = "/login";
             } catch (error: any) {
                 toast({
                     title: "Error",
@@ -210,7 +209,7 @@ export const SettingsPage = () => {
             setTimeout(() => {
                 clearAuth();
             }, 2000);
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 title: "Error",
                 description: error.response?.data?.message || "Failed to change password",
@@ -383,7 +382,7 @@ export const SettingsPage = () => {
                                                                 display_name: currentUser.display_name || "",
                                                                 bio: currentUser.bio || "",
                                                                 username: currentUser.username || "",
-                                                                profile_visibility: currentUser.profile_visibility as any || "public",
+                                                                profile_visibility: (currentUser.profile_visibility || "public") as "public" | "followers",
                                                                 location: currentUser.location || "",
                                                                 website: currentUser.website || "",
                                                             });
@@ -612,7 +611,7 @@ export const SettingsPage = () => {
     );
 };
 
-function GlobeIcon(props: any) {
+function GlobeIcon(props: React.SVGProps<SVGSVGElement>) {
     return (
         <svg
             {...props}

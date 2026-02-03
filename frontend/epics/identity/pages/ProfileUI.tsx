@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { profileApi } from "../api/client";
 import {
@@ -61,7 +61,7 @@ interface UserListModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
-  users: any[];
+  users: Array<{ id: string; username: string; display_name: string; avatar_url: string }>;
   loading: boolean;
 }
 
@@ -128,6 +128,10 @@ const ProfileUI = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [searchParams] = useSearchParams();
+  const targetPostId = searchParams.get("post");
+  const shouldOpenComments = searchParams.get("openComments") === "true";
+
   // Date Filter State
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
@@ -161,7 +165,7 @@ const ProfileUI = () => {
 
 
 
-      } catch (err: any) {
+      } catch (err) {
         console.error("Failed to load profile:", err);
         setError(err.response?.data?.message || "Failed to load profile");
       } finally {
@@ -171,6 +175,19 @@ const ProfileUI = () => {
 
     loadProfileData();
   }, [username, isOwnProfile, currentUser]);
+
+  // Handle scrolling to target post
+  useEffect(() => {
+    if (targetPostId && !loading && posts.length > 0) {
+      const timer = setTimeout(() => {
+        const element = document.getElementById(`post-${targetPostId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 500); // Wait for animations
+      return () => clearTimeout(timer);
+    }
+  }, [targetPostId, loading, posts]);
 
   useEffect(() => {
     const fetchActivityData = async () => {
@@ -208,7 +225,7 @@ const ProfileUI = () => {
 
   const [isListModalOpen, setIsListModalOpen] = useState(false);
   const [listModalTitle, setListModalTitle] = useState("");
-  const [listModalUsers, setListModalUsers] = useState<any[]>([]);
+  const [listModalUsers, setListModalUsers] = useState<Array<{ id: string; username: string; display_name: string; avatar_url: string }>>([]);
   const [listModalLoading, setListModalLoading] = useState(false);
   const [showBlockConfirmation, setShowBlockConfirmation] = useState(false);
 
@@ -257,7 +274,7 @@ const ProfileUI = () => {
           title: "User unblocked",
           description: `${profileUser.display_name} has been unblocked.`,
         });
-      } catch (error: any) {
+      } catch (error) {
         console.error("Failed to unblock user:", error);
         toast({
           title: "Error",
@@ -286,7 +303,7 @@ const ProfileUI = () => {
         description: `${profileUser.display_name} has been blocked.`,
       });
       // Do not navigate away, show the blocked state on profile
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to block user:", error);
       // Better error message handling
       const errorMessage = error.response?.data?.message ||
@@ -638,9 +655,20 @@ const ProfileUI = () => {
                         </div>
                       ) : (
                         filteredPosts.map((post, index) => (
-                          <div key={post.id} className="opacity-0 animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
+                          <div
+                            key={post.id}
+                            id={`post-${post.id}`}
+                            className={cn(
+                              "opacity-0 animate-fade-in-up transition-all duration-500",
+                              targetPostId === post.id && "ring-2 ring-primary ring-offset-4 ring-offset-background rounded-[2.2rem] shadow-glow"
+                            )}
+                            style={{ animationDelay: `${index * 0.1}s` }}
+                          >
                             <div className="glass-card rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all shadow-sm hover:shadow-glow">
-                              <PostCard post={post} />
+                              <PostCard
+                                post={post}
+                                initialShowComments={targetPostId === post.id && shouldOpenComments}
+                              />
                             </div>
                           </div>
                         ))

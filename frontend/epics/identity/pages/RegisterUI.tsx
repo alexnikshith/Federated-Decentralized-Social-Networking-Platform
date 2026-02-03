@@ -41,17 +41,13 @@ const Register = () => {
         username,
         email,
         password,
-        // @ts-ignore - adding instance which might be expected by backend
+        // @ts-expect-error - adding instance which might be expected by backend
         instance
       });
 
-      // Auto-login after signup
-      const loginResponse = await authApi.login({ email, password });
-      setAuth(loginResponse.user, loginResponse.token);
-
-      toast.success("Account created successfully!");
-      navigate("/dashboard");
-    } catch (err: any) {
+      toast.success("Account created successfully! Please sign in to verify your account.");
+      navigate("/login");
+    } catch (err) {
       toast.error(err.response?.data?.message || "Registration failed. Please try again.");
     } finally {
       setIsLoading(false);

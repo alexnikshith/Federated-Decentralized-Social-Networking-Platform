@@ -71,9 +71,10 @@ func (s *AuthService) Signup(ctx context.Context, req dto.SignupRequest) (*model
 		PasswordHash:      string(hashedPassword),
 		DisplayName:       req.DisplayName,
 		ProfileVisibility: "public",
-		InstanceID:        "default", // TODO: Get from config
-		Is2FAEnabled:      true,      // Default to enabled
+		InstanceID:        "default",
+		Is2FAEnabled:      true,
 		IsActive:          true,
+		Role:              "user",
 	}
 
 	if err := s.userRepo.CreateUser(ctx, user); err != nil {
@@ -135,12 +136,17 @@ func (s *AuthService) InitiateLogin(ctx context.Context, req dto.LoginRequest, i
 		return "Verification code sent to your email", nil
 	}
 
-	// 2FA Disabled - Direct Login
 	// Generate JWT token
 	expiresAt := time.Now().Add(24 * time.Hour)
+	role := user.Role
+	if role == "" {
+		role = "user"
+	}
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": user.ID.Hex(),
 		"email":   user.Email,
+		"role":    role,
 		"exp":     expiresAt.Unix(),
 	})
 
@@ -201,9 +207,15 @@ func (s *AuthService) VerifyOTP(ctx context.Context, req dto.VerifyOTPRequest, i
 
 	// Generate JWT token
 	expiresAt := time.Now().Add(24 * time.Hour)
+	role := user.Role
+	if role == "" {
+		role = "user"
+	}
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": user.ID.Hex(),
 		"email":   user.Email,
+		"role":    role,
 		"exp":     expiresAt.Unix(),
 	})
 
@@ -303,6 +315,53 @@ func (s *AuthService) Toggle2FA(ctx context.Context, userID primitive.ObjectID, 
 	}
 	s.logActivity(ctx, userID, "toggle_2fa", fmt.Sprintf("2FA enabled: %v", enable), "", "")
 	return nil
+}
+
+// SyncProfile re-issues a token and returns updated user info
+func (s *AuthService) SyncProfile(ctx context.Context, userID primitive.ObjectID) (*dto.LoginResponse, error) {
+	// Find user
+	user, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return nil, errors.New("user not found")
+	}
+
+	// Generate JWT token
+	expiresAt := time.Now().Add(24 * time.Hour)
+	role := user.Role
+	if role == "" {
+		role = "user"
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user_id": user.ID.Hex(),
+		"email":   user.Email,
+		"role":    role,
+		"exp":     expiresAt.Unix(),
+	})
+
+	tokenString, err := token.SignedString([]byte(config.AppConfig.JWTSecret))
+	if err != nil {
+		return nil, err
+	}
+
+	// Store session
+	session := &models.Session{
+		UserID:    user.ID,
+		Token:     tokenString,
+		ExpiresAt: expiresAt,
+	}
+	if err := s.sessionRepo.CreateSession(ctx, session); err != nil {
+		return nil, err
+	}
+
+	publicUser := user.ToPublicUser()
+	publicUser.Is2FAEnabled = &user.Is2FAEnabled
+
+	return &dto.LoginResponse{
+		Token:     tokenString,
+		ExpiresAt: expiresAt.Format(time.RFC3339),
+		User:      publicUser,
+	}, nil
 }
 
 // Helper function to log activity

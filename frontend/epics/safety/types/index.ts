@@ -8,5 +8,5 @@ export interface Block {
 export interface BlockResponse {
     success: boolean;
     message: string;
-    data?: any;
+    data?: unknown;
 }

@@ -172,6 +172,30 @@ func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 	respondSuccess(w, "Post deleted successfully", nil, http.StatusOK)
 }
 
+// GetPostByID handles GET /api/posts/:id
+func (h *PostHandler) GetPostByID(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserIDFromContext(r.Context())
+	vars := mux.Vars(r)
+
+	postID, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		respondError(w, "Invalid post ID", http.StatusBadRequest)
+		return
+	}
+
+	post, err := h.postService.GetPostByID(r.Context(), postID, userID)
+	if err != nil {
+		if err.Error() == "access denied" || err.Error() == "post not found" {
+			respondError(w, "Post not found or access denied", http.StatusNotFound)
+			return
+		}
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondSuccess(w, "Post retrieved successfully", post, http.StatusOK)
+}
+
 // GetUserPosts handles GET /api/users/:id/posts
 func (h *PostHandler) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)

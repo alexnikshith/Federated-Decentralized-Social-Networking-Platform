@@ -68,6 +68,11 @@ export const getUserCommentedPosts = async (userId: string, limit = 50): Promise
     return response.data.data.posts || [];
 };
 
+export const getPostById = async (postId: string): Promise<Post> => {
+    const response = await api.get(`/api/posts/${postId}`);
+    return response.data.data;
+};
+
 export const likePost = async (postId: string): Promise<void> => {
     await api.post(`/api/posts/${postId}/like`);
 };

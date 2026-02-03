@@ -32,6 +32,10 @@ export interface Notification {
     related_user_id: string;
     related_user_name: string;
     related_user_avatar: string;
+    comment_content?: string;           // Content of the comment (for comment notifications)
+    parent_comment_id?: string;         // ID of parent comment (for replies)
+    parent_comment_content?: string;    // Content of parent comment
+    parent_user_name?: string;          // Username of parent comment author
     is_read: boolean;
     created_at: string;
 }

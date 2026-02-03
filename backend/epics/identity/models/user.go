@@ -20,9 +20,10 @@ type User struct {
 	ProfileVisibility string `json:"profile_visibility" bson:"profile_visibility"` // "public" or "followers"
 
 	// Account status
-	IsActive      bool `json:"is_active" bson:"is_active"`
-	IsDeactivated bool `json:"is_deactivated" bson:"is_deactivated"`
-	Is2FAEnabled  bool `json:"is_2fa_enabled" bson:"is_2fa_enabled"`
+	IsActive      bool   `json:"is_active" bson:"is_active"`
+	IsDeactivated bool   `json:"is_deactivated" bson:"is_deactivated"`
+	Is2FAEnabled  bool   `json:"is_2fa_enabled" bson:"is_2fa_enabled"`
+	Role          string `json:"role" bson:"role"` // "user" or "admin"
 
 	// Timestamps
 	CreatedAt interface{} `json:"created_at" bson:"created_at"`
@@ -52,6 +53,7 @@ type PublicUser struct {
 	AvatarURL         string             `json:"avatar_url"`
 	ProfileVisibility string             `json:"profile_visibility"`
 	CreatedAt         interface{}        `json:"created_at"`
+	Role              string             `json:"role"`
 	FollowersCount    int64              `json:"followers_count"`
 	FollowingCount    int64              `json:"following_count"`
 	PostsCount        int64              `json:"posts_count"`
@@ -72,6 +74,10 @@ type Session struct {
 // ToPublicUser converts User to PublicUser
 func (u *User) ToPublicUser() PublicUser {
 	isEnabled := u.Is2FAEnabled
+	role := u.Role
+	if role == "" {
+		role = "user"
+	}
 	return PublicUser{
 		ID:                u.ID,
 		Username:          u.Username,
@@ -80,6 +86,7 @@ func (u *User) ToPublicUser() PublicUser {
 		AvatarURL:         u.AvatarURL,
 		ProfileVisibility: u.ProfileVisibility,
 		CreatedAt:         u.CreatedAt,
+		Role:              role,
 		Is2FAEnabled:      &isEnabled,
 		FollowersCount:    0,
 		FollowingCount:    0,

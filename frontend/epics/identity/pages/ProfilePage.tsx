@@ -42,7 +42,7 @@ export const ProfilePage: React.FC = () => {
         try {
             const data = await profileApi.getActivity(50);
             setActivities(data);
-        } catch (err: any) {
+        } catch (err) {
             setError('Failed to load activity');
         }
     };
@@ -59,7 +59,7 @@ export const ProfilePage: React.FC = () => {
                 updateUser(response.data);
             }
             setMessage('Profile updated successfully!');
-        } catch (err: any) {
+        } catch (err) {
             setError(err.response?.data?.message || 'Failed to update profile');
         } finally {
             setLoading(false);
@@ -93,7 +93,7 @@ export const ProfilePage: React.FC = () => {
             setTimeout(() => {
                 handleLogout();
             }, 2000);
-        } catch (err: any) {
+        } catch (err) {
             setError(err.response?.data?.message || 'Failed to change password');
         } finally {
             setLoading(false);
@@ -108,6 +108,7 @@ export const ProfilePage: React.FC = () => {
         try {
             await profileApi.deactivateAccount();
             clearAuth();
+            navigate('/login');
         } catch (err: any) {
             setError(err.response?.data?.message || 'Failed to deactivate account');
         }

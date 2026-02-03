@@ -45,11 +45,15 @@ type Follow struct {
 
 // Notification represents a user notification
 type Notification struct {
-	ID              primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	UserID          primitive.ObjectID `json:"user_id" bson:"user_id"`                     // User receiving the notification
-	Type            string             `json:"type" bson:"type"`                           // "like", "comment", "follow"
-	RelatedEntityID primitive.ObjectID `json:"related_entity_id" bson:"related_entity_id"` // PostID or CommentID
-	RelatedUserID   primitive.ObjectID `json:"related_user_id" bson:"related_user_id"`     // User who triggered the notification
-	IsRead          bool               `json:"is_read" bson:"is_read"`
-	CreatedAt       time.Time          `json:"created_at" bson:"created_at"`
+	ID                   primitive.ObjectID  `json:"id" bson:"_id,omitempty"`
+	UserID               primitive.ObjectID  `json:"user_id" bson:"user_id"`                                                   // User receiving the notification
+	Type                 string              `json:"type" bson:"type"`                                                         // "like", "comment", "follow"
+	RelatedEntityID      primitive.ObjectID  `json:"related_entity_id" bson:"related_entity_id"`                               // PostID or CommentID
+	RelatedUserID        primitive.ObjectID  `json:"related_user_id" bson:"related_user_id"`                                   // User who triggered the notification
+	CommentContent       string              `json:"comment_content,omitempty" bson:"comment_content,omitempty"`               // Content of the comment (for comment notifications)
+	ParentCommentID      *primitive.ObjectID `json:"parent_comment_id,omitempty" bson:"parent_comment_id,omitempty"`           // ID of parent comment (for replies)
+	ParentCommentContent string              `json:"parent_comment_content,omitempty" bson:"parent_comment_content,omitempty"` // Content of parent comment
+	ParentUserName       string              `json:"parent_user_name,omitempty" bson:"parent_user_name,omitempty"`             // Username of parent comment author
+	IsRead               bool                `json:"is_read" bson:"is_read"`
+	CreatedAt            time.Time           `json:"created_at" bson:"created_at"`
 }

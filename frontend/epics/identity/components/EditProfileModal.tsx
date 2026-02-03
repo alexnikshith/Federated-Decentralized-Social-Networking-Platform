@@ -57,8 +57,8 @@ export const EditProfileModal = ({
             } else {
                 setError("Failed to update profile: No data returned");
             }
-        } catch (err: any) {
-            setError(err.response?.data?.message || "Failed to update profile");
+        } catch (error) {
+            setError(error.response?.data?.message || "Failed to update profile");
         } finally {
             setLoading(false);
         }

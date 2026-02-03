@@ -3,18 +3,23 @@ package middleware
 import (
 	"context"
 	"federated-social/backend/config"
+	"federated-social/backend/database"
 	"net/http"
 	"strings"
 
 	"log"
 
 	"github.com/golang-jwt/jwt/v5"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type contextKey string
 
-const UserIDKey contextKey = "userID"
+const (
+	UserIDKey contextKey = "userID"
+	RoleKey   contextKey = "userRole"
+)
 
 // AuthMiddleware validates JWT tokens
 func AuthMiddleware(next http.Handler) http.Handler {
@@ -50,15 +55,43 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		// Extract user ID from claims
+		// Verify against sessions collection to handle invalidation (e.g. role change)
+		sessionsCol := database.GetCollection("sessions")
+		var session struct {
+			IsValid bool `bson:"is_valid"`
+		}
+		err = sessionsCol.FindOne(r.Context(), bson.M{"token": tokenString, "is_valid": true}).Decode(&session)
+		if err != nil {
+			http.Error(w, "Session no longer valid", http.StatusUnauthorized)
+			return
+		}
+
+		// Extract user ID and role from claims
 		if claims, ok := token.Claims.(jwt.MapClaims); ok {
 			userID := claims["user_id"].(string)
+			role := "user"
+			if r, ok := claims["role"].(string); ok && r != "" {
+				role = r
+			}
 			ctx := context.WithValue(r.Context(), UserIDKey, userID)
+			ctx = context.WithValue(ctx, RoleKey, role)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		} else {
 			http.Error(w, "Invalid token claims", http.StatusUnauthorized)
 			return
 		}
+	})
+}
+
+// AdminMiddleware ensures the user has an admin role
+func AdminMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		role, ok := r.Context().Value(RoleKey).(string)
+		if !ok || role != "admin" {
+			http.Error(w, "Admin access required", http.StatusForbidden)
+			return
+		}
+		next.ServeHTTP(w, r)
 	})
 }
 
@@ -88,7 +121,12 @@ func OptionalAuth(next http.Handler) http.Handler {
 			if err == nil && token.Valid {
 				if claims, ok := token.Claims.(jwt.MapClaims); ok {
 					userID := claims["user_id"].(string)
+					role := "user"
+					if r, ok := claims["role"].(string); ok && r != "" {
+						role = r
+					}
 					ctx := context.WithValue(r.Context(), UserIDKey, userID)
+					ctx = context.WithValue(ctx, RoleKey, role)
 					next.ServeHTTP(w, r.WithContext(ctx))
 					return
 				}
@@ -104,11 +142,9 @@ func CORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
 
-		// Log CORS request
 		if origin != "" {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 		} else {
-			// Fallback for requests without Origin header
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 		}
 
@@ -117,9 +153,7 @@ func CORS(next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		w.Header().Set("Access-Control-Max-Age", "3600")
 
-		// Handle preflight requests
 		if r.Method == "OPTIONS" {
-			log.Printf("CORS Preflight: %s %s from %s", r.Method, r.URL.Path, origin)
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
