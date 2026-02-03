@@ -12,11 +12,20 @@ import { Globe, ArrowRight, Eye, EyeOff, Shield } from "lucide-react";
 
 const Login = () => {
   const navigate = useNavigate();
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const { user, setAuth } = useAuthStore();
 
   const [showPassword, setShowPassword] = useState(false);
   const [instance, setInstance] = useState("");
   const [email, setEmail] = useState("");
+
+  // Pre-fill from store if we're coming from an account switch "intent to login"
+  useState(() => {
+    if (user) {
+      if (user.email) setEmail(user.email);
+      if (user.instance) setInstance(user.instance);
+    }
+  });
+
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +43,7 @@ const Login = () => {
       if (step === 1) {
         // Step 1: Initiate Login
         const response = await authApi.login({ email, password });
-        
+
         // Check if direct login (2FA disabled) - response has token
         if (response.token) {
           setAuth(response.user, response.token);
@@ -191,22 +200,25 @@ const Login = () => {
               )}
             </Button>
 
-            {/* Divider */}
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-border"></div>
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">New to Nexus?</span>
-              </div>
-            </div>
+            {/* Register link - Only show on step 1 */}
+            {step === 1 && (
+              <>
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-border"></div>
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground">New to Nexus?</span>
+                  </div>
+                </div>
 
-            {/* Register link */}
-            <Link to="/register">
-              <Button variant="outline" className="w-full h-11">
-                Create an Account
-              </Button>
-            </Link>
+                <Link to="/register">
+                  <Button variant="outline" className="w-full h-11">
+                    Create an Account
+                  </Button>
+                </Link>
+              </>
+            )}
           </form>
 
           {/* Trust indicator */}

@@ -19,8 +19,8 @@ func NewEmailSender() *EmailSender {
 
 func (s *EmailSender) SendVerificationEmail(toEmail, code string) error {
 	// Use the authenticated user as the sender to avoid spoofing issues with Gmail,
-	// but add a Display Name "Nexus Security"
-	fromEmail := s.config.SMTPUser
+	// but add a Display Name "Nexus Security" and the SMTPFrom address
+	senderEmail := s.config.SMTPFrom
 	password := s.config.SMTPPassword
 	host := s.config.SMTPHost
 	port := s.config.SMTPPort
@@ -28,7 +28,7 @@ func (s *EmailSender) SendVerificationEmail(toEmail, code string) error {
 
 	// Email Headers
 	headers := make(map[string]string)
-	headers["From"] = fmt.Sprintf("Nexus Security <%s>", fromEmail)
+	headers["From"] = fmt.Sprintf("Nexus Security <%s>", senderEmail)
 	headers["To"] = toEmail
 	headers["Subject"] = "Your Login Verification Code"
 	headers["MIME-Version"] = "1.0"
@@ -96,5 +96,77 @@ func (s *EmailSender) SendVerificationEmail(toEmail, code string) error {
 	}
 
 	log.Printf("Email sent successfully to %s", toEmail)
+	return nil
+}
+
+func (s *EmailSender) SendAdminRoleNotification(toEmail, username, newRole string) error {
+	password := s.config.SMTPPassword
+	host := s.config.SMTPHost
+	port := s.config.SMTPPort
+	address := host + ":" + port
+
+	headers := make(map[string]string)
+	headers["From"] = fmt.Sprintf("Nexus Security <%s>", s.config.SMTPUser)
+	headers["To"] = toEmail
+	headers["Subject"] = "Account Permission Update"
+	headers["MIME-Version"] = "1.0"
+	headers["Content-Type"] = "text/html; charset=\"UTF-8\""
+
+	headerStr := ""
+	for k, v := range headers {
+		headerStr += fmt.Sprintf("%s: %s\r\n", k, v)
+	}
+
+	body := fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { margin: 0; padding: 0; background-color: #09090b; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .container { max-width: 600px; margin: 40px auto; background-color: #18181b; border: 1px solid #27272a; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); }
+        .header { background-color: #18181b; padding: 30px; text-align: center; border-bottom: 1px solid #27272a; }
+        .logo { color: #fff; font-size: 24px; font-weight: 700; text-decoration: none; letter-spacing: 1px; }
+        .logo span { color: #f5a524; }
+        .content { padding: 40px 30px; text-align: left; color: #a1a1aa; }
+        .title { color: #fff; font-size: 20px; font-weight: 600; margin-bottom: 20px; }
+        .badge { background-color: #27272a; border: 1px solid #3f3f46; border-radius: 6px; padding: 4px 10px; color: #f5a524; font-weight: 600; }
+        .footer { background-color: #09090b; padding: 20px; text-align: center; font-size: 12px; color: #52525b; border-top: 1px solid #27272a; }
+        .button { display: inline-block; background-color: #f5a524; color: #000; padding: 12px 24px; border-radius: 8px; font-weight: bold; text-decoration: none; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">Nexus<span>Protocol</span></div>
+        </div>
+        <div class="content">
+            <h1 class="title">Permission Update</h1>
+            <p>Hello @%s,</p>
+            <p>Your account permissions have been updated on Nexus Protocol. Your new role is: <span class="badge">%s</span></p>
+            
+            <p style="margin-top: 20px;"><strong>Important:</strong> To ensure these changes take effect correctly, please log out and log back in to your account.</p>
+            
+            <p>If you did not expect this change, please contact the system administrator immediately.</p>
+        </div>
+        <div class="footer">
+            &copy; 2026 Nexus Protocol. All rights reserved.<br>
+            Secure Federated Social Networking
+        </div>
+    </div>
+</body>
+</html>
+`, username, newRole)
+
+	msg := []byte(headerStr + "\r\n" + body)
+	auth := smtp.PlainAuth("", s.config.SMTPUser, password, host)
+
+	log.Printf("Sending role notification to %s...", toEmail)
+	err := smtp.SendMail(address, auth, s.config.SMTPUser, []string{toEmail}, msg)
+	if err != nil {
+		log.Printf("ERROR: Failed to send role notification to %s: %v", toEmail, err)
+		return err
+	}
+
+	log.Printf("Role notification sent successfully to %s", toEmail)
 	return nil
 }

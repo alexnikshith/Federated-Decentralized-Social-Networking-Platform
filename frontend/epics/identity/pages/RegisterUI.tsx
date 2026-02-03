@@ -45,12 +45,8 @@ const Register = () => {
         instance
       });
 
-      // Auto-login after signup
-      const loginResponse = await authApi.login({ email, password });
-      setAuth(loginResponse.user, loginResponse.token);
-
-      toast.success("Account created successfully!");
-      navigate("/dashboard");
+      toast.success("Account created successfully! Please sign in to verify your account.");
+      navigate("/login");
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Registration failed. Please try again.");
     } finally {
