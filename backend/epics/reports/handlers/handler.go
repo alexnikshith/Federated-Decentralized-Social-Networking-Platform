@@ -44,12 +44,21 @@ func (h *ReportHandler) GetReport(w http.ResponseWriter, r *http.Request) {
 
 	query := r.URL.Query()
 	if startStr := query.Get("start_date"); startStr != "" {
-		if t, err := time.Parse(time.RFC3339, startStr); err == nil {
+		// Try parsing as yyyy-MM-dd format first
+		if t, err := time.Parse("2006-01-02", startStr); err == nil {
+			startDate = t.UTC()
+		} else if t, err := time.Parse(time.RFC3339, startStr); err == nil {
+			// Fallback to RFC3339 if yyyy-MM-dd fails
 			startDate = t
 		}
 	}
 	if endStr := query.Get("end_date"); endStr != "" {
-		if t, err := time.Parse(time.RFC3339, endStr); err == nil {
+		// Try parsing as yyyy-MM-dd format first
+		if t, err := time.Parse("2006-01-02", endStr); err == nil {
+			// Set to end of day for end date
+			endDate = time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, time.UTC)
+		} else if t, err := time.Parse(time.RFC3339, endStr); err == nil {
+			// Fallback to RFC3339 if yyyy-MM-dd fails
 			endDate = t
 		}
 	}
@@ -85,12 +94,21 @@ func (h *ReportHandler) GetInteractionReport(w http.ResponseWriter, r *http.Requ
 
 	query := r.URL.Query()
 	if startStr := query.Get("start_date"); startStr != "" {
-		if t, err := time.Parse(time.RFC3339, startStr); err == nil {
+		// Try parsing as yyyy-MM-dd format first
+		if t, err := time.Parse("2006-01-02", startStr); err == nil {
+			startDate = t.UTC()
+		} else if t, err := time.Parse(time.RFC3339, startStr); err == nil {
+			// Fallback to RFC3339 if yyyy-MM-dd fails
 			startDate = t
 		}
 	}
 	if endStr := query.Get("end_date"); endStr != "" {
-		if t, err := time.Parse(time.RFC3339, endStr); err == nil {
+		// Try parsing as yyyy-MM-dd format first
+		if t, err := time.Parse("2006-01-02", endStr); err == nil {
+			// Set to end of day for end date
+			endDate = time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, time.UTC)
+		} else if t, err := time.Parse(time.RFC3339, endStr); err == nil {
+			// Fallback to RFC3339 if yyyy-MM-dd fails
 			endDate = t
 		}
 	}
@@ -132,12 +150,21 @@ func (h *ReportHandler) GetInteractionMadeReport(w http.ResponseWriter, r *http.
 
 	query := r.URL.Query()
 	if startStr := query.Get("start_date"); startStr != "" {
-		if t, err := time.Parse(time.RFC3339, startStr); err == nil {
+		// Try parsing as yyyy-MM-dd format first
+		if t, err := time.Parse("2006-01-02", startStr); err == nil {
+			startDate = t.UTC()
+		} else if t, err := time.Parse(time.RFC3339, startStr); err == nil {
+			// Fallback to RFC3339 if yyyy-MM-dd fails
 			startDate = t
 		}
 	}
 	if endStr := query.Get("end_date"); endStr != "" {
-		if t, err := time.Parse(time.RFC3339, endStr); err == nil {
+		// Try parsing as yyyy-MM-dd format first
+		if t, err := time.Parse("2006-01-02", endStr); err == nil {
+			// Set to end of day for end date
+			endDate = time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, time.UTC)
+		} else if t, err := time.Parse(time.RFC3339, endStr); err == nil {
+			// Fallback to RFC3339 if yyyy-MM-dd fails
 			endDate = t
 		}
 	}
