@@ -7,10 +7,12 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/gridfs"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var DB *mongo.Database
+var GridFS *gridfs.Bucket
 
 // Connect establishes connection to MongoDB with retries
 func Connect() {
@@ -47,7 +49,15 @@ func Connect() {
 		cancel()
 
 		DB = client.Database(config.AppConfig.DatabaseName)
-		log.Println("Connected to MongoDB successfully")
+
+		// Initialize GridFS bucket
+		var errBucket error
+		GridFS, errBucket = gridfs.NewBucket(DB, options.GridFSBucket().SetName("messaging_media"))
+		if errBucket != nil {
+			log.Printf("Warning: Failed to initialize GridFS bucket: %v", errBucket)
+		}
+
+		log.Println("Connected to MongoDB and initialized GridFS successfully")
 		return
 	}
 }
