@@ -94,13 +94,14 @@ const InteractionsChart: React.FC<InteractionsChartProps> = ({
 
     const chartData = processData();
 
+    // Match TimeUsageChart scaling: default to 10, step of 2
     const maxValue = Math.max(
         ...chartData.map(d => d[selectedMetric]),
         0
     );
-    const tickStep = Math.max(1, Math.ceil(maxValue / 10));
+    const tickStep = 2; // Fixed step of 2
     const calculatedMax = Math.ceil(maxValue / tickStep) * tickStep;
-    const finalMax = Math.max(calculatedMax, 10);
+    const finalMax = Math.max(calculatedMax, 10); // Default minimum of 10
 
     const ticks = [];
     for (let i = 0; i <= finalMax; i += tickStep) {
