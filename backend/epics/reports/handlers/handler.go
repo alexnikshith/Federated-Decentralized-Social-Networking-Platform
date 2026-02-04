@@ -101,17 +101,19 @@ func (h *ReportHandler) GetInteractionReport(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	var totalLikes, totalComments, totalFollows int
+	var totalLikes, totalComments, totalFollows, totalPosts int
 	for _, i := range interactions {
 		totalLikes += i.Likes
 		totalComments += i.Comments
 		totalFollows += i.Follows
+		totalPosts += i.Posts
 	}
 
 	response := models.InteractionReport{
 		TotalLikes:    totalLikes,
 		TotalComments: totalComments,
 		TotalFollows:  totalFollows,
+		TotalPosts:    totalPosts,
 		DailyStats:    interactions,
 	}
 

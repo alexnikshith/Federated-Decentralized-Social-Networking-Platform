@@ -25,11 +25,13 @@ type DailyInteraction struct {
 	Likes    int       `bson:"likes" json:"likes"`
 	Comments int       `bson:"comments" json:"comments"`
 	Follows  int       `bson:"follows" json:"follows"`
+	Posts    int       `bson:"posts" json:"posts"`
 }
 
 type InteractionReport struct {
 	TotalLikes    int                `json:"total_likes"`
 	TotalComments int                `json:"total_comments"`
 	TotalFollows  int                `json:"total_follows"`
+	TotalPosts    int                `json:"total_posts"`
 	DailyStats    []DailyInteraction `json:"daily_stats"`
 }
