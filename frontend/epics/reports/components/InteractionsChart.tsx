@@ -21,6 +21,7 @@ interface InteractionsChartProps {
     interactionReport?: any;
     prevInteractionReport?: any;
     viewMode?: 'weekly' | 'monthly';
+    isInteractionsMade?: boolean;
 }
 
 interface ChartData {
@@ -46,7 +47,8 @@ const InteractionsChart: React.FC<InteractionsChartProps> = ({
     isNextDisabled = false,
     interactionReport,
     prevInteractionReport,
-    viewMode = 'weekly'
+    viewMode = 'weekly',
+    isInteractionsMade = false
 }) => {
     const [selectedMetric, setSelectedMetric] = useState<MetricType>('likes');
 
@@ -156,9 +158,9 @@ const InteractionsChart: React.FC<InteractionsChartProps> = ({
                 </div>
             </CardHeader>
             <CardContent>
-                {/* Stat Boxes Row */}
+                {/* Stat Box Row - Only Dynamic Metric */}
                 {interactionReport && (
-                    <div className="grid gap-4 md:grid-cols-3 mb-6">
+                    <div className="mb-6">
                         {/* Dynamic Metric Total */}
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -174,65 +176,22 @@ const InteractionsChart: React.FC<InteractionsChartProps> = ({
                                     {selectedMetric === 'follows' && (interactionReport?.total_follows || 0)}
                                 </div>
                                 <p className="text-xs text-muted-foreground">
-                                    {selectedMetric === 'likes' && 'Likes received on posts'}
-                                    {selectedMetric === 'comments' && 'Comments received on posts'}
-                                    {selectedMetric === 'posts' && 'Posts created'}
-                                    {selectedMetric === 'follows' && 'New followers gained'}
-                                </p>
-                            </CardContent>
-                        </Card>
-
-                        {/* Combined Total */}
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">
-                                    Total interactions
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">
-                                    {(interactionReport?.total_posts || 0) +
-                                        (interactionReport?.total_likes || 0) +
-                                        (interactionReport?.total_comments || 0) +
-                                        (interactionReport?.total_follows || 0)}
-                                </div>
-                                <p className="text-xs text-muted-foreground">
-                                    Posts: {interactionReport?.total_posts || 0}, Likes: {interactionReport?.total_likes || 0}, Comments: {interactionReport?.total_comments || 0}, Follows: {interactionReport?.total_follows || 0}
-                                </p>
-                            </CardContent>
-                        </Card>
-
-                        {/* Comparison */}
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">
-                                    Compared to last {viewMode === 'weekly' ? 'week' : 'month'}
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                {(() => {
-                                    const currentTotal = (interactionReport?.total_posts || 0) +
-                                        (interactionReport?.total_likes || 0) +
-                                        (interactionReport?.total_comments || 0) +
-                                        (interactionReport?.total_follows || 0);
-                                    const previousTotal = (prevInteractionReport?.total_posts || 0) +
-                                        (prevInteractionReport?.total_likes || 0) +
-                                        (prevInteractionReport?.total_comments || 0) +
-                                        (prevInteractionReport?.total_follows || 0);
-                                    const diff = currentTotal - previousTotal;
-                                    const isIncrease = diff >= 0;
-
-                                    return (
+                                    {isInteractionsMade ? (
                                         <>
-                                            <div className={`text-2xl font-bold ${isIncrease ? 'text-green-600' : 'text-red-600'}`}>
-                                                {isIncrease ? '+' : ''}{diff}
-                                            </div>
-                                            <p className="text-xs text-muted-foreground">
-                                                {isIncrease ? 'More' : 'Fewer'} interactions than previous {viewMode === 'weekly' ? 'week' : 'month'}
-                                            </p>
+                                            {selectedMetric === 'likes' && 'Posts liked'}
+                                            {selectedMetric === 'comments' && 'Comments made'}
+                                            {selectedMetric === 'posts' && 'Posts created'}
+                                            {selectedMetric === 'follows' && 'Users followed'}
                                         </>
-                                    );
-                                })()}
+                                    ) : (
+                                        <>
+                                            {selectedMetric === 'likes' && 'Likes received on posts'}
+                                            {selectedMetric === 'comments' && 'Comments received on posts'}
+                                            {selectedMetric === 'posts' && 'Posts created'}
+                                            {selectedMetric === 'follows' && 'New followers gained'}
+                                        </>
+                                    )}
+                                </p>
                             </CardContent>
                         </Card>
                     </div>
