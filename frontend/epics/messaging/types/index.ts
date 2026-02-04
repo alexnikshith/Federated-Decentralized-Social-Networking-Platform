@@ -2,7 +2,7 @@ export interface Message {
     id: string;
     sender_id: string;
     content: string;
-    type: 'text' | 'image' | 'doc';
+    type: 'text' | 'image' | 'video' | 'file';
     media_url?: string;
     file_name?: string;
     created_at: string;
@@ -25,7 +25,7 @@ export interface Participant {
 export interface SendMessageRequest {
     receiver_id: string;
     content: string;
-    type: 'text' | 'image' | 'doc';
+    type: 'text' | 'image' | 'video' | 'file';
     media_url?: string;
     file_name?: string;
 }
