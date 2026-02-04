@@ -17,6 +17,7 @@ interface InteractionsChartProps {
     onNextClick: () => void;
     currentLabel: string;
     onViewChange: (view: 'weekly' | 'monthly') => void;
+    isNextDisabled?: boolean;
 }
 
 interface ChartData {
@@ -38,7 +39,8 @@ const InteractionsChart: React.FC<InteractionsChartProps> = ({
     onPrevClick,
     onNextClick,
     currentLabel,
-    onViewChange
+    onViewChange,
+    isNextDisabled = false
 }) => {
     const [selectedMetric, setSelectedMetric] = useState<MetricType>('likes');
 
@@ -134,7 +136,7 @@ const InteractionsChart: React.FC<InteractionsChartProps> = ({
                         <span className="text-sm font-medium min-w-[140px] text-center">
                             {currentLabel}
                         </span>
-                        <Button variant="ghost" size="icon" onClick={onNextClick} className="h-8 w-8 hover:bg-background">
+                        <Button variant="ghost" size="icon" onClick={onNextClick} disabled={isNextDisabled} className="h-8 w-8 hover:bg-background">
                             <ChevronRight className="h-4 w-4" />
                         </Button>
                     </div>
