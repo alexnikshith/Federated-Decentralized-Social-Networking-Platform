@@ -75,3 +75,37 @@ func (h *MessageHandler) GetConversationMessages(w http.ResponseWriter, r *http.
 
 	respondSuccess(w, "Messages retrieved successfully", msgs, http.StatusOK)
 }
+
+func (h *MessageHandler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserIDFromContext(r.Context())
+	vars := mux.Vars(r)
+	msgID, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		respondError(w, "Invalid message ID", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.service.DeleteMessage(r.Context(), msgID, userID); err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondSuccess(w, "Message deleted successfully", nil, http.StatusOK)
+}
+
+func (h *MessageHandler) DeleteConversation(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserIDFromContext(r.Context())
+	vars := mux.Vars(r)
+	convID, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		respondError(w, "Invalid conversation ID", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.service.DeleteConversation(r.Context(), convID, userID); err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondSuccess(w, "Conversation deleted successfully", nil, http.StatusOK)
+}

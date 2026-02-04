@@ -126,3 +126,35 @@ func (s *MessageService) GetMessages(ctx context.Context, conversationID primiti
 
 	return responses, nil
 }
+
+func (s *MessageService) DeleteMessage(ctx context.Context, messageID, userID primitive.ObjectID) error {
+	msg, err := s.repo.GetMessageByID(ctx, messageID)
+	if err != nil {
+		return err
+	}
+	if msg.SenderID != userID {
+		return errors.New("unauthorized: you can only delete your own messages")
+	}
+	return s.repo.DeleteMessage(ctx, messageID)
+}
+
+func (s *MessageService) DeleteConversation(ctx context.Context, conversationID, userID primitive.ObjectID) error {
+	conv, err := s.repo.GetConversationByID(ctx, conversationID)
+	if err != nil {
+		return err
+	}
+
+	// Check if user is a participant
+	isParticipant := false
+	for _, pID := range conv.Participants {
+		if pID == userID {
+			isParticipant = true
+			break
+		}
+	}
+	if !isParticipant {
+		return errors.New("unauthorized: you are not a participant in this conversation")
+	}
+
+	return s.repo.DeleteConversation(ctx, conversationID)
+}
