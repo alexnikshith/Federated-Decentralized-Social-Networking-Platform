@@ -17,7 +17,8 @@ import {
   Image as ImageIcon,
   Lock,
   Calendar as CalendarIcon,
-  X
+  X,
+  Ban
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -228,7 +229,7 @@ const ProfileUI = () => {
   const [listModalUsers, setListModalUsers] = useState<Array<{ id: string; username: string; display_name: string; avatar_url: string }>>([]);
   const [listModalLoading, setListModalLoading] = useState(false);
   const [showBlockConfirmation, setShowBlockConfirmation] = useState(false);
-
+  
   const handleOpenFollowers = async () => {
     if (!profileUser) return;
     setListModalTitle("Followers");
@@ -316,7 +317,7 @@ const ProfileUI = () => {
       setShowBlockConfirmation(false);
     }
   };
-
+  
   // Filter Posts Logic
   const filteredPosts = posts.filter(post => {
     if (!startDate && !endDate) return true;
@@ -417,49 +418,55 @@ const ProfileUI = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={handleBlockUser} className={isBlocked ? "font-medium cursor-pointer" : "text-red-500 font-medium cursor-pointer"}>
-                          <Shield className="w-4 h-4 mr-2" />
-                          {isBlocked ? "Unblock User" : "Block User"}
-                        </DropdownMenuItem>
+                        {!isBlocked && (
+                          <DropdownMenuItem onClick={handleBlockUser} className="text-destructive font-medium cursor-pointer">
+                            <Ban className="w-4 h-4 mr-2" />
+                            Block User
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
 
-                    <Button
-                      variant={isFollowing ? "outline" : "hero"}
-                      className="rounded-full px-8 h-11 shadow-lg shadow-primary/20"
-                      onClick={async () => {
-                        if (!profileUser) return;
-                        try {
-                          if (isFollowing) {
-                            await unfollowUser(profileUser.id);
-                            setIsFollowing(false);
-                            setProfileUser(prev => prev ? { ...prev, followers_count: (prev.followers_count || 0) - 1 } : null);
-                          } else {
-                            await followUser(profileUser.id);
-                            setIsFollowing(true);
-                            setProfileUser(prev => prev ? { ...prev, followers_count: (prev.followers_count || 0) + 1 } : null);
-                          }
-                        } catch (err) {
-                          console.error("Follow/unfollow failed:", err);
-                        }
-                      }}
-                    >
-                      {isFollowing ? "Following" : (
+                    {isBlocked ? (
+                      <Button
+                        variant="destructive"
+                        className="rounded-full px-8 h-11 shadow-lg shadow-destructive/20"
+                        onClick={handleBlockUser}
+                      >
                         <span className="flex items-center gap-2">
-                          <UserPlus className="w-4 h-4" />
-                          Follow
+                          <Shield className="w-4 h-4" />
+                          Unblock User
                         </span>
-                      )}
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      className="rounded-full px-8 h-11 border-primary/20 hover:bg-primary/5"
-                      onClick={() => navigate(`/messages?userId=${profileUser.id}&username=${profileUser.username}`)}
-                    >
-                      <MessageSquare className="w-4 h-4 mr-2" />
-                      Message
-                    </Button>
+                      </Button>
+                    ) : (
+                      <Button
+                        variant={isFollowing ? "outline" : "hero"}
+                        className="rounded-full px-8 h-11 shadow-lg shadow-primary/20"
+                        onClick={async () => {
+                          if (!profileUser) return;
+                          try {
+                            if (isFollowing) {
+                              await unfollowUser(profileUser.id);
+                              setIsFollowing(false);
+                              setProfileUser(prev => prev ? { ...prev, followers_count: (prev.followers_count || 0) - 1 } : null);
+                            } else {
+                              await followUser(profileUser.id);
+                              setIsFollowing(true);
+                              setProfileUser(prev => prev ? { ...prev, followers_count: (prev.followers_count || 0) + 1 } : null);
+                            }
+                          } catch (err) {
+                            console.error("Follow/unfollow failed:", err);
+                          }
+                        }}
+                      >
+                        {isFollowing ? "Following" : (
+                          <span className="flex items-center gap-2">
+                            <UserPlus className="w-4 h-4" />
+                            Follow
+                          </span>
+                        )}
+                      </Button>
+                    )}
                   </>
                 )}
               </div>
@@ -538,13 +545,7 @@ const ProfileUI = () => {
                   <p className="text-muted-foreground mb-8 max-w-md mx-auto">
                     You cannot see their posts, followers, or activity. To view their profile again, you must unblock them.
                   </p>
-                  <Button
-                    variant="outline"
-                    className="border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    onClick={handleBlockUser}
-                  >
-                    Unblock User
-                  </Button>
+
                 </div>
               </div>
             ) : (profileUser.followers_count === -1) ? (

@@ -170,3 +170,5 @@ func (s *EmailSender) SendAdminRoleNotification(toEmail, username, newRole strin
 	log.Printf("Role notification sent successfully to %s", toEmail)
 	return nil
 }
+
+

@@ -46,3 +46,8 @@ export const getBlockedUsers = async (): Promise<Block[]> => {
     const response = await api.get('/api/users/blocked');
     return response.data || [];
 };
+
+export const reportUser = async (userId: string, reason: string): Promise<any> => {
+    const response = await api.post(`/api/users/${userId}/report`, { reason });
+    return response.data;
+};
