@@ -28,4 +28,13 @@ export const adminApi = {
     deleteUser: async (userId: string): Promise<void> => {
         await api.delete(`/api/admin/users?id=${userId}`);
     },
+
+    listReports: async (): Promise<any[]> => {
+        const response = await api.get('/api/admin/reports');
+        return response.data;
+    },
+
+    resolveReport: async (reportId: string): Promise<void> => {
+        await api.delete(`/api/admin/reports/resolve?id=${reportId}`);
+    },
 };

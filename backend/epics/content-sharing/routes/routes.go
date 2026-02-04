@@ -27,8 +27,13 @@ func RegisterContentSharingRoutes(router *mux.Router) {
 	router.Handle("/api/posts/{id}/comments", middleware.AuthMiddleware(http.HandlerFunc(postHandler.GetComments))).Methods("GET", "OPTIONS")
 	router.Handle("/api/comments/{id}", middleware.AuthMiddleware(http.HandlerFunc(postHandler.DeleteComment))).Methods("DELETE", "OPTIONS")
 	router.Handle("/api/posts/{id}/likers", middleware.AuthMiddleware(http.HandlerFunc(postHandler.GetPostLikers))).Methods("GET", "OPTIONS")
+	router.Handle("/api/posts/saved", middleware.AuthMiddleware(http.HandlerFunc(postHandler.GetSavedPosts))).Methods("GET", "OPTIONS")
+	router.Handle("/api/posts/{id}/save", middleware.AuthMiddleware(http.HandlerFunc(postHandler.SavePost))).Methods("POST", "OPTIONS")
+	router.Handle("/api/posts/{id}/save", middleware.AuthMiddleware(http.HandlerFunc(postHandler.UnsavePost))).Methods("DELETE", "OPTIONS")
 	router.Handle("/api/posts/{id}", middleware.AuthMiddleware(http.HandlerFunc(postHandler.GetPostByID))).Methods("GET", "OPTIONS")
 	router.Handle("/api/posts/{id}", middleware.AuthMiddleware(http.HandlerFunc(postHandler.DeletePost))).Methods("DELETE", "OPTIONS")
+	router.Handle("/api/posts/{id}/report", middleware.AuthMiddleware(http.HandlerFunc(postHandler.ReportPost))).Methods("POST", "OPTIONS")
+	router.Handle("/api/posts/{id}/interact", middleware.AuthMiddleware(http.HandlerFunc(postHandler.InteractPost))).Methods("POST", "OPTIONS")
 
 	// Follow routes
 	router.Handle("/api/users/{id}/follow", middleware.AuthMiddleware(http.HandlerFunc(followHandler.Follow))).Methods("POST", "OPTIONS")

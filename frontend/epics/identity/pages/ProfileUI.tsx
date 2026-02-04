@@ -18,7 +18,8 @@ import {
   Lock,
   Calendar as CalendarIcon,
   X,
-  Ban
+  Ban,
+  Bookmark
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -32,7 +33,8 @@ import {
   followUser,
   unfollowUser,
   getFollowers,
-  getFollowing
+  getFollowing,
+  getSavedPosts
 } from "../../content-sharing/api/client";
 import type { Post } from "../../content-sharing/types";
 import type { User } from "../types";
@@ -125,6 +127,7 @@ const ProfileUI = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [likedPosts, setLikedPosts] = useState<Post[]>([]);
   const [commentedPosts, setCommentedPosts] = useState<Post[]>([]);
+  const [savedPosts, setSavedPosts] = useState<Post[]>([]);
   const [activeSubTab, setActiveSubTab] = useState("Likes");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -190,19 +193,26 @@ const ProfileUI = () => {
     }
   }, [targetPostId, loading, posts]);
 
+  const [activityLoading, setActivityLoading] = useState(false);
   useEffect(() => {
     const fetchActivityData = async () => {
       if (activeTab === "Activity" && profileUser) {
+        setActivityLoading(true);
         try {
           if (activeSubTab === "Likes") {
             const posts = await getUserLikedPosts(profileUser.id);
             setLikedPosts(posts);
-          } else {
+          } else if (activeSubTab === "Comments") {
             const posts = await getUserCommentedPosts(profileUser.id);
             setCommentedPosts(posts);
+          } else if (activeSubTab === "Saved") {
+            const data = await getSavedPosts();
+            setSavedPosts(data.posts);
           }
         } catch (err) {
           console.error("Failed to fetch activity data", err);
+        } finally {
+          setActivityLoading(false);
         }
       }
     };
@@ -229,7 +239,7 @@ const ProfileUI = () => {
   const [listModalUsers, setListModalUsers] = useState<Array<{ id: string; username: string; display_name: string; avatar_url: string }>>([]);
   const [listModalLoading, setListModalLoading] = useState(false);
   const [showBlockConfirmation, setShowBlockConfirmation] = useState(false);
-  
+
   const handleOpenFollowers = async () => {
     if (!profileUser) return;
     setListModalTitle("Followers");
@@ -317,7 +327,7 @@ const ProfileUI = () => {
       setShowBlockConfirmation(false);
     }
   };
-  
+
   // Filter Posts Logic
   const filteredPosts = posts.filter(post => {
     if (!startDate && !endDate) return true;
@@ -690,7 +700,7 @@ const ProfileUI = () => {
                     <div className="space-y-6">
                       {/* Sub Tabs */}
                       <div className="flex items-center gap-6 border-b border-border/50 px-2">
-                        {["Likes", "Comments"].map((subTab) => (
+                        {["Likes", "Comments", ...(isOwnProfile ? ["Saved"] : [])].map((subTab) => (
                           <button
                             key={subTab}
                             onClick={() => setActiveSubTab(subTab)}
@@ -707,36 +717,60 @@ const ProfileUI = () => {
                       </div>
 
                       <div className="space-y-4">
-                        {activeSubTab === "Likes" && (
-                          likedPosts.length === 0 ? (
-                            <div className="glass-card rounded-3xl p-16 text-center opacity-50">
-                              <Heart className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                              <h3 className="text-xl font-bold mb-1">No liked posts</h3>
-                              <p className="text-sm">Posts {profileUser.display_name} likes will appear here.</p>
-                            </div>
-                          ) : (
-                            likedPosts.map((post) => (
-                              <div key={post.id} className="glass-card rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all shadow-sm">
-                                <PostCard post={post} />
-                              </div>
-                            ))
-                          )
-                        )}
+                        {activityLoading ? (
+                          <div className="flex justify-center py-20">
+                            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                          </div>
+                        ) : (
+                          <>
+                            {activeSubTab === "Likes" && (
+                              likedPosts.length === 0 ? (
+                                <div className="glass-card rounded-3xl p-16 text-center opacity-50">
+                                  <Heart className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                                  <h3 className="text-xl font-bold mb-1">No liked posts</h3>
+                                  <p className="text-sm">Posts {profileUser.display_name} likes will appear here.</p>
+                                </div>
+                              ) : (
+                                likedPosts.map((post) => (
+                                  <div key={post.id} className="glass-card rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all shadow-sm">
+                                    <PostCard post={post} />
+                                  </div>
+                                ))
+                              )
+                            )}
 
-                        {activeSubTab === "Comments" && (
-                          commentedPosts.length === 0 ? (
-                            <div className="glass-card rounded-3xl p-16 text-center opacity-50">
-                              <MessageSquare className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                              <h3 className="text-xl font-bold mb-1">No comments</h3>
-                              <p className="text-sm">Posts {profileUser.display_name} commented on will appear here.</p>
-                            </div>
-                          ) : (
-                            commentedPosts.map((post) => (
-                              <div key={post.id} className="glass-card rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all shadow-sm">
-                                <PostCard post={post} />
-                              </div>
-                            ))
-                          )
+                            {activeSubTab === "Comments" && (
+                              commentedPosts.length === 0 ? (
+                                <div className="glass-card rounded-3xl p-16 text-center opacity-50">
+                                  <MessageSquare className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                                  <h3 className="text-xl font-bold mb-1">No comments</h3>
+                                  <p className="text-sm">Posts {profileUser.display_name} commented on will appear here.</p>
+                                </div>
+                              ) : (
+                                commentedPosts.map((post) => (
+                                  <div key={post.id} className="glass-card rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all shadow-sm">
+                                    <PostCard post={post} />
+                                  </div>
+                                ))
+                              )
+                            )}
+
+                            {activeSubTab === "Saved" && isOwnProfile && (
+                              savedPosts.length === 0 ? (
+                                <div className="glass-card rounded-3xl p-16 text-center opacity-50">
+                                  <Bookmark className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                                  <h3 className="text-xl font-bold mb-1">No saved posts</h3>
+                                  <p className="text-sm">Posts you've saved will appear here.</p>
+                                </div>
+                              ) : (
+                                savedPosts.map((post) => (
+                                  <div key={post.id} className="glass-card rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all shadow-sm">
+                                    <PostCard post={post} />
+                                  </div>
+                                ))
+                              )
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
