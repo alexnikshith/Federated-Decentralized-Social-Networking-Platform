@@ -69,12 +69,22 @@ export const RefinedReportsPage: React.FC = () => {
     };
 
     const handleNext = () => {
+        // Don't allow navigation to future periods
+        if (isNextDisabled) return;
+
         if (viewMode === 'weekly') {
             setCurrentDate(d => addWeeks(d, 1));
         } else {
             setCurrentDate(d => addMonths(d, 1));
         }
     };
+
+    // Check if next button should be disabled (current period includes today or is in the future)
+    const isNextDisabled = useMemo(() => {
+        const today = new Date();
+        // If the end of the current range is today or in the future, disable next
+        return range.end >= today;
+    }, [range.end]);
 
     // Format dates for API - current period
     const startDateStr = format(range.start, 'yyyy-MM-dd');
@@ -242,7 +252,6 @@ export const RefinedReportsPage: React.FC = () => {
                                     </Card>
                                 </div>
 
-                                {/* Chart - takes up 3 columns on large screens */}
                                 <div className="lg:col-span-3">
                                     <TimeUsageChart
                                         data={report?.daily_stats || []}
@@ -256,6 +265,7 @@ export const RefinedReportsPage: React.FC = () => {
                                             : format(currentDate, 'MMMM yyyy')
                                         }
                                         onViewChange={(v) => setViewMode(v)}
+                                        isNextDisabled={isNextDisabled}
                                     />
                                 </div>
                             </div>
@@ -420,6 +430,7 @@ export const RefinedReportsPage: React.FC = () => {
                                             : format(currentDate, 'MMMM yyyy')
                                         }
                                         onViewChange={(v) => setViewMode(v)}
+                                        isNextDisabled={isNextDisabled}
                                     />
                                 </div>
                             )}
@@ -571,6 +582,7 @@ export const RefinedReportsPage: React.FC = () => {
                                             : format(currentDate, 'MMMM yyyy')
                                         }
                                         onViewChange={(v) => setViewMode(v)}
+                                        isNextDisabled={isNextDisabled}
                                     />
                                 </div>
                             )}

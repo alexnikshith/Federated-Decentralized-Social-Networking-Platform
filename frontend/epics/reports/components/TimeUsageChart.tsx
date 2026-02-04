@@ -17,6 +17,7 @@ interface TimeUsageChartProps {
     onNextClick: () => void;
     currentLabel: string;
     onViewChange: (view: 'weekly' | 'monthly') => void;
+    isNextDisabled?: boolean;
 }
 
 interface ChartData {
@@ -33,7 +34,8 @@ const TimeUsageChart: React.FC<TimeUsageChartProps> = ({
     onPrevClick,
     onNextClick,
     currentLabel,
-    onViewChange
+    onViewChange,
+    isNextDisabled = false
 }) => {
 
     const processData = (): ChartData[] => {
@@ -124,7 +126,7 @@ const TimeUsageChart: React.FC<TimeUsageChartProps> = ({
                         <span className="text-sm font-medium min-w-[140px] text-center">
                             {currentLabel}
                         </span>
-                        <Button variant="ghost" size="icon" onClick={onNextClick} className="h-8 w-8 hover:bg-background">
+                        <Button variant="ghost" size="icon" onClick={onNextClick} disabled={isNextDisabled} className="h-8 w-8 hover:bg-background">
                             <ChevronRight className="h-4 w-4" />
                         </Button>
                     </div>
