@@ -90,6 +90,9 @@ func main() {
 	adminRoutes.RegisterAdminRoutes(router)
 	messagingRoutes.RegisterMessagingRoutes(router)
 
+	// Serve static files from uploads directory
+	router.PathPrefix("/uploads/").Handler(http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
+
 	// Health check endpoint
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

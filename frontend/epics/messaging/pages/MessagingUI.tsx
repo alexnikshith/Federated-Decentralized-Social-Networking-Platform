@@ -34,6 +34,14 @@ const MessagingUI: React.FC = () => {
     const [loadingMessages, setLoadingMessages] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const [selectedMedia, setSelectedMedia] = useState<{
+        file: File;
+        preview: string;
+        type: 'image' | 'video' | 'file';
+    } | null>(null);
+    const [uploadingMedia, setUploadingMedia] = useState(false);
     const [isNewChat, setIsNewChat] = useState(false);
     const [newChatUser, setNewChatUser] = useState<Participant | null>(null);
 
@@ -103,9 +111,23 @@ const MessagingUI: React.FC = () => {
         }
     };
 
+    const handleMediaSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const mediaType = file.type.startsWith('image/') ? 'image' :
+            file.type.startsWith('video/') ? 'video' : 'file';
+
+        const preview = URL.createObjectURL(file);
+        setSelectedMedia({ file, preview, type: mediaType });
+
+        // Reset inputs
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
     const handleSendMessage = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
-        if (!messageInput.trim() || !currentUser) return;
+        if ((!messageInput.trim() && !selectedMedia) || !currentUser) return;
         if (!selectedConversation && !isNewChat) return;
 
         let receiverId: string;
@@ -121,16 +143,36 @@ const MessagingUI: React.FC = () => {
         }
 
         try {
+            let mediaUrl = '';
+            let mediaType = 'text';
+            let fileName = '';
+
+            if (selectedMedia) {
+                setUploadingMedia(true);
+                const formData = new FormData();
+                formData.append('file', selectedMedia.file);
+                formData.append('type', selectedMedia.type);
+
+                const response = await messagingApi.uploadMedia(formData);
+                mediaUrl = response.url;
+                mediaType = selectedMedia.type;
+                fileName = selectedMedia.file.name;
+            }
+
             const newMsg = await messagingApi.sendMessage({
                 receiver_id: receiverId,
                 content: messageInput.trim(),
-                type: 'text'
+                type: mediaType as any,
+                media_url: mediaUrl,
+                file_name: fileName
             });
+
             setMessages(prev => [...(Array.isArray(prev) ? prev : []), newMsg]);
             setMessageInput('');
+            setSelectedMedia(null);
+            setUploadingMedia(false);
 
             if (isNewChat) {
-                // Reload conversations to get the newly created one
                 await loadConversations();
                 setIsNewChat(false);
                 setNewChatUser(null);
@@ -150,6 +192,7 @@ const MessagingUI: React.FC = () => {
             }
         } catch (error) {
             console.error('Failed to send message:', error);
+            setUploadingMedia(false);
         }
     };
 
@@ -323,6 +366,27 @@ const MessagingUI: React.FC = () => {
                                                         ? "bg-primary text-primary-foreground rounded-tr-none"
                                                         : "bg-secondary text-secondary-foreground rounded-tl-none"
                                                 )}>
+                                                    {msg.type === 'image' && msg.media_url && (
+                                                        <div className="mb-2 rounded-lg overflow-hidden border border-white/20">
+                                                            <img
+                                                                src={msg.media_url.startsWith('http') ? msg.media_url : `${import.meta.env.VITE_API_URL}${msg.media_url}`}
+                                                                alt="attachment"
+                                                                className="max-w-full h-auto max-h-60 object-cover"
+                                                                onError={(e) => (e.currentTarget.src = "/placeholder-image.png")}
+                                                            />
+                                                        </div>
+                                                    )}
+                                                    {msg.type === 'file' && (
+                                                        <a
+                                                            href={msg.media_url?.startsWith('http') ? msg.media_url : `${import.meta.env.VITE_API_URL}${msg.media_url}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="flex items-center gap-2 p-2 bg-black/10 rounded-lg mb-2 hover:bg-black/20 transition-colors"
+                                                        >
+                                                            <FileText className="w-5 h-5" />
+                                                            <span className="text-xs truncate max-w-[150px]">{msg.file_name || 'Download file'}</span>
+                                                        </a>
+                                                    )}
                                                     {msg.content}
                                                 </div>
                                                 <span className="text-[10px] text-muted-foreground mt-1 px-1">
@@ -338,12 +402,50 @@ const MessagingUI: React.FC = () => {
 
                         {/* Input Area */}
                         <div className="p-4 border-t bg-card">
+                            {selectedMedia && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="mb-3 flex items-center gap-3 p-2 bg-secondary/30 rounded-xl border border-border"
+                                >
+                                    {selectedMedia.type === 'image' ? (
+                                        <img src={selectedMedia.preview} className="w-12 h-12 rounded-lg object-cover" />
+                                    ) : (
+                                        <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                                            <FileText className="w-6 h-6 text-primary" />
+                                        </div>
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-medium truncate">{selectedMedia.file.name}</p>
+                                        <p className="text-[10px] text-muted-foreground">{(selectedMedia.file.size / 1024).toFixed(1)} KB</p>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7 rounded-full"
+                                        onClick={() => setSelectedMedia(null)}
+                                    >
+                                        <Smile className="w-4 h-4 rotate-45" />
+                                    </Button>
+                                </motion.div>
+                            )}
+
                             <form onSubmit={handleSendMessage} className="flex items-end gap-2">
                                 <div className="flex items-center gap-1 mb-1">
-                                    <Button type="button" variant="ghost" size="icon" className="rounded-full h-9 w-9 text-muted-foreground">
-                                        <Camera className="w-5 h-5" />
-                                    </Button>
-                                    <Button type="button" variant="ghost" size="icon" className="rounded-full h-9 w-9 text-muted-foreground">
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        className="hidden"
+                                        onChange={(e) => handleMediaSelect(e)}
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="rounded-full h-9 w-9 text-muted-foreground"
+                                        onClick={() => fileInputRef.current?.click()}
+                                    >
                                         <Paperclip className="w-5 h-5" />
                                     </Button>
                                 </div>
@@ -363,10 +465,10 @@ const MessagingUI: React.FC = () => {
                                 </div>
                                 <Button
                                     type="submit"
-                                    disabled={!messageInput.trim()}
+                                    disabled={(!messageInput.trim() && !selectedMedia) || uploadingMedia}
                                     className="rounded-full h-11 w-11 p-0 flex-shrink-0 bg-primary hover:bg-primary/90 shadow-glow"
                                 >
-                                    <Send className="w-5 h-5" />
+                                    {uploadingMedia ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                                 </Button>
                             </form>
                         </div>
