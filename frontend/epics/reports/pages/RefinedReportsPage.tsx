@@ -98,6 +98,7 @@ export const RefinedReportsPage: React.FC = () => {
                 </Tabs>
             </div>
 
+
             {/* Time Usage Tab Content */}
             {activeTab === 'time-usage' && (
                 <div className="mt-6">
@@ -117,10 +118,10 @@ export const RefinedReportsPage: React.FC = () => {
                             Error loading report data. Please try again later.
                         </div>
                     ) : (
-                        /* Side-by-side layout: Stats Card + Chart */
-                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                            {/* "Total Time" Card - takes up 1 column on large screens */}
-                            <div className="lg:col-span-1">
+                        <div className="space-y-6">
+                            {/* Top Row: Stat Cards */}
+                            <div className="grid gap-4 md:grid-cols-2">
+                                {/* Total Time Spent */}
                                 <Card>
                                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                         <CardTitle className="text-sm font-medium">Total time spent</CardTitle>
@@ -134,23 +135,68 @@ export const RefinedReportsPage: React.FC = () => {
                                         </p>
                                     </CardContent>
                                 </Card>
+
+                                {/* Time Spent Today */}
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-sm font-medium">Time spent today</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-2xl font-bold">
+                                            {(() => {
+                                                const today = format(new Date(), 'yyyy-MM-dd');
+                                                const todayData = report?.daily_stats?.find(d => d.date === today);
+                                                const todayMinutes = todayData?.minutes || 0;
+                                                return `${Math.floor(todayMinutes / 60)}h ${todayMinutes % 60}m`;
+                                            })()}
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">
+                                            Activity for {format(new Date(), 'MMM d, yyyy')}
+                                        </p>
+                                    </CardContent>
+                                </Card>
                             </div>
 
-                            {/* Chart - takes up 3 columns on large screens */}
-                            <div className="lg:col-span-3">
-                                <TimeUsageChart
-                                    data={report?.daily_stats || []}
-                                    view={viewMode}
-                                    startDate={range.start}
-                                    endDate={range.end}
-                                    onPrevClick={handlePrev}
-                                    onNextClick={handleNext}
-                                    currentLabel={viewMode === 'weekly'
-                                        ? `${format(range.start, 'MMM d')} - ${format(range.end, 'MMM d')}`
-                                        : format(currentDate, 'MMMM yyyy')
-                                    }
-                                    onViewChange={(v) => setViewMode(v)}
-                                />
+                            {/* Bottom Row: Chart with Stat Card */}
+                            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                                {/* Weekly/Monthly Total - takes up 1 column on large screens */}
+                                <div className="lg:col-span-1">
+                                    <Card>
+                                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                            <CardTitle className="text-sm font-medium">
+                                                {viewMode === 'weekly' ? 'Weekly' : 'Monthly'} total
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="text-2xl font-bold">
+                                                {Math.floor(report?.total_hours || 0)}h {Math.round(((report?.total_hours || 0) % 1) * 60)}m
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">
+                                                {viewMode === 'weekly'
+                                                    ? `${format(range.start, 'MMM d')} - ${format(range.end, 'MMM d')}`
+                                                    : format(currentDate, 'MMMM yyyy')
+                                                }
+                                            </p>
+                                        </CardContent>
+                                    </Card>
+                                </div>
+
+                                {/* Chart - takes up 3 columns on large screens */}
+                                <div className="lg:col-span-3">
+                                    <TimeUsageChart
+                                        data={report?.daily_stats || []}
+                                        view={viewMode}
+                                        startDate={range.start}
+                                        endDate={range.end}
+                                        onPrevClick={handlePrev}
+                                        onNextClick={handleNext}
+                                        currentLabel={viewMode === 'weekly'
+                                            ? `${format(range.start, 'MMM d')} - ${format(range.end, 'MMM d')}`
+                                            : format(currentDate, 'MMMM yyyy')
+                                        }
+                                        onViewChange={(v) => setViewMode(v)}
+                                    />
+                                </div>
                             </div>
                         </div>
                     )}
