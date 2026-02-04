@@ -16,9 +16,12 @@ interface ContentState {
     unlikePost: (postId: string) => Promise<void>;
     deletePost: (postId: string) => Promise<void>;
     fetchNotifications: () => Promise<void>;
-    markAsRead: (notificationId: string) => Promise<void>;
     markAllAsRead: () => Promise<void>;
     fetchUnreadCount: () => Promise<void>;
+    savePost: (postId: string) => Promise<void>;
+    unsavePost: (postId: string) => Promise<void>;
+    reportPost: (postId: string, reason: string) => Promise<void>;
+    interactPost: (postId: string, type: 'interested' | 'not_interested') => Promise<void>;
 }
 
 export const useContentStore = create<ContentState>((set, get) => ({
@@ -144,6 +147,55 @@ export const useContentStore = create<ContentState>((set, get) => ({
             set({ unreadCount: count });
         } catch (error) {
             console.error('Failed to fetch unread count:', error);
+        }
+    },
+
+    savePost: async (postId: string) => {
+        try {
+            await api.savePost(postId);
+            set({
+                posts: get().posts.map((post) =>
+                    post.id === postId ? { ...post, is_saved: true } : post
+                ),
+            });
+        } catch (error) {
+            set({ error: error.response?.data?.message || 'Failed to save post' });
+        }
+    },
+
+    unsavePost: async (postId: string) => {
+        try {
+            await api.unsavePost(postId);
+            set({
+                posts: get().posts.map((post) =>
+                    post.id === postId ? { ...post, is_saved: false } : post
+                ),
+            });
+        } catch (error) {
+            set({ error: error.response?.data?.message || 'Failed to unsave post' });
+        }
+    },
+
+    reportPost: async (postId: string, reason: string) => {
+        try {
+            await api.reportPost(postId, { reason });
+            // Hide the post from local state
+            set({ posts: get().posts.filter((post) => post.id !== postId) });
+        } catch (error) {
+            set({ error: error.response?.data?.message || 'Failed to report post' });
+        }
+    },
+
+    interactPost: async (postId: string, type: 'interested' | 'not_interested') => {
+        try {
+            await api.interactPost(postId, { type });
+            if (type === 'not_interested') {
+                // Hide locally
+                set({ posts: get().posts.filter((post) => post.id !== postId) });
+            }
+            // For 'interested', we might want to refresh feed later or just notify user
+        } catch (error) {
+            set({ error: error.response?.data?.message || 'Failed to track interaction' });
         }
     },
 }));

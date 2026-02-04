@@ -8,6 +8,7 @@ export interface Post {
     like_count: number;
     comment_count: number;
     is_liked: boolean;
+    is_saved: boolean;
     created_at: string;
     updated_at: string;
 }
@@ -52,6 +53,14 @@ export interface CreatePostRequest {
 export interface CreateCommentRequest {
     content: string;
     parent_id?: string;
+}
+
+export interface ReportPostRequest {
+    reason: string;
+}
+
+export interface PostInteractionRequest {
+    type: 'interested' | 'not_interested';
 }
 
 export interface PublicUser {

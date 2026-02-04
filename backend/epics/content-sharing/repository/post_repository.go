@@ -13,16 +13,22 @@ import (
 )
 
 type PostRepository struct {
-	posts    *mongo.Collection
-	likes    *mongo.Collection
-	comments *mongo.Collection
+	posts        *mongo.Collection
+	likes        *mongo.Collection
+	comments     *mongo.Collection
+	savedPosts   *mongo.Collection
+	reports      *mongo.Collection
+	interactions *mongo.Collection
 }
 
 func NewPostRepository() *PostRepository {
 	return &PostRepository{
-		posts:    database.GetCollection("posts"),
-		likes:    database.GetCollection("likes"),
-		comments: database.GetCollection("comments"),
+		posts:        database.GetCollection("posts"),
+		likes:        database.GetCollection("likes"),
+		comments:     database.GetCollection("comments"),
+		savedPosts:   database.GetCollection("saved_posts"),
+		reports:      database.GetCollection("reports"),
+		interactions: database.GetCollection("post_interactions"),
 	}
 }
 
@@ -56,6 +62,9 @@ func (r *PostRepository) CreateIndexes(ctx context.Context) error {
 		{
 			Keys: bson.D{{Key: "post_id", Value: 1}},
 		},
+		{
+			Keys: bson.D{{Key: "user_id", Value: 1}},
+		},
 	}
 	if _, err := r.likes.Indexes().CreateMany(ctx, likesIndexes); err != nil {
 		return err
@@ -69,8 +78,39 @@ func (r *PostRepository) CreateIndexes(ctx context.Context) error {
 				{Key: "created_at", Value: 1},
 			},
 		},
+		{
+			Keys: bson.D{{Key: "user_id", Value: 1}},
+		},
 	}
 	if _, err := r.comments.Indexes().CreateMany(ctx, commentsIndexes); err != nil {
+		return err
+	}
+
+	// Index for saved posts
+	savedIndexes := []mongo.IndexModel{
+		{
+			Keys: bson.D{
+				{Key: "user_id", Value: 1},
+				{Key: "post_id", Value: 1},
+			},
+			Options: options.Index().SetUnique(true),
+		},
+	}
+	if _, err := r.savedPosts.Indexes().CreateMany(ctx, savedIndexes); err != nil {
+		return err
+	}
+
+	// Index for interactions
+	interactionIndexes := []mongo.IndexModel{
+		{
+			Keys: bson.D{
+				{Key: "user_id", Value: 1},
+				{Key: "post_id", Value: 1},
+			},
+			Options: options.Index().SetUnique(true),
+		},
+	}
+	if _, err := r.interactions.Indexes().CreateMany(ctx, interactionIndexes); err != nil {
 		return err
 	}
 
@@ -480,4 +520,198 @@ func (r *PostRepository) FindAll(ctx context.Context) ([]models.Post, error) {
 		return nil, err
 	}
 	return posts, nil
+}
+
+// SavePost saves a post for a user
+func (r *PostRepository) SavePost(ctx context.Context, savedPost *models.SavedPost) error {
+	savedPost.CreatedAt = time.Now()
+	_, err := r.savedPosts.InsertOne(ctx, savedPost)
+	return err
+}
+
+// UnsavePost removes a saved post for a user
+func (r *PostRepository) UnsavePost(ctx context.Context, userID, postID primitive.ObjectID) error {
+	_, err := r.savedPosts.DeleteOne(ctx, bson.M{"user_id": userID, "post_id": postID})
+	return err
+}
+
+// GetSavedPostIDsByUser retrieves IDs of posts saved by a user
+func (r *PostRepository) GetSavedPostIDsByUser(ctx context.Context, userID primitive.ObjectID) ([]primitive.ObjectID, error) {
+	cursor, err := r.savedPosts.Find(ctx, bson.M{"user_id": userID})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var saved []models.SavedPost
+	if err = cursor.All(ctx, &saved); err != nil {
+		return nil, err
+	}
+
+	ids := make([]primitive.ObjectID, len(saved))
+	for i, s := range saved {
+		ids[i] = s.PostID
+	}
+	return ids, nil
+}
+
+// CheckIfSaved checks if a user has saved a post
+func (r *PostRepository) CheckIfSaved(ctx context.Context, postID, userID primitive.ObjectID) (bool, error) {
+	count, err := r.savedPosts.CountDocuments(ctx, bson.M{"post_id": postID, "user_id": userID})
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+// CreateReport submits a report for a post
+func (r *PostRepository) CreateReport(ctx context.Context, report *models.ReportedPost) error {
+	report.CreatedAt = time.Now()
+	report.Status = "pending"
+	_, err := r.reports.InsertOne(ctx, report)
+	return err
+}
+
+// GetAllReports retrieves all reports for admin review
+func (r *PostRepository) GetAllReports(ctx context.Context) ([]models.ReportedPost, error) {
+	cursor, err := r.reports.Find(ctx, bson.M{}, options.Find().SetSort(bson.D{{Key: "created_at", Value: -1}}))
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var reports []models.ReportedPost
+	if err = cursor.All(ctx, &reports); err != nil {
+		return nil, err
+	}
+	return reports, nil
+}
+
+// GetReportedPostIDsByUser retrieves IDs of posts reported by a user (to hide them)
+func (r *PostRepository) GetReportedPostIDsByUser(ctx context.Context, userID primitive.ObjectID) ([]primitive.ObjectID, error) {
+	cursor, err := r.reports.Find(ctx, bson.M{"reporter_id": userID})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var reports []models.ReportedPost
+	if err = cursor.All(ctx, &reports); err != nil {
+		return nil, err
+	}
+
+	ids := make([]primitive.ObjectID, len(reports))
+	for i, rep := range reports {
+		ids[i] = rep.PostID
+	}
+	return ids, nil
+}
+
+// DeleteReport deletes a report
+func (r *PostRepository) DeleteReport(ctx context.Context, reportID primitive.ObjectID) error {
+	_, err := r.reports.DeleteOne(ctx, bson.M{"_id": reportID})
+	return err
+}
+
+// UpsertInteraction tracks user interaction sentiment
+func (r *PostRepository) UpsertInteraction(ctx context.Context, interaction *models.PostInteraction) error {
+	filter := bson.M{"user_id": interaction.UserID, "post_id": interaction.PostID}
+	update := bson.M{
+		"$set": bson.M{
+			"type":       interaction.Type,
+			"created_at": time.Now(),
+		},
+	}
+	opts := options.Update().SetUpsert(true)
+	_, err := r.interactions.UpdateOne(ctx, filter, update, opts)
+	return err
+}
+
+// GetHiddenPostIDsByUser retrieves IDs of posts marks as "not_interested"
+func (r *PostRepository) GetHiddenPostIDsByUser(ctx context.Context, userID primitive.ObjectID) ([]primitive.ObjectID, error) {
+	cursor, err := r.interactions.Find(ctx, bson.M{"user_id": userID, "type": "not_interested"})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var interactions []models.PostInteraction
+	if err = cursor.All(ctx, &interactions); err != nil {
+		return nil, err
+	}
+
+	ids := make([]primitive.ObjectID, len(interactions))
+	for i, inter := range interactions {
+		ids[i] = inter.PostID
+	}
+	return ids, nil
+}
+
+// GetInterestedAuthorIDsByUser retrieves IDs of authors whose posts the user liked or marked "interested"
+func (r *PostRepository) GetInterestedAuthorIDsByUser(ctx context.Context, userID primitive.ObjectID) ([]primitive.ObjectID, error) {
+	// 1. Get authors from "interested" interactions
+	cursor, err := r.interactions.Find(ctx, bson.M{"user_id": userID, "type": "interested"})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var interactions []models.PostInteraction
+	_ = cursor.All(ctx, &interactions)
+
+	authorSet := make(map[primitive.ObjectID]bool)
+	for _, inter := range interactions {
+		post, err := r.GetPostByID(ctx, inter.PostID)
+		if err == nil {
+			authorSet[post.AuthorID] = true
+		}
+	}
+
+	// 2. Get authors from likes
+	cursor, err = r.likes.Find(ctx, bson.M{"user_id": userID})
+	if err == nil {
+		var likes []models.Like
+		_ = cursor.All(ctx, &likes)
+		for _, like := range likes {
+			post, err := r.GetPostByID(ctx, like.PostID)
+			if err == nil {
+				authorSet[post.AuthorID] = true
+			}
+		}
+		cursor.Close(ctx)
+	}
+
+	ids := make([]primitive.ObjectID, 0, len(authorSet))
+	for id := range authorSet {
+		ids = append(ids, id)
+	}
+	return ids, nil
+}
+
+// GetPostIDsByAuthors retrieves IDs of posts from specific authors
+func (r *PostRepository) GetPostIDsByAuthors(ctx context.Context, authorIDs []primitive.ObjectID, limit int64) ([]primitive.ObjectID, error) {
+	filter := bson.M{"author_id": bson.M{"$in": authorIDs}}
+	opts := options.Find().
+		SetSort(bson.D{{Key: "created_at", Value: -1}}).
+		SetLimit(limit).
+		SetProjection(bson.M{"_id": 1})
+
+	cursor, err := r.posts.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var results []struct {
+		ID primitive.ObjectID `bson:"_id"`
+	}
+	if err = cursor.All(ctx, &results); err != nil {
+		return nil, err
+	}
+
+	ids := make([]primitive.ObjectID, len(results))
+	for i, res := range results {
+		ids[i] = res.ID
+	}
+	return ids, nil
 }
