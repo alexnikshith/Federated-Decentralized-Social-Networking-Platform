@@ -762,13 +762,13 @@ const ProfileUI = () => {
             </DialogTitle>
             <DialogDescription className="pt-2">
               Are you sure you want to block this user?
-              <ul className="list-disc pl-5 mt-2 space-y-1 text-left">
-                <li>They will not be able to follow you.</li>
-                <li>They will not see your posts.</li>
-                <li>You will not see their posts.</li>
-                <li>This action is reversible.</li>
-              </ul>
             </DialogDescription>
+            <ul className="list-disc pl-5 mt-2 space-y-1 text-left text-sm text-muted-foreground">
+              <li>They will not be able to follow you.</li>
+              <li>They will not see your posts.</li>
+              <li>You will not see their posts.</li>
+              <li>This action is reversible.</li>
+            </ul>
           </DialogHeader>
           <DialogFooter className="mt-4 gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setShowBlockConfirmation(false)}>
