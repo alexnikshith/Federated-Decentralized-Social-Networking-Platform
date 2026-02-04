@@ -62,6 +62,15 @@ func (s *PostService) GetFeed(ctx context.Context, userID primitive.ObjectID, li
 		blockedMap[id] = true
 	}
 
+	// Get hidden post IDs (reported or not interested)
+	reportedIDs, _ := s.postRepo.GetReportedPostIDsByUser(ctx, userID)
+	notInterestedIDs, _ := s.postRepo.GetHiddenPostIDsByUser(ctx, userID)
+	hiddenPostIDs := append(reportedIDs, notInterestedIDs...)
+	hiddenPostMap := make(map[primitive.ObjectID]bool)
+	for _, id := range hiddenPostIDs {
+		hiddenPostMap[id] = true
+	}
+
 	// Get list of users the current user follows
 	followingIDs, err := s.followRepo.GetFollowingIDs(ctx, userID)
 	if err != nil {
@@ -108,6 +117,31 @@ func (s *PostService) GetFeed(ctx context.Context, userID primitive.ObjectID, li
 		allPosts = append(followedPosts, otherPosts...)
 		log.Printf("DEBUG GetFeed: Combined total: %d posts", len(allPosts))
 
+		// Add "Interested" recommendations: posts from authors user is "interested" in
+		interestedAuthorIDs, _ := s.postRepo.GetInterestedAuthorIDsByUser(ctx, userID)
+		if len(interestedAuthorIDs) > 0 {
+			recommendedPosts, err := s.postRepo.GetPostsByAuthors(ctx, interestedAuthorIDs, 5) // Get top 5 newest
+			if err == nil && len(recommendedPosts) > 0 {
+				// Interleave or prepend some recommended posts if they aren't already there
+				postMap := make(map[primitive.ObjectID]bool)
+				for _, p := range allPosts {
+					postMap[p.ID] = true
+				}
+
+				newRecs := make([]models.Post, 0)
+				for _, p := range recommendedPosts {
+					if !postMap[p.ID] {
+						newRecs = append(newRecs, p)
+					}
+				}
+
+				if len(newRecs) > 0 {
+					// Prepend up to 3 recommendations to boost them
+					allPosts = append(newRecs[:min(len(newRecs), 3)], allPosts...)
+				}
+			}
+		}
+
 		// Trim to limit
 		if int64(len(allPosts)) > limit {
 			allPosts = allPosts[:limit]
@@ -116,13 +150,25 @@ func (s *PostService) GetFeed(ctx context.Context, userID primitive.ObjectID, li
 	} else {
 		// User follows nobody (or only blocked people) - show all posts chronologically (excluding blocks)
 		log.Printf("DEBUG GetFeed: User follows nobody, showing all posts")
-		allPosts, err = s.postRepo.GetAllPosts(ctx, blockedIDs, limit)
+		allPosts, err = s.postRepo.GetAllPosts(ctx, blockedIDs, limit*2) // Fetch more to account for filtering
 		if err != nil {
 			log.Printf("ERROR GetFeed: Failed to get all posts: %v", err)
 			return nil, err
 		}
 		log.Printf("DEBUG GetFeed: Retrieved %d posts from all users", len(allPosts))
 	}
+
+	// Filter out hidden posts
+	filteredPosts := make([]models.Post, 0)
+	for _, post := range allPosts {
+		if !hiddenPostMap[post.ID] {
+			filteredPosts = append(filteredPosts, post)
+		}
+		if int64(len(filteredPosts)) >= limit {
+			break
+		}
+	}
+	allPosts = filteredPosts
 
 	// Enrich posts with author information and like status
 	postResponses, err := s.enrichPosts(ctx, allPosts, userID)
@@ -484,6 +530,8 @@ func (s *PostService) enrichPosts(ctx context.Context, posts []models.Post, curr
 
 		// Check if current user has liked this post
 		isLiked, _ := s.postRepo.CheckIfLiked(ctx, post.ID, currentUserID)
+		// Check if current user has saved this post
+		isSaved, _ := s.postRepo.CheckIfSaved(ctx, post.ID, currentUserID)
 
 		postResponses = append(postResponses, dto.PostResponse{
 			ID:           post.ID,
@@ -494,6 +542,7 @@ func (s *PostService) enrichPosts(ctx context.Context, posts []models.Post, curr
 			LikeCount:    post.LikeCount,
 			CommentCount: post.CommentCount,
 			IsLiked:      isLiked,
+			IsSaved:      isSaved,
 			CreatedAt:    post.CreatedAt,
 			UpdatedAt:    post.UpdatedAt,
 		})
@@ -505,7 +554,8 @@ func (s *PostService) enrichPosts(ctx context.Context, posts []models.Post, curr
 
 // GetUserLikedPosts retrieves posts liked by a specific user
 func (s *PostService) GetUserLikedPosts(ctx context.Context, userID, requestingUserID primitive.ObjectID, limit int64) (*dto.FeedResponse, error) {
-	if userID != requestingUserID {
+	if userID.Hex() != requestingUserID.Hex() {
+		log.Printf("DEBUG: Activity private check failed in GetUserLikedPosts. userID: %s, requestingUserID: %s", userID.Hex(), requestingUserID.Hex())
 		return nil, errors.New("activity is private")
 	}
 	posts, err := s.postRepo.GetLikedPostsByUser(ctx, userID, limit)
@@ -526,7 +576,8 @@ func (s *PostService) GetUserLikedPosts(ctx context.Context, userID, requestingU
 
 // GetUserCommentedPosts retrieves posts commented on by a specific user
 func (s *PostService) GetUserCommentedPosts(ctx context.Context, userID, requestingUserID primitive.ObjectID, limit int64) (*dto.FeedResponse, error) {
-	if userID != requestingUserID {
+	if userID.Hex() != requestingUserID.Hex() {
+		log.Printf("DEBUG: Activity private check failed in GetUserCommentedPosts. userID: %s, requestingUserID: %s", userID.Hex(), requestingUserID.Hex())
 		return nil, errors.New("activity is private")
 	}
 	posts, err := s.postRepo.GetCommentedPostsByUser(ctx, userID, limit)
@@ -596,4 +647,102 @@ func (s *PostService) GetPostLikers(ctx context.Context, postID, userID primitiv
 	}
 
 	return likerResponses, nil
+}
+
+// SavePost logic
+func (s *PostService) SavePost(ctx context.Context, postID, userID primitive.ObjectID) error {
+	savedPost := &models.SavedPost{
+		PostID: postID,
+		UserID: userID,
+	}
+	return s.postRepo.SavePost(ctx, savedPost)
+}
+
+// UnsavePost logic
+func (s *PostService) UnsavePost(ctx context.Context, postID, userID primitive.ObjectID) error {
+	return s.postRepo.UnsavePost(ctx, userID, postID)
+}
+
+// GetSavedPosts retrieves posts saved by a user
+func (s *PostService) GetSavedPosts(ctx context.Context, userID primitive.ObjectID, limit int64) (*dto.FeedResponse, error) {
+	postIDs, err := s.postRepo.GetSavedPostIDsByUser(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(postIDs) == 0 {
+		return &dto.FeedResponse{Posts: []dto.PostResponse{}, Total: 0}, nil
+	}
+
+	// Fetch actual posts
+	allPosts := make([]models.Post, 0)
+	for _, id := range postIDs {
+		post, err := s.postRepo.GetPostByID(ctx, id)
+		if err == nil {
+			allPosts = append(allPosts, *post)
+		}
+	}
+
+	postResponses, err := s.enrichPosts(ctx, allPosts, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &dto.FeedResponse{Posts: postResponses, Total: len(postResponses)}, nil
+}
+
+// ReportPost logic
+func (s *PostService) ReportPost(ctx context.Context, postID, userID primitive.ObjectID, req dto.ReportPostRequest) error {
+	report := &models.ReportedPost{
+		PostID:     postID,
+		ReporterID: userID,
+		Reason:     req.Reason,
+	}
+	return s.postRepo.CreateReport(ctx, report)
+}
+
+// TrackInteraction handles "Interested" and "Not Interested"
+func (s *PostService) TrackInteraction(ctx context.Context, postID, userID primitive.ObjectID, req dto.PostInteractionRequest) error {
+	interaction := &models.PostInteraction{
+		PostID: postID,
+		UserID: userID,
+		Type:   req.Type,
+	}
+	return s.postRepo.UpsertInteraction(ctx, interaction)
+}
+
+// GetAllReports retrieves all reports for admin
+func (s *PostService) GetAllReports(ctx context.Context) ([]dto.ReportResponse, error) {
+	reports, err := s.postRepo.GetAllReports(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	responses := make([]dto.ReportResponse, 0, len(reports))
+	for _, report := range reports {
+		post, _ := s.postRepo.GetPostByID(ctx, report.PostID)
+		reporter, _ := s.searchRepo.GetUsersByIDs(ctx, []primitive.ObjectID{report.ReporterID})
+		author, _ := s.searchRepo.GetUsersByIDs(ctx, []primitive.ObjectID{post.AuthorID})
+
+		responses = append(responses, dto.ReportResponse{
+			ID:           report.ID,
+			ReporterID:   report.ReporterID,
+			PostID:       report.PostID,
+			PostContent:  post.Content,
+			AuthorName:   author[post.AuthorID].Username,
+			ReporterName: reporter[report.ReporterID].Username,
+			Reason:       report.Reason,
+			Status:       report.Status,
+			CreatedAt:    report.CreatedAt,
+		})
+	}
+
+	return responses, nil
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
