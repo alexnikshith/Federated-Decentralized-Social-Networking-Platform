@@ -68,6 +68,8 @@ func main() {
 		log.Printf("Warning: Failed to create block indexes: %v", err)
 	}
 
+
+
 	// Setup router
 	router := mux.NewRouter()
 
