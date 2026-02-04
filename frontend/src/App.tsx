@@ -24,6 +24,7 @@ import { SettingsPage } from '../epics/identity/pages/SettingsPage';
 // Epic 3: Federation - Import pages
 import Communities from '../epics/federation/pages/Communities';
 import Explore from '../epics/federation/pages/Explore';
+import MessagingUI from '../epics/messaging/pages/MessagingUI';
 
 // Epic 4: Reports - Import pages
 import About from '../epics/reports/pages/About';
@@ -204,6 +205,14 @@ const AppContent: React.FC = () => {
                         element={
                             <ProtectedRoute>
                                 <Explore />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/messages"
+                        element={
+                            <ProtectedRoute>
+                                <MessagingUI />
                             </ProtectedRoute>
                         }
                     />
