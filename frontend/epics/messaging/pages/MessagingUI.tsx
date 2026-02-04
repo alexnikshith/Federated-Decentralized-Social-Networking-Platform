@@ -22,6 +22,14 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { UserSearch } from '../../content-sharing/components/UserSearch';
 import { motion, AnimatePresence } from 'motion/react';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Trash2 } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 const MessagingUI: React.FC = () => {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -61,6 +69,57 @@ const MessagingUI: React.FC = () => {
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setSelectedConversation(null);
+                setIsNewChat(false);
+                setNewChatUser(null);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    const handleDeleteMessage = async (messageId: string) => {
+        try {
+            await messagingApi.deleteMessage(messageId);
+            setMessages(prev => (Array.isArray(prev) ? prev : []).filter(msg => msg.id !== messageId));
+            toast({
+                title: "Message deleted",
+                description: "The message has been removed.",
+            });
+        } catch (error) {
+            console.error('Failed to delete message:', error);
+            toast({
+                title: "Error",
+                description: "Failed to delete message.",
+                variant: "destructive",
+            });
+        }
+    };
+
+    const handleDeleteConversation = async (conversationId: string) => {
+        if (!window.confirm('Are you sure you want to delete this entire chat? This action cannot be undone.')) return;
+        try {
+            await messagingApi.deleteConversation(conversationId);
+            setConversations(prev => (Array.isArray(prev) ? prev : []).filter(conv => conv.id !== conversationId));
+            setSelectedConversation(null);
+            setMessages([]);
+            toast({
+                title: "Chat deleted",
+                description: "The conversation has been removed.",
+            });
+        } catch (error) {
+            console.error('Failed to delete conversation:', error);
+            toast({
+                title: "Error",
+                description: "Failed to delete conversation.",
+                variant: "destructive",
+            });
+        }
+    };
 
     const loadConversations = async () => {
         setLoading(true);
@@ -331,9 +390,22 @@ const MessagingUI: React.FC = () => {
                                     <span className="text-[10px] text-green-500 font-medium">Active now</span>
                                 </div>
                             </div>
-                            <Button variant="ghost" size="icon" className="rounded-full">
-                                <MoreVertical className="w-5 h-5" />
-                            </Button>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="rounded-full">
+                                        <MoreVertical className="w-5 h-5" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem
+                                        className="text-destructive cursor-pointer"
+                                        onClick={() => selectedConversation && handleDeleteConversation(selectedConversation.id)}
+                                    >
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        Delete Chat
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
 
                         {/* Messages Area */}
@@ -355,39 +427,63 @@ const MessagingUI: React.FC = () => {
                                             <div
                                                 key={msg.id || idx}
                                                 className={cn(
-                                                    "flex flex-col",
+                                                    "flex flex-col group relative",
                                                     isMine ? "items-end" : "items-start",
                                                     sameSenderAsPrev ? "mt-1" : "mt-4"
                                                 )}
                                             >
-                                                <div className={cn(
-                                                    "max-w-[80%] px-4 py-2.5 rounded-2xl text-sm shadow-sm",
-                                                    isMine
-                                                        ? "bg-primary text-primary-foreground rounded-tr-none"
-                                                        : "bg-secondary text-secondary-foreground rounded-tl-none"
-                                                )}>
-                                                    {msg.type === 'image' && msg.media_url && (
-                                                        <div className="mb-2 rounded-lg overflow-hidden border border-white/20">
-                                                            <img
-                                                                src={msg.media_url.startsWith('http') ? msg.media_url : `${import.meta.env.VITE_API_URL}${msg.media_url}`}
-                                                                alt="attachment"
-                                                                className="max-w-full h-auto max-h-60 object-cover"
-                                                                onError={(e) => (e.currentTarget.src = "/placeholder-image.png")}
-                                                            />
-                                                        </div>
+                                                <div className="flex items-center gap-2 max-w-[80%]">
+                                                    {isMine && (
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                >
+                                                                    <MoreVertical className="w-3 h-3" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end">
+                                                                <DropdownMenuItem
+                                                                    className="text-destructive cursor-pointer"
+                                                                    onClick={() => msg.id && handleDeleteMessage(msg.id)}
+                                                                >
+                                                                    <Trash2 className="w-3 h-3 mr-2" />
+                                                                    Delete
+                                                                </DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
                                                     )}
-                                                    {msg.type === 'file' && (
-                                                        <a
-                                                            href={msg.media_url?.startsWith('http') ? msg.media_url : `${import.meta.env.VITE_API_URL}${msg.media_url}`}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="flex items-center gap-2 p-2 bg-black/10 rounded-lg mb-2 hover:bg-black/20 transition-colors"
-                                                        >
-                                                            <FileText className="w-5 h-5" />
-                                                            <span className="text-xs truncate max-w-[150px]">{msg.file_name || 'Download file'}</span>
-                                                        </a>
-                                                    )}
-                                                    {msg.content}
+                                                    <div className={cn(
+                                                        "px-4 py-2.5 rounded-2xl text-sm shadow-sm",
+                                                        isMine
+                                                            ? "bg-primary text-primary-foreground rounded-tr-none"
+                                                            : "bg-secondary text-secondary-foreground rounded-tl-none"
+                                                    )}>
+                                                        {msg.type === 'image' && msg.media_url && (
+                                                            <div className="mb-2 rounded-lg overflow-hidden border border-white/20">
+                                                                <img
+                                                                    src={msg.media_url.startsWith('http') ? msg.media_url : `${import.meta.env.VITE_API_URL}${msg.media_url}`}
+                                                                    alt="attachment"
+                                                                    className="max-w-full h-auto max-h-60 object-cover"
+                                                                    onError={(e) => (e.currentTarget.src = "/placeholder-image.png")}
+                                                                />
+                                                            </div>
+                                                        )}
+                                                        {msg.type === 'file' && (
+                                                            <a
+                                                                href={msg.media_url?.startsWith('http') ? msg.media_url : `${import.meta.env.VITE_API_URL}${msg.media_url}`}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="flex items-center gap-2 p-2 bg-black/10 rounded-lg mb-2 hover:bg-black/20 transition-colors"
+                                                            >
+                                                                <FileText className="w-5 h-5" />
+                                                                <span className="text-xs truncate max-w-[150px]">{msg.file_name || 'Download file'}</span>
+                                                            </a>
+                                                        )}
+                                                        {msg.content}
+                                                    </div>
                                                 </div>
                                                 <span className="text-[10px] text-muted-foreground mt-1 px-1">
                                                     {safeFormat(msg.created_at, 'h:mm a')}

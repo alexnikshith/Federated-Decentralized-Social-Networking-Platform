@@ -44,4 +44,12 @@ export const messagingApi = {
         const response = await api.post('/api/messages', data);
         return response.data.data;
     },
+
+    deleteMessage: async (messageId: string): Promise<void> => {
+        await api.delete(`/api/messages/${messageId}`);
+    },
+
+    deleteConversation: async (conversationId: string): Promise<void> => {
+        await api.delete(`/api/messages/conversations/${conversationId}`);
+    },
 };
