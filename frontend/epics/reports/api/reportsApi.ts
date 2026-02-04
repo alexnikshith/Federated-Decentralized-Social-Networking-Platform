@@ -19,12 +19,14 @@ export interface DailyInteraction {
     likes: number;
     comments: number;
     follows: number;
+    posts: number;
 }
 
 export interface InteractionReport {
     total_likes: number;
     total_comments: number;
     total_follows: number;
+    total_posts: number;
     daily_stats: DailyInteraction[];
 }
 

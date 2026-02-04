@@ -21,6 +21,7 @@ interface InteractionsChartProps {
 
 interface ChartData {
     name: string;
+    posts: number;
     likes: number;
     comments: number;
     follows: number;
@@ -44,6 +45,7 @@ const InteractionsChart: React.FC<InteractionsChartProps> = ({
             const sortedData = [...data].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
             return sortedData.map(item => ({
                 name: format(parseISO(item.date), 'MMM d'),
+                posts: item.posts,
                 likes: item.likes,
                 comments: item.comments,
                 follows: item.follows,
@@ -78,6 +80,7 @@ const InteractionsChart: React.FC<InteractionsChartProps> = ({
 
             return {
                 name: label,
+                posts: dayData?.posts || 0,
                 likes: dayData?.likes || 0,
                 comments: dayData?.comments || 0,
                 follows: dayData?.follows || 0,
@@ -89,7 +92,7 @@ const InteractionsChart: React.FC<InteractionsChartProps> = ({
     const chartData = processData();
 
     const maxValue = Math.max(
-        ...chartData.map(d => Math.max(d.likes, d.comments, d.follows)),
+        ...chartData.map(d => Math.max(d.posts, d.likes, d.comments, d.follows)),
         0
     );
     const tickStep = Math.max(1, Math.ceil(maxValue / 10));
@@ -182,6 +185,12 @@ const InteractionsChart: React.FC<InteractionsChartProps> = ({
                                     }}
                                 />
                                 <Legend />
+                                <Bar
+                                    dataKey="posts"
+                                    fill="#8b5cf6"
+                                    radius={[4, 4, 0, 0]}
+                                    name="Posts"
+                                />
                                 <Bar
                                     dataKey="likes"
                                     fill="#3b82f6"

@@ -14,17 +14,19 @@ import (
 
 type ReportRepository struct {
 	collection         *mongo.Collection
-	upvotesCollection  *mongo.Collection
+	likesCollection    *mongo.Collection
 	commentsCollection *mongo.Collection
 	followsCollection  *mongo.Collection
+	postsCollection    *mongo.Collection
 }
 
 func NewReportRepository() *ReportRepository {
 	return &ReportRepository{
 		collection:         database.DB.Collection("user_activity"),
-		upvotesCollection:  database.GetCollection("upvotes"),
+		likesCollection:    database.GetCollection("likes"),
 		commentsCollection: database.GetCollection("comments"),
 		followsCollection:  database.GetCollection("follows"),
+		postsCollection:    database.GetCollection("posts"),
 	}
 }
 
@@ -80,7 +82,7 @@ func (r *ReportRepository) GetActivity(ctx context.Context, userID primitive.Obj
 	return activities, nil
 }
 
-// GetInteractions retrieves interaction stats (likes, comments, follows) for a user within a date range
+// GetInteractions retrieves interaction stats (likes, comments, follows, posts) for a user within a date range
 func (r *ReportRepository) GetInteractions(ctx context.Context, userID primitive.ObjectID, startDate, endDate time.Time) ([]models.DailyInteraction, error) {
 	// Normalize dates to midnight
 	normalizedStart := time.Date(startDate.Year(), startDate.Month(), startDate.Day(), 0, 0, 0, 0, time.UTC)
@@ -94,23 +96,23 @@ func (r *ReportRepository) GetInteractions(ctx context.Context, userID primitive
 		return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC).Format("2006-01-02")
 	}
 
-	// Aggregate likes (upvotes)
-	upvoteFilter := bson.M{
+	// Aggregate likes (from likes collection)
+	likeFilter := bson.M{
 		"user_id": userID,
 		"created_at": bson.M{
 			"$gte": normalizedStart,
 			"$lte": normalizedEnd,
 		},
 	}
-	upvoteCursor, err := r.upvotesCollection.Find(ctx, upvoteFilter)
+	likeCursor, err := r.likesCollection.Find(ctx, likeFilter)
 	if err == nil {
-		defer upvoteCursor.Close(ctx)
-		for upvoteCursor.Next(ctx) {
-			var upvote struct {
+		defer likeCursor.Close(ctx)
+		for likeCursor.Next(ctx) {
+			var like struct {
 				CreatedAt time.Time `bson:"created_at"`
 			}
-			if err := upvoteCursor.Decode(&upvote); err == nil {
-				dateKey := normalizeDate(upvote.CreatedAt)
+			if err := likeCursor.Decode(&like); err == nil {
+				dateKey := normalizeDate(like.CreatedAt)
 				if dailyMap[dateKey] == nil {
 					parsedDate, _ := time.Parse("2006-01-02", dateKey)
 					dailyMap[dateKey] = &models.DailyInteraction{
@@ -174,6 +176,34 @@ func (r *ReportRepository) GetInteractions(ctx context.Context, userID primitive
 					}
 				}
 				dailyMap[dateKey].Follows++
+			}
+		}
+	}
+
+	// Aggregate posts
+	postFilter := bson.M{
+		"author_id": userID,
+		"created_at": bson.M{
+			"$gte": normalizedStart,
+			"$lte": normalizedEnd,
+		},
+	}
+	postCursor, err := r.postsCollection.Find(ctx, postFilter)
+	if err == nil {
+		defer postCursor.Close(ctx)
+		for postCursor.Next(ctx) {
+			var post struct {
+				CreatedAt time.Time `bson:"created_at"`
+			}
+			if err := postCursor.Decode(&post); err == nil {
+				dateKey := normalizeDate(post.CreatedAt)
+				if dailyMap[dateKey] == nil {
+					parsedDate, _ := time.Parse("2006-01-02", dateKey)
+					dailyMap[dateKey] = &models.DailyInteraction{
+						Date: parsedDate,
+					}
+				}
+				dailyMap[dateKey].Posts++
 			}
 		}
 	}
