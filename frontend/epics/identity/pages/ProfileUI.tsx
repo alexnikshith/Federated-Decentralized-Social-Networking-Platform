@@ -451,6 +451,15 @@ const ProfileUI = () => {
                         </span>
                       )}
                     </Button>
+
+                    <Button
+                      variant="outline"
+                      className="rounded-full px-8 h-11 border-primary/20 hover:bg-primary/5"
+                      onClick={() => navigate(`/messages?userId=${profileUser.id}&username=${profileUser.username}`)}
+                    >
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Message
+                    </Button>
                   </>
                 )}
               </div>

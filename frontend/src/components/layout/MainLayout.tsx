@@ -25,7 +25,7 @@ import { useContentStore } from "../../../epics/content-sharing/store/contentSto
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "@/components/theme-provider";
 import { FloatingDock } from "../ui/floating-dock";
-import { Home } from "lucide-react";
+import { Home, MessageSquare } from "lucide-react";
 import { UserSearch } from "../../../epics/content-sharing/components/UserSearch";
 
 import {
@@ -41,7 +41,7 @@ import { LogOut, User as LucideUser, Plus } from "lucide-react";
 
 export const MainLayout = ({ children }: { children: React.ReactNode }) => {
     const { user, clearAuth, sessions, switchAccount, pauseSession, clearAllSessions } = useAuthStore();
-    const { unreadCount } = useContentStore();
+    const { unreadCount = 0 } = useContentStore();
     const navigate = useNavigate();
     const location = useLocation();
     const { theme, toggleTheme } = useTheme();
@@ -138,6 +138,13 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
             ),
             href: "/notifications",
         },
+        {
+            title: "Messages",
+            icon: (
+                <MessageSquare className="h-full w-full text-neutral-500 dark:text-neutral-300" />
+            ),
+            href: "/messages",
+        },
     ];
 
     return (
@@ -161,12 +168,12 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                         <SidebarLink
                             link={{
                                 label: "Profile",
-                                href: `/profile/${user?.username}`,
+                                href: user?.username ? `/profile/${user.username}` : "/dashboard",
                                 icon: (
                                     <LucideUser className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
                                 ),
                             }}
-                            onClick={() => navigate(`/profile/${user?.username}`)}
+                            onClick={() => user?.username && navigate(`/profile/${user.username}`)}
                             className={location.pathname === `/profile/${user?.username}` ? "bg-neutral-200 dark:bg-neutral-700 rounded-md" : ""}
                         />
                         <SidebarLink
