@@ -1,7 +1,7 @@
-import React from 'react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
+import React, { useState } from 'react';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { format, parseISO, eachDayOfInterval } from 'date-fns';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, MessageCircle, FileText, UserPlus } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,8 @@ interface ChartData {
     fullDate?: string;
 }
 
+type MetricType = 'likes' | 'comments' | 'posts' | 'follows';
+
 const InteractionsChart: React.FC<InteractionsChartProps> = ({
     data,
     view,
@@ -38,6 +40,7 @@ const InteractionsChart: React.FC<InteractionsChartProps> = ({
     currentLabel,
     onViewChange
 }) => {
+    const [selectedMetric, setSelectedMetric] = useState<MetricType>('likes');
 
     const processData = (): ChartData[] => {
         if (!startDate || !endDate) {
@@ -92,7 +95,7 @@ const InteractionsChart: React.FC<InteractionsChartProps> = ({
     const chartData = processData();
 
     const maxValue = Math.max(
-        ...chartData.map(d => Math.max(d.posts, d.likes, d.comments, d.follows)),
+        ...chartData.map(d => d[selectedMetric]),
         0
     );
     const tickStep = Math.max(1, Math.ceil(maxValue / 10));
@@ -103,6 +106,13 @@ const InteractionsChart: React.FC<InteractionsChartProps> = ({
     for (let i = 0; i <= finalMax; i += tickStep) {
         ticks.push(i);
     }
+
+    const metricConfig = {
+        likes: { icon: Heart, color: '#3b82f6', label: 'Likes' },
+        comments: { icon: MessageCircle, color: '#10b981', label: 'Comments' },
+        posts: { icon: FileText, color: '#8b5cf6', label: 'Posts' },
+        follows: { icon: UserPlus, color: '#f59e0b', label: 'Follows' }
+    };
 
     return (
         <Card className="w-full">
@@ -137,85 +147,92 @@ const InteractionsChart: React.FC<InteractionsChartProps> = ({
                 </div>
             </CardHeader>
             <CardContent>
-                <div className="h-[300px] w-full">
-                    {chartData.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                <XAxis
-                                    dataKey="name"
-                                    stroke="#888888"
-                                    fontSize={12}
-                                    tickLine={false}
-                                    axisLine={false}
-                                />
-                                <YAxis
-                                    stroke="#888888"
-                                    fontSize={12}
-                                    tickLine={false}
-                                    axisLine={false}
-                                    ticks={ticks}
-                                    domain={[0, finalMax]}
-                                />
-                                <Tooltip
-                                    cursor={{
-                                        fill: 'hsl(var(--muted) / 0.4)',
-                                    }}
-                                    contentStyle={{
-                                        borderRadius: '8px',
-                                        border: '1px solid hsl(var(--border))',
-                                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                                        backgroundColor: 'hsl(var(--popover))',
-                                        color: 'hsl(var(--popover-foreground))',
-                                        padding: '12px'
-                                    }}
-                                    labelStyle={{
-                                        color: 'hsl(var(--muted-foreground))',
-                                        marginBottom: '4px'
-                                    }}
-                                    itemStyle={{
-                                        color: 'hsl(var(--popover-foreground))',
-                                        fontWeight: 500
-                                    }}
-                                    labelFormatter={(label, payload) => {
-                                        if (payload && payload.length > 0) {
-                                            return payload[0].payload.fullDate;
-                                        }
-                                        return label;
-                                    }}
-                                />
-                                <Legend />
-                                <Bar
-                                    dataKey="posts"
-                                    fill="#8b5cf6"
-                                    radius={[4, 4, 0, 0]}
-                                    name="Posts"
-                                />
-                                <Bar
-                                    dataKey="likes"
-                                    fill="#3b82f6"
-                                    radius={[4, 4, 0, 0]}
-                                    name="Likes"
-                                />
-                                <Bar
-                                    dataKey="comments"
-                                    fill="#10b981"
-                                    radius={[4, 4, 0, 0]}
-                                    name="Comments"
-                                />
-                                <Bar
-                                    dataKey="follows"
-                                    fill="#f59e0b"
-                                    radius={[4, 4, 0, 0]}
-                                    name="Follows"
-                                />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    ) : (
-                        <div className="flex items-center justify-center h-full text-muted-foreground">
-                            No interaction data for this period
-                        </div>
-                    )}
+                <div className="flex gap-4">
+                    {/* Vertical Metric Selector */}
+                    <div className="flex flex-col gap-2 bg-secondary/30 p-2 rounded-lg">
+                        {(Object.keys(metricConfig) as MetricType[]).map((metric) => {
+                            const config = metricConfig[metric];
+                            const Icon = config.icon;
+                            const isSelected = selectedMetric === metric;
+
+                            return (
+                                <Button
+                                    key={metric}
+                                    variant={isSelected ? "default" : "ghost"}
+                                    size="icon"
+                                    onClick={() => setSelectedMetric(metric)}
+                                    className={`h-10 w-10 ${isSelected ? '' : 'hover:bg-secondary'}`}
+                                    style={isSelected ? { backgroundColor: config.color } : {}}
+                                    title={config.label}
+                                >
+                                    <Icon className="h-5 w-5" />
+                                </Button>
+                            );
+                        })}
+                    </div>
+
+                    {/* Chart */}
+                    <div className="flex-1 h-[300px]">
+                        {chartData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                    <XAxis
+                                        dataKey="name"
+                                        stroke="#888888"
+                                        fontSize={12}
+                                        tickLine={false}
+                                        axisLine={false}
+                                    />
+                                    <YAxis
+                                        stroke="#888888"
+                                        fontSize={12}
+                                        tickLine={false}
+                                        axisLine={false}
+                                        ticks={ticks}
+                                        domain={[0, finalMax]}
+                                    />
+                                    <Tooltip
+                                        cursor={{
+                                            fill: 'hsl(var(--muted) / 0.4)',
+                                        }}
+                                        contentStyle={{
+                                            borderRadius: '8px',
+                                            border: '1px solid hsl(var(--border))',
+                                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                            backgroundColor: 'hsl(var(--popover))',
+                                            color: 'hsl(var(--popover-foreground))',
+                                            padding: '12px'
+                                        }}
+                                        labelStyle={{
+                                            color: 'hsl(var(--muted-foreground))',
+                                            marginBottom: '4px'
+                                        }}
+                                        itemStyle={{
+                                            color: 'hsl(var(--popover-foreground))',
+                                            fontWeight: 500
+                                        }}
+                                        labelFormatter={(label, payload) => {
+                                            if (payload && payload.length > 0) {
+                                                return payload[0].payload.fullDate;
+                                            }
+                                            return label;
+                                        }}
+                                    />
+                                    <Bar
+                                        dataKey={selectedMetric}
+                                        fill={metricConfig[selectedMetric].color}
+                                        radius={[4, 4, 0, 0]}
+                                        name={metricConfig[selectedMetric].label}
+                                    />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="flex items-center justify-center h-full text-muted-foreground">
+                                No interaction data for this period
+                            </div>
+                        )}
+                    </div>
                 </div>
             </CardContent>
         </Card>
