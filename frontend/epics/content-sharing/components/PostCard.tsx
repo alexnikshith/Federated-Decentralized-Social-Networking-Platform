@@ -13,9 +13,22 @@ import {
     Globe,
     ExternalLink,
     Users,
-    AlertTriangle
+    AlertTriangle,
+    Bookmark,
+    ThumbsUp,
+    ThumbsDown,
+    Flag,
+    MoreVertical
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from '@/lib/utils';
 import { getPostLikers } from '../api/client';
 import type { PostLiker } from '../types';
@@ -48,8 +61,19 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
     const [likers, setLikers] = useState<PostLiker[]>([]);
     const [isLoadingLikers, setIsLoadingLikers] = useState(false);
     const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+    const [showReportDialog, setShowReportDialog] = useState(false);
+    const [reportReason, setReportReason] = useState('');
+    const [isReporting, setIsReporting] = useState(false);
 
-    const { likePost, unlikePost, deletePost } = useContentStore();
+    const {
+        likePost,
+        unlikePost,
+        deletePost,
+        savePost,
+        unsavePost,
+        reportPost,
+        interactPost
+    } = useContentStore();
     const { user } = useAuthStore();
 
     const fetchLikers = async () => {
@@ -82,6 +106,48 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
             showToast.postDeleted();
         } catch (error) {
             showToast.error("Failed to delete post", "Please try again later.");
+        }
+    };
+
+    const handleSave = async () => {
+        try {
+            if (post.is_saved) {
+                await unsavePost(post.id);
+                showToast.success("Removed from saved posts");
+            } else {
+                await savePost(post.id);
+                showToast.success("Post saved to profile");
+            }
+        } catch (error) {
+            showToast.error("Failed to update saved status");
+        }
+    };
+
+    const handleReport = async () => {
+        if (!reportReason.trim()) return;
+        setIsReporting(true);
+        try {
+            await reportPost(post.id, reportReason);
+            setShowReportDialog(false);
+            setReportReason('');
+            showToast.success("Post reported", "Moderators will review it soon.");
+        } catch (error) {
+            showToast.error("Failed to submit report");
+        } finally {
+            setIsReporting(false);
+        }
+    };
+
+    const handleInteraction = async (type: 'interested' | 'not_interested') => {
+        try {
+            await interactPost(post.id, type);
+            if (type === 'not_interested') {
+                showToast.success("Post hidden", "We'll show you less content like this.");
+            } else {
+                showToast.success("Preference noted", "We'll show you more similar content.");
+            }
+        } catch (error) {
+            showToast.error("Failed to update preference");
         }
     };
 
@@ -126,20 +192,46 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
                     </div>
 
                     <div className="flex items-center gap-1">
-                        {isOwner ? (
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors rounded-xl"
-                                onClick={() => setShowDeleteAlert(true)}
-                            >
-                                <Trash2 className="w-4 h-4" />
-                            </Button>
-                        ) : (
-                            <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground rounded-xl">
-                                <MoreHorizontal className="w-4 h-4" />
-                            </Button>
-                        )}
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground transition-colors rounded-xl">
+                                    <MoreHorizontal className="w-4 h-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48 bg-card border-border/50 backdrop-blur-md">
+                                <DropdownMenuItem onClick={handleSave} className="gap-2 cursor-pointer">
+                                    <Bookmark className={cn("w-4 h-4", post.is_saved && "fill-primary text-primary")} />
+                                    <span>{post.is_saved ? 'Unsave Post' : 'Save Post'}</span>
+                                </DropdownMenuItem>
+
+                                <DropdownMenuItem onClick={() => handleInteraction('interested')} className="gap-2 cursor-pointer">
+                                    <ThumbsUp className="w-4 h-4" />
+                                    <span>Interested</span>
+                                </DropdownMenuItem>
+
+                                <DropdownMenuItem onClick={() => handleInteraction('not_interested')} className="gap-2 cursor-pointer">
+                                    <ThumbsDown className="w-4 h-4" />
+                                    <span>Not Interested</span>
+                                </DropdownMenuItem>
+
+                                <DropdownMenuSeparator className="bg-border/50" />
+
+                                <DropdownMenuItem onClick={() => setShowReportDialog(true)} className="gap-2 text-orange-500 focus:text-orange-500 cursor-pointer">
+                                    <Flag className="w-4 h-4" />
+                                    <span>Report Post</span>
+                                </DropdownMenuItem>
+
+                                {isOwner && (
+                                    <>
+                                        <DropdownMenuSeparator className="bg-border/50" />
+                                        <DropdownMenuItem onClick={() => setShowDeleteAlert(true)} className="gap-2 text-destructive focus:text-destructive cursor-pointer">
+                                            <Trash2 className="w-4 h-4" />
+                                            <span>Delete Post</span>
+                                        </DropdownMenuItem>
+                                    </>
+                                )}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </div>
 
@@ -280,6 +372,42 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Report Dialog */}
+            <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
+                <DialogContent className="sm:max-w-md bg-card border-border/50">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 font-display text-xl">
+                            <Flag className="w-5 h-5 text-orange-500" />
+                            Report Post
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <p className="text-sm text-muted-foreground">
+                            Help us understand what's wrong with this post. Your report is anonymous.
+                        </p>
+                        <Textarea
+                            placeholder="Reason for reporting (e.g., spam, harassment, inappropriate content...)"
+                            value={reportReason}
+                            onChange={(e) => setReportReason(e.target.value)}
+                            className="min-h-[120px] bg-secondary/30 border-border/50 focus:ring-primary/20"
+                        />
+                    </div>
+                    <div className="flex justify-end gap-3">
+                        <Button variant="ghost" onClick={() => setShowReportDialog(false)}>
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="default"
+                            onClick={handleReport}
+                            disabled={!reportReason.trim() || isReporting}
+                            className="bg-orange-500 hover:bg-orange-600 text-white"
+                        >
+                            {isReporting ? 'Submitting...' : 'Submit Report'}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

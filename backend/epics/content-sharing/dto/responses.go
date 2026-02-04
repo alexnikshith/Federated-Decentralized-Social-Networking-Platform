@@ -16,6 +16,7 @@ type PostResponse struct {
 	LikeCount    int                `json:"like_count"`
 	CommentCount int                `json:"comment_count"`
 	IsLiked      bool               `json:"is_liked"` // Whether current user has liked
+	IsSaved      bool               `json:"is_saved"` // Whether current user has saved
 	CreatedAt    time.Time          `json:"created_at"`
 	UpdatedAt    time.Time          `json:"updated_at"`
 }
@@ -61,4 +62,17 @@ type LikerResponse struct {
 	UserID     primitive.ObjectID `json:"user_id"`
 	UserName   string             `json:"user_name"`
 	UserAvatar string             `json:"user_avatar"`
+}
+
+// ReportResponse represents a report for admin
+type ReportResponse struct {
+	ID           primitive.ObjectID `json:"id"`
+	ReporterID   primitive.ObjectID `json:"reporter_id"`
+	PostID       primitive.ObjectID `json:"post_id"`
+	PostContent  string             `json:"post_content"`
+	AuthorName   string             `json:"author_name"`
+	ReporterName string             `json:"reporter_name"`
+	Reason       string             `json:"reason"`
+	Status       string             `json:"status"`
+	CreatedAt    time.Time          `json:"created_at"`
 }

@@ -57,3 +57,30 @@ type Notification struct {
 	IsRead               bool                `json:"is_read" bson:"is_read"`
 	CreatedAt            time.Time           `json:"created_at" bson:"created_at"`
 }
+
+// SavedPost represents a post saved by a user
+type SavedPost struct {
+	ID        primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	UserID    primitive.ObjectID `json:"user_id" bson:"user_id"`
+	PostID    primitive.ObjectID `json:"post_id" bson:"post_id"`
+	CreatedAt time.Time          `json:"created_at" bson:"created_at"`
+}
+
+// ReportedPost represents a post reported by a user
+type ReportedPost struct {
+	ID         primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	ReporterID primitive.ObjectID `json:"reporter_id" bson:"reporter_id"`
+	PostID     primitive.ObjectID `json:"post_id" bson:"post_id"`
+	Reason     string             `json:"reason" bson:"reason"`
+	Status     string             `json:"status" bson:"status"` // "pending", "resolved", "dismissed"
+	CreatedAt  time.Time          `json:"created_at" bson:"created_at"`
+}
+
+// PostInteraction represents a user's interaction sentiment with a post
+type PostInteraction struct {
+	ID        primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	UserID    primitive.ObjectID `json:"user_id" bson:"user_id"`
+	PostID    primitive.ObjectID `json:"post_id" bson:"post_id"`
+	Type      string             `json:"type" bson:"type"` // "interested", "not_interested"
+	CreatedAt time.Time          `json:"created_at" bson:"created_at"`
+}
