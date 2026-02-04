@@ -22,6 +22,7 @@ interface InteractionsChartProps {
     prevInteractionReport?: any;
     viewMode?: 'weekly' | 'monthly';
     isInteractionsMade?: boolean;
+    allowedMetrics?: MetricType[];
 }
 
 interface ChartData {
@@ -48,9 +49,17 @@ const InteractionsChart: React.FC<InteractionsChartProps> = ({
     interactionReport,
     prevInteractionReport,
     viewMode = 'weekly',
-    isInteractionsMade = false
+    isInteractionsMade = false,
+    allowedMetrics = ['likes', 'comments', 'posts', 'follows']
 }) => {
-    const [selectedMetric, setSelectedMetric] = useState<MetricType>('likes');
+    const [selectedMetric, setSelectedMetric] = useState<MetricType>(allowedMetrics[0]);
+
+    // Update selected metric if it's not in allowedMetrics
+    React.useEffect(() => {
+        if (!allowedMetrics.includes(selectedMetric)) {
+            setSelectedMetric(allowedMetrics[0]);
+        }
+    }, [allowedMetrics, selectedMetric]);
 
     const processData = (): ChartData[] => {
         if (!startDate || !endDate) {
@@ -111,7 +120,8 @@ const InteractionsChart: React.FC<InteractionsChartProps> = ({
     );
     const tickStep = 2; // Fixed step of 2
     const calculatedMax = Math.ceil(maxValue / tickStep) * tickStep;
-    const finalMax = Math.max(calculatedMax, 10); // Default minimum of 10
+    const defaultMin = selectedMetric === 'posts' ? 4 : 10;
+    const finalMax = Math.max(calculatedMax, defaultMin);
 
     const ticks = [];
     for (let i = 0; i <= finalMax; i += tickStep) {
@@ -198,28 +208,30 @@ const InteractionsChart: React.FC<InteractionsChartProps> = ({
                 )}
 
                 <div className="flex gap-4">
-                    {/* Vertical Metric Selector */}
-                    <div className="flex flex-col gap-2 bg-secondary/30 p-2 rounded-lg">
-                        {(Object.keys(metricConfig) as MetricType[]).map((metric) => {
-                            const config = metricConfig[metric];
-                            const Icon = config.icon;
-                            const isSelected = selectedMetric === metric;
+                    {/* Vertical Metric Selector - Only show if more than 1 metric allowed */}
+                    {allowedMetrics.length > 1 && (
+                        <div className="flex flex-col gap-2 bg-secondary/30 p-2 rounded-lg">
+                            {(Object.keys(metricConfig) as MetricType[]).filter(m => allowedMetrics.includes(m)).map((metric) => {
+                                const config = metricConfig[metric];
+                                const Icon = config.icon;
+                                const isSelected = selectedMetric === metric;
 
-                            return (
-                                <Button
-                                    key={metric}
-                                    variant={isSelected ? "default" : "ghost"}
-                                    size="icon"
-                                    onClick={() => setSelectedMetric(metric)}
-                                    className={`h-10 w-10 ${isSelected ? '' : 'hover:bg-secondary'}`}
-                                    style={isSelected ? { backgroundColor: config.color } : {}}
-                                    title={config.label}
-                                >
-                                    <Icon className="h-5 w-5" />
-                                </Button>
-                            );
-                        })}
-                    </div>
+                                return (
+                                    <Button
+                                        key={metric}
+                                        variant={isSelected ? "default" : "ghost"}
+                                        size="icon"
+                                        onClick={() => setSelectedMetric(metric)}
+                                        className={`h-10 w-10 ${isSelected ? '' : 'hover:bg-secondary'}`}
+                                        style={isSelected ? { backgroundColor: config.color } : {}}
+                                        title={config.label}
+                                    >
+                                        <Icon className="h-5 w-5" />
+                                    </Button>
+                                );
+                            })}
+                        </div>
+                    )}
 
                     {/* Chart */}
                     <div className="flex-1 h-[300px]">
