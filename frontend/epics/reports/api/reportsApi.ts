@@ -19,12 +19,14 @@ export interface DailyInteraction {
     likes: number;
     comments: number;
     follows: number;
+    posts: number;
 }
 
 export interface InteractionReport {
     total_likes: number;
     total_comments: number;
     total_follows: number;
+    total_posts: number;
     daily_stats: DailyInteraction[];
 }
 
@@ -76,6 +78,17 @@ export const useReportsApi = () => {
         useInteractionReport: (startDate?: string, endDate?: string) => useQuery({
             queryKey: ['interaction-report', startDate, endDate],
             queryFn: () => fetchInteractions(startDate, endDate),
+            enabled: !!token
+        }),
+        useInteractionMadeReport: (startDate?: string, endDate?: string) => useQuery({
+            queryKey: ['interaction-made-report', startDate, endDate],
+            queryFn: async () => {
+                const params = new URLSearchParams();
+                if (startDate) params.append('start_date', startDate);
+                if (endDate) params.append('end_date', endDate);
+                const response = await api.get('/api/reports/interactions-made', { params });
+                return response.data;
+            },
             enabled: !!token
         })
     };
