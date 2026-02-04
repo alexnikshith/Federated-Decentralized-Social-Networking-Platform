@@ -18,6 +18,7 @@ interface TimeUsageChartProps {
     currentLabel: string;
     onViewChange: (view: 'weekly' | 'monthly') => void;
     isNextDisabled?: boolean;
+    periodTotal?: number;
 }
 
 interface ChartData {
@@ -35,7 +36,8 @@ const TimeUsageChart: React.FC<TimeUsageChartProps> = ({
     onNextClick,
     currentLabel,
     onViewChange,
-    isNextDisabled = false
+    isNextDisabled = false,
+    periodTotal
 }) => {
 
     const processData = (): ChartData[] => {
@@ -116,6 +118,16 @@ const TimeUsageChart: React.FC<TimeUsageChartProps> = ({
                         {view === 'weekly' && 'Daily usage for the selected week'}
                         {view === 'monthly' && 'Daily usage for the selected month'}
                     </CardDescription>
+                    {periodTotal !== undefined && (
+                        <div className="mt-2">
+                            <span className="text-2xl font-bold">
+                                {Math.floor(periodTotal)}h {Math.round((periodTotal % 1) * 60)}m
+                            </span>
+                            <span className="text-sm text-muted-foreground ml-2">
+                                total this {view === 'weekly' ? 'week' : 'month'}
+                            </span>
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 items-center w-full md:w-auto">

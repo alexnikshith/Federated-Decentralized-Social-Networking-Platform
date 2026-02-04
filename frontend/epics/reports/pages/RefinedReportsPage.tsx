@@ -22,7 +22,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 export const RefinedReportsPage: React.FC = () => {
     const { useActivityReport, useInteractionReport, useInteractionMadeReport } = useReportsApi();
 
-    const [activeTab, setActiveTab] = useState<'time-usage' | 'interactions'>('time-usage');
+    const [activeTab, setActiveTab] = useState<'time-usage' | 'interactions' | 'posts'>('time-usage');
     const [interactionSection, setInteractionSection] = useState<'received' | 'made'>('received');
     const [currentDate, setCurrentDate] = useState(new Date());
     const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
@@ -104,6 +104,19 @@ export const RefinedReportsPage: React.FC = () => {
     const { data: prevInteractionReport } = useInteractionReport(prevStartDateStr, prevEndDateStr);
     const { data: prevInteractionMadeReport } = useInteractionMadeReport(prevStartDateStr, prevEndDateStr);
 
+    // Fetch "All Time" and "Today" data for static stats
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const allTimeStartStr = '2000-01-01'; // Far past date to get all activity
+
+    // For Time Usage
+    const { data: todayActivityReport } = useActivityReport(todayStr, todayStr);
+    const { data: allTimeActivityReport } = useActivityReport(allTimeStartStr, todayStr);
+
+    // For Interactions (Total)
+    // We fetch all-time data for interactions to show in the "Total interactions" card
+    const { data: allTimeInteractionReceived } = useInteractionReport(allTimeStartStr, todayStr);
+    const { data: allTimeInteractionMade } = useInteractionMadeReport(allTimeStartStr, todayStr);
+
     // Calculate percentage change helper
     const calculatePercentageChange = (current: number, previous: number): { percentage: number; isIncrease: boolean } => {
         if (previous === 0) {
@@ -126,7 +139,7 @@ export const RefinedReportsPage: React.FC = () => {
 
             {/* 2. Full-width Tabs Navigation */}
             <div className="w-full border-b">
-                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'time-usage' | 'interactions')} className="w-full">
+                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'time-usage' | 'interactions' | 'posts')} className="w-full">
                     <TabsList className="w-full justify-start h-12 bg-transparent border-b-0 rounded-none p-0">
                         <TabsTrigger
                             value="time-usage"
@@ -139,6 +152,12 @@ export const RefinedReportsPage: React.FC = () => {
                             className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6"
                         >
                             Interactions
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="posts"
+                            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6"
+                        >
+                            Posts
                         </TabsTrigger>
                     </TabsList>
                 </Tabs>
@@ -167,22 +186,22 @@ export const RefinedReportsPage: React.FC = () => {
                         <div className="space-y-6">
                             {/* Top Row: Stat Cards */}
                             <div className="grid gap-4 md:grid-cols-2">
-                                {/* Total Time Spent */}
+                                {/* Total Time Spent (All Time) */}
                                 <Card>
                                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                        <CardTitle className="text-sm font-medium">Total time spent</CardTitle>
+                                        <CardTitle className="text-sm font-medium">Total time spent till date</CardTitle>
                                     </CardHeader>
                                     <CardContent>
                                         <div className="text-2xl font-bold">
-                                            {Math.floor(report?.total_hours || 0)}h {Math.round(((report?.total_hours || 0) % 1) * 60)}m
+                                            {Math.floor(allTimeActivityReport?.total_hours || 0)}h {Math.round(((allTimeActivityReport?.total_hours || 0) % 1) * 60)}m
                                         </div>
                                         <p className="text-xs text-muted-foreground">
-                                            Total activity in selected period
+                                            Total lifetime activity
                                         </p>
                                     </CardContent>
                                 </Card>
 
-                                {/* Time Spent Today */}
+                                {/* Time Spent Today (Always Today) */}
                                 <Card>
                                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                         <CardTitle className="text-sm font-medium">Time spent today</CardTitle>
@@ -190,18 +209,9 @@ export const RefinedReportsPage: React.FC = () => {
                                     <CardContent>
                                         <div className="text-2xl font-bold">
                                             {(() => {
-                                                const today = new Date();
-                                                const todayStr = format(today, 'yyyy-MM-dd');
-                                                // Find today's data by comparing date strings
-                                                const todayData = report?.daily_stats?.find(d => {
-                                                    // Parse the date from API (could be ISO string or date object)
-                                                    const activityDate = typeof d.date === 'string'
-                                                        ? format(new Date(d.date), 'yyyy-MM-dd')
-                                                        : format(d.date, 'yyyy-MM-dd');
-                                                    return activityDate === todayStr;
-                                                });
-                                                const todayMinutes = todayData?.minutes || 0;
-                                                return `${Math.floor(todayMinutes / 60)}h ${todayMinutes % 60}m`;
+                                                // Calculate minutes from total_hours for today's report
+                                                const totalMinutes = Math.round((todayActivityReport?.total_hours || 0) * 60);
+                                                return `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`;
                                             })()}
                                         </div>
                                         <p className="text-xs text-muted-foreground">
@@ -211,203 +221,274 @@ export const RefinedReportsPage: React.FC = () => {
                                 </Card>
                             </div>
 
-                            {/* Bottom Row: Chart with Stat Card */}
-                            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                                {/* Weekly/Monthly Total - takes up 1 column on large screens */}
-                                <div className="lg:col-span-1">
-                                    <Card>
-                                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                            <CardTitle className="text-sm font-medium">
-                                                {viewMode === 'weekly' ? 'Weekly' : 'Monthly'} total
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <div className="text-2xl font-bold">
-                                                {Math.floor(report?.total_hours || 0)}h {Math.round(((report?.total_hours || 0) % 1) * 60)}m
-                                            </div>
-                                            <p className="text-xs text-muted-foreground">
-                                                {viewMode === 'weekly'
-                                                    ? `${format(range.start, 'MMM d')} - ${format(range.end, 'MMM d')}`
-                                                    : format(currentDate, 'MMMM yyyy')
-                                                }
-                                            </p>
-                                        </CardContent>
-                                    </Card>
-                                </div>
-
-                                <div className="lg:col-span-3">
-                                    <TimeUsageChart
-                                        data={report?.daily_stats || []}
-                                        view={viewMode}
-                                        startDate={range.start}
-                                        endDate={range.end}
-                                        onPrevClick={handlePrev}
-                                        onNextClick={handleNext}
-                                        currentLabel={viewMode === 'weekly'
-                                            ? `${format(range.start, 'MMM d')} - ${format(range.end, 'MMM d')}`
-                                            : format(currentDate, 'MMMM yyyy')
-                                        }
-                                        onViewChange={(v) => setViewMode(v)}
-                                        isNextDisabled={isNextDisabled}
-                                    />
-                                </div>
+                            {/* Bottom Row: Chart with Integrated Weekly Total */}
+                            <div className="grid grid-cols-1">
+                                <TimeUsageChart
+                                    data={report?.daily_stats || []}
+                                    view={viewMode}
+                                    startDate={range.start}
+                                    endDate={range.end}
+                                    onPrevClick={handlePrev}
+                                    onNextClick={handleNext}
+                                    currentLabel={viewMode === 'weekly'
+                                        ? `${format(range.start, 'MMM d')} - ${format(range.end, 'MMM d')}`
+                                        : format(currentDate, 'MMMM yyyy')
+                                    }
+                                    onViewChange={(v) => setViewMode(v)}
+                                    isNextDisabled={isNextDisabled}
+                                    periodTotal={report?.total_hours || 0}
+                                />
                             </div>
                         </div>
                     )}
                 </div>
-            )}
+            )
+            }
 
             {/* Interactions Tab Content */}
-            {activeTab === 'interactions' && (
+            {
+                activeTab === 'interactions' && (
+                    <div className="mt-6 space-y-6">
+                        {/* Sub-navigation for Made/Received */}
+                        <Tabs value={interactionSection} onValueChange={(v) => setInteractionSection(v as 'received' | 'made')}>
+                            <TabsList>
+                                <TabsTrigger value="received">Interactions Received</TabsTrigger>
+                                <TabsTrigger value="made">Interactions Made</TabsTrigger>
+                            </TabsList>
+                        </Tabs>
+
+                        {/* Interactions Received Section */}
+                        {interactionSection === 'received' && (
+                            <>
+                                {interactionLoading ? (
+                                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                                        <Card>
+                                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                                <CardTitle className="text-sm font-medium">Loading...</CardTitle>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <div className="text-2xl font-bold animate-pulse bg-gray-200 h-8 w-24 rounded"></div>
+                                            </CardContent>
+                                        </Card>
+                                    </div>
+                                ) : interactionError ? (
+                                    <div className="p-4 rounded-md bg-destructive/10 text-destructive">
+                                        Error loading interaction data. Please try again later.
+                                    </div>
+                                ) : (
+                                    <div className="space-y-6">
+                                        {/* Stat Box Row - Only Total Interactions with visual breakdown */}
+                                        {allTimeInteractionReceived && (
+                                            <div className="mb-6">
+                                                {/* Combined Total */}
+                                                <Card>
+                                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                                        <CardTitle className="text-sm font-medium">
+                                                            Total interactions Received till date
+                                                        </CardTitle>
+                                                    </CardHeader>
+                                                    <CardContent>
+                                                        <div className="text-2xl font-bold mb-4">
+                                                            {(allTimeInteractionReceived?.total_likes || 0) +
+                                                                (allTimeInteractionReceived?.total_comments || 0) +
+                                                                (allTimeInteractionReceived?.total_follows || 0)}
+                                                        </div>
+
+                                                        {/* Visual Breakdown Grid */}
+                                                        <div className="grid grid-cols-3 gap-4">
+                                                            <div className="bg-secondary/20 p-3 rounded-lg flex flex-col items-center">
+                                                                <span className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Likes</span>
+                                                                <span className="text-lg font-bold">{allTimeInteractionReceived?.total_likes || 0}</span>
+                                                            </div>
+                                                            <div className="bg-secondary/20 p-3 rounded-lg flex flex-col items-center">
+                                                                <span className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Comments</span>
+                                                                <span className="text-lg font-bold">{allTimeInteractionReceived?.total_comments || 0}</span>
+                                                            </div>
+                                                            <div className="bg-secondary/20 p-3 rounded-lg flex flex-col items-center">
+                                                                <span className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Follows</span>
+                                                                <span className="text-lg font-bold">{allTimeInteractionReceived?.total_follows || 0}</span>
+                                                            </div>
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            </div>
+                                        )}
+
+                                        {/* Chart with integrated metric selector */}
+                                        <InteractionsChart
+                                            data={interactionReport?.daily_stats || []}
+                                            view={viewMode}
+                                            startDate={range.start}
+                                            endDate={range.end}
+                                            onPrevClick={handlePrev}
+                                            onNextClick={handleNext}
+                                            currentLabel={viewMode === 'weekly'
+                                                ? `${format(range.start, 'MMM d')} - ${format(range.end, 'MMM d')}`
+                                                : format(currentDate, 'MMMM yyyy')
+                                            }
+                                            onViewChange={(v) => setViewMode(v)}
+                                            isNextDisabled={isNextDisabled}
+                                            interactionReport={interactionReport}
+                                            prevInteractionReport={prevInteractionReport}
+                                            viewMode={viewMode}
+                                            isInteractionsMade={false}
+                                            allowedMetrics={['likes', 'comments', 'follows']}
+                                        />
+                                    </div>
+                                )}
+                            </>
+                        )}
+
+                        {/* Interactions Made Section */}
+                        {interactionSection === 'made' && (
+                            <>
+                                {interactionMadeLoading ? (
+                                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                                        <Card>
+                                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                                <CardTitle className="text-sm font-medium">Loading...</CardTitle>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <div className="text-2xl font-bold animate-pulse bg-gray-200 h-8 w-24 rounded"></div>
+                                            </CardContent>
+                                        </Card>
+                                    </div>
+                                ) : interactionMadeError ? (
+                                    <div className="p-4 rounded-md bg-destructive/10 text-destructive">
+                                        Error loading interaction data. Please try again later.
+                                    </div>
+                                ) : (
+                                    <div className="space-y-6">
+                                        {/* Stat Box Row - Only Total Interactions with visual breakdown */}
+                                        {allTimeInteractionMade && (
+                                            <div className="mb-6">
+                                                {/* Combined Total */}
+                                                <Card>
+                                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                                        <CardTitle className="text-sm font-medium">
+                                                            Total interactions made till date
+                                                        </CardTitle>
+                                                    </CardHeader>
+                                                    <CardContent>
+                                                        <div className="text-2xl font-bold mb-4">
+                                                            {(allTimeInteractionMade?.total_likes || 0) +
+                                                                (allTimeInteractionMade?.total_comments || 0) +
+                                                                (allTimeInteractionMade?.total_follows || 0)}
+                                                        </div>
+
+                                                        {/* Visual Breakdown Grid */}
+                                                        <div className="grid grid-cols-3 gap-4">
+                                                            <div className="bg-secondary/20 p-3 rounded-lg flex flex-col items-center">
+                                                                <span className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Likes</span>
+                                                                <span className="text-lg font-bold">{allTimeInteractionMade?.total_likes || 0}</span>
+                                                            </div>
+                                                            <div className="bg-secondary/20 p-3 rounded-lg flex flex-col items-center">
+                                                                <span className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Comments</span>
+                                                                <span className="text-lg font-bold">{allTimeInteractionMade?.total_comments || 0}</span>
+                                                            </div>
+                                                            <div className="bg-secondary/20 p-3 rounded-lg flex flex-col items-center">
+                                                                <span className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Follows</span>
+                                                                <span className="text-lg font-bold">{allTimeInteractionMade?.total_follows || 0}</span>
+                                                            </div>
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            </div>
+                                        )}
+
+                                        {/* Chart with integrated metric selector */}
+                                        <InteractionsChart
+                                            data={interactionMadeReport?.daily_stats || []}
+                                            view={viewMode}
+                                            startDate={range.start}
+                                            endDate={range.end}
+                                            onPrevClick={handlePrev}
+                                            onNextClick={handleNext}
+                                            currentLabel={viewMode === 'weekly'
+                                                ? `${format(range.start, 'MMM d')} - ${format(range.end, 'MMM d')}`
+                                                : format(currentDate, 'MMMM yyyy')
+                                            }
+                                            onViewChange={(v) => setViewMode(v)}
+                                            isNextDisabled={isNextDisabled}
+                                            interactionReport={interactionMadeReport}
+                                            prevInteractionReport={prevInteractionMadeReport}
+                                            viewMode={viewMode}
+                                            isInteractionsMade={true}
+                                            allowedMetrics={['likes', 'comments', 'follows']}
+                                        />
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
+                )
+            }
+            {/* Posts Tab Content */}
+            {activeTab === 'posts' && (
                 <div className="mt-6 space-y-6">
-                    {/* Sub-navigation for Made/Received */}
-                    <Tabs value={interactionSection} onValueChange={(v) => setInteractionSection(v as 'received' | 'made')}>
-                        <TabsList>
-                            <TabsTrigger value="received">Interactions Received</TabsTrigger>
-                            <TabsTrigger value="made">Interactions Made</TabsTrigger>
-                        </TabsList>
-                    </Tabs>
-
-                    {/* Interactions Received Section */}
-                    {interactionSection === 'received' && (
-                        <>
-                            {interactionLoading ? (
-                                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    {interactionMadeLoading ? (
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Loading...</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold animate-pulse bg-gray-200 h-8 w-24 rounded"></div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    ) : interactionMadeError ? (
+                        <div className="p-4 rounded-md bg-destructive/10 text-destructive">
+                            Error loading posts data. Please try again later.
+                        </div>
+                    ) : (
+                        <div className="space-y-6">
+                            {/* Total Posts Card */}
+                            {allTimeInteractionMade && (
+                                <div className="mb-6">
                                     <Card>
                                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                            <CardTitle className="text-sm font-medium">Loading...</CardTitle>
+                                            <CardTitle className="text-sm font-medium">
+                                                Total Posts (All Time)
+                                            </CardTitle>
                                         </CardHeader>
                                         <CardContent>
-                                            <div className="text-2xl font-bold animate-pulse bg-gray-200 h-8 w-24 rounded"></div>
+                                            <div className="text-2xl font-bold">
+                                                {allTimeInteractionMade?.total_posts || 0}
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">
+                                                Total posts created
+                                            </p>
                                         </CardContent>
                                     </Card>
                                 </div>
-                            ) : interactionError ? (
-                                <div className="p-4 rounded-md bg-destructive/10 text-destructive">
-                                    Error loading interaction data. Please try again later.
-                                </div>
-                            ) : (
-                                <div className="space-y-6">
-                                    {/* Stat Box Row - Only Total Interactions */}
-                                    {interactionReport && (
-                                        <div className="mb-6">
-                                            {/* Combined Total */}
-                                            <Card>
-                                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                                    <CardTitle className="text-sm font-medium">
-                                                        Total interactions
-                                                    </CardTitle>
-                                                </CardHeader>
-                                                <CardContent>
-                                                    <div className="text-2xl font-bold">
-                                                        {(interactionReport?.total_posts || 0) +
-                                                            (interactionReport?.total_likes || 0) +
-                                                            (interactionReport?.total_comments || 0) +
-                                                            (interactionReport?.total_follows || 0)}
-                                                    </div>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        Posts: {interactionReport?.total_posts || 0}, Likes: {interactionReport?.total_likes || 0}, Comments: {interactionReport?.total_comments || 0}, Follows: {interactionReport?.total_follows || 0}
-                                                    </p>
-                                                </CardContent>
-                                            </Card>
-                                        </div>
-                                    )}
-
-                                    {/* Chart with integrated metric selector */}
-                                    <InteractionsChart
-                                        data={interactionReport?.daily_stats || []}
-                                        view={viewMode}
-                                        startDate={range.start}
-                                        endDate={range.end}
-                                        onPrevClick={handlePrev}
-                                        onNextClick={handleNext}
-                                        currentLabel={viewMode === 'weekly'
-                                            ? `${format(range.start, 'MMM d')} - ${format(range.end, 'MMM d')}`
-                                            : format(currentDate, 'MMMM yyyy')
-                                        }
-                                        onViewChange={(v) => setViewMode(v)}
-                                        isNextDisabled={isNextDisabled}
-                                        interactionReport={interactionReport}
-                                        prevInteractionReport={prevInteractionReport}
-                                        viewMode={viewMode}
-                                        isInteractionsMade={false}
-                                    />
-                                </div>
                             )}
-                        </>
-                    )}
 
-                    {/* Interactions Made Section */}
-                    {interactionSection === 'made' && (
-                        <>
-                            {interactionMadeLoading ? (
-                                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                                    <Card>
-                                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                            <CardTitle className="text-sm font-medium">Loading...</CardTitle>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <div className="text-2xl font-bold animate-pulse bg-gray-200 h-8 w-24 rounded"></div>
-                                        </CardContent>
-                                    </Card>
-                                </div>
-                            ) : interactionMadeError ? (
-                                <div className="p-4 rounded-md bg-destructive/10 text-destructive">
-                                    Error loading interaction data. Please try again later.
-                                </div>
-                            ) : (
-                                <div className="space-y-6">
-                                    {/* Stat Box Row - Only Total Interactions */}
-                                    {interactionMadeReport && (
-                                        <div className="mb-6">
-                                            {/* Combined Total */}
-                                            <Card>
-                                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                                    <CardTitle className="text-sm font-medium">
-                                                        Total interactions
-                                                    </CardTitle>
-                                                </CardHeader>
-                                                <CardContent>
-                                                    <div className="text-2xl font-bold">
-                                                        {(interactionMadeReport?.total_posts || 0) +
-                                                            (interactionMadeReport?.total_likes || 0) +
-                                                            (interactionMadeReport?.total_comments || 0) +
-                                                            (interactionMadeReport?.total_follows || 0)}
-                                                    </div>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        Posts: {interactionMadeReport?.total_posts || 0}, Likes: {interactionMadeReport?.total_likes || 0}, Comments: {interactionMadeReport?.total_comments || 0}, Follows: {interactionMadeReport?.total_follows || 0}
-                                                    </p>
-                                                </CardContent>
-                                            </Card>
-                                        </div>
-                                    )}
-
-                                    {/* Chart with integrated metric selector */}
-                                    <InteractionsChart
-                                        data={interactionMadeReport?.daily_stats || []}
-                                        view={viewMode}
-                                        startDate={range.start}
-                                        endDate={range.end}
-                                        onPrevClick={handlePrev}
-                                        onNextClick={handleNext}
-                                        currentLabel={viewMode === 'weekly'
-                                            ? `${format(range.start, 'MMM d')} - ${format(range.end, 'MMM d')}`
-                                            : format(currentDate, 'MMMM yyyy')
-                                        }
-                                        onViewChange={(v) => setViewMode(v)}
-                                        isNextDisabled={isNextDisabled}
-                                        interactionReport={interactionMadeReport}
-                                        prevInteractionReport={prevInteractionMadeReport}
-                                        viewMode={viewMode}
-                                        isInteractionsMade={true}
-                                    />
-                                </div>
-                            )}
-                        </>
+                            {/* Posts Chart */}
+                            <InteractionsChart
+                                data={interactionMadeReport?.daily_stats || []}
+                                view={viewMode}
+                                startDate={range.start}
+                                endDate={range.end}
+                                onPrevClick={handlePrev}
+                                onNextClick={handleNext}
+                                currentLabel={viewMode === 'weekly'
+                                    ? `${format(range.start, 'MMM d')} - ${format(range.end, 'MMM d')}`
+                                    : format(currentDate, 'MMMM yyyy')
+                                }
+                                onViewChange={(v) => setViewMode(v)}
+                                isNextDisabled={isNextDisabled}
+                                interactionReport={interactionMadeReport}
+                                prevInteractionReport={prevInteractionMadeReport}
+                                viewMode={viewMode}
+                                isInteractionsMade={true}
+                                allowedMetrics={['posts']}
+                            />
+                        </div>
                     )}
                 </div>
             )}
-        </div>
+        </div >
     );
 };
 
