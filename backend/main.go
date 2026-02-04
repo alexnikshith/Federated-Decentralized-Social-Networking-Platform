@@ -9,6 +9,8 @@ import (
 	contentRoutes "federated-social/backend/epics/content-sharing/routes"
 	"federated-social/backend/epics/identity/repository"
 	"federated-social/backend/epics/identity/routes"
+	messagingRepo "federated-social/backend/epics/messaging/repository"
+	messagingRoutes "federated-social/backend/epics/messaging/routes"
 	reportRoutes "federated-social/backend/epics/reports/routes"
 	safetyRepo "federated-social/backend/epics/safety/repository"
 	safetyRoutes "federated-social/backend/epics/safety/routes"
@@ -62,6 +64,12 @@ func main() {
 		log.Printf("Warning: Failed to create search indexes: %v", err)
 	}
 
+	// Create messaging indexes
+	messagingR := messagingRepo.NewMessageRepository()
+	if err := messagingR.CreateIndexes(ctx); err != nil {
+		log.Printf("Warning: Failed to create messaging indexes: %v", err)
+	}
+
 	// Create safety indexes
 	blockRepo := safetyRepo.NewBlockRepository()
 	if err := blockRepo.CreateIndexes(ctx); err != nil {
@@ -80,6 +88,7 @@ func main() {
 	reportRoutes.RegisterReportRoutes(router)
 	safetyRoutes.RegisterSafetyRoutes(router)
 	adminRoutes.RegisterAdminRoutes(router)
+	messagingRoutes.RegisterMessagingRoutes(router)
 
 	// Health check endpoint
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {

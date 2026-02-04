@@ -1,0 +1,460 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { useAuthStore } from '../../identity/store/authStore';
+import { messagingApi } from '../api/client';
+import { Conversation, Message, Participant } from '../types';
+import {
+    Search,
+    Send,
+    Camera,
+    FileText,
+    MoreVertical,
+    ArrowLeft,
+    Loader2,
+    Smile,
+    Paperclip,
+    MessageSquare
+} from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { UserSearch } from '../../content-sharing/components/UserSearch';
+import { motion, AnimatePresence } from 'motion/react';
+
+const MessagingUI: React.FC = () => {
+    const [searchParams, setSearchParams] = useSearchParams();
+    const { user: currentUser } = useAuthStore();
+    const [conversations, setConversations] = useState<Conversation[]>([]);
+    const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [messageInput, setMessageInput] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [loadingMessages, setLoadingMessages] = useState(false);
+    const [showSearch, setShowSearch] = useState(false);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const [isNewChat, setIsNewChat] = useState(false);
+    const [newChatUser, setNewChatUser] = useState<Participant | null>(null);
+
+    // Ensure conversations is ALWAYS an array even if state somehow becomes null
+    const safeConversations = Array.isArray(conversations) ? conversations : [];
+
+    useEffect(() => {
+        loadConversations();
+    }, []);
+
+    useEffect(() => {
+        if (selectedConversation?.id) {
+            loadMessages(selectedConversation.id);
+        }
+    }, [selectedConversation?.id]);
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages]);
+
+    const loadConversations = async () => {
+        setLoading(true);
+        try {
+            const data = await messagingApi.getConversations();
+            const convs = Array.isArray(data) ? data : [];
+            setConversations(convs);
+
+            // Handle initial user selection from query params
+            const targetUserId = searchParams.get('userId');
+            const targetUsername = searchParams.get('username');
+
+            if (targetUserId) {
+                const existing = convs.find(c => c.participants.some(p => p.id === targetUserId));
+                if (existing) {
+                    setSelectedConversation(existing);
+                } else if (targetUsername) {
+                    // Start a virtual new chat session
+                    setIsNewChat(true);
+                    setNewChatUser({
+                        id: targetUserId,
+                        username: targetUsername,
+                        avatar_url: '' // Will be updated if/when they send message
+                    });
+                }
+                // Clear params after processing
+                setSearchParams({}, { replace: true });
+            }
+        } catch (error) {
+            console.error('Failed to load conversations:', error);
+            setConversations([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const loadMessages = async (convId: string) => {
+        if (!convId) return;
+        setLoadingMessages(true);
+        try {
+            const data = await messagingApi.getMessages(convId);
+            setMessages(Array.isArray(data) ? data : []);
+        } catch (error) {
+            console.error('Failed to load messages:', error);
+            setMessages([]);
+        } finally {
+            setLoadingMessages(false);
+        }
+    };
+
+    const handleSendMessage = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        if (!messageInput.trim() || !currentUser) return;
+        if (!selectedConversation && !isNewChat) return;
+
+        let receiverId: string;
+        if (selectedConversation) {
+            const participants = selectedConversation.participants || [];
+            const receiver = participants.find(p => p.id !== currentUser.id);
+            if (!receiver) return;
+            receiverId = receiver.id;
+        } else if (newChatUser) {
+            receiverId = newChatUser.id;
+        } else {
+            return;
+        }
+
+        try {
+            const newMsg = await messagingApi.sendMessage({
+                receiver_id: receiverId,
+                content: messageInput.trim(),
+                type: 'text'
+            });
+            setMessages(prev => [...(Array.isArray(prev) ? prev : []), newMsg]);
+            setMessageInput('');
+
+            if (isNewChat) {
+                // Reload conversations to get the newly created one
+                await loadConversations();
+                setIsNewChat(false);
+                setNewChatUser(null);
+            } else if (selectedConversation) {
+                setConversations(prev => {
+                    const currentPrev = Array.isArray(prev) ? prev : [];
+                    return currentPrev.map(c =>
+                        c.id === selectedConversation.id
+                            ? { ...c, last_message: newMsg, updated_at: newMsg.created_at }
+                            : c
+                    ).sort((a, b) => {
+                        const dateA = new Date(a.updated_at || 0).getTime();
+                        const dateB = new Date(b.updated_at || 0).getTime();
+                        return dateB - dateA;
+                    });
+                });
+            }
+        } catch (error) {
+            console.error('Failed to send message:', error);
+        }
+    };
+
+    const scrollToBottom = () => {
+        if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+    };
+
+    const getOtherParticipant = (participants: Participant[]) => {
+        if (!Array.isArray(participants) || participants.length === 0) {
+            return { username: 'User', avatar_url: '' } as Participant;
+        }
+        return participants.find(p => p.id !== currentUser?.id) || participants[0];
+    };
+
+    const safeFormat = (dateStr: string | undefined, formatStr: string) => {
+        if (!dateStr) return '';
+        try {
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return '';
+            return format(date, formatStr);
+        } catch (e) {
+            return '';
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="h-[calc(100vh-80px)] flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex h-[calc(100vh-80px)] overflow-hidden bg-background border rounded-2xl mx-4 my-2 shadow-sm">
+            {/* Conversation List */}
+            <div className={cn(
+                "w-full md:w-80 border-r flex flex-col transition-all duration-300",
+                (selectedConversation || isNewChat) && "hidden md:flex"
+            )}>
+                <div className="p-4 border-b flex justify-between items-center bg-card">
+                    <h2 className="text-xl font-bold font-display">Messages</h2>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="rounded-full"
+                        onClick={() => setShowSearch(true)}
+                    >
+                        <Search className="w-5 h-5" />
+                    </Button>
+                </div>
+
+                <ScrollArea className="flex-1">
+                    {safeConversations.length === 0 ? (
+                        <div className="p-10 text-center opacity-50 flex flex-col items-center">
+                            <Smile className="w-12 h-12 mb-4 text-muted-foreground" />
+                            <p className="text-sm font-medium">No messages yet</p>
+                            <Button variant="link" onClick={() => setShowSearch(true)}>Start a conversation</Button>
+                        </div>
+                    ) : (
+                        <div className="py-2">
+                            {safeConversations.map((conv) => {
+                                if (!conv) return null;
+                                const other = getOtherParticipant(conv.participants);
+                                const isSelected = selectedConversation?.id === conv.id;
+                                return (
+                                    <div
+                                        key={conv.id}
+                                        onClick={() => {
+                                            setSelectedConversation(conv);
+                                            setIsNewChat(false);
+                                            setNewChatUser(null);
+                                        }}
+                                        className={cn(
+                                            "flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-l-4",
+                                            isSelected
+                                                ? "bg-primary/5 border-primary"
+                                                : "border-transparent hover:bg-secondary/50"
+                                        )}
+                                    >
+                                        <div className="relative">
+                                            <Avatar className="w-12 h-12 border border-border/50">
+                                                <AvatarImage src={other.avatar_url} />
+                                                <AvatarFallback>{(other.username || 'U')[0].toUpperCase()}</AvatarFallback>
+                                            </Avatar>
+                                            <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-neutral-900" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex justify-between items-baseline mb-1">
+                                                <span className="font-semibold text-sm truncate">{other.username}</span>
+                                                <span className="text-[10px] text-muted-foreground">
+                                                    {conv.last_message && safeFormat(conv.last_message.created_at, 'HH:mm')}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground truncate">
+                                                {conv.last_message?.content || "Start messaging..."}
+                                            </p>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </ScrollArea>
+            </div>
+
+            {/* Chat Window */}
+            <div className={cn(
+                "flex-1 flex flex-col bg-card/30 backdrop-blur-sm relative",
+                (!selectedConversation && !isNewChat) && "hidden md:flex justify-center items-center text-muted-foreground p-12"
+            )}>
+                {(selectedConversation || isNewChat) ? (
+                    <>
+                        {/* Chat Header */}
+                        <div className="p-4 border-b flex items-center justify-between bg-card">
+                            <div className="flex items-center gap-3">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="md:hidden"
+                                    onClick={() => {
+                                        setSelectedConversation(null);
+                                        setIsNewChat(false);
+                                    }}
+                                >
+                                    <ArrowLeft className="w-5 h-5" />
+                                </Button>
+                                <Avatar className="w-10 h-10">
+                                    <AvatarImage src={isNewChat ? newChatUser?.avatar_url : getOtherParticipant(selectedConversation!.participants).avatar_url} />
+                                    <AvatarFallback>{((isNewChat ? newChatUser?.username : getOtherParticipant(selectedConversation!.participants).username) || 'U')[0].toUpperCase()}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <h3 className="font-bold text-sm leading-none">{isNewChat ? newChatUser?.username : getOtherParticipant(selectedConversation!.participants).username}</h3>
+                                    <span className="text-[10px] text-green-500 font-medium">Active now</span>
+                                </div>
+                            </div>
+                            <Button variant="ghost" size="icon" className="rounded-full">
+                                <MoreVertical className="w-5 h-5" />
+                            </Button>
+                        </div>
+
+                        {/* Messages Area */}
+                        <ScrollArea className="flex-1 p-4">
+                            {loadingMessages ? (
+                                <div className="h-full flex items-center justify-center">
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                </div>
+                            ) : (
+                                <div className="space-y-4 pb-4">
+                                    {(messages || []).map((msg, idx) => {
+                                        if (!msg) return null;
+                                        const isMine = msg.sender_id === currentUser?.id;
+                                        const safeMessages = Array.isArray(messages) ? messages : [];
+                                        const prevMsg = idx > 0 ? safeMessages[idx - 1] : null;
+                                        const sameSenderAsPrev = prevMsg?.sender_id === msg.sender_id;
+
+                                        return (
+                                            <div
+                                                key={msg.id || idx}
+                                                className={cn(
+                                                    "flex flex-col",
+                                                    isMine ? "items-end" : "items-start",
+                                                    sameSenderAsPrev ? "mt-1" : "mt-4"
+                                                )}
+                                            >
+                                                <div className={cn(
+                                                    "max-w-[80%] px-4 py-2.5 rounded-2xl text-sm shadow-sm",
+                                                    isMine
+                                                        ? "bg-primary text-primary-foreground rounded-tr-none"
+                                                        : "bg-secondary text-secondary-foreground rounded-tl-none"
+                                                )}>
+                                                    {msg.content}
+                                                </div>
+                                                <span className="text-[10px] text-muted-foreground mt-1 px-1">
+                                                    {safeFormat(msg.created_at, 'h:mm a')}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                    <div ref={messagesEndRef} />
+                                </div>
+                            )}
+                        </ScrollArea>
+
+                        {/* Input Area */}
+                        <div className="p-4 border-t bg-card">
+                            <form onSubmit={handleSendMessage} className="flex items-end gap-2">
+                                <div className="flex items-center gap-1 mb-1">
+                                    <Button type="button" variant="ghost" size="icon" className="rounded-full h-9 w-9 text-muted-foreground">
+                                        <Camera className="w-5 h-5" />
+                                    </Button>
+                                    <Button type="button" variant="ghost" size="icon" className="rounded-full h-9 w-9 text-muted-foreground">
+                                        <Paperclip className="w-5 h-5" />
+                                    </Button>
+                                </div>
+                                <div className="flex-1 relative">
+                                    <TextareaAutosize
+                                        value={messageInput}
+                                        onChange={(e) => setMessageInput(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && !e.shiftKey) {
+                                                e.preventDefault();
+                                                handleSendMessage();
+                                            }
+                                        }}
+                                        placeholder="Type a message..."
+                                        className="w-full bg-secondary/50 border-none rounded-2xl py-3 px-4 text-sm resize-none focus:ring-1 focus:ring-primary/30 max-h-32 scrollbar-hide focus:outline-none"
+                                    />
+                                </div>
+                                <Button
+                                    type="submit"
+                                    disabled={!messageInput.trim()}
+                                    className="rounded-full h-11 w-11 p-0 flex-shrink-0 bg-primary hover:bg-primary/90 shadow-glow"
+                                >
+                                    <Send className="w-5 h-5" />
+                                </Button>
+                            </form>
+                        </div>
+                    </>
+                ) : (
+                    <div className="text-center">
+                        <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <MessageSquare className="w-10 h-10 text-primary" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-foreground mb-2">Your Messages</h2>
+                        <p className="max-w-xs mx-auto">Send private photos and messages to a friend or group.</p>
+                        <Button className="mt-6 rounded-full px-8 font-bold" onClick={() => setShowSearch(true)}>Send Message</Button>
+                    </div>
+                )}
+            </div>
+
+            {/* User Search Overlay */}
+            <AnimatePresence>
+                {showSearch && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+                            onClick={() => setShowSearch(false)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="w-full max-w-lg bg-card border rounded-2xl shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[80vh]"
+                        >
+                            <div className="p-4 border-b flex justify-between items-center bg-card">
+                                <h3 className="font-bold">New Message</h3>
+                                <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setShowSearch(false)}>
+                                    <ArrowLeft className="w-5 h-5" />
+                                </Button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-4 scrollbar-hide text-foreground">
+                                <UserSearch
+                                    onClose={() => setShowSearch(false)}
+                                    onSelectUser={(user) => {
+                                        const existing = safeConversations.find(c => c.participants.some(p => p.id === user.id));
+                                        if (existing) {
+                                            setSelectedConversation(existing);
+                                            setIsNewChat(false);
+                                            setNewChatUser(null);
+                                        } else {
+                                            setIsNewChat(true);
+                                            setNewChatUser({
+                                                id: user.id,
+                                                username: user.username,
+                                                avatar_url: user.avatar_url || ''
+                                            });
+                                            setSelectedConversation(null);
+                                            setMessages([]);
+                                        }
+                                        setShowSearch(false);
+                                    }}
+                                />
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
+
+// Simple auto-resizing textarea component
+const TextareaAutosize = (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => {
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    useEffect(() => {
+        if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+        }
+    }, [props.value]);
+
+    return (
+        <textarea
+            {...props}
+            ref={textareaRef}
+            rows={1}
+        />
+    );
+};
+
+export default MessagingUI;
