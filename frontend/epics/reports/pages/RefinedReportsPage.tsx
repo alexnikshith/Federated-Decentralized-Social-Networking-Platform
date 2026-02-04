@@ -192,13 +192,16 @@ export const RefinedReportsPage: React.FC = () => {
                                             {(() => {
                                                 const today = new Date();
                                                 const todayStr = format(today, 'yyyy-MM-dd');
-                                                // Check if today falls within the current selected range
-                                                if (today >= range.start && today <= range.end) {
-                                                    const todayData = report?.daily_stats?.find(d => d.date === todayStr);
-                                                    const todayMinutes = todayData?.minutes || 0;
-                                                    return `${Math.floor(todayMinutes / 60)}h ${todayMinutes % 60}m`;
-                                                }
-                                                return '0h 0m';
+                                                // Find today's data by comparing date strings
+                                                const todayData = report?.daily_stats?.find(d => {
+                                                    // Parse the date from API (could be ISO string or date object)
+                                                    const activityDate = typeof d.date === 'string'
+                                                        ? format(new Date(d.date), 'yyyy-MM-dd')
+                                                        : format(d.date, 'yyyy-MM-dd');
+                                                    return activityDate === todayStr;
+                                                });
+                                                const todayMinutes = todayData?.minutes || 0;
+                                                return `${Math.floor(todayMinutes / 60)}h ${todayMinutes % 60}m`;
                                             })()}
                                         </div>
                                         <p className="text-xs text-muted-foreground">
