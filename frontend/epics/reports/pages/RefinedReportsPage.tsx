@@ -21,6 +21,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 export const RefinedReportsPage: React.FC = () => {
     const { useActivityReport } = useReportsApi();
 
+    const [activeTab, setActiveTab] = useState<'time-usage' | 'interactions'>('time-usage');
     const [currentDate, setCurrentDate] = useState(new Date());
     const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
 
@@ -67,65 +68,85 @@ export const RefinedReportsPage: React.FC = () => {
 
             {/* 1. Full-width Title Header */}
             <div>
-                <h1 className="text-3xl font-bold tracking-tight">Time Usage Reports</h1>
+                <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
                 <p className="text-muted-foreground">
                     Monitor your activity and usage patterns over time.
                 </p>
             </div>
 
-            {isLoading ? (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Loading...</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold animate-pulse bg-gray-200 h-8 w-24 rounded"></div>
-                        </CardContent>
-                    </Card>
-                </div>
-            ) : error ? (
-                <div className="p-4 rounded-md bg-destructive/10 text-destructive">
-                    Error loading report data. Please try again later.
-                </div>
-            ) : (
-                /* 2. Side-by-side layout: Stats Card + Chart */
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                    {/* "Total Time" Card - takes up 1 column on large screens */}
-                    <div className="lg:col-span-1">
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Total time spent</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">
-                                    {Math.floor(report?.total_hours || 0)}h {Math.round(((report?.total_hours || 0) % 1) * 60)}m
-                                </div>
-                                <p className="text-xs text-muted-foreground">
-                                    Total activity in selected period
-                                </p>
-                            </CardContent>
-                        </Card>
-                    </div>
+            {/* 2. Tabs for Time Usage and Interactions */}
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'time-usage' | 'interactions')}>
+                <TabsList>
+                    <TabsTrigger value="time-usage">Time Usage</TabsTrigger>
+                    <TabsTrigger value="interactions">Interactions</TabsTrigger>
+                </TabsList>
 
-                    {/* Chart - takes up 3 columns on large screens */}
-                    <div className="lg:col-span-3">
-                        <TimeUsageChart
-                            data={report?.daily_stats || []}
-                            view={viewMode}
-                            startDate={range.start}
-                            endDate={range.end}
-                            onPrevClick={handlePrev}
-                            onNextClick={handleNext}
-                            currentLabel={viewMode === 'weekly'
-                                ? `${format(range.start, 'MMM d')} - ${format(range.end, 'MMM d')}`
-                                : format(currentDate, 'MMMM yyyy')
-                            }
-                            onViewChange={(v) => setViewMode(v)}
-                        />
+                {/* Time Usage Tab Content */}
+                {activeTab === 'time-usage' && (
+                    <div className="mt-6">
+                        {isLoading ? (
+                            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-sm font-medium">Loading...</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-2xl font-bold animate-pulse bg-gray-200 h-8 w-24 rounded"></div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        ) : error ? (
+                            <div className="p-4 rounded-md bg-destructive/10 text-destructive">
+                                Error loading report data. Please try again later.
+                            </div>
+                        ) : (
+                            /* Side-by-side layout: Stats Card + Chart */
+                            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                                {/* "Total Time" Card - takes up 1 column on large screens */}
+                                <div className="lg:col-span-1">
+                                    <Card>
+                                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                            <CardTitle className="text-sm font-medium">Total time spent</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="text-2xl font-bold">
+                                                {Math.floor(report?.total_hours || 0)}h {Math.round(((report?.total_hours || 0) % 1) * 60)}m
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">
+                                                Total activity in selected period
+                                            </p>
+                                        </CardContent>
+                                    </Card>
+                                </div>
+
+                                {/* Chart - takes up 3 columns on large screens */}
+                                <div className="lg:col-span-3">
+                                    <TimeUsageChart
+                                        data={report?.daily_stats || []}
+                                        view={viewMode}
+                                        startDate={range.start}
+                                        endDate={range.end}
+                                        onPrevClick={handlePrev}
+                                        onNextClick={handleNext}
+                                        currentLabel={viewMode === 'weekly'
+                                            ? `${format(range.start, 'MMM d')} - ${format(range.end, 'MMM d')}`
+                                            : format(currentDate, 'MMMM yyyy')
+                                        }
+                                        onViewChange={(v) => setViewMode(v)}
+                                    />
+                                </div>
+                            </div>
+                        )}
                     </div>
-                </div>
-            )}
+                )}
+
+                {/* Interactions Tab Content */}
+                {activeTab === 'interactions' && (
+                    <div className="mt-6">
+                        <p className="text-muted-foreground">Interactions content coming soon...</p>
+                    </div>
+                )}
+            </Tabs>
         </div>
     );
 };
