@@ -190,10 +190,15 @@ export const RefinedReportsPage: React.FC = () => {
                                     <CardContent>
                                         <div className="text-2xl font-bold">
                                             {(() => {
-                                                const today = format(new Date(), 'yyyy-MM-dd');
-                                                const todayData = report?.daily_stats?.find(d => d.date === today);
-                                                const todayMinutes = todayData?.minutes || 0;
-                                                return `${Math.floor(todayMinutes / 60)}h ${todayMinutes % 60}m`;
+                                                const today = new Date();
+                                                const todayStr = format(today, 'yyyy-MM-dd');
+                                                // Check if today falls within the current selected range
+                                                if (today >= range.start && today <= range.end) {
+                                                    const todayData = report?.daily_stats?.find(d => d.date === todayStr);
+                                                    const todayMinutes = todayData?.minutes || 0;
+                                                    return `${Math.floor(todayMinutes / 60)}h ${todayMinutes % 60}m`;
+                                                }
+                                                return '0h 0m';
                                             })()}
                                         </div>
                                         <p className="text-xs text-muted-foreground">
@@ -209,14 +214,18 @@ export const RefinedReportsPage: React.FC = () => {
                                     </CardHeader>
                                     <CardContent>
                                         {(() => {
-                                            const currentHours = report?.total_hours || 0;
-                                            const previousHours = prevReport?.total_hours || 0;
-                                            const { percentage, isIncrease } = calculatePercentageChange(currentHours, previousHours);
+                                            const currentMinutes = Math.round((report?.total_hours || 0) * 60);
+                                            const previousMinutes = Math.round((prevReport?.total_hours || 0) * 60);
+                                            const diffMinutes = currentMinutes - previousMinutes;
+                                            const isIncrease = diffMinutes >= 0;
+                                            const absDiffMinutes = Math.abs(diffMinutes);
+                                            const hours = Math.floor(absDiffMinutes / 60);
+                                            const mins = absDiffMinutes % 60;
 
                                             return (
                                                 <>
                                                     <div className={`text-2xl font-bold ${isIncrease ? 'text-green-600' : 'text-red-600'}`}>
-                                                        {isIncrease ? '+' : '-'}{percentage}%
+                                                        {isIncrease ? '+' : '-'}{hours}h {mins}m
                                                     </div>
                                                     <p className="text-xs text-muted-foreground">
                                                         {isIncrease ? 'More' : 'Less'} time than previous {viewMode === 'weekly' ? 'week' : 'month'}
@@ -305,119 +314,7 @@ export const RefinedReportsPage: React.FC = () => {
                                 </div>
                             ) : (
                                 <div className="space-y-6">
-                                    {/* Stats Cards */}
-                                    <div className="grid gap-4 md:grid-cols-4">
-                                        <Card>
-                                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                                <CardTitle className="text-sm font-medium">Total Posts</CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <div className="text-2xl font-bold">
-                                                    {interactionReport?.total_posts || 0}
-                                                </div>
-                                                <p className="text-xs text-muted-foreground">
-                                                    Posts created
-                                                </p>
-                                            </CardContent>
-                                        </Card>
-                                        <Card>
-                                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                                <CardTitle className="text-sm font-medium">Total Likes</CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <div className="text-2xl font-bold">
-                                                    {interactionReport?.total_likes || 0}
-                                                </div>
-                                                <p className="text-xs text-muted-foreground">
-                                                    Likes received on posts
-                                                </p>
-                                            </CardContent>
-                                        </Card>
-                                        <Card>
-                                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                                <CardTitle className="text-sm font-medium">Total Comments</CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <div className="text-2xl font-bold">
-                                                    {interactionReport?.total_comments || 0}
-                                                </div>
-                                                <p className="text-xs text-muted-foreground">
-                                                    Comments received on posts
-                                                </p>
-                                            </CardContent>
-                                        </Card>
-                                        <Card>
-                                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                                <CardTitle className="text-sm font-medium">Total Followers</CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <div className="text-2xl font-bold">
-                                                    {interactionReport?.total_follows || 0}
-                                                </div>
-                                                <p className="text-xs text-muted-foreground">
-                                                    New followers gained
-                                                </p>
-                                            </CardContent>
-                                        </Card>
-                                    </div>
-
-                                    {/* Additional Stats Row */}
-                                    <div className="grid gap-4 md:grid-cols-2">
-                                        {/* Total Interactions This Week/Month */}
-                                        <Card>
-                                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                                <CardTitle className="text-sm font-medium">
-                                                    Total interactions this {viewMode === 'weekly' ? 'week' : 'month'}
-                                                </CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <div className="text-2xl font-bold">
-                                                    {(interactionReport?.total_posts || 0) +
-                                                        (interactionReport?.total_likes || 0) +
-                                                        (interactionReport?.total_comments || 0) +
-                                                        (interactionReport?.total_follows || 0)}
-                                                </div>
-                                                <p className="text-xs text-muted-foreground">
-                                                    Combined interactions received
-                                                </p>
-                                            </CardContent>
-                                        </Card>
-
-                                        {/* Comparison with Previous Period */}
-                                        <Card>
-                                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                                <CardTitle className="text-sm font-medium">
-                                                    Compared to last {viewMode === 'weekly' ? 'week' : 'month'}
-                                                </CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                {(() => {
-                                                    const currentTotal = (interactionReport?.total_posts || 0) +
-                                                        (interactionReport?.total_likes || 0) +
-                                                        (interactionReport?.total_comments || 0) +
-                                                        (interactionReport?.total_follows || 0);
-                                                    const previousTotal = (prevInteractionReport?.total_posts || 0) +
-                                                        (prevInteractionReport?.total_likes || 0) +
-                                                        (prevInteractionReport?.total_comments || 0) +
-                                                        (prevInteractionReport?.total_follows || 0);
-                                                    const { percentage, isIncrease } = calculatePercentageChange(currentTotal, previousTotal);
-
-                                                    return (
-                                                        <>
-                                                            <div className={`text-2xl font-bold ${isIncrease ? 'text-green-600' : 'text-red-600'}`}>
-                                                                {isIncrease ? '+' : '-'}{percentage}%
-                                                            </div>
-                                                            <p className="text-xs text-muted-foreground">
-                                                                {isIncrease ? 'More' : 'Fewer'} interactions than previous {viewMode === 'weekly' ? 'week' : 'month'}
-                                                            </p>
-                                                        </>
-                                                    );
-                                                })()}
-                                            </CardContent>
-                                        </Card>
-                                    </div>
-
-                                    {/* Chart */}
+                                    {/* Chart with integrated metric selector */}
                                     <InteractionsChart
                                         data={interactionReport?.daily_stats || []}
                                         view={viewMode}
@@ -431,6 +328,9 @@ export const RefinedReportsPage: React.FC = () => {
                                         }
                                         onViewChange={(v) => setViewMode(v)}
                                         isNextDisabled={isNextDisabled}
+                                        interactionReport={interactionReport}
+                                        prevInteractionReport={prevInteractionReport}
+                                        viewMode={viewMode}
                                     />
                                 </div>
                             )}
@@ -457,119 +357,7 @@ export const RefinedReportsPage: React.FC = () => {
                                 </div>
                             ) : (
                                 <div className="space-y-6">
-                                    {/* Stats Cards */}
-                                    <div className="grid gap-4 md:grid-cols-4">
-                                        <Card>
-                                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                                <CardTitle className="text-sm font-medium">Total Posts</CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <div className="text-2xl font-bold">
-                                                    {interactionMadeReport?.total_posts || 0}
-                                                </div>
-                                                <p className="text-xs text-muted-foreground">
-                                                    Posts created
-                                                </p>
-                                            </CardContent>
-                                        </Card>
-                                        <Card>
-                                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                                <CardTitle className="text-sm font-medium">Total Likes</CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <div className="text-2xl font-bold">
-                                                    {interactionMadeReport?.total_likes || 0}
-                                                </div>
-                                                <p className="text-xs text-muted-foreground">
-                                                    Likes given
-                                                </p>
-                                            </CardContent>
-                                        </Card>
-                                        <Card>
-                                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                                <CardTitle className="text-sm font-medium">Total Comments</CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <div className="text-2xl font-bold">
-                                                    {interactionMadeReport?.total_comments || 0}
-                                                </div>
-                                                <p className="text-xs text-muted-foreground">
-                                                    Comments posted
-                                                </p>
-                                            </CardContent>
-                                        </Card>
-                                        <Card>
-                                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                                <CardTitle className="text-sm font-medium">Total Follows</CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <div className="text-2xl font-bold">
-                                                    {interactionMadeReport?.total_follows || 0}
-                                                </div>
-                                                <p className="text-xs text-muted-foreground">
-                                                    Users followed
-                                                </p>
-                                            </CardContent>
-                                        </Card>
-                                    </div>
-
-                                    {/* Additional Stats Row */}
-                                    <div className="grid gap-4 md:grid-cols-2">
-                                        {/* Total Interactions This Week/Month */}
-                                        <Card>
-                                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                                <CardTitle className="text-sm font-medium">
-                                                    Total interactions this {viewMode === 'weekly' ? 'week' : 'month'}
-                                                </CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <div className="text-2xl font-bold">
-                                                    {(interactionMadeReport?.total_posts || 0) +
-                                                        (interactionMadeReport?.total_likes || 0) +
-                                                        (interactionMadeReport?.total_comments || 0) +
-                                                        (interactionMadeReport?.total_follows || 0)}
-                                                </div>
-                                                <p className="text-xs text-muted-foreground">
-                                                    Combined interactions made
-                                                </p>
-                                            </CardContent>
-                                        </Card>
-
-                                        {/* Comparison with Previous Period */}
-                                        <Card>
-                                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                                <CardTitle className="text-sm font-medium">
-                                                    Compared to last {viewMode === 'weekly' ? 'week' : 'month'}
-                                                </CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                {(() => {
-                                                    const currentTotal = (interactionMadeReport?.total_posts || 0) +
-                                                        (interactionMadeReport?.total_likes || 0) +
-                                                        (interactionMadeReport?.total_comments || 0) +
-                                                        (interactionMadeReport?.total_follows || 0);
-                                                    const previousTotal = (prevInteractionMadeReport?.total_posts || 0) +
-                                                        (prevInteractionMadeReport?.total_likes || 0) +
-                                                        (prevInteractionMadeReport?.total_comments || 0) +
-                                                        (prevInteractionMadeReport?.total_follows || 0);
-                                                    const { percentage, isIncrease } = calculatePercentageChange(currentTotal, previousTotal);
-
-                                                    return (
-                                                        <>
-                                                            <div className={`text-2xl font-bold ${isIncrease ? 'text-green-600' : 'text-red-600'}`}>
-                                                                {isIncrease ? '+' : '-'}{percentage}%
-                                                            </div>
-                                                            <p className="text-xs text-muted-foreground">
-                                                                {isIncrease ? 'More' : 'Fewer'} interactions than previous {viewMode === 'weekly' ? 'week' : 'month'}
-                                                            </p>
-                                                        </>
-                                                    );
-                                                })()}
-                                            </CardContent>
-                                        </Card>
-                                    </div>
-
-                                    {/* Chart */}
+                                    {/* Chart with integrated metric selector */}
                                     <InteractionsChart
                                         data={interactionMadeReport?.daily_stats || []}
                                         view={viewMode}
@@ -583,6 +371,9 @@ export const RefinedReportsPage: React.FC = () => {
                                         }
                                         onViewChange={(v) => setViewMode(v)}
                                         isNextDisabled={isNextDisabled}
+                                        interactionReport={interactionMadeReport}
+                                        prevInteractionReport={prevInteractionMadeReport}
+                                        viewMode={viewMode}
                                     />
                                 </div>
                             )}
