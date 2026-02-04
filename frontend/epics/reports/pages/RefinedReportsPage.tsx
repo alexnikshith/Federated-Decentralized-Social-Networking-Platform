@@ -42,6 +42,23 @@ export const RefinedReportsPage: React.FC = () => {
         }
     }, [currentDate, viewMode]);
 
+    // Calculate previous period range for comparison
+    const previousRange = useMemo(() => {
+        if (viewMode === 'weekly') {
+            const prevWeekDate = subWeeks(currentDate, 1);
+            return {
+                start: startOfWeek(prevWeekDate, { weekStartsOn: 1 }),
+                end: endOfWeek(prevWeekDate, { weekStartsOn: 1 })
+            };
+        } else {
+            const prevMonthDate = subMonths(currentDate, 1);
+            return {
+                start: startOfMonth(prevMonthDate),
+                end: endOfMonth(prevMonthDate)
+            };
+        }
+    }, [currentDate, viewMode]);
+
     // Navigation handlers
     const handlePrev = () => {
         if (viewMode === 'weekly') {
@@ -59,13 +76,32 @@ export const RefinedReportsPage: React.FC = () => {
         }
     };
 
-    // Format dates for API
+    // Format dates for API - current period
     const startDateStr = format(range.start, 'yyyy-MM-dd');
     const endDateStr = format(range.end, 'yyyy-MM-dd');
 
+    // Format dates for API - previous period
+    const prevStartDateStr = format(previousRange.start, 'yyyy-MM-dd');
+    const prevEndDateStr = format(previousRange.end, 'yyyy-MM-dd');
+
+    // Fetch current period data
     const { data: report, isLoading, error } = useActivityReport(startDateStr, endDateStr);
     const { data: interactionReport, isLoading: interactionLoading, error: interactionError } = useInteractionReport(startDateStr, endDateStr);
     const { data: interactionMadeReport, isLoading: interactionMadeLoading, error: interactionMadeError } = useInteractionMadeReport(startDateStr, endDateStr);
+
+    // Fetch previous period data for comparison
+    const { data: prevReport } = useActivityReport(prevStartDateStr, prevEndDateStr);
+    const { data: prevInteractionReport } = useInteractionReport(prevStartDateStr, prevEndDateStr);
+    const { data: prevInteractionMadeReport } = useInteractionMadeReport(prevStartDateStr, prevEndDateStr);
+
+    // Calculate percentage change helper
+    const calculatePercentageChange = (current: number, previous: number): { percentage: number; isIncrease: boolean } => {
+        if (previous === 0) {
+            return { percentage: current > 0 ? 100 : 0, isIncrease: current > 0 };
+        }
+        const change = ((current - previous) / previous) * 100;
+        return { percentage: Math.abs(Math.round(change)), isIncrease: change >= 0 };
+    };
 
     return (
         <div className="container mx-auto p-6 space-y-6">
@@ -120,7 +156,7 @@ export const RefinedReportsPage: React.FC = () => {
                     ) : (
                         <div className="space-y-6">
                             {/* Top Row: Stat Cards */}
-                            <div className="grid gap-4 md:grid-cols-2">
+                            <div className="grid gap-4 md:grid-cols-3">
                                 {/* Total Time Spent */}
                                 <Card>
                                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -153,6 +189,31 @@ export const RefinedReportsPage: React.FC = () => {
                                         <p className="text-xs text-muted-foreground">
                                             Activity for {format(new Date(), 'MMM d, yyyy')}
                                         </p>
+                                    </CardContent>
+                                </Card>
+
+                                {/* Comparison with Previous Period */}
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-sm font-medium">Compared to last {viewMode === 'weekly' ? 'week' : 'month'}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {(() => {
+                                            const currentHours = report?.total_hours || 0;
+                                            const previousHours = prevReport?.total_hours || 0;
+                                            const { percentage, isIncrease } = calculatePercentageChange(currentHours, previousHours);
+
+                                            return (
+                                                <>
+                                                    <div className={`text-2xl font-bold ${isIncrease ? 'text-green-600' : 'text-red-600'}`}>
+                                                        {isIncrease ? '+' : '-'}{percentage}%
+                                                    </div>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {isIncrease ? 'More' : 'Less'} time than previous {viewMode === 'weekly' ? 'week' : 'month'}
+                                                    </p>
+                                                </>
+                                            );
+                                        })()}
                                     </CardContent>
                                 </Card>
                             </div>
@@ -290,6 +351,62 @@ export const RefinedReportsPage: React.FC = () => {
                                         </Card>
                                     </div>
 
+                                    {/* Additional Stats Row */}
+                                    <div className="grid gap-4 md:grid-cols-2">
+                                        {/* Total Interactions This Week/Month */}
+                                        <Card>
+                                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                                <CardTitle className="text-sm font-medium">
+                                                    Total interactions this {viewMode === 'weekly' ? 'week' : 'month'}
+                                                </CardTitle>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <div className="text-2xl font-bold">
+                                                    {(interactionReport?.total_posts || 0) +
+                                                        (interactionReport?.total_likes || 0) +
+                                                        (interactionReport?.total_comments || 0) +
+                                                        (interactionReport?.total_follows || 0)}
+                                                </div>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Combined interactions received
+                                                </p>
+                                            </CardContent>
+                                        </Card>
+
+                                        {/* Comparison with Previous Period */}
+                                        <Card>
+                                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                                <CardTitle className="text-sm font-medium">
+                                                    Compared to last {viewMode === 'weekly' ? 'week' : 'month'}
+                                                </CardTitle>
+                                            </CardHeader>
+                                            <CardContent>
+                                                {(() => {
+                                                    const currentTotal = (interactionReport?.total_posts || 0) +
+                                                        (interactionReport?.total_likes || 0) +
+                                                        (interactionReport?.total_comments || 0) +
+                                                        (interactionReport?.total_follows || 0);
+                                                    const previousTotal = (prevInteractionReport?.total_posts || 0) +
+                                                        (prevInteractionReport?.total_likes || 0) +
+                                                        (prevInteractionReport?.total_comments || 0) +
+                                                        (prevInteractionReport?.total_follows || 0);
+                                                    const { percentage, isIncrease } = calculatePercentageChange(currentTotal, previousTotal);
+
+                                                    return (
+                                                        <>
+                                                            <div className={`text-2xl font-bold ${isIncrease ? 'text-green-600' : 'text-red-600'}`}>
+                                                                {isIncrease ? '+' : '-'}{percentage}%
+                                                            </div>
+                                                            <p className="text-xs text-muted-foreground">
+                                                                {isIncrease ? 'More' : 'Fewer'} interactions than previous {viewMode === 'weekly' ? 'week' : 'month'}
+                                                            </p>
+                                                        </>
+                                                    );
+                                                })()}
+                                            </CardContent>
+                                        </Card>
+                                    </div>
+
                                     {/* Chart */}
                                     <InteractionsChart
                                         data={interactionReport?.daily_stats || []}
@@ -381,6 +498,62 @@ export const RefinedReportsPage: React.FC = () => {
                                                 <p className="text-xs text-muted-foreground">
                                                     Users followed
                                                 </p>
+                                            </CardContent>
+                                        </Card>
+                                    </div>
+
+                                    {/* Additional Stats Row */}
+                                    <div className="grid gap-4 md:grid-cols-2">
+                                        {/* Total Interactions This Week/Month */}
+                                        <Card>
+                                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                                <CardTitle className="text-sm font-medium">
+                                                    Total interactions this {viewMode === 'weekly' ? 'week' : 'month'}
+                                                </CardTitle>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <div className="text-2xl font-bold">
+                                                    {(interactionMadeReport?.total_posts || 0) +
+                                                        (interactionMadeReport?.total_likes || 0) +
+                                                        (interactionMadeReport?.total_comments || 0) +
+                                                        (interactionMadeReport?.total_follows || 0)}
+                                                </div>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Combined interactions made
+                                                </p>
+                                            </CardContent>
+                                        </Card>
+
+                                        {/* Comparison with Previous Period */}
+                                        <Card>
+                                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                                <CardTitle className="text-sm font-medium">
+                                                    Compared to last {viewMode === 'weekly' ? 'week' : 'month'}
+                                                </CardTitle>
+                                            </CardHeader>
+                                            <CardContent>
+                                                {(() => {
+                                                    const currentTotal = (interactionMadeReport?.total_posts || 0) +
+                                                        (interactionMadeReport?.total_likes || 0) +
+                                                        (interactionMadeReport?.total_comments || 0) +
+                                                        (interactionMadeReport?.total_follows || 0);
+                                                    const previousTotal = (prevInteractionMadeReport?.total_posts || 0) +
+                                                        (prevInteractionMadeReport?.total_likes || 0) +
+                                                        (prevInteractionMadeReport?.total_comments || 0) +
+                                                        (prevInteractionMadeReport?.total_follows || 0);
+                                                    const { percentage, isIncrease } = calculatePercentageChange(currentTotal, previousTotal);
+
+                                                    return (
+                                                        <>
+                                                            <div className={`text-2xl font-bold ${isIncrease ? 'text-green-600' : 'text-red-600'}`}>
+                                                                {isIncrease ? '+' : '-'}{percentage}%
+                                                            </div>
+                                                            <p className="text-xs text-muted-foreground">
+                                                                {isIncrease ? 'More' : 'Fewer'} interactions than previous {viewMode === 'weekly' ? 'week' : 'month'}
+                                                            </p>
+                                                        </>
+                                                    );
+                                                })()}
                                             </CardContent>
                                         </Card>
                                     </div>
