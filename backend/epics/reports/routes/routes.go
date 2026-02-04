@@ -16,4 +16,5 @@ func RegisterReportRoutes(router *mux.Router) {
 	s.HandleFunc("/heartbeat", handler.Heartbeat).Methods("POST")
 	s.HandleFunc("/activity", handler.GetReport).Methods("GET")
 	s.HandleFunc("/interactions", handler.GetInteractionReport).Methods("GET")
+	s.HandleFunc("/interactions-made", handler.GetInteractionMadeReport).Methods("GET")
 }
