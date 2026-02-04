@@ -26,9 +26,18 @@ export const messagingApi = {
         return response.data.data || [];
     },
 
-    getMessages: async (conversationId: string, limit = 50): Promise<Message[]> => {
-        const response = await api.get(`/api/messages/conversations/${conversationId}?limit=${limit}`);
+    async getMessages(conversationId: string): Promise<Message[]> {
+        const response = await api.get(`/api/messages/conversations/${conversationId}`);
         return response.data.data || [];
+    },
+
+    async uploadMedia(formData: FormData): Promise<{ url: string; fileName: string; type: string }> {
+        const response = await api.post('/api/messages/upload', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data.data;
     },
 
     sendMessage: async (data: SendMessageRequest): Promise<Message> => {
