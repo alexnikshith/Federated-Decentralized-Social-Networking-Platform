@@ -114,6 +114,40 @@ func (r *MessageRepository) GetConversationMessages(ctx context.Context, convers
 	return messages, nil
 }
 
+func (r *MessageRepository) GetMessageByID(ctx context.Context, id primitive.ObjectID) (*models.Message, error) {
+	var msg models.Message
+	err := r.messages.FindOne(ctx, bson.M{"_id": id}).Decode(&msg)
+	if err != nil {
+		return nil, err
+	}
+	return &msg, nil
+}
+
+func (r *MessageRepository) DeleteMessage(ctx context.Context, messageID primitive.ObjectID) error {
+	_, err := r.messages.DeleteOne(ctx, bson.M{"_id": messageID})
+	return err
+}
+
+func (r *MessageRepository) DeleteConversation(ctx context.Context, conversationID primitive.ObjectID) error {
+	// Delete all messages in the conversation
+	_, err := r.messages.DeleteMany(ctx, bson.M{"conversation_id": conversationID})
+	if err != nil {
+		return err
+	}
+	// Delete the conversation itself
+	_, err = r.conversations.DeleteOne(ctx, bson.M{"_id": conversationID})
+	return err
+}
+
+func (r *MessageRepository) GetConversationByID(ctx context.Context, id primitive.ObjectID) (*models.Conversation, error) {
+	var conv models.Conversation
+	err := r.conversations.FindOne(ctx, bson.M{"_id": id}).Decode(&conv)
+	if err != nil {
+		return nil, err
+	}
+	return &conv, nil
+}
+
 func (r *MessageRepository) CreateIndexes(ctx context.Context) error {
 	_, err := r.conversations.Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys: bson.D{primitive.E{Key: "participants", Value: 1}},
