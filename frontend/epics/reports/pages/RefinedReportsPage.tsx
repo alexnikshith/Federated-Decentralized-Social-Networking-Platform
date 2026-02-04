@@ -166,7 +166,7 @@ export const RefinedReportsPage: React.FC = () => {
                     ) : (
                         <div className="space-y-6">
                             {/* Top Row: Stat Cards */}
-                            <div className="grid gap-4 md:grid-cols-3">
+                            <div className="grid gap-4 md:grid-cols-2">
                                 {/* Total Time Spent */}
                                 <Card>
                                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -204,35 +204,6 @@ export const RefinedReportsPage: React.FC = () => {
                                         <p className="text-xs text-muted-foreground">
                                             Activity for {format(new Date(), 'MMM d, yyyy')}
                                         </p>
-                                    </CardContent>
-                                </Card>
-
-                                {/* Comparison with Previous Period */}
-                                <Card>
-                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                        <CardTitle className="text-sm font-medium">Compared to last {viewMode === 'weekly' ? 'week' : 'month'}</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        {(() => {
-                                            const currentMinutes = Math.round((report?.total_hours || 0) * 60);
-                                            const previousMinutes = Math.round((prevReport?.total_hours || 0) * 60);
-                                            const diffMinutes = currentMinutes - previousMinutes;
-                                            const isIncrease = diffMinutes >= 0;
-                                            const absDiffMinutes = Math.abs(diffMinutes);
-                                            const hours = Math.floor(absDiffMinutes / 60);
-                                            const mins = absDiffMinutes % 60;
-
-                                            return (
-                                                <>
-                                                    <div className={`text-2xl font-bold ${isIncrease ? 'text-green-600' : 'text-red-600'}`}>
-                                                        {isIncrease ? '+' : '-'}{hours}h {mins}m
-                                                    </div>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        {isIncrease ? 'More' : 'Less'} time than previous {viewMode === 'weekly' ? 'week' : 'month'}
-                                                    </p>
-                                                </>
-                                            );
-                                        })()}
                                     </CardContent>
                                 </Card>
                             </div>
@@ -314,9 +285,9 @@ export const RefinedReportsPage: React.FC = () => {
                                 </div>
                             ) : (
                                 <div className="space-y-6">
-                                    {/* Stat Boxes Row - Outside Chart */}
+                                    {/* Stat Box Row - Only Total Interactions */}
                                     {interactionReport && (
-                                        <div className="grid gap-4 md:grid-cols-2 mb-6">
+                                        <div className="mb-6">
                                             {/* Combined Total */}
                                             <Card>
                                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -334,40 +305,6 @@ export const RefinedReportsPage: React.FC = () => {
                                                     <p className="text-xs text-muted-foreground">
                                                         Posts: {interactionReport?.total_posts || 0}, Likes: {interactionReport?.total_likes || 0}, Comments: {interactionReport?.total_comments || 0}, Follows: {interactionReport?.total_follows || 0}
                                                     </p>
-                                                </CardContent>
-                                            </Card>
-
-                                            {/* Comparison */}
-                                            <Card>
-                                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                                    <CardTitle className="text-sm font-medium">
-                                                        Compared to last {viewMode === 'weekly' ? 'week' : 'month'}
-                                                    </CardTitle>
-                                                </CardHeader>
-                                                <CardContent>
-                                                    {(() => {
-                                                        const currentTotal = (interactionReport?.total_posts || 0) +
-                                                            (interactionReport?.total_likes || 0) +
-                                                            (interactionReport?.total_comments || 0) +
-                                                            (interactionReport?.total_follows || 0);
-                                                        const previousTotal = (prevInteractionReport?.total_posts || 0) +
-                                                            (prevInteractionReport?.total_likes || 0) +
-                                                            (prevInteractionReport?.total_comments || 0) +
-                                                            (prevInteractionReport?.total_follows || 0);
-                                                        const diff = currentTotal - previousTotal;
-                                                        const isIncrease = diff >= 0;
-
-                                                        return (
-                                                            <>
-                                                                <div className={`text-2xl font-bold ${isIncrease ? 'text-green-600' : 'text-red-600'}`}>
-                                                                    {isIncrease ? '+' : ''}{diff}
-                                                                </div>
-                                                                <p className="text-xs text-muted-foreground">
-                                                                    {isIncrease ? 'More' : 'Fewer'} interactions than previous {viewMode === 'weekly' ? 'week' : 'month'}
-                                                                </p>
-                                                            </>
-                                                        );
-                                                    })()}
                                                 </CardContent>
                                             </Card>
                                         </div>
@@ -417,9 +354,9 @@ export const RefinedReportsPage: React.FC = () => {
                                 </div>
                             ) : (
                                 <div className="space-y-6">
-                                    {/* Stat Boxes Row - Outside Chart */}
+                                    {/* Stat Box Row - Only Total Interactions */}
                                     {interactionMadeReport && (
-                                        <div className="grid gap-4 md:grid-cols-2 mb-6">
+                                        <div className="mb-6">
                                             {/* Combined Total */}
                                             <Card>
                                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -437,40 +374,6 @@ export const RefinedReportsPage: React.FC = () => {
                                                     <p className="text-xs text-muted-foreground">
                                                         Posts: {interactionMadeReport?.total_posts || 0}, Likes: {interactionMadeReport?.total_likes || 0}, Comments: {interactionMadeReport?.total_comments || 0}, Follows: {interactionMadeReport?.total_follows || 0}
                                                     </p>
-                                                </CardContent>
-                                            </Card>
-
-                                            {/* Comparison */}
-                                            <Card>
-                                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                                    <CardTitle className="text-sm font-medium">
-                                                        Compared to last {viewMode === 'weekly' ? 'week' : 'month'}
-                                                    </CardTitle>
-                                                </CardHeader>
-                                                <CardContent>
-                                                    {(() => {
-                                                        const currentTotal = (interactionMadeReport?.total_posts || 0) +
-                                                            (interactionMadeReport?.total_likes || 0) +
-                                                            (interactionMadeReport?.total_comments || 0) +
-                                                            (interactionMadeReport?.total_follows || 0);
-                                                        const previousTotal = (prevInteractionMadeReport?.total_posts || 0) +
-                                                            (prevInteractionMadeReport?.total_likes || 0) +
-                                                            (prevInteractionMadeReport?.total_comments || 0) +
-                                                            (prevInteractionMadeReport?.total_follows || 0);
-                                                        const diff = currentTotal - previousTotal;
-                                                        const isIncrease = diff >= 0;
-
-                                                        return (
-                                                            <>
-                                                                <div className={`text-2xl font-bold ${isIncrease ? 'text-green-600' : 'text-red-600'}`}>
-                                                                    {isIncrease ? '+' : ''}{diff}
-                                                                </div>
-                                                                <p className="text-xs text-muted-foreground">
-                                                                    {isIncrease ? 'More' : 'Fewer'} interactions than previous {viewMode === 'weekly' ? 'week' : 'month'}
-                                                                </p>
-                                                            </>
-                                                        );
-                                                    })()}
                                                 </CardContent>
                                             </Card>
                                         </div>
