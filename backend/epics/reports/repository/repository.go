@@ -82,8 +82,8 @@ func (r *ReportRepository) GetActivity(ctx context.Context, userID primitive.Obj
 	return activities, nil
 }
 
-// GetInteractions retrieves interaction stats (likes, comments, follows, posts) for a user within a date range
-func (r *ReportRepository) GetInteractions(ctx context.Context, userID primitive.ObjectID, startDate, endDate time.Time) ([]models.DailyInteraction, error) {
+// GetInteractionsMade retrieves interaction stats (likes given, comments posted, follows initiated, posts created) for a user within a date range
+func (r *ReportRepository) GetInteractionsMade(ctx context.Context, userID primitive.ObjectID, startDate, endDate time.Time) ([]models.DailyInteraction, error) {
 	// Normalize dates to midnight
 	normalizedStart := time.Date(startDate.Year(), startDate.Month(), startDate.Day(), 0, 0, 0, 0, time.UTC)
 	normalizedEnd := time.Date(endDate.Year(), endDate.Month(), endDate.Day(), 23, 59, 59, 999999999, time.UTC)
@@ -204,6 +204,162 @@ func (r *ReportRepository) GetInteractions(ctx context.Context, userID primitive
 					}
 				}
 				dailyMap[dateKey].Posts++
+			}
+		}
+	}
+
+	// Convert map to sorted slice
+	var interactions []models.DailyInteraction
+	for _, interaction := range dailyMap {
+		interactions = append(interactions, *interaction)
+	}
+
+	// Sort by date
+	for i := 0; i < len(interactions); i++ {
+		for j := i + 1; j < len(interactions); j++ {
+			if interactions[i].Date.After(interactions[j].Date) {
+				interactions[i], interactions[j] = interactions[j], interactions[i]
+			}
+		}
+	}
+
+	return interactions, nil
+}
+
+// GetInteractionsReceived retrieves interaction stats (likes/comments received on posts, followers gained) for a user within a date range
+func (r *ReportRepository) GetInteractionsReceived(ctx context.Context, userID primitive.ObjectID, startDate, endDate time.Time) ([]models.DailyInteraction, error) {
+	// Normalize dates to midnight
+	normalizedStart := time.Date(startDate.Year(), startDate.Month(), startDate.Day(), 0, 0, 0, 0, time.UTC)
+	normalizedEnd := time.Date(endDate.Year(), endDate.Month(), endDate.Day(), 23, 59, 59, 999999999, time.UTC)
+
+	// Create a map to store daily interactions
+	dailyMap := make(map[string]*models.DailyInteraction)
+
+	// Helper to normalize date for grouping
+	normalizeDate := func(t time.Time) string {
+		return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC).Format("2006-01-02")
+	}
+
+	// First, get all posts by the user
+	postFilter := bson.M{
+		"author_id": userID,
+	}
+	postCursor, err := r.postsCollection.Find(ctx, postFilter)
+	if err != nil {
+		return nil, err
+	}
+	defer postCursor.Close(ctx)
+
+	var userPostIDs []primitive.ObjectID
+	postCountByDate := make(map[string]int)
+
+	for postCursor.Next(ctx) {
+		var post struct {
+			ID        primitive.ObjectID `bson:"_id"`
+			CreatedAt time.Time          `bson:"created_at"`
+		}
+		if err := postCursor.Decode(&post); err == nil {
+			userPostIDs = append(userPostIDs, post.ID)
+
+			// Count posts created in the date range
+			if post.CreatedAt.After(normalizedStart) && post.CreatedAt.Before(normalizedEnd) {
+				dateKey := normalizeDate(post.CreatedAt)
+				postCountByDate[dateKey]++
+			}
+		}
+	}
+
+	// Add post counts to daily map
+	for dateKey, count := range postCountByDate {
+		parsedDate, _ := time.Parse("2006-01-02", dateKey)
+		dailyMap[dateKey] = &models.DailyInteraction{
+			Date:  parsedDate,
+			Posts: count,
+		}
+	}
+
+	// Aggregate likes on user's posts
+	if len(userPostIDs) > 0 {
+		likeFilter := bson.M{
+			"post_id": bson.M{"$in": userPostIDs},
+			"created_at": bson.M{
+				"$gte": normalizedStart,
+				"$lte": normalizedEnd,
+			},
+		}
+		likeCursor, err := r.likesCollection.Find(ctx, likeFilter)
+		if err == nil {
+			defer likeCursor.Close(ctx)
+			for likeCursor.Next(ctx) {
+				var like struct {
+					CreatedAt time.Time `bson:"created_at"`
+				}
+				if err := likeCursor.Decode(&like); err == nil {
+					dateKey := normalizeDate(like.CreatedAt)
+					if dailyMap[dateKey] == nil {
+						parsedDate, _ := time.Parse("2006-01-02", dateKey)
+						dailyMap[dateKey] = &models.DailyInteraction{
+							Date: parsedDate,
+						}
+					}
+					dailyMap[dateKey].Likes++
+				}
+			}
+		}
+
+		// Aggregate comments on user's posts
+		commentFilter := bson.M{
+			"post_id": bson.M{"$in": userPostIDs},
+			"created_at": bson.M{
+				"$gte": normalizedStart,
+				"$lte": normalizedEnd,
+			},
+		}
+		commentCursor, err := r.commentsCollection.Find(ctx, commentFilter)
+		if err == nil {
+			defer commentCursor.Close(ctx)
+			for commentCursor.Next(ctx) {
+				var comment struct {
+					CreatedAt time.Time `bson:"created_at"`
+				}
+				if err := commentCursor.Decode(&comment); err == nil {
+					dateKey := normalizeDate(comment.CreatedAt)
+					if dailyMap[dateKey] == nil {
+						parsedDate, _ := time.Parse("2006-01-02", dateKey)
+						dailyMap[dateKey] = &models.DailyInteraction{
+							Date: parsedDate,
+						}
+					}
+					dailyMap[dateKey].Comments++
+				}
+			}
+		}
+	}
+
+	// Aggregate followers gained (people who followed this user)
+	followFilter := bson.M{
+		"following_id": userID, // Changed from follower_id to following_id
+		"created_at": bson.M{
+			"$gte": normalizedStart,
+			"$lte": normalizedEnd,
+		},
+	}
+	followCursor, err := r.followsCollection.Find(ctx, followFilter)
+	if err == nil {
+		defer followCursor.Close(ctx)
+		for followCursor.Next(ctx) {
+			var follow struct {
+				CreatedAt time.Time `bson:"created_at"`
+			}
+			if err := followCursor.Decode(&follow); err == nil {
+				dateKey := normalizeDate(follow.CreatedAt)
+				if dailyMap[dateKey] == nil {
+					parsedDate, _ := time.Parse("2006-01-02", dateKey)
+					dailyMap[dateKey] = &models.DailyInteraction{
+						Date: parsedDate,
+					}
+				}
+				dailyMap[dateKey].Follows++
 			}
 		}
 	}
