@@ -7,7 +7,10 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
-export const UserSearch: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
+export const UserSearch: React.FC<{
+    onClose?: () => void;
+    onSelectUser?: (user: PublicUser) => void;
+}> = ({ onClose, onSelectUser }) => {
     const navigate = useNavigate();
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<PublicUser[]>([]);
@@ -66,7 +69,11 @@ export const UserSearch: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
                             key={user.id}
                             className="group flex items-center gap-3 p-3 rounded-xl hover:bg-secondary/30 transition-all border border-transparent hover:border-border/50 cursor-pointer"
                             onClick={() => {
-                                navigate(`/profile/${user.username}`);
+                                if (onSelectUser) {
+                                    onSelectUser(user);
+                                } else {
+                                    navigate(`/profile/${user.username}`);
+                                }
                                 if (onClose) onClose();
                             }}
                         >
