@@ -1,6 +1,7 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Sidebar, SidebarBody, SidebarLink } from "../ui/sidebar";
+import { useMessagingStore } from "../../../epics/messaging/store/messagingStore";
 import {
     IconHome,
     IconRss,
@@ -42,12 +43,23 @@ import { LogOut, User as LucideUser, Plus } from "lucide-react";
 export const MainLayout = ({ children }: { children: React.ReactNode }) => {
     const { user, clearAuth, sessions, switchAccount, pauseSession, clearAllSessions } = useAuthStore();
     const { unreadCount = 0 } = useContentStore();
+    const { unreadMessageCount, refreshUnreadCount } = useMessagingStore();
     const navigate = useNavigate();
     const location = useLocation();
     const { theme, toggleTheme } = useTheme();
     const [open, setOpen] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+    // Refresh unread count on mount and periodically
+    useEffect(() => {
+        if (user) {
+            refreshUnreadCount();
+            // Refresh every 30 seconds
+            const interval = setInterval(refreshUnreadCount, 30000);
+            return () => clearInterval(interval);
+        }
+    }, [user, refreshUnreadCount]);
 
     // If on landing page, don't show navigation
     if (location.pathname === "/") {
@@ -141,7 +153,14 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
         {
             title: "Messages",
             icon: (
-                <MessageSquare className="h-full w-full text-neutral-500 dark:text-neutral-300" />
+                <div className="relative h-full w-full">
+                    <MessageSquare className="h-full w-full text-neutral-500 dark:text-neutral-300" />
+                    {unreadMessageCount > 0 && (
+                        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center px-1 text-[10px] font-bold text-white bg-red-500 rounded-full ring-2 ring-white dark:ring-neutral-900">
+                            {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
+                        </span>
+                    )}
+                </div>
             ),
             href: "/messages",
         },
@@ -281,16 +300,18 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                                     <LogOut className="mr-2 h-4 w-4" />
                                     <span>Log out of {user?.username}</span>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    onClick={() => {
-                                        clearAllSessions();
-                                        navigate("/");
-                                    }}
-                                    className="cursor-pointer text-red-500 focus:text-red-500"
-                                >
-                                    <LogOut className="mr-2 h-4 w-4" />
-                                    <span>Log out of all accounts</span>
-                                </DropdownMenuItem>
+                                {sessions.filter(s => s.user.id !== user?.id).length > 0 && (
+                                    <DropdownMenuItem
+                                        onClick={() => {
+                                            clearAllSessions();
+                                            navigate("/");
+                                        }}
+                                        className="cursor-pointer text-red-500 focus:text-red-500"
+                                    >
+                                        <LogOut className="mr-2 h-4 w-4" />
+                                        <span>Log out of all accounts</span>
+                                    </DropdownMenuItem>
+                                )}
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
