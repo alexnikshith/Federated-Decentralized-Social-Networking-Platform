@@ -38,6 +38,15 @@ export const useReportsApi = () => {
         return response.data;
     };
 
+    const submitReport = async (data: { reported_id: string; reason: string; description?: string }) => {
+        await api.post('/api/reports/user', data);
+    };
+
+    const getAdminReports = async (): Promise<any[]> => {
+        const response = await api.get('/api/reports/admin/list');
+        return response.data;
+    };
+
     return {
         useHeartbeat: () => useMutation({
             mutationFn: sendHeartbeat,
@@ -48,6 +57,17 @@ export const useReportsApi = () => {
         useActivityReport: (startDate?: string, endDate?: string) => useQuery({
             queryKey: ['activity-report', startDate, endDate],
             queryFn: () => fetchActivity(startDate, endDate),
+            enabled: !!token
+        }),
+        useSubmitReport: () => useMutation({
+            mutationFn: submitReport,
+            onSuccess: () => {
+                // queryClient.invalidateQueries({ queryKey: ['admin-reports'] });
+            }
+        }),
+        useAdminReports: () => useQuery({
+            queryKey: ['admin-reports'],
+            queryFn: getAdminReports,
             enabled: !!token
         })
     };
