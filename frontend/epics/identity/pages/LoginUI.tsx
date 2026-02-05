@@ -3,12 +3,12 @@ import { useState } from "react";
 import { authApi } from "../api/client";
 import { useAuthStore } from "../store/authStore";
 import { toast } from "sonner";
-import { Header } from "@/components/layout/Header";
+
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Globe, ArrowRight, Eye, EyeOff, Shield } from "lucide-react";
+import { Globe, ArrowRight, Eye, EyeOff, Shield, ArrowLeft } from "lucide-react";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -72,8 +72,16 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
+    <div className="min-h-screen flex flex-col relative">
+      <div className="absolute top-4 left-4 md:top-8 md:left-8">
+        <Button
+          variant="ghost"
+          className="gap-2 text-muted-foreground hover:text-foreground"
+          onClick={() => navigate('/')}
+        >
+          <ArrowLeft className="w-4 h-4" /> Back
+        </Button>
+      </div>
       <main className="flex-1 flex items-center justify-center py-24 px-4">
         <div className="w-full max-w-md">
           {/* Logo */}
