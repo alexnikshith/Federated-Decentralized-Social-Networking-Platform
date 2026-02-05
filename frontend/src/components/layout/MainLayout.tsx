@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LogOut, User as LucideUser, Plus } from "lucide-react";
+import { AuthModal } from "@/components/auth/AuthModal";
 
 export const MainLayout = ({ children }: { children: React.ReactNode }) => {
     const { user, clearAuth, sessions, switchAccount, pauseSession, clearAllSessions } = useAuthStore();
@@ -50,6 +51,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
     const [open, setOpen] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [showAuthModal, setShowAuthModal] = useState(false);
 
     // Refresh unread count on mount and periodically
     useEffect(() => {
@@ -286,8 +288,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
 
                                 <DropdownMenuItem
                                     onClick={() => {
-                                        pauseSession();
-                                        navigate("/login");
+                                        setShowAuthModal(true);
                                     }}
                                     className="cursor-pointer text-muted-foreground mt-1"
                                 >
@@ -368,6 +369,8 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                     />
                 </div>
             </div>
+            {/* Auth Modal */}
+            <AuthModal open={showAuthModal} onOpenChange={setShowAuthModal} />
         </div>
     );
 };
