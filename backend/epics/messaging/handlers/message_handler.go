@@ -109,3 +109,32 @@ func (h *MessageHandler) DeleteConversation(w http.ResponseWriter, r *http.Reque
 
 	respondSuccess(w, "Conversation deleted successfully", nil, http.StatusOK)
 }
+
+func (h *MessageHandler) GetUnreadCount(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserIDFromContext(r.Context())
+
+	count, err := h.service.GetTotalUnreadCount(r.Context(), userID)
+	if err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondSuccess(w, "Unread count retrieved successfully", map[string]int64{"count": count}, http.StatusOK)
+}
+
+func (h *MessageHandler) MarkConversationAsRead(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserIDFromContext(r.Context())
+	vars := mux.Vars(r)
+	convID, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		respondError(w, "Invalid conversation ID", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.service.MarkConversationAsRead(r.Context(), convID, userID); err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondSuccess(w, "Messages marked as read", nil, http.StatusOK)
+}

@@ -113,7 +113,9 @@ export const useAuthStore = create<AuthState>()(
                         lastActivity: null,
                         sessions: newSessions
                     });
-                    setTimeout(() => window.location.href = '/login', 100);
+                    if (window.location.pathname !== '/' && window.location.pathname !== '/register') {
+                        setTimeout(() => window.location.href = '/login', 100);
+                    }
                 }
             },
 
