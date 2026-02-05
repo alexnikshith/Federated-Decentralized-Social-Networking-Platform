@@ -66,7 +66,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
     return (
         <div className="w-full h-full flex flex-col justify-center">
             {!hideBackNav && (
-                <div className="absolute top-4 left-4 md:top-8 md:left-8">
+                <div className="absolute top-4 left-4 md:top-8 md:left-8 z-[10]">
                     <Button
                         variant="ghost"
                         className="gap-2 text-muted-foreground hover:text-foreground"
@@ -77,23 +77,23 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                 </div>
             )}
 
-            <div className="w-full max-w-lg mx-auto">
-                <div className="text-center mb-8">
-                    <div className="inline-flex items-center gap-2 mb-6">
+            <form onSubmit={handleSubmit} className="w-full max-w-6xl mx-auto grid md:grid-cols-2 gap-8 md:gap-16 items-start p-6">
+
+                {/* LEFT COLUMN: Header + Community Selection */}
+                <div className="space-y-8">
+                    <div className="text-left space-y-4">
                         <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
                             <Globe className="w-6 h-6 text-primary" />
                         </div>
+                        <h1 className="font-display text-4xl font-bold">Join the Federation</h1>
+                        <p className="text-muted-foreground text-lg">
+                            Create your account on a community instance that fits you.
+                        </p>
                     </div>
-                    <h1 className="font-display text-3xl font-bold mb-2">Join the Federation</h1>
-                    <p className="text-muted-foreground">
-                        Create your account on a community that fits you
-                    </p>
-                </div>
 
-                <form onSubmit={handleSubmit} className="glass-card rounded-xl p-6 space-y-6">
-                    <div className="space-y-3">
-                        <Label>Choose your community</Label>
-                        <div className="grid gap-2">
+                    <div className="space-y-4">
+                        <Label className="text-base font-medium">Choose your community</Label>
+                        <div className="grid gap-3">
                             {popularInstances.map((instance) => (
                                 <button
                                     key={instance.domain}
@@ -103,18 +103,18 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                                         setCustomInstance("");
                                     }}
                                     className={cn(
-                                        "flex items-center justify-between p-3 rounded-lg border transition-all text-left",
+                                        "flex items-center justify-between p-4 rounded-xl border transition-all text-left",
                                         selectedInstance === instance.domain && !customInstance
-                                            ? "border-primary bg-primary/10"
-                                            : "border-border hover:border-primary/50 hover:bg-secondary"
+                                            ? "border-primary bg-primary/10 shadow-sm"
+                                            : "border-border hover:border-primary/50 hover:bg-secondary/50"
                                     )}
                                 >
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-4">
                                         <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
                                             <Users className="w-5 h-5 text-muted-foreground" />
                                         </div>
                                         <div>
-                                            <div className="font-medium text-sm">{instance.name}</div>
+                                            <div className="font-semibold text-sm">{instance.name}</div>
                                             <div className="text-xs text-muted-foreground">{instance.domain}</div>
                                         </div>
                                     </div>
@@ -130,12 +130,12 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                             ))}
                         </div>
 
-                        <div className="relative">
+                        <div className="relative py-2">
                             <div className="absolute inset-0 flex items-center">
                                 <div className="w-full border-t border-border"></div>
                             </div>
                             <div className="relative flex justify-center text-xs uppercase">
-                                <span className="bg-card px-2 text-muted-foreground">or join a custom instance</span>
+                                <span className="bg-background px-2 text-muted-foreground">or join a custom instance</span>
                             </div>
                         </div>
 
@@ -149,120 +149,135 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                                     setCustomInstance(e.target.value);
                                     setSelectedInstance("");
                                 }}
-                                className="pl-10 h-11 bg-secondary border-border"
+                                className="pl-10 h-12 bg-secondary border-border"
                             />
                         </div>
                     </div>
+                </div>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="username">Username</Label>
-                        <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground">@</span>
+                {/* RIGHT COLUMN: User Details Form */}
+                <div className="glass-card rounded-2xl p-8 space-y-6 shadow-xl border border-white/10 relative">
+                    <div className="space-y-4">
+                        <Label className="text-base font-medium">Account Details</Label>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="username">Username</Label>
+                            <div className="flex items-center gap-2">
+                                <span className="text-muted-foreground text-lg">@</span>
+                                <Input
+                                    id="username"
+                                    type="text"
+                                    placeholder="your_username"
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    className="h-11 bg-secondary border-border flex-1"
+                                />
+                            </div>
+                            {currentInstance && username && (
+                                <p className="text-xs text-muted-foreground">
+                                    Your full handle: <span className="text-primary font-medium">@{username}@{currentInstance}</span>
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="email">Email</Label>
                             <Input
-                                id="username"
-                                type="text"
-                                placeholder="your_username"
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
-                                className="h-11 bg-secondary border-border flex-1"
+                                id="email"
+                                type="email"
+                                placeholder="you@example.com"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="h-11 bg-secondary border-border"
                             />
                         </div>
-                        {currentInstance && username && (
+
+                        <div className="space-y-2">
+                            <Label htmlFor="password">Password</Label>
+                            <div className="relative">
+                                <Input
+                                    id="password"
+                                    type={showPassword ? "text" : "password"}
+                                    placeholder="Create a strong password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="h-11 bg-secondary border-border pr-10"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                >
+                                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
+                            </div>
                             <p className="text-xs text-muted-foreground">
-                                Your full handle: <span className="text-primary">@{username}@{currentInstance}</span>
+                                Minimum 8 characters with at least one number and symbol
                             </p>
-                        )}
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input
-                            id="email"
-                            type="email"
-                            placeholder="you@example.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="h-11 bg-secondary border-border"
-                        />
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label htmlFor="password">Password</Label>
-                        <div className="relative">
-                            <Input
-                                id="password"
-                                type={showPassword ? "text" : "password"}
-                                placeholder="Create a strong password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="h-11 bg-secondary border-border pr-10"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                            >
-                                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                            </button>
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                            Minimum 8 characters with at least one number and symbol
-                        </p>
                     </div>
 
-                    <div className="flex items-start gap-3">
-                        <Checkbox
-                            id="terms"
-                            checked={agreedToTerms}
-                            onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
-                            className="mt-1"
-                        />
-                        <label htmlFor="terms" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
-                            I agree to the{" "}
-                            <Link to="/terms" className="text-primary hover:underline">
-                                Terms of Service
-                            </Link>{" "}
-                            and{" "}
-                            <Link to="/privacy" className="text-primary hover:underline">
-                                Privacy Policy
-                            </Link>
-                            . I understand my data will be stored on my chosen instance.
-                        </label>
+                    <div className="pt-2">
+                        <div className="flex items-start gap-3">
+                            <Checkbox
+                                id="terms"
+                                checked={agreedToTerms}
+                                onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+                                className="mt-1"
+                            />
+                            <label htmlFor="terms" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
+                                I agree to the{" "}
+                                <Link to="/terms" className="text-primary hover:underline">
+                                    Terms of Service
+                                </Link>{" "}
+                                and{" "}
+                                <Link to="/privacy" className="text-primary hover:underline">
+                                    Privacy Policy
+                                </Link>
+                                . I understand my data will be stored on my chosen instance.
+                            </label>
+                        </div>
                     </div>
 
                     <Button
                         type="submit"
                         variant="hero"
-                        className="w-full h-11"
-                        disabled={!currentInstance || !username || !email || !password || !agreedToTerms}
+                        className="w-full h-11 text-base mt-2"
+                        disabled={!currentInstance || !username || !email || !password || !agreedToTerms || isLoading}
                     >
-                        Create Account
-                        <ArrowRight className="w-4 h-4" />
+                        {isLoading ? "Creating Account..." : (
+                            <>
+                                Create Account
+                                <ArrowRight className="w-4 h-4 ml-2" />
+                            </>
+                        )}
                     </Button>
 
-                    <p className="text-center text-sm text-muted-foreground">
-                        Already have an account?{" "}
-                        {onSwitchToLogin ? (
-                            <button
-                                type="button"
-                                className="text-primary hover:underline bg-transparent border-none p-0 cursor-pointer"
-                                onClick={(e) => { e.preventDefault(); onSwitchToLogin(); }}
-                            >
-                                Sign in
-                            </button>
-                        ) : (
-                            <Link to="/login" className="text-primary hover:underline">
-                                Sign in
-                            </Link>
-                        )}
-                    </p>
-                </form>
+                    <div className="text-center pt-2">
+                        <p className="text-sm text-muted-foreground">
+                            Already have an account?{" "}
+                            {onSwitchToLogin ? (
+                                <button
+                                    type="button"
+                                    className="text-primary hover:underline bg-transparent border-none p-0 cursor-pointer font-medium"
+                                    onClick={(e) => { e.preventDefault(); onSwitchToLogin(); }}
+                                >
+                                    Sign in
+                                </button>
+                            ) : (
+                                <Link to="/login" className="text-primary hover:underline font-medium">
+                                    Sign in
+                                </Link>
+                            )}
+                        </p>
+                    </div>
 
-                <div className="flex items-center justify-center gap-2 mt-6 text-sm text-muted-foreground">
-                    <Shield className="w-4 h-4" />
-                    <span>Your data stays on your chosen community instance</span>
+                    <div className="flex items-center justify-center gap-2 pt-4 border-t border-border/50 text-xs text-muted-foreground">
+                        <Shield className="w-3 h-3" />
+                        <span>Your data stays on your chosen community instance</span>
+                    </div>
                 </div>
-            </div>
+            </form>
         </div>
     );
 };

@@ -23,7 +23,7 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister, hideBackNav = false, 
     const [instance, setInstance] = useState("");
     const [email, setEmail] = useState("");
 
-    // Pre-fill from store (logic copied from LoginUI)
+    // Pre-fill from store
     useState(() => {
         if (user && !disablePrefill) {
             if (user.email) setEmail(user.email);
@@ -46,32 +46,20 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister, hideBackNav = false, 
 
         try {
             if (step === 1) {
-                // Step 1: Initiate Login
                 const response = await authApi.login({ email, password });
-
                 if (response.token) {
                     setAuth(response.user, response.token);
                     toast.success("Welcome back!");
-                    if (onSuccess) {
-                        onSuccess();
-                    } else {
-                        navigate("/dashboard");
-                    }
+                    onSuccess ? onSuccess() : navigate("/dashboard");
                     return;
                 }
-
                 setStep(2);
                 toast.success(`Verification code sent to ${email}. Check your inbox and spam folder.`);
             } else {
-                // Step 2: Verify OTP
                 const response = await authApi.verifyOTP({ email, code: otp });
                 setAuth(response.user, response.token);
                 toast.success("Welcome back!");
-                if (onSuccess) {
-                    onSuccess();
-                } else {
-                    navigate("/dashboard");
-                }
+                onSuccess ? onSuccess() : navigate("/dashboard");
             }
         } catch (error: any) {
             const message = error.response?.data?.message || error.message || "Login failed. Please try again.";
@@ -84,9 +72,9 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister, hideBackNav = false, 
 
     return (
         <div className="w-full h-full flex flex-col justify-center">
-            {/* Header / Back Button Logic */}
+            {/* Back Button */}
             {!hideBackNav && (
-                <div className="absolute top-4 left-4 md:top-8 md:left-8">
+                <div className="absolute top-4 left-4 md:top-8 md:left-8 z-[10]">
                     <Button
                         variant="ghost"
                         className="gap-2 text-muted-foreground hover:text-foreground"
@@ -97,22 +85,30 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister, hideBackNav = false, 
                 </div>
             )}
 
-            <div className="w-full max-w-md mx-auto">
-                <div className="text-center mb-8">
-                    <div className="inline-flex items-center gap-2 mb-6">
-                        <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-                            <Globe className="w-6 h-6 text-primary" />
-                        </div>
+            <div className="w-full max-w-5xl mx-auto grid md:grid-cols-2 gap-12 items-center p-6">
+                {/* Left Column: Heading & Info */}
+                <div className="text-left space-y-6">
+                    <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center">
+                        <Globe className="w-8 h-8 text-primary" />
                     </div>
-                    <h1 className="font-display text-3xl font-bold mb-2">
-                        {step === 1 ? "Welcome back" : "Enter Verification Code"}
-                    </h1>
-                    <p className="text-muted-foreground">
-                        {step === 1 ? "Sign in to your Nexus account" : `We sent a code to ${email}`}
-                    </p>
+
+                    <div>
+                        <h1 className="font-display text-4xl md:text-5xl font-bold mb-4">
+                            {step === 1 ? "Welcome back" : "Verify It's You"}
+                        </h1>
+                        <p className="text-lg text-muted-foreground">
+                            {step === 1 ? "Sign in to your Nexus account to connect with your community." : `We've sent a 6-digit code to ${email}. Please enter it below.`}
+                        </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground pt-4">
+                        <Shield className="w-4 h-4" />
+                        <span>Your credentials are encrypted end-to-end</span>
+                    </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="glass-card rounded-xl p-6 space-y-5">
+                {/* Right Column: Form */}
+                <form onSubmit={handleSubmit} className="glass-card rounded-2xl p-8 space-y-6 shadow-xl border border-white/10 relative">
                     {error && (
                         <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
                             {error}
@@ -155,10 +151,7 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister, hideBackNav = false, 
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between">
                                     <Label htmlFor="password">Password</Label>
-                                    <Link
-                                        to="/forgot-password"
-                                        className="text-sm text-primary hover:underline"
-                                    >
+                                    <Link to="/forgot-password" className="text-sm text-primary hover:underline">
                                         Forgot password?
                                     </Link>
                                 </div>
@@ -183,7 +176,7 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister, hideBackNav = false, 
                             </div>
                         </>
                     ) : (
-                        <div className="space-y-2">
+                        <div className="space-y-4">
                             <Label htmlFor="otp">Verification Code</Label>
                             <Input
                                 id="otp"
@@ -191,33 +184,36 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister, hideBackNav = false, 
                                 placeholder="Enter 6-digit code"
                                 value={otp}
                                 onChange={(e) => setOtp(e.target.value)}
-                                className="h-11 bg-secondary border-border text-center text-lg tracking-widest"
+                                className="h-14 bg-secondary border-border text-center text-2xl tracking-[0.5em] font-mono"
                                 maxLength={6}
                                 required
+                                autoFocus
                             />
-                            <Button
-                                type="button"
-                                variant="link"
-                                className="text-xs text-muted-foreground p-0 h-auto"
-                                onClick={() => setStep(1)}
-                            >
-                                Back to login
-                            </Button>
+                            <div className="text-center">
+                                <Button
+                                    type="button"
+                                    variant="link"
+                                    className="text-sm text-muted-foreground"
+                                    onClick={() => setStep(1)}
+                                >
+                                    Use a different email
+                                </Button>
+                            </div>
                         </div>
                     )}
 
-                    <Button type="submit" variant="hero" className="w-full h-11" disabled={isLoading}>
+                    <Button type="submit" variant="hero" className="w-full h-11 text-base" disabled={isLoading}>
                         {isLoading ? "Processing..." : (
                             <>
                                 {step === 1 ? "Sign In" : "Verify Code"}
-                                <ArrowRight className="w-4 h-4" />
+                                <ArrowRight className="w-4 h-4 ml-2" />
                             </>
                         )}
                     </Button>
 
                     {step === 1 && (
                         <>
-                            <div className="relative">
+                            <div className="relative py-2">
                                 <div className="absolute inset-0 flex items-center">
                                     <div className="w-full border-t border-border"></div>
                                 </div>
@@ -244,11 +240,6 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister, hideBackNav = false, 
                         </>
                     )}
                 </form>
-
-                <div className="flex items-center justify-center gap-2 mt-6 text-sm text-muted-foreground">
-                    <Shield className="w-4 h-4" />
-                    <span>Your credentials are encrypted end-to-end</span>
-                </div>
             </div>
         </div>
     );
