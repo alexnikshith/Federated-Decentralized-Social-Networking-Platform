@@ -18,8 +18,10 @@ import {
   Lock,
   Calendar as CalendarIcon,
   X,
-  Ban
+  Ban,
+  Flag
 } from "lucide-react";
+import { ReportModal } from "../../reports/components/ReportModal";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation, useSearchParams } from "react-router-dom";
@@ -229,6 +231,7 @@ const ProfileUI = () => {
   const [listModalUsers, setListModalUsers] = useState<Array<{ id: string; username: string; display_name: string; avatar_url: string }>>([]);
   const [listModalLoading, setListModalLoading] = useState(false);
   const [showBlockConfirmation, setShowBlockConfirmation] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   
   const handleOpenFollowers = async () => {
     if (!profileUser) return;
@@ -424,6 +427,10 @@ const ProfileUI = () => {
                             Block User
                           </DropdownMenuItem>
                         )}
+                        <DropdownMenuItem onClick={() => setShowReportModal(true)} className="cursor-pointer">
+                          <Flag className="w-4 h-4 mr-2" />
+                          Report User
+                        </DropdownMenuItem>
 
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -791,6 +798,11 @@ const ProfileUI = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        reportedUser={profileUser}
+      />
     </div>
   );
 };
