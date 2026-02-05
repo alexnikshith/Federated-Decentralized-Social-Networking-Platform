@@ -401,14 +401,14 @@ const MessagingUI: React.FC = () => {
 
     if (loading) {
         return (
-            <div className="h-[calc(100vh-80px)] flex items-center justify-center">
+            <div className="h-[calc(100vh-140px)] flex items-center justify-center">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
         );
     }
 
     return (
-        <div className="flex h-[calc(100vh-80px)] overflow-hidden bg-background border rounded-2xl mx-4 my-2 shadow-sm">
+        <div className="flex h-[calc(100vh-140px)] overflow-hidden bg-background border rounded-2xl mx-4 my-2 shadow-sm">
             {/* Conversation List */}
             <div className={cn(
                 "w-full md:w-80 border-r flex flex-col transition-all duration-300",
