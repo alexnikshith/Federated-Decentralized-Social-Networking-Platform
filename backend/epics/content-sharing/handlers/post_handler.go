@@ -323,3 +323,80 @@ func (h *PostHandler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 
 	respondSuccess(w, "Comment deleted successfully", nil, http.StatusOK)
 }
+
+// SavePost handles POST /api/posts/:id/save
+func (h *PostHandler) SavePost(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserIDFromContext(r.Context())
+	vars := mux.Vars(r)
+	postID, _ := primitive.ObjectIDFromHex(vars["id"])
+
+	if err := h.postService.SavePost(r.Context(), postID, userID); err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondSuccess(w, "Post saved successfully", nil, http.StatusOK)
+}
+
+// UnsavePost handles DELETE /api/posts/:id/save
+func (h *PostHandler) UnsavePost(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserIDFromContext(r.Context())
+	vars := mux.Vars(r)
+	postID, _ := primitive.ObjectIDFromHex(vars["id"])
+
+	if err := h.postService.UnsavePost(r.Context(), postID, userID); err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondSuccess(w, "Post unsaved successfully", nil, http.StatusOK)
+}
+
+// GetSavedPosts handles GET /api/posts/saved
+func (h *PostHandler) GetSavedPosts(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserIDFromContext(r.Context())
+	limit := int64(50)
+
+	feed, err := h.postService.GetSavedPosts(r.Context(), userID, limit)
+	if err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondSuccess(w, "Saved posts retrieved successfully", feed, http.StatusOK)
+}
+
+// ReportPost handles POST /api/posts/:id/report
+func (h *PostHandler) ReportPost(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserIDFromContext(r.Context())
+	vars := mux.Vars(r)
+	postID, _ := primitive.ObjectIDFromHex(vars["id"])
+
+	var req dto.ReportPostRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.postService.ReportPost(r.Context(), postID, userID, req); err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondSuccess(w, "Report submitted successfully", nil, http.StatusOK)
+}
+
+// InteractPost handles POST /api/posts/:id/interact
+func (h *PostHandler) InteractPost(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserIDFromContext(r.Context())
+	vars := mux.Vars(r)
+	postID, _ := primitive.ObjectIDFromHex(vars["id"])
+
+	var req dto.PostInteractionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.postService.TrackInteraction(r.Context(), postID, userID, req); err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondSuccess(w, "Interaction tracked successfully", nil, http.StatusOK)
+}

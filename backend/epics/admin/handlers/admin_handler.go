@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	contentRepo "federated-social/backend/epics/content-sharing/repository"
+	"federated-social/backend/epics/content-sharing/service"
 	identityRepo "federated-social/backend/epics/identity/repository"
 	"federated-social/backend/pkg/email"
 	"log"
@@ -19,6 +20,7 @@ type AdminHandler struct {
 	sessionRepo      *identityRepo.SessionRepository
 	followRepo       *contentRepo.FollowRepository
 	notificationRepo *contentRepo.NotificationRepository
+	postService      *service.PostService
 	emailSender      *email.EmailSender
 }
 
@@ -30,6 +32,7 @@ func NewAdminHandler() *AdminHandler {
 		sessionRepo:      identityRepo.NewSessionRepository(),
 		followRepo:       contentRepo.NewFollowRepository(),
 		notificationRepo: contentRepo.NewNotificationRepository(),
+		postService:      service.NewPostService(),
 		emailSender:      email.NewEmailSender(),
 	}
 }
@@ -195,6 +198,33 @@ func (h *AdminHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	// 5. Finally, the User record
 	if err := h.userRepo.DeleteUser(ctx, oid); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *AdminHandler) ListReports(w http.ResponseWriter, r *http.Request) {
+	reports, err := h.postService.GetAllReports(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(reports)
+}
+
+func (h *AdminHandler) ResolveReport(w http.ResponseWriter, r *http.Request) {
+	reportID := r.URL.Query().Get("id")
+	if reportID == "" {
+		http.Error(w, "Report ID required", http.StatusBadRequest)
+		return
+	}
+
+	oid, _ := primitive.ObjectIDFromHex(reportID)
+	if err := h.postRepo.DeleteReport(r.Context(), oid); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

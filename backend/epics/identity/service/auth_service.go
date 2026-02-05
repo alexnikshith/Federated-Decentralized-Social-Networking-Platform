@@ -99,7 +99,7 @@ func (s *AuthService) InitiateLogin(ctx context.Context, req dto.LoginRequest, i
 	}
 
 	// Check if account is deactivated
-	if user.IsDeactivated {
+	if user.IsDeactivated || !user.IsActive {
 		return nil, errors.New("account is deactivated")
 	}
 
@@ -187,6 +187,11 @@ func (s *AuthService) VerifyOTP(ctx context.Context, req dto.VerifyOTPRequest, i
 	user, err := s.userRepo.FindByEmail(ctx, req.Email)
 	if err != nil {
 		return nil, errors.New("user not found")
+	}
+
+	// Check if account is deactivated
+	if user.IsDeactivated || !user.IsActive {
+		return nil, errors.New("account is deactivated")
 	}
 
 	// Find latest verification code

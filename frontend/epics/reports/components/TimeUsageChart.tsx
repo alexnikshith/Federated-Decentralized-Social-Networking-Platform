@@ -17,6 +17,8 @@ interface TimeUsageChartProps {
     onNextClick: () => void;
     currentLabel: string;
     onViewChange: (view: 'weekly' | 'monthly') => void;
+    isNextDisabled?: boolean;
+    periodTotal?: number;
 }
 
 interface ChartData {
@@ -33,7 +35,9 @@ const TimeUsageChart: React.FC<TimeUsageChartProps> = ({
     onPrevClick,
     onNextClick,
     currentLabel,
-    onViewChange
+    onViewChange,
+    isNextDisabled = false,
+    periodTotal
 }) => {
 
     const processData = (): ChartData[] => {
@@ -114,6 +118,16 @@ const TimeUsageChart: React.FC<TimeUsageChartProps> = ({
                         {view === 'weekly' && 'Daily usage for the selected week'}
                         {view === 'monthly' && 'Daily usage for the selected month'}
                     </CardDescription>
+                    {periodTotal !== undefined && (
+                        <div className="mt-2">
+                            <span className="text-2xl font-bold">
+                                {Math.floor(periodTotal)}h {Math.round((periodTotal % 1) * 60)}m
+                            </span>
+                            <span className="text-sm text-muted-foreground ml-2">
+                                total this {view === 'weekly' ? 'week' : 'month'}
+                            </span>
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 items-center w-full md:w-auto">
@@ -124,7 +138,7 @@ const TimeUsageChart: React.FC<TimeUsageChartProps> = ({
                         <span className="text-sm font-medium min-w-[140px] text-center">
                             {currentLabel}
                         </span>
-                        <Button variant="ghost" size="icon" onClick={onNextClick} className="h-8 w-8 hover:bg-background">
+                        <Button variant="ghost" size="icon" onClick={onNextClick} disabled={isNextDisabled} className="h-8 w-8 hover:bg-background">
                             <ChevronRight className="h-4 w-4" />
                         </Button>
                     </div>

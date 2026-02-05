@@ -58,6 +58,18 @@ api.interceptors.response.use(
                 window.location.reload();
             }
         }
+
+        // Handle Account Deactivation (403)
+        if (error.response?.status === 403) {
+            const data = error.response.data;
+            const msg = typeof data === 'string' ? data : (data as any)?.error || '';
+            const isDeactivated = msg.includes("deactivated") || msg.includes("Deactivated");
+
+            if (isDeactivated) {
+                useAuthStore.getState().clearAuth();
+                window.location.href = '/login';
+            }
+        }
         return Promise.reject(error);
     }
 );
