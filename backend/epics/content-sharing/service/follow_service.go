@@ -43,9 +43,12 @@ func (s *FollowService) GetFollowers(ctx context.Context, userID primitive.Objec
 		return nil, err
 	}
 
-	publicUsers := make([]identityModels.PublicUser, len(users))
-	for i, user := range users {
-		publicUsers[i] = user.ToPublicUser()
+	// Filter out deactivated users
+	publicUsers := make([]identityModels.PublicUser, 0)
+	for _, user := range users {
+		if !user.IsDeactivated {
+			publicUsers = append(publicUsers, user.ToPublicUser())
+		}
 	}
 
 	return publicUsers, nil
@@ -63,9 +66,12 @@ func (s *FollowService) GetFollowing(ctx context.Context, userID primitive.Objec
 		return nil, err
 	}
 
-	publicUsers := make([]identityModels.PublicUser, len(users))
-	for i, user := range users {
-		publicUsers[i] = user.ToPublicUser()
+	// Filter out deactivated users
+	publicUsers := make([]identityModels.PublicUser, 0)
+	for _, user := range users {
+		if !user.IsDeactivated {
+			publicUsers = append(publicUsers, user.ToPublicUser())
+		}
 	}
 
 	return publicUsers, nil

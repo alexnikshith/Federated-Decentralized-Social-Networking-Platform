@@ -128,7 +128,8 @@ const ProfileUI = () => {
   const [likedPosts, setLikedPosts] = useState<Post[]>([]);
   const [commentedPosts, setCommentedPosts] = useState<Post[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
-  const [activeSubTab, setActiveSubTab] = useState("Likes");
+  const [activeSubTab, setActiveSubTab] = useState("All");
+  const [activitySubTab, setActivitySubTab] = useState("Likes");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -199,25 +200,32 @@ const ProfileUI = () => {
       if (activeTab === "Activity" && profileUser) {
         setActivityLoading(true);
         try {
-          if (activeSubTab === "Likes") {
+          if (activitySubTab === "Likes") {
             const posts = await getUserLikedPosts(profileUser.id);
             setLikedPosts(posts);
-          } else if (activeSubTab === "Comments") {
+          } else if (activitySubTab === "Comments") {
             const posts = await getUserCommentedPosts(profileUser.id);
             setCommentedPosts(posts);
-          } else if (activeSubTab === "Saved") {
-            const data = await getSavedPosts();
-            setSavedPosts(data.posts);
           }
         } catch (err) {
           console.error("Failed to fetch activity data", err);
         } finally {
           setActivityLoading(false);
         }
+      } else if (activeTab === "Posts" && activeSubTab === "Saved" && profileUser) {
+        setActivityLoading(true);
+        try {
+          const data = await getSavedPosts();
+          setSavedPosts(data.posts);
+        } catch (err) {
+          console.error("Failed to fetch saved posts", err);
+        } finally {
+          setActivityLoading(false);
+        }
       }
     };
     fetchActivityData();
-  }, [activeTab, activeSubTab, profileUser]);
+  }, [activeTab, activitySubTab, activeSubTab, profileUser]);
 
   // Check if user is blocked
   useEffect(() => {
@@ -365,7 +373,7 @@ const ProfileUI = () => {
     );
   }
 
-  const tabs = isOwnProfile ? ["Posts", "Activity", "Media"] : ["Posts"];
+  const tabs = isOwnProfile ? ["Posts", "Activity"] : ["Posts"];
 
   return (
     <div className="min-h-screen bg-background">
@@ -587,7 +595,6 @@ const ProfileUI = () => {
                     >
                       {tab === "Posts" && <FileText className="w-4 h-4" />}
                       {tab === "Activity" && <Activity className="w-4 h-4" />}
-                      {tab === "Media" && <ImageIcon className="w-4 h-4" />}
                       {tab}
                     </button>
                   ))}
@@ -597,101 +604,147 @@ const ProfileUI = () => {
                 <div className="space-y-6">
                   {activeTab === "Posts" && (
                     <>
-                      {/* Date Filter */}
-                      <div className="flex flex-wrap items-center gap-4 py-2">
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant={"outline"}
+                      {/* Sub Tabs for Posts */}
+                      {isOwnProfile && (
+                        <div className="flex items-center gap-6 border-b border-border/50 px-2">
+                          {["All", "Saved"].map((subTab) => (
+                            <button
+                              key={subTab}
+                              onClick={() => setActiveSubTab(subTab)}
                               className={cn(
-                                "w-[200px] justify-start text-left font-normal rounded-xl border-border/50 bg-secondary/30",
-                                !startDate && "text-muted-foreground"
+                                "py-3 text-sm font-bold uppercase tracking-widest border-b-2 transition-colors",
+                                activeSubTab === subTab
+                                  ? "border-primary text-primary"
+                                  : "border-transparent text-muted-foreground hover:text-foreground"
                               )}
                             >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {startDate ? format(startDate, "PPP") : <span>Start Date</span>}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <CalendarComponent
-                              mode="single"
-                              selected={startDate}
-                              onSelect={setStartDate}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-
-                        <span className="text-muted-foreground">to</span>
-
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-[200px] justify-start text-left font-normal rounded-xl border-border/50 bg-secondary/30",
-                                !endDate && "text-muted-foreground"
-                              )}
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {endDate ? format(endDate, "PPP") : <span>End Date</span>}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <CalendarComponent
-                              mode="single"
-                              selected={endDate}
-                              onSelect={setEndDate}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-
-                        {(startDate || endDate) && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setStartDate(undefined);
-                              setEndDate(undefined);
-                            }}
-                            className="text-xs hover:bg-destructive/10 hover:text-destructive"
-                          >
-                            <X className="w-4 h-4 mr-1" />
-                            Clear Filter
-                          </Button>
-                        )}
-                      </div>
-
-                      {filteredPosts.length === 0 ? (
-                        <div className="glass-card rounded-3xl p-20 text-center opacity-50">
-                          <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                          <h3 className="text-xl font-bold mb-1">
-                            {(startDate || endDate) ? "No posts in range" : "No posts yet"}
-                          </h3>
-                          <p className="text-sm">
-                            {(startDate || endDate) ? "Try adjusting your dates." : "When they post, they'll appear here."}
-                          </p>
+                              {subTab}
+                            </button>
+                          ))}
                         </div>
-                      ) : (
-                        filteredPosts.map((post, index) => (
-                          <div
-                            key={post.id}
-                            id={`post-${post.id}`}
-                            className={cn(
-                              "opacity-0 animate-fade-in-up transition-all duration-500",
-                              targetPostId === post.id && "ring-2 ring-primary ring-offset-4 ring-offset-background rounded-[2.2rem] shadow-glow"
+                      )}
+
+                      {activeSubTab === "All" && (
+                        <>
+                          {/* Date Filter */}
+                          <div className="flex flex-wrap items-center gap-4 py-2">
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant={"outline"}
+                                  className={cn(
+                                    "w-[200px] justify-start text-left font-normal rounded-xl border-border/50 bg-secondary/30",
+                                    !startDate && "text-muted-foreground"
+                                  )}
+                                >
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {startDate ? format(startDate, "PPP") : <span>Start Date</span>}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <CalendarComponent
+                                  mode="single"
+                                  selected={startDate}
+                                  onSelect={setStartDate}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+
+                            <span className="text-muted-foreground">to</span>
+
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant={"outline"}
+                                  className={cn(
+                                    "w-[200px] justify-start text-left font-normal rounded-xl border-border/50 bg-secondary/30",
+                                    !endDate && "text-muted-foreground"
+                                  )}
+                                >
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {endDate ? format(endDate, "PPP") : <span>End Date</span>}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <CalendarComponent
+                                  mode="single"
+                                  selected={endDate}
+                                  onSelect={setEndDate}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+
+                            {(startDate || endDate) && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setStartDate(undefined);
+                                  setEndDate(undefined);
+                                }}
+                                className="text-xs hover:bg-destructive/10 hover:text-destructive"
+                              >
+                                <X className="w-4 h-4 mr-1" />
+                                Clear Filter
+                              </Button>
                             )}
-                            style={{ animationDelay: `${index * 0.1}s` }}
-                          >
-                            <div className="glass-card rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all shadow-sm hover:shadow-glow">
-                              <PostCard
-                                post={post}
-                                initialShowComments={targetPostId === post.id && shouldOpenComments}
-                              />
-                            </div>
                           </div>
-                        ))
+
+                          {filteredPosts.length === 0 ? (
+                            <div className="glass-card rounded-3xl p-20 text-center opacity-50">
+                              <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                              <h3 className="text-xl font-bold mb-1">
+                                {(startDate || endDate) ? "No posts in range" : "No posts yet"}
+                              </h3>
+                              <p className="text-sm">
+                                {(startDate || endDate) ? "Try adjusting your dates." : "When they post, they'll appear here."}
+                              </p>
+                            </div>
+                          ) : (
+                            filteredPosts.map((post, index) => (
+                              <div
+                                key={post.id}
+                                id={`post-${post.id}`}
+                                className={cn(
+                                  "opacity-0 animate-fade-in-up transition-all duration-500",
+                                  targetPostId === post.id && "ring-2 ring-primary ring-offset-4 ring-offset-background rounded-[2.2rem] shadow-glow"
+                                )}
+                                style={{ animationDelay: `${index * 0.1}s` }}
+                              >
+                                <div className="glass-card rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all shadow-sm hover:shadow-glow">
+                                  <PostCard
+                                    post={post}
+                                    initialShowComments={targetPostId === post.id && shouldOpenComments}
+                                  />
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </>
+                      )}
+
+                      {activeSubTab === "Saved" && isOwnProfile && (
+                        <div className="space-y-4">
+                          {activityLoading ? (
+                            <div className="flex justify-center py-20">
+                              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                            </div>
+                          ) : savedPosts.length === 0 ? (
+                            <div className="glass-card rounded-3xl p-16 text-center opacity-50">
+                              <Bookmark className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                              <h3 className="text-xl font-bold mb-1">No saved posts</h3>
+                              <p className="text-sm">Posts you've saved will appear here.</p>
+                            </div>
+                          ) : (
+                            savedPosts.map((post) => (
+                              <div key={post.id} className="glass-card rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all shadow-sm">
+                                <PostCard post={post} />
+                              </div>
+                            ))
+                          )}
+                        </div>
                       )}
                     </>
                   )}
@@ -700,13 +753,13 @@ const ProfileUI = () => {
                     <div className="space-y-6">
                       {/* Sub Tabs */}
                       <div className="flex items-center gap-6 border-b border-border/50 px-2">
-                        {["Likes", "Comments", ...(isOwnProfile ? ["Saved"] : [])].map((subTab) => (
+                        {["Likes", "Comments"].map((subTab) => (
                           <button
                             key={subTab}
-                            onClick={() => setActiveSubTab(subTab)}
+                            onClick={() => setActivitySubTab(subTab)}
                             className={cn(
                               "py-3 text-sm font-bold uppercase tracking-widest border-b-2 transition-colors",
-                              activeSubTab === subTab
+                              activitySubTab === subTab
                                 ? "border-primary text-primary"
                                 : "border-transparent text-muted-foreground hover:text-foreground"
                             )}
@@ -723,7 +776,7 @@ const ProfileUI = () => {
                           </div>
                         ) : (
                           <>
-                            {activeSubTab === "Likes" && (
+                            {activitySubTab === "Likes" && (
                               likedPosts.length === 0 ? (
                                 <div className="glass-card rounded-3xl p-16 text-center opacity-50">
                                   <Heart className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
@@ -739,7 +792,7 @@ const ProfileUI = () => {
                               )
                             )}
 
-                            {activeSubTab === "Comments" && (
+                            {activitySubTab === "Comments" && (
                               commentedPosts.length === 0 ? (
                                 <div className="glass-card rounded-3xl p-16 text-center opacity-50">
                                   <MessageSquare className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
@@ -754,33 +807,9 @@ const ProfileUI = () => {
                                 ))
                               )
                             )}
-
-                            {activeSubTab === "Saved" && isOwnProfile && (
-                              savedPosts.length === 0 ? (
-                                <div className="glass-card rounded-3xl p-16 text-center opacity-50">
-                                  <Bookmark className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                                  <h3 className="text-xl font-bold mb-1">No saved posts</h3>
-                                  <p className="text-sm">Posts you've saved will appear here.</p>
-                                </div>
-                              ) : (
-                                savedPosts.map((post) => (
-                                  <div key={post.id} className="glass-card rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all shadow-sm">
-                                    <PostCard post={post} />
-                                  </div>
-                                ))
-                              )
-                            )}
                           </>
                         )}
                       </div>
-                    </div>
-                  )}
-
-                  {activeTab === "Media" && (
-                    <div className="glass-card rounded-3xl p-20 text-center opacity-50 border-dashed">
-                      <ImageIcon className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                      <h3 className="text-xl font-bold mb-1">Gallery is empty</h3>
-                      <p className="text-sm">Media uploads are currently in development.</p>
                     </div>
                   )}
                 </div>
