@@ -54,6 +54,15 @@ export const useReportsApi = () => {
         return response.data;
     };
 
+    const submitReport = async (data: { reported_id: string; reason: string; description?: string }) => {
+        await api.post('/api/reports/user', data);
+    };
+
+    const getAdminReports = async (): Promise<any[]> => {
+        const response = await api.get('/api/reports/admin/list');
+        return response.data;
+    };
+
     const fetchInteractions = async (startDate?: string, endDate?: string): Promise<InteractionReport> => {
         const params = new URLSearchParams();
         if (startDate) params.append('start_date', startDate);
@@ -75,6 +84,17 @@ export const useReportsApi = () => {
             queryFn: () => fetchActivity(startDate, endDate),
             enabled: !!token
         }),
+        useSubmitReport: () => useMutation({
+            mutationFn: submitReport,
+            onSuccess: () => {
+                // queryClient.invalidateQueries({ queryKey: ['admin-reports'] });
+            }
+        }),
+        useAdminReports: () => useQuery({
+            queryKey: ['admin-reports'],
+            queryFn: getAdminReports,
+            enabled: !!token
+        }),
         useInteractionReport: (startDate?: string, endDate?: string) => useQuery({
             queryKey: ['interaction-report', startDate, endDate],
             queryFn: () => fetchInteractions(startDate, endDate),
@@ -93,4 +113,3 @@ export const useReportsApi = () => {
         })
     };
 };
-

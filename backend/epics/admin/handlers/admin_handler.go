@@ -6,6 +6,7 @@ import (
 	"federated-social/backend/epics/content-sharing/service"
 	identityRepo "federated-social/backend/epics/identity/repository"
 	"federated-social/backend/pkg/email"
+	"log"
 	"net/http"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -75,6 +76,7 @@ func (h *AdminHandler) ToggleUserStatus(w http.ResponseWriter, r *http.Request) 
 	var req struct {
 		UserID string `json:"user_id"`
 		Status bool   `json:"is_active"`
+		Reason string `json:"reason,omitempty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request", http.StatusBadRequest)
@@ -82,6 +84,27 @@ func (h *AdminHandler) ToggleUserStatus(w http.ResponseWriter, r *http.Request) 
 	}
 
 	oid, _ := primitive.ObjectIDFromHex(req.UserID)
+	
+	// If deactivating, try to send email first
+	if !req.Status {
+		user, err := h.userRepo.FindByID(r.Context(), oid)
+		if err == nil && user != nil && user.Email != "" {
+			reason := req.Reason
+			if reason == "" {
+				reason = "Violation of Terms of Service"
+			}
+			
+			// Send Synchronously (Soft Fail)
+			if err := h.emailSender.SendAccountDeactivationNotification(user.Email, user.Username, reason); err != nil {
+				log.Printf("WARNING: Failed to send deactivation email to %s: %v", user.Email, err)
+				// We proceed with deactivation anyway
+			}
+		}
+
+		// Invalidate all sessions
+		h.sessionRepo.InvalidateAllUserSessions(r.Context(), oid)
+	}
+
 	update := bson.M{"is_active": req.Status}
 	if err := h.userRepo.UpdateUser(r.Context(), oid, update); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

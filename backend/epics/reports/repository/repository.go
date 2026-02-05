@@ -14,6 +14,8 @@ import (
 
 type ReportRepository struct {
 	collection         *mongo.Collection
+	reportsCollection  *mongo.Collection
+	usersCollection    *mongo.Collection
 	likesCollection    *mongo.Collection
 	commentsCollection *mongo.Collection
 	followsCollection  *mongo.Collection
@@ -23,6 +25,8 @@ type ReportRepository struct {
 func NewReportRepository() *ReportRepository {
 	return &ReportRepository{
 		collection:         database.DB.Collection("user_activity"),
+		reportsCollection:  database.DB.Collection("user_reports"),
+		usersCollection:    database.DB.Collection("users"),
 		likesCollection:    database.GetCollection("likes"),
 		commentsCollection: database.GetCollection("comments"),
 		followsCollection:  database.GetCollection("follows"),
@@ -80,6 +84,55 @@ func (r *ReportRepository) GetActivity(ctx context.Context, userID primitive.Obj
 	}
 
 	return activities, nil
+}
+
+// CreateUserReport creates a new user report
+func (r *ReportRepository) CreateUserReport(ctx context.Context, report models.UserReport) error {
+	_, err := r.reportsCollection.InsertOne(ctx, report)
+	return err
+}
+
+// CountReports counts reports for a specific user
+func (r *ReportRepository) CountReports(ctx context.Context, reportedID primitive.ObjectID) (int64, error) {
+	filter := bson.M{"reported_id": reportedID}
+	return r.reportsCollection.CountDocuments(ctx, filter)
+}
+
+// DeactivateUser deactivates a user account
+func (r *ReportRepository) DeactivateUser(ctx context.Context, userID primitive.ObjectID) error {
+	filter := bson.M{"_id": userID}
+	update := bson.M{"$set": bson.M{"is_active": false}}
+	_, err := r.usersCollection.UpdateOne(ctx, filter, update)
+	return err
+}
+
+// GetReports retrieves all reports (for admin)
+func (r *ReportRepository) GetReports(ctx context.Context) ([]models.UserReportResponse, error) {
+	pipeline := []bson.M{
+		{"$sort": bson.M{"created_at": -1}},
+		{"$lookup": bson.M{
+			"from":         "users",
+			"localField":   "reported_id",
+			"foreignField": "_id",
+			"as":           "user_details",
+		}},
+		{"$unwind": bson.M{
+			"path":                       "$user_details",
+			"preserveNullAndEmptyArrays": true,
+		}},
+	}
+
+	cursor, err := r.reportsCollection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var reports []models.UserReportResponse
+	if err := cursor.All(ctx, &reports); err != nil {
+		return nil, err
+	}
+	return reports, nil
 }
 
 // GetInteractionsMade retrieves interaction stats (likes given, comments posted, follows initiated, posts created) for a user within a date range
