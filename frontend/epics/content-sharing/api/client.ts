@@ -39,6 +39,18 @@ api.interceptors.response.use(
             // Token expired or server reset
             useAuthStore.getState().clearAuth(); // Use clearAuth to keep session but invalidate token
         }
+
+        // Handle Account Deactivation (403)
+        if (error.response?.status === 403) {
+            const data = error.response.data;
+            const msg = typeof data === 'string' ? data : (data as any)?.error || '';
+            const isDeactivated = msg.includes("deactivated") || msg.includes("Deactivated") || msg.includes("Account has been deactivated");
+
+            if (isDeactivated) {
+                useAuthStore.getState().clearAuth();
+                window.location.href = '/login';
+            }
+        }
         return Promise.reject(error);
     }
 );
