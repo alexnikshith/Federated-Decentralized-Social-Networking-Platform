@@ -26,7 +26,7 @@ export const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-[95vw] md:max-w-[85vw] w-full h-[90vh] md:h-[85vh] p-0 overflow-hidden bg-background border-border [&>button]:top-4 [&>button]:right-4 [&>button]:opacity-100 [&>button]:ring-2 [&>button]:ring-primary [&>button]:text-primary [&>button]:bg-transparent [&>button]:h-8 [&>button]:w-8 [&>button]:rounded-full">
+            <DialogContent className="max-w-[95vw] md:max-w-[85vw] w-full h-[90vh] md:h-[85vh] p-0 overflow-hidden bg-background border-border [&>button]:top-4 [&>button]:right-4 [&>button]:opacity-100 [&>button]:ring-2 [&>button]:ring-primary [&>button]:text-primary [&>button]:bg-transparent [&>button]:h-8 [&>button]:w-8 [&>button]:rounded-full [&>button]:flex [&>button]:items-center [&>button]:justify-center">
                 {/* Hidden Header for Accessibility */}
                 <DialogHeader className="sr-only">
                     <DialogTitle>Authentication</DialogTitle>
