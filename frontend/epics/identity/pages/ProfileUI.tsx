@@ -56,7 +56,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { blockUser, unblockUser, getBlockedUsers } from "../../safety/api/client";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, subDays, isToday, isYesterday, isSameDay } from "date-fns";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
@@ -355,6 +355,64 @@ const ProfileUI = () => {
     return true;
   });
 
+  const handlePostLike = (postId: string) => {
+    const updateList = (list: Post[]) => list.map(p => {
+      if (p.id === postId) {
+        return {
+          ...p,
+          is_liked: !p.is_liked,
+          like_count: p.is_liked ? p.like_count - 1 : p.like_count + 1
+        };
+      }
+      return p;
+    });
+
+    setPosts(prev => updateList(prev));
+    setLikedPosts(prev => updateList(prev));
+    setCommentedPosts(prev => updateList(prev));
+    setSavedPosts(prev => updateList(prev));
+  };
+
+  const getDateLabel = (dateStr: string) => {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return "";
+    if (isToday(date)) return "Today";
+    if (isYesterday(date)) return "Yesterday";
+    return format(date, 'MMM dd, yyyy');
+  };
+
+  const renderPostList = (items: Post[], targetId?: string) => {
+    return items.map((post, index) => {
+      const showSeparator = index === 0 || !isSameDay(new Date(post.created_at), new Date(items[index - 1].created_at));
+      return (
+        <div key={post.id} className="animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ animationDelay: `${Math.min(index * 0.05, 0.5)}s`, animationFillMode: 'backwards' }}>
+          {showSeparator && (
+            <div className="flex items-center justify-center py-6 opacity-80">
+              <div className="px-4 py-1 bg-secondary/60 backdrop-blur-md rounded-full text-xs font-bold uppercase tracking-widest text-muted-foreground border border-border/50 shadow-sm">
+                {getDateLabel(post.created_at)}
+              </div>
+            </div>
+          )}
+          <div
+            id={`post-${post.id}`}
+            className={cn(
+              "transition-all duration-300",
+              targetId === post.id && "ring-2 ring-primary ring-offset-4 ring-offset-background rounded-[2.2rem] shadow-glow"
+            )}
+          >
+            <div className="glass-card rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all shadow-sm hover:shadow-glow">
+              <PostCard
+                post={post}
+                initialShowComments={targetId === post.id && shouldOpenComments}
+                onLikeToggle={() => handlePostLike(post.id)}
+              />
+            </div>
+          </div>
+        </div>
+      );
+    });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -605,24 +663,38 @@ const ProfileUI = () => {
                   {activeTab === "Posts" && (
                     <>
                       {/* Sub Tabs for Posts */}
-                      {isOwnProfile && (
-                        <div className="flex items-center gap-6 border-b border-border/50 px-2">
-                          {["All", "Saved"].map((subTab) => (
-                            <button
-                              key={subTab}
-                              onClick={() => setActiveSubTab(subTab)}
-                              className={cn(
-                                "py-3 text-sm font-bold uppercase tracking-widest border-b-2 transition-colors",
-                                activeSubTab === subTab
-                                  ? "border-primary text-primary"
-                                  : "border-transparent text-muted-foreground hover:text-foreground"
-                              )}
-                            >
-                              {subTab}
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                      <div className="flex flex-col gap-4 mb-4">
+                        {isOwnProfile && (
+                          <div className="flex items-center gap-6 border-b border-border/50 px-2">
+                            {/* ... preserved tabs ... */}
+                            {["All", "Saved"].map((subTab) => (
+                              <button
+                                key={subTab}
+                                onClick={() => setActiveSubTab(subTab)}
+                                className={cn(
+                                  "py-3 text-sm font-bold uppercase tracking-widest border-b-2 transition-colors",
+                                  activeSubTab === subTab
+                                    ? "border-primary text-primary"
+                                    : "border-transparent text-muted-foreground hover:text-foreground"
+                                )}
+                              >
+                                {subTab}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {activeSubTab === "All" && (
+                          <div className="flex flex-wrap items-center gap-2 px-2 overflow-x-auto scrollbar-hide">
+                            <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest mr-2">Quick Filters:</span>
+                            <Button variant="outline" size="sm" onClick={() => { setStartDate(subDays(new Date(), 7)); setEndDate(new Date()); }} className="rounded-full h-8 text-xs">Last 7 Days</Button>
+                            <Button variant="outline" size="sm" onClick={() => { setStartDate(subDays(new Date(), 30)); setEndDate(new Date()); }} className="rounded-full h-8 text-xs">Last 30 Days</Button>
+                            {(startDate || endDate) && (
+                              <Button variant="ghost" size="sm" onClick={() => { setStartDate(undefined); setEndDate(undefined); }} className="rounded-full h-8 text-xs text-destructive hover:bg-destructive/10">Clear</Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
 
                       {activeSubTab === "All" && (
                         <>
@@ -646,6 +718,7 @@ const ProfileUI = () => {
                                   mode="single"
                                   selected={startDate}
                                   onSelect={setStartDate}
+                                  disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
                                   initialFocus
                                 />
                               </PopoverContent>
@@ -671,6 +744,7 @@ const ProfileUI = () => {
                                   mode="single"
                                   selected={endDate}
                                   onSelect={setEndDate}
+                                  disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
                                   initialFocus
                                 />
                               </PopoverContent>
@@ -703,24 +777,7 @@ const ProfileUI = () => {
                               </p>
                             </div>
                           ) : (
-                            filteredPosts.map((post, index) => (
-                              <div
-                                key={post.id}
-                                id={`post-${post.id}`}
-                                className={cn(
-                                  "opacity-0 animate-fade-in-up transition-all duration-500",
-                                  targetPostId === post.id && "ring-2 ring-primary ring-offset-4 ring-offset-background rounded-[2.2rem] shadow-glow"
-                                )}
-                                style={{ animationDelay: `${index * 0.1}s` }}
-                              >
-                                <div className="glass-card rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all shadow-sm hover:shadow-glow">
-                                  <PostCard
-                                    post={post}
-                                    initialShowComments={targetPostId === post.id && shouldOpenComments}
-                                  />
-                                </div>
-                              </div>
-                            ))
+                            renderPostList(filteredPosts, targetPostId || undefined)
                           )}
                         </>
                       )}
@@ -738,11 +795,7 @@ const ProfileUI = () => {
                               <p className="text-sm">Posts you've saved will appear here.</p>
                             </div>
                           ) : (
-                            savedPosts.map((post) => (
-                              <div key={post.id} className="glass-card rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all shadow-sm">
-                                <PostCard post={post} />
-                              </div>
-                            ))
+                            renderPostList(savedPosts)
                           )}
                         </div>
                       )}
@@ -784,11 +837,7 @@ const ProfileUI = () => {
                                   <p className="text-sm">Posts {profileUser.display_name} likes will appear here.</p>
                                 </div>
                               ) : (
-                                likedPosts.map((post) => (
-                                  <div key={post.id} className="glass-card rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all shadow-sm">
-                                    <PostCard post={post} />
-                                  </div>
-                                ))
+                                renderPostList(likedPosts)
                               )
                             )}
 
@@ -800,11 +849,7 @@ const ProfileUI = () => {
                                   <p className="text-sm">Posts {profileUser.display_name} commented on will appear here.</p>
                                 </div>
                               ) : (
-                                commentedPosts.map((post) => (
-                                  <div key={post.id} className="glass-card rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all shadow-sm">
-                                    <PostCard post={post} />
-                                  </div>
-                                ))
+                                renderPostList(commentedPosts)
                               )
                             )}
                           </>

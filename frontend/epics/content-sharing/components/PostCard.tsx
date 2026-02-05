@@ -53,9 +53,10 @@ import { showToast } from "@/lib/toast";
 interface PostCardProps {
     post: Post;
     initialShowComments?: boolean;
+    onLikeToggle?: () => void;
 }
 
-export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = false }) => {
+export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = false, onLikeToggle }) => {
     const [showComments, setShowComments] = useState(initialShowComments);
     const [showLikers, setShowLikers] = useState(false);
     const [likers, setLikers] = useState<PostLiker[]>([]);
@@ -96,6 +97,9 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
             unlikePost(post.id);
         } else {
             likePost(post.id);
+        }
+        if (onLikeToggle) {
+            onLikeToggle();
         }
     };
 
