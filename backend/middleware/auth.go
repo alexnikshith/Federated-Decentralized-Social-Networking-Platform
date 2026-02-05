@@ -73,6 +73,30 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			if r, ok := claims["role"].(string); ok && r != "" {
 				role = r
 			}
+
+			// Check if user is deactivated or deleted
+			usersCol := database.GetCollection("users")
+			objID, err := primitive.ObjectIDFromHex(userID)
+			if err != nil {
+				http.Error(w, "Invalid user ID", http.StatusUnauthorized)
+				return
+			}
+
+			var user struct {
+				IsDeactivated bool `bson:"is_deactivated"`
+				IsActive      bool `bson:"is_active"`
+			}
+			err = usersCol.FindOne(r.Context(), bson.M{"_id": objID}).Decode(&user)
+			if err != nil {
+				http.Error(w, "User not found", http.StatusUnauthorized)
+				return
+			}
+
+			if user.IsDeactivated || !user.IsActive {
+				http.Error(w, "Account has been deactivated", http.StatusForbidden)
+				return
+			}
+
 			ctx := context.WithValue(r.Context(), UserIDKey, userID)
 			ctx = context.WithValue(ctx, RoleKey, role)
 			next.ServeHTTP(w, r.WithContext(ctx))

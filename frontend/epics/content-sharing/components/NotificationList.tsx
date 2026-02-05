@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { useContentStore } from '../store/contentStore';
 import { useAuthStore } from '../../identity/store/authStore';
 import { Notification as AppNotification } from '../types';
@@ -42,6 +43,15 @@ export const NotificationList: React.FC = () => {
             default:
                 return <Circle className="w-4 h-4 text-muted-foreground" />;
         }
+    };
+
+    const getDateLabel = (dateStr: string) => {
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return "";
+
+        if (isToday(date)) return "Today";
+        if (isYesterday(date)) return "Yesterday";
+        return format(date, 'MMM dd, yyyy');
     };
 
     const getNotificationText = (notif: AppNotification) => {
@@ -113,64 +123,76 @@ export const NotificationList: React.FC = () => {
             )}
 
             <div className="flex flex-col gap-2 max-h-[400px] overflow-y-auto scrollbar-hide">
-                {notifications.map((notif) => (
-                    <div
-                        key={notif.id}
-                        onClick={() => {
-                            if (!notif.is_read) handleMarkAsRead(notif.id);
+                {notifications.map((notif, index) => {
+                    const showDateSeparator = index === 0 || !isSameDay(new Date(notif.created_at), new Date(notifications[index - 1].created_at));
 
-                            if (notif.type === 'follow') {
-                                navigate(`/profile/${notif.related_user_name}`);
-                            } else if (notif.type === 'like') {
-                                // Open post in dialog
-                                setSelectedPostId(notif.related_entity_id);
-                                setOpenCommentsOnPost(false);
-                                setShowPostDialog(true);
-                            } else if (notif.type === 'comment') {
-                                // Open post in dialog with comments expanded
-                                setSelectedPostId(notif.related_entity_id);
-                                setOpenCommentsOnPost(true);
-                                setShowPostDialog(true);
-                            }
-                        }}
-                        className={cn(
-                            "group relative flex gap-3 p-3 rounded-xl transition-all cursor-pointer border border-transparent",
-                            notif.is_read
-                                ? "bg-transparent hover:bg-secondary/30"
-                                : "bg-primary/5 hover:bg-primary/10 border-primary/20 shadow-sm"
-                        )}
-                    >
-                        <div className="relative flex-shrink-0">
-                            {notif.related_user_avatar ? (
-                                <img
-                                    src={notif.related_user_avatar}
-                                    alt={notif.related_user_name}
-                                    className="w-10 h-10 rounded-full object-cover border border-border/50"
-                                />
-                            ) : (
-                                <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-xs font-bold text-muted-foreground border border-border/50">
-                                    {notif.related_user_name[0]?.toUpperCase()}
+                    return (
+                        <React.Fragment key={notif.id}>
+                            {showDateSeparator && (
+                                <div className="flex items-center justify-center py-2">
+                                    <div className="px-3 py-1 bg-secondary/50 rounded-full text-xs font-medium text-muted-foreground">
+                                        {getDateLabel(notif.created_at)}
+                                    </div>
                                 </div>
                             )}
-                            <div className="absolute -bottom-1 -right-1 bg-background rounded-full p-1 border border-border/50">
-                                {getNotificationIcon(notif.type)}
-                            </div>
-                        </div>
+                            <div
+                                onClick={() => {
+                                    if (!notif.is_read) handleMarkAsRead(notif.id);
 
-                        <div className="flex-1 min-w-0">
-                            <div className="text-xs text-muted-foreground leading-snug mb-1">
-                                {getNotificationText(notif)}
-                            </div>
-                            <span className="text-[10px] text-muted-foreground/60 uppercase tracking-tight">
-                                {new Date(notif.created_at).toLocaleDateString()}
-                            </span>
-                        </div>
+                                    if (notif.type === 'follow') {
+                                        navigate(`/profile/${notif.related_user_name}`);
+                                    } else if (notif.type === 'like') {
+                                        // Open post in dialog
+                                        setSelectedPostId(notif.related_entity_id);
+                                        setOpenCommentsOnPost(false);
+                                        setShowPostDialog(true);
+                                    } else if (notif.type === 'comment') {
+                                        // Open post in dialog with comments expanded
+                                        setSelectedPostId(notif.related_entity_id);
+                                        setOpenCommentsOnPost(true);
+                                        setShowPostDialog(true);
+                                    }
+                                }}
+                                className={cn(
+                                    "group relative flex gap-3 p-3 rounded-xl transition-all cursor-pointer border border-transparent",
+                                    notif.is_read
+                                        ? "bg-transparent hover:bg-secondary/30"
+                                        : "bg-primary/5 hover:bg-primary/10 border-primary/20 shadow-sm"
+                                )}
+                            >
+                                <div className="relative flex-shrink-0">
+                                    {notif.related_user_avatar ? (
+                                        <img
+                                            src={notif.related_user_avatar}
+                                            alt={notif.related_user_name}
+                                            className="w-10 h-10 rounded-full object-cover border border-border/50"
+                                        />
+                                    ) : (
+                                        <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-xs font-bold text-muted-foreground border border-border/50">
+                                            {notif.related_user_name[0]?.toUpperCase()}
+                                        </div>
+                                    )}
+                                    <div className="absolute -bottom-1 -right-1 bg-background rounded-full p-1 border border-border/50">
+                                        {getNotificationIcon(notif.type)}
+                                    </div>
+                                </div>
 
-                        {!notif.is_read && (
-                            <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0" />
-                        )}
-                    </div>
-                ))}
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-xs text-muted-foreground leading-snug mb-1">
+                                        {getNotificationText(notif)}
+                                    </div>
+                                    <span className="text-[10px] text-muted-foreground/60 uppercase tracking-tight">
+                                        {format(new Date(notif.created_at), 'h:mm a')}
+                                    </span>
+                                </div>
+
+                                {!notif.is_read && (
+                                    <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0" />
+                                )}
+                            </div>
+                        </React.Fragment>
+                    );
+                })}
             </div>
 
             {/* Post Detail Dialog */}

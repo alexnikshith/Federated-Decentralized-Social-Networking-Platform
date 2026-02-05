@@ -9,14 +9,18 @@ import (
 	contentRoutes "federated-social/backend/epics/content-sharing/routes"
 	"federated-social/backend/epics/identity/repository"
 	"federated-social/backend/epics/identity/routes"
+	messagingRepo "federated-social/backend/epics/messaging/repository"
+	messagingRoutes "federated-social/backend/epics/messaging/routes"
 	reportRoutes "federated-social/backend/epics/reports/routes"
 	safetyRepo "federated-social/backend/epics/safety/repository"
 	safetyRoutes "federated-social/backend/epics/safety/routes"
 	"federated-social/backend/middleware"
+	"federated-social/backend/pkg/websocket"
 	"log"
 	"net/http"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/mux"
 )
 
@@ -62,13 +66,17 @@ func main() {
 		log.Printf("Warning: Failed to create search indexes: %v", err)
 	}
 
+	// Create messaging indexes
+	messagingR := messagingRepo.NewMessageRepository()
+	if err := messagingR.CreateIndexes(ctx); err != nil {
+		log.Printf("Warning: Failed to create messaging indexes: %v", err)
+	}
+
 	// Create safety indexes
 	blockRepo := safetyRepo.NewBlockRepository()
 	if err := blockRepo.CreateIndexes(ctx); err != nil {
 		log.Printf("Warning: Failed to create block indexes: %v", err)
 	}
-
-
 
 	// Setup router
 	router := mux.NewRouter()
@@ -82,6 +90,46 @@ func main() {
 	reportRoutes.RegisterReportRoutes(router)
 	safetyRoutes.RegisterSafetyRoutes(router)
 	adminRoutes.RegisterAdminRoutes(router)
+	messagingRoutes.RegisterMessagingRoutes(router)
+
+	// Public media access
+	router.PathPrefix("/uploads/").Handler(http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
+
+	// WebSocket Hub
+	hub := websocket.NewHub()
+	websocket.GlobalHub = hub
+	go hub.Run()
+
+	// WebSocket Endpoint
+	router.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		// Extract token from query param since headers are limited in WS
+		tokenString := r.URL.Query().Get("token")
+		if tokenString == "" {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		// Validate token manually here (simple version reusing middleware logic principles)
+		// Or better, make a small helper in middleware/auth.go to validate token string
+		// For now, let's just parse it using the same secret
+		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+			return []byte(config.AppConfig.JWTSecret), nil
+		})
+
+		if err != nil || !token.Valid {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		userID := claims["user_id"].(string)
+
+		websocket.ServeWs(hub, w, r, userID)
+	})
 
 	// Health check endpoint
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {

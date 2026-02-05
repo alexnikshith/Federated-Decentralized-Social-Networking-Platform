@@ -35,7 +35,6 @@ type InteractionReport struct {
 	TotalPosts    int                `json:"total_posts"`
 	DailyStats    []DailyInteraction `json:"daily_stats"`
 }
-
 type UserReport struct {
 	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 	ReporterID  primitive.ObjectID `bson:"reporter_id" json:"reporter_id"`

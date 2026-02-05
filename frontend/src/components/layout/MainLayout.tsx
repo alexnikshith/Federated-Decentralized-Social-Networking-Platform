@@ -1,6 +1,7 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Sidebar, SidebarBody, SidebarLink } from "../ui/sidebar";
+import { useMessagingStore } from "../../../epics/messaging/store/messagingStore";
 import {
     IconHome,
     IconRss,
@@ -25,7 +26,7 @@ import { useContentStore } from "../../../epics/content-sharing/store/contentSto
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "@/components/theme-provider";
 import { FloatingDock } from "../ui/floating-dock";
-import { Home } from "lucide-react";
+import { Home, MessageSquare } from "lucide-react";
 import { UserSearch } from "../../../epics/content-sharing/components/UserSearch";
 
 import {
@@ -38,16 +39,29 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LogOut, User as LucideUser, Plus } from "lucide-react";
+import { AuthModal } from "@/components/auth/AuthModal";
 
 export const MainLayout = ({ children }: { children: React.ReactNode }) => {
     const { user, clearAuth, sessions, switchAccount, pauseSession, clearAllSessions } = useAuthStore();
-    const { unreadCount } = useContentStore();
+    const { unreadCount = 0 } = useContentStore();
+    const { unreadMessageCount, refreshUnreadCount } = useMessagingStore();
     const navigate = useNavigate();
     const location = useLocation();
     const { theme, toggleTheme } = useTheme();
     const [open, setOpen] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [showAuthModal, setShowAuthModal] = useState(false);
+
+    // Refresh unread count on mount and periodically
+    useEffect(() => {
+        if (user) {
+            refreshUnreadCount();
+            // Refresh every 30 seconds
+            const interval = setInterval(refreshUnreadCount, 30000);
+            return () => clearInterval(interval);
+        }
+    }, [user, refreshUnreadCount]);
 
     // If on landing page, don't show navigation
     if (location.pathname === "/") {
@@ -138,6 +152,20 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
             ),
             href: "/notifications",
         },
+        {
+            title: "Messages",
+            icon: (
+                <div className="relative h-full w-full">
+                    <MessageSquare className="h-full w-full text-neutral-500 dark:text-neutral-300" />
+                    {unreadMessageCount > 0 && (
+                        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center px-1 text-[10px] font-bold text-white bg-red-500 rounded-full ring-2 ring-white dark:ring-neutral-900">
+                            {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
+                        </span>
+                    )}
+                </div>
+            ),
+            href: "/messages",
+        },
     ];
 
     return (
@@ -161,12 +189,12 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                         <SidebarLink
                             link={{
                                 label: "Profile",
-                                href: `/profile/${user?.username}`,
+                                href: user?.username ? `/profile/${user.username}` : "/dashboard",
                                 icon: (
                                     <LucideUser className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
                                 ),
                             }}
-                            onClick={() => navigate(`/profile/${user?.username}`)}
+                            onClick={() => user?.username && navigate(`/profile/${user.username}`)}
                             className={location.pathname === `/profile/${user?.username}` ? "bg-neutral-200 dark:bg-neutral-700 rounded-md" : ""}
                         />
                         <SidebarLink
@@ -260,8 +288,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
 
                                 <DropdownMenuItem
                                     onClick={() => {
-                                        pauseSession();
-                                        navigate("/login");
+                                        setShowAuthModal(true);
                                     }}
                                     className="cursor-pointer text-muted-foreground mt-1"
                                 >
@@ -274,16 +301,18 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                                     <LogOut className="mr-2 h-4 w-4" />
                                     <span>Log out of {user?.username}</span>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    onClick={() => {
-                                        clearAllSessions();
-                                        navigate("/");
-                                    }}
-                                    className="cursor-pointer text-red-500 focus:text-red-500"
-                                >
-                                    <LogOut className="mr-2 h-4 w-4" />
-                                    <span>Log out of all accounts</span>
-                                </DropdownMenuItem>
+                                {sessions.filter(s => s.user.id !== user?.id).length > 0 && (
+                                    <DropdownMenuItem
+                                        onClick={() => {
+                                            clearAllSessions();
+                                            navigate("/");
+                                        }}
+                                        className="cursor-pointer text-red-500 focus:text-red-500"
+                                    >
+                                        <LogOut className="mr-2 h-4 w-4" />
+                                        <span>Log out of all accounts</span>
+                                    </DropdownMenuItem>
+                                )}
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
@@ -340,6 +369,8 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                     />
                 </div>
             </div>
+            {/* Auth Modal */}
+            <AuthModal open={showAuthModal} onOpenChange={setShowAuthModal} />
         </div>
     );
 };
