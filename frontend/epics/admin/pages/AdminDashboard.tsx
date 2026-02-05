@@ -6,13 +6,25 @@ import StatsDashboard from '../components/StatsDashboard';
 import UserManagement from '../components/UserManagement';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { RefreshCcw, ShieldAlert, LayoutDashboard, Users, FileText } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { RefreshCcw, ShieldAlert, LayoutDashboard, Users, FileText, Flag } from 'lucide-react';
 import { toast } from 'sonner';
+import { useReportsApi } from '../../reports/api/reportsApi';
+import { format } from 'date-fns';
+
+import { useQueryClient } from '@tanstack/react-query';
 
 const AdminDashboard: React.FC = () => {
     const [stats, setStats] = useState<AdminStats | null>(null);
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
+    const { useAdminReports } = useReportsApi();
+    const { data: reports } = useAdminReports();
+    const queryClient = useQueryClient();
+
+    const [deactivateId, setDeactivateId] = useState<string | null>(null);
+    const [deactivateReason, setDeactivateReason] = useState("");
+    const [isDeactivateDialogOpen, setIsDeactivateDialogOpen] = useState(false);
 
     const fetchData = async () => {
         setLoading(true);
@@ -35,13 +47,28 @@ const AdminDashboard: React.FC = () => {
         fetchData();
     }, []);
 
-    const handleToggleStatus = async (userId: string, currentStatus: boolean) => {
+    const handleToggleStatus = async (userId: string, currentStatus: boolean, reason?: string) => {
         try {
-            await adminApi.toggleUserStatus({ user_id: userId, is_active: !currentStatus });
+            await adminApi.toggleUserStatus({ user_id: userId, is_active: !currentStatus, reason });
             toast.success(`User successfully ${!currentStatus ? 'activated' : 'deactivated'}`);
             fetchData(); // Refresh data
+            queryClient.invalidateQueries({ queryKey: ['admin-reports'] });
+            setIsDeactivateDialogOpen(false);
+            setDeactivateId(null);
+            setDeactivateReason("");
         } catch (error) {
             toast.error('Failed to update user status');
+        }
+    };
+
+    const initiateDeactivation = (userId: string) => {
+        setDeactivateId(userId);
+        setIsDeactivateDialogOpen(true);
+    };
+
+    const confirmDeactivation = () => {
+        if (deactivateId) {
+            handleToggleStatus(deactivateId, true, deactivateReason); // Passing true as current status means it becomes false
         }
     };
 
@@ -95,6 +122,10 @@ const AdminDashboard: React.FC = () => {
                                 <FileText className="h-4 w-4" />
                                 Content Moderation
                             </TabsTrigger>
+                            <TabsTrigger value="reports" className="gap-2">
+                                <Flag className="h-4 w-4" />
+                                Reports
+                            </TabsTrigger>
                         </TabsList>
                     </div>
 
@@ -114,7 +145,7 @@ const AdminDashboard: React.FC = () => {
                         <UserManagement
                             users={users}
                             loading={loading}
-                            onToggleStatus={handleToggleStatus}
+                            onToggleStatus={(id, status) => handleToggleStatus(id, status)} // Simple toggle for user table, or update to use dialog too? Keeping simple for now as requested for reports tab mainly.
                             onDeleteUser={handleDeleteUser}
                             onRefresh={fetchData}
                         />
@@ -130,8 +161,89 @@ const AdminDashboard: React.FC = () => {
                             <Button variant="outline" size="sm">Coming Soon</Button>
                         </div>
                     </TabsContent>
+
+                    <TabsContent value="reports" className="mt-0">
+                        <div className="space-y-4">
+                            {!reports || reports.length === 0 ? (
+                                <div className="text-center p-8 text-muted-foreground">No reports found</div>
+                            ) : (
+                                reports.map((report: any) => (
+                                    <div key={report.id} className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border border-border/40 rounded-xl bg-card/20 gap-4">
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-bold text-destructive">{report.reason}</span>
+                                                <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">{report.status}</span>
+                                            </div>
+                                            <div className="text-sm flex items-center gap-2">
+                                                <span className="text-muted-foreground">Reported User:</span> 
+                                                <span className="font-medium text-foreground">{report.user_details?.display_name || 'Unknown'} (@{report.user_details?.username || 'unknown'})</span>
+                                            </div>
+                                            <p className="text-sm text-foreground/80 italic">
+                                                "{report.description || 'No description provided'}"
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {format(new Date(report.created_at), 'PPP p')}
+                                            </p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button 
+                                                size="sm" 
+                                                variant="outline"
+                                                onClick={() => window.open(`/profile/${report.user_details?.username}`, '_blank')}
+                                            >
+                                                View Profile
+                                            </Button>
+
+                                            {report.user_details?.is_active ? (
+                                                <Button 
+                                                    size="sm" 
+                                                    variant="destructive"
+                                                    onClick={() => initiateDeactivation(report.reported_id)}
+                                                >
+                                                    Deactivate User
+                                                </Button>
+                                            ) : (
+                                                <Button 
+                                                    size="sm" 
+                                                    variant="default" // or a 'success' variant if available, default is primary
+                                                    className="bg-green-600 hover:bg-green-700"
+                                                    onClick={() => handleToggleStatus(report.reported_id, false)} // status is false (inactive), so !false = true (active)
+                                                >
+                                                    Activate User
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </TabsContent>
                 </Tabs>
             </div>
+
+            <Dialog open={isDeactivateDialogOpen} onOpenChange={setIsDeactivateDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Deactivate User</DialogTitle>
+                        <DialogDescription>
+                            Please provide a reason for deactivating this user. This action will be recorded and sent to the user.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-4">
+                        <textarea
+                            className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                            rows={4}
+                            placeholder="Reason for deactivation..."
+                            value={deactivateReason}
+                            onChange={(e) => setDeactivateReason(e.target.value)}
+                        />
+                        <div className="flex justify-end gap-2">
+                            <Button variant="outline" onClick={() => setIsDeactivateDialogOpen(false)}>Cancel</Button>
+                            <Button variant="destructive" onClick={confirmDeactivation}>Deactivate</Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };
