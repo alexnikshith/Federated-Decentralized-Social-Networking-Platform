@@ -6,11 +6,11 @@ import StatsDashboard from '../components/StatsDashboard';
 import UserManagement from '../components/UserManagement';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { RefreshCcw, ShieldAlert, LayoutDashboard, Users, FileText } from 'lucide-react';
+import { RefreshCcw, ShieldAlert, LayoutDashboard, Users, FileText, Flag } from 'lucide-react';
 import { toast } from 'sonner';
 import { useReportsApi } from '../../reports/api/reportsApi';
 import { format } from 'date-fns';
-
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useQueryClient } from '@tanstack/react-query';
 
 const AdminDashboard: React.FC = () => {
