@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { format, isToday, isYesterday } from 'date-fns';
 import { useContentStore } from '../store/contentStore';
 import { useAuthStore } from '../../identity/store/authStore';
 import { Notification as AppNotification } from '../types';
@@ -41,6 +42,23 @@ export const NotificationList: React.FC = () => {
                 return <UserPlus className="w-4 h-4 text-accent fill-current" />;
             default:
                 return <Circle className="w-4 h-4 text-muted-foreground" />;
+        }
+    };
+
+    const formatNotificationDate = (dateStr: string) => {
+        try {
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return "";
+
+            if (isToday(date)) {
+                return `Today at ${format(date, 'h:mm a')}`;
+            } else if (isYesterday(date)) {
+                return `Yesterday at ${format(date, 'h:mm a')}`;
+            } else {
+                return format(date, 'MMM dd, yyyy');
+            }
+        } catch {
+            return "";
         }
     };
 
@@ -162,7 +180,7 @@ export const NotificationList: React.FC = () => {
                                 {getNotificationText(notif)}
                             </div>
                             <span className="text-[10px] text-muted-foreground/60 uppercase tracking-tight">
-                                {new Date(notif.created_at).toLocaleDateString()}
+                                {formatNotificationDate(notif.created_at)}
                             </span>
                         </div>
 
