@@ -160,3 +160,92 @@ func (r *MessageRepository) CreateIndexes(ctx context.Context) error {
 	})
 	return err
 }
+
+func (r *MessageRepository) GetUnreadCountForConversation(ctx context.Context, conversationID primitive.ObjectID, userID primitive.ObjectID) (int64, error) {
+	filter := bson.M{
+		"conversation_id": conversationID,
+		"sender_id":       bson.M{"$ne": userID},
+		"is_read":         false,
+	}
+	return r.messages.CountDocuments(ctx, filter)
+}
+
+func (r *MessageRepository) GetTotalUnreadCount(ctx context.Context, userID primitive.ObjectID) (int64, error) {
+	pipeline := mongo.Pipeline{
+		{{Key: "$match", Value: bson.M{"participants": userID}}},
+		// Lookup to get participant details
+		{{Key: "$lookup", Value: bson.M{
+			"from":         "users",
+			"localField":   "participants",
+			"foreignField": "_id",
+			"as":           "participant_details",
+		}}},
+		// Filter out conversations where any participant (other than current user) is deactivated or deleted
+		{{Key: "$addFields", Value: bson.M{
+			"has_deactivated_other": bson.M{
+				"$anyElementTrue": bson.A{
+					bson.M{
+						"$map": bson.M{
+							"input": "$participant_details",
+							"as":    "p",
+							"in": bson.M{
+								"$and": bson.A{
+									bson.M{"$ne": bson.A{"$$p._id", userID}},
+									bson.M{
+										"$or": bson.A{
+											bson.M{"$eq": bson.A{"$$p.is_deactivated", true}},
+											bson.M{"$eq": bson.A{"$$p.is_active", false}},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}}},
+		{{Key: "$match", Value: bson.M{"has_deactivated_other": bson.M{"$ne": true}}}},
+		{{Key: "$lookup", Value: bson.M{
+			"from":         "messages",
+			"localField":   "_id",
+			"foreignField": "conversation_id",
+			"as":           "messages",
+		}}},
+		{{Key: "$unwind", Value: "$messages"}},
+		{{Key: "$match", Value: bson.M{
+			"messages.sender_id": bson.M{"$ne": userID},
+			"messages.is_read":   false,
+		}}},
+		{{Key: "$count", Value: "total_unread"}},
+	}
+
+	cursor, err := r.conversations.Aggregate(ctx, pipeline)
+	if err != nil {
+		return 0, err
+	}
+	defer cursor.Close(ctx)
+
+	var result []bson.M
+	if err = cursor.All(ctx, &result); err != nil {
+		return 0, err
+	}
+
+	if len(result) > 0 {
+		return int64(result[0]["total_unread"].(int32)), nil
+	}
+	return 0, nil
+}
+
+// MarkConversationAsRead marks all messages in a conversation as read for a specific user
+func (r *MessageRepository) MarkConversationAsRead(ctx context.Context, conversationID primitive.ObjectID, userID primitive.ObjectID) error {
+	filter := bson.M{
+		"conversation_id": conversationID,
+		"sender_id":       bson.M{"$ne": userID}, // Only mark messages from others as read
+		"is_read":         false,
+	}
+	update := bson.M{
+		"$set": bson.M{"is_read": true},
+	}
+	_, err := r.messages.UpdateMany(ctx, filter, update)
+	return err
+}

@@ -106,7 +106,7 @@ func (s *EmailSender) SendAdminRoleNotification(toEmail, username, newRole strin
 	address := host + ":" + port
 
 	headers := make(map[string]string)
-	headers["From"] = fmt.Sprintf("Nexus Security <%s>", s.config.SMTPUser)
+	headers["From"] = fmt.Sprintf("Nexus Security <%s>", s.config.SMTPFrom)
 	headers["To"] = toEmail
 	headers["Subject"] = "Account Permission Update"
 	headers["MIME-Version"] = "1.0"
@@ -170,5 +170,3 @@ func (s *EmailSender) SendAdminRoleNotification(toEmail, username, newRole strin
 	log.Printf("Role notification sent successfully to %s", toEmail)
 	return nil
 }
-
-

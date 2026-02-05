@@ -45,18 +45,23 @@ func (s *NotificationService) GetNotifications(ctx context.Context, userID primi
 		return nil, err
 	}
 
-	// Build notification responses
-	notificationResponses := make([]dto.NotificationResponse, len(notifications))
-	for i, notif := range notifications {
+	// Build notification responses (filter out notifications from deactivated users)
+	notificationResponses := make([]dto.NotificationResponse, 0)
+	for _, notif := range notifications {
 		user, ok := users[notif.RelatedUserID]
 		userName := "Unknown User"
 		userAvatar := ""
+
+		// Skip notifications from deactivated users
 		if ok && user != nil {
+			if user.IsDeactivated {
+				continue
+			}
 			userName = user.Username
 			userAvatar = user.AvatarURL
 		}
 
-		notificationResponses[i] = dto.NotificationResponse{
+		notificationResponses = append(notificationResponses, dto.NotificationResponse{
 			ID:                   notif.ID,
 			Type:                 notif.Type,
 			RelatedEntityID:      notif.RelatedEntityID,
@@ -69,7 +74,7 @@ func (s *NotificationService) GetNotifications(ctx context.Context, userID primi
 			ParentUserName:       notif.ParentUserName,
 			IsRead:               notif.IsRead,
 			CreatedAt:            notif.CreatedAt,
-		}
+		})
 	}
 
 	return notificationResponses, nil

@@ -22,6 +22,7 @@ interface ContentState {
     unsavePost: (postId: string) => Promise<void>;
     reportPost: (postId: string, reason: string) => Promise<void>;
     interactPost: (postId: string, type: 'interested' | 'not_interested') => Promise<void>;
+    markAsRead: (notificationId: string) => Promise<void>;
 }
 
 export const useContentStore = create<ContentState>((set, get) => ({
