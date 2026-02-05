@@ -23,4 +23,6 @@ func RegisterMessagingRoutes(router *mux.Router) {
 	api.HandleFunc("/conversations/{id}", h.DeleteConversation).Methods("DELETE")
 	api.HandleFunc("/{id}", h.DeleteMessage).Methods("DELETE")
 	api.HandleFunc("/upload", mh.UploadMedia).Methods("POST")
+	api.HandleFunc("/unread-count", h.GetUnreadCount).Methods("GET")
+	api.HandleFunc("/conversations/{id}/read", h.MarkConversationAsRead).Methods("POST")
 }

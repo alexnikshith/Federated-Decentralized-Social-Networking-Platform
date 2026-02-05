@@ -389,6 +389,11 @@ func (s *PostService) GetComments(ctx context.Context, postID primitive.ObjectID
 			continue
 		}
 
+		// Skip comments from deactivated users
+		if user.IsDeactivated {
+			continue
+		}
+
 		resp := &dto.CommentResponse{
 			ID:         comment.ID,
 			PostID:     comment.PostID,
@@ -517,7 +522,7 @@ func (s *PostService) enrichPosts(ctx context.Context, posts []models.Post, curr
 		}
 	}
 
-	// Build post responses (filter out posts whose authors can't be found)
+	// Build post responses (filter out posts whose authors can't be found or are deactivated)
 	postResponses := make([]dto.PostResponse, 0, len(posts))
 	for _, post := range posts {
 		author := authors[post.AuthorID]
@@ -525,6 +530,12 @@ func (s *PostService) enrichPosts(ctx context.Context, posts []models.Post, curr
 		// Skip posts from authors who don't exist or were deleted
 		if author == nil {
 			log.Printf("DEBUG enrichPosts: Skipping post %v - author %v not found in database", post.ID, post.AuthorID)
+			continue
+		}
+
+		// Skip posts from deactivated users
+		if author.IsDeactivated {
+			log.Printf("DEBUG enrichPosts: Skipping post %v - author %v is deactivated", post.ID, post.AuthorID)
 			continue
 		}
 
@@ -639,6 +650,11 @@ func (s *PostService) GetPostLikers(ctx context.Context, postID, userID primitiv
 			continue // Skip if user not found
 		}
 
+		// Skip deactivated users
+		if user.IsDeactivated {
+			continue
+		}
+
 		likerResponses = append(likerResponses, dto.LikerResponse{
 			UserID:     like.UserID,
 			UserName:   user.Username,
@@ -721,16 +737,37 @@ func (s *PostService) GetAllReports(ctx context.Context) ([]dto.ReportResponse, 
 	responses := make([]dto.ReportResponse, 0, len(reports))
 	for _, report := range reports {
 		post, _ := s.postRepo.GetPostByID(ctx, report.PostID)
-		reporter, _ := s.searchRepo.GetUsersByIDs(ctx, []primitive.ObjectID{report.ReporterID})
-		author, _ := s.searchRepo.GetUsersByIDs(ctx, []primitive.ObjectID{post.AuthorID})
+
+		postContent := "[Deleted Post]"
+		authorName := "Unknown"
+		reporterName := "Unknown"
+
+		if post != nil {
+			postContent = post.Content
+			// Only try to fetch author if we have a post
+			users, _ := s.searchRepo.GetUsersByIDs(ctx, []primitive.ObjectID{post.AuthorID})
+			if users != nil {
+				if author := users[post.AuthorID]; author != nil {
+					authorName = author.Username
+				}
+			}
+		}
+
+		// Fetch reporter
+		users, _ := s.searchRepo.GetUsersByIDs(ctx, []primitive.ObjectID{report.ReporterID})
+		if users != nil {
+			if reporter := users[report.ReporterID]; reporter != nil {
+				reporterName = reporter.Username
+			}
+		}
 
 		responses = append(responses, dto.ReportResponse{
 			ID:           report.ID,
 			ReporterID:   report.ReporterID,
 			PostID:       report.PostID,
-			PostContent:  post.Content,
-			AuthorName:   author[post.AuthorID].Username,
-			ReporterName: reporter[report.ReporterID].Username,
+			PostContent:  postContent,
+			AuthorName:   authorName,
+			ReporterName: reporterName,
 			Reason:       report.Reason,
 			Status:       report.Status,
 			CreatedAt:    report.CreatedAt,
