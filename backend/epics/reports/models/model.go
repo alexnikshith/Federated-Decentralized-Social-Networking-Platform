@@ -35,3 +35,21 @@ type InteractionReport struct {
 	TotalPosts    int                `json:"total_posts"`
 	DailyStats    []DailyInteraction `json:"daily_stats"`
 }
+type UserReport struct {
+	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	ReporterID  primitive.ObjectID `bson:"reporter_id" json:"reporter_id"`
+	ReportedID  primitive.ObjectID `bson:"reported_id" json:"reported_id"`
+	Reason      string             `bson:"reason" json:"reason"`
+	Description string             `bson:"description,omitempty" json:"description"`
+	Status      string             `bson:"status" json:"status"` // pending, reviewed, actioned
+	CreatedAt   time.Time          `bson:"created_at" json:"created_at"`
+}
+
+type UserReportResponse struct {
+	UserReport  `bson:",inline"`
+	UserDetails struct {
+		Username    string `bson:"username" json:"username"`
+		DisplayName string `bson:"display_name" json:"display_name"`
+		IsActive    bool   `bson:"is_active" json:"is_active"`
+	} `bson:"user_details" json:"user_details"`
+}

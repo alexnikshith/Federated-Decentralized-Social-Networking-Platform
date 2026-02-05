@@ -170,3 +170,77 @@ func (s *EmailSender) SendAdminRoleNotification(toEmail, username, newRole strin
 	log.Printf("Role notification sent successfully to %s", toEmail)
 	return nil
 }
+func (s *EmailSender) SendAccountDeactivationNotification(toEmail, username, reason string) error {
+	password := s.config.SMTPPassword
+	host := s.config.SMTPHost
+	port := s.config.SMTPPort
+	address := host + ":" + port
+
+	headers := make(map[string]string)
+	headers["From"] = fmt.Sprintf("Nexus Security <%s>", s.config.SMTPUser)
+	headers["To"] = toEmail
+	headers["Subject"] = "Account Deactivation Notice"
+	headers["MIME-Version"] = "1.0"
+	headers["Content-Type"] = "text/html; charset=\"UTF-8\""
+
+	headerStr := ""
+	for k, v := range headers {
+		headerStr += fmt.Sprintf("%s: %s\r\n", k, v)
+	}
+
+	body := fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { margin: 0; padding: 0; background-color: #09090b; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .container { max-width: 600px; margin: 40px auto; background-color: #18181b; border: 1px solid #27272a; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); }
+        .header { background-color: #18181b; padding: 30px; text-align: center; border-bottom: 1px solid #27272a; }
+        .logo { color: #fff; font-size: 24px; font-weight: 700; text-decoration: none; letter-spacing: 1px; }
+        .logo span { color: #dc2626; }
+        .content { padding: 40px 30px; text-align: left; color: #a1a1aa; }
+        .title { color: #fff; font-size: 20px; font-weight: 600; margin-bottom: 20px; }
+        .badge { background-color: #27272a; border: 1px solid #dc2626; border-radius: 6px; padding: 4px 10px; color: #dc2626; font-weight: 600; }
+        .footer { background-color: #09090b; padding: 20px; text-align: center; font-size: 12px; color: #52525b; border-top: 1px solid #27272a; }
+        .reason-box { background-color: #27272a; padding: 15px; border-radius: 8px; border-left: 4px solid #dc2626; margin: 20px 0; font-style: italic; color: #e4e4e7; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">Nexus<span>Protocol</span></div>
+        </div>
+        <div class="content">
+            <h1 class="title">Account Deactivated</h1>
+            <p>Hello @%s,</p>
+            <p>Your account has been deactivated due to a violation of our community guidelines or excessive reports.</p>
+            
+            <p><strong>Reason for action:</strong></p>
+            <div class="reason-box">
+                "%s"
+            </div>
+            
+            <p>If you believe this is a mistake, please contact our support team immediately.</p>
+        </div>
+        <div class="footer">
+            &copy; 2026 Nexus Protocol. All rights reserved.<br>
+            Secure Federated Social Networking
+        </div>
+    </div>
+</body>
+</html>
+`, username, reason)
+
+	msg := []byte(headerStr + "\r\n" + body)
+	auth := smtp.PlainAuth("", s.config.SMTPUser, password, host)
+
+	log.Printf("Sending deactivation notice to %s...", toEmail)
+	err := smtp.SendMail(address, auth, s.config.SMTPUser, []string{toEmail}, msg)
+	if err != nil {
+		log.Printf("ERROR: Failed to send deactivation notice to %s: %v", toEmail, err)
+		return err
+	}
+
+	log.Printf("Deactivation notice sent successfully to %s", toEmail)
+	return nil
+}
