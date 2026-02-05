@@ -9,6 +9,7 @@ export interface AdminStats {
 export interface UserStatusUpdate {
     user_id: string;
     is_active: boolean;
+    reason?: string;
 }
 
 export interface AdminPost {
