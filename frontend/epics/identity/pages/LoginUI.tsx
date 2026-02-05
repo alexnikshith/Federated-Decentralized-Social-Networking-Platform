@@ -4,7 +4,7 @@ import { LoginForm } from "@/components/auth/LoginForm";
 const Login = () => {
   return (
     <div className="min-h-screen flex flex-col relative w-full">
-      <main className="flex-1 flex items-center justify-center py-24 px-4 w-full">
+      <main className="flex-1 flex items-center justify-center py-12 px-4 w-full">
         <LoginForm />
       </main>
       <Footer />
