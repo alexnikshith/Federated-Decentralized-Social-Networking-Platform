@@ -16,7 +16,8 @@ func NewSearchHandler() *SearchHandler {
 	}
 }
 
-// SearchUsers handles GET /api/users/search
+// SearchUsers handles GET /api/users/search?q=query
+// It searches for users by username or other fields based on the query parameter `q`.
 func (h *SearchHandler) SearchUsers(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 	if query == "" {

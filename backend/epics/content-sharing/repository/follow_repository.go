@@ -65,7 +65,8 @@ func (r *FollowRepository) Unfollow(ctx context.Context, followerID, followingID
 	return err
 }
 
-// IsFollowing checks if followerID follows followingID
+// IsFollowing checks if a directional follow relationship exists
+// Returns true if followerID is following followingID.
 func (r *FollowRepository) IsFollowing(ctx context.Context, followerID, followingID primitive.ObjectID) (bool, error) {
 	count, err := r.collection.CountDocuments(ctx, bson.M{
 		"follower_id":  followerID,

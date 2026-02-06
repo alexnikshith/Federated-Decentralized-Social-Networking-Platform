@@ -15,7 +15,7 @@ import { useAuthStore } from '../store/authStore';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
-// Create axios instance
+// Create axios instance with base configuration
 const api = axios.create({
     baseURL: API_URL,
     headers: {
@@ -23,7 +23,7 @@ const api = axios.create({
     },
 });
 
-// Add token to requests
+// Request Interceptor: Injects the Bearer token into headers
 api.interceptors.request.use((config) => {
     const token = useAuthStore.getState().token;
     if (token) {
@@ -32,11 +32,11 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
-// Handle errors
+// Response Interceptor: Handles global error states (401 Unauthorized, 403 Forbidden)
 api.interceptors.response.use(
     (response) => response,
     (error: AxiosError<ApiError>) => {
-        // Check if error is 401 and NOT from login/verify endpoints
+        // Check if error is 401 and NOT from login/verify endpoints (avoid loops)
         if (error.response?.status === 401 &&
             !error.config?.url?.includes('/auth/login') &&
             !error.config?.url?.includes('/auth/verify-otp') &&
@@ -60,6 +60,7 @@ api.interceptors.response.use(
         }
 
         // Handle Account Deactivation (403)
+        // If the backend signals deactivation, force logout and redirect
         if (error.response?.status === 403) {
             const data = error.response.data;
             const msg = typeof data === 'string' ? data : (data as any)?.error || '';
@@ -74,46 +75,52 @@ api.interceptors.response.use(
     }
 );
 
-// Auth API
+// Auth API - Handles authentication flows
 export const authApi = {
+    // Registers a new user
     signup: async (data: SignupRequest): Promise<ApiResponse<User>> => {
         const response = await api.post('/api/auth/signup', data);
         return response.data;
     },
 
+    // Authenticates a user
     login: async (data: LoginRequest): Promise<LoginResponse> => {
         const response = await api.post('/api/auth/login', data);
         return response.data;
     },
 
-
+    // Verifies OTP for 2FA or Login
     verifyOTP: async (data: VerifyOTPRequest): Promise<LoginResponse> => {
         const response = await api.post('/api/auth/verify-otp', data);
         return response.data;
     },
 
+    // Enables/Disables 2FA
     toggle2FA: async (enable: boolean): Promise<ApiResponse<null>> => {
         const response = await api.post('/api/auth/2fa', { enable });
         return response.data;
     },
 
+    // Logs out the current user server-side
     logout: async (): Promise<ApiResponse<null>> => {
         const response = await api.post('/api/auth/logout');
         return response.data;
     },
 
+    // Changes user password
     changePassword: async (data: ChangePasswordRequest): Promise<ApiResponse<null>> => {
         const response = await api.post('/api/auth/change-password', data);
         return response.data;
     },
 
+    // Syncs session data (token validity check)
     syncSession: async (): Promise<LoginResponse> => {
         const response = await api.get('/api/auth/me');
         return response.data;
     },
 };
 
-// Profile API
+// Profile API - Handles user profile management
 export const profileApi = {
     getMyProfile: async (): Promise<User> => {
         const response = await api.get('/api/profile/me');

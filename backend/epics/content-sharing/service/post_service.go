@@ -47,7 +47,9 @@ func (s *PostService) CreatePost(ctx context.Context, userID primitive.ObjectID,
 }
 
 // GetFeed retrieves the feed for a user with prioritized algorithm
-// Shows posts from followed users first (newest), then posts from everyone else
+// Shows posts from followed users first (newest), then posts from everyone else.
+// It respects block lists and hidden/reported posts.
+// The feed composition is: 1. Main Feed (Followed Users + Global) 2. "Interested" Recommendations boosted/interleaved.
 func (s *PostService) GetFeed(ctx context.Context, userID primitive.ObjectID, limit int64) (*dto.FeedResponse, error) {
 	log.Printf("DEBUG GetFeed: Starting prioritized feed retrieval for user %v, limit=%d", userID, limit)
 

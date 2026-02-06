@@ -21,6 +21,7 @@ func NewAuthHandler() *AuthHandler {
 }
 
 // Signup handles user registration (US1.1)
+// It parses the request body, invokes the signup service, and returns the public user profile.
 func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 	var req dto.SignupRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -38,6 +39,7 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 }
 
 // Login handles user authentication trigger (US1.2 updated)
+// It supports both immediate JWT issuance (if 2FA off) and OTP initiation (if 2FA on).
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req dto.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -54,13 +56,13 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check result type
+	// Check result type to determine response format
 	switch v := result.(type) {
 	case string:
-		// OTP sent
+		// OTP sent: Return status message
 		respondSuccess(w, v, nil, http.StatusOK)
 	case *dto.LoginResponse:
-		// Direct Login
+		// Direct Login: Return token and user info
 		respondJSON(w, v, http.StatusOK)
 	default:
 		respondError(w, "Unexpected login response", http.StatusInternalServerError)

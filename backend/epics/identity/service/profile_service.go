@@ -34,32 +34,38 @@ func NewProfileService() *ProfileService {
 }
 
 // GetProfile retrieves a user's profile (US1.4 - with visibility check)
+// It fetches necessary user data, checks for account deactivation, and
+// enforces visibility rules based on the relationship (own profile, following, or public).
 func (s *ProfileService) GetProfile(ctx context.Context, userID primitive.ObjectID, requestingUserID *primitive.ObjectID) (*models.PublicUser, error) {
+	// Fetch user from repository
 	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	// Check if account is deactivated
+	// Check if account is deactivated - deactivated accounts should not be visible
 	if user.IsDeactivated {
 		return nil, errors.New("account is deactivated")
 	}
 
-	// Check visibility
+	// Convert to PublicUser to strip sensitive fields (e.g., password hash)
 	publicUser := user.ToPublicUser()
 
-	// Populate private fields if viewing own profile
+	// Populate private fields (like 2FA status) ONLY if viewing own profile
 	if requestingUserID != nil && *requestingUserID == userID {
 		publicUser.Is2FAEnabled = &user.Is2FAEnabled
 	}
 
-	// Populate follow status early
+	// Check and set follow status if a requesting user is provided
 	if requestingUserID != nil {
 		isFollowing, _ := s.followRepo.IsFollowing(ctx, *requestingUserID, userID)
 		publicUser.IsFollowing = isFollowing
 	}
 
-	// Check visibility and mask data if needed
+	// Enforce Profile Visibility Rules:
+	// - Public: Visible to everyone
+	// - Followers: Visible only to followers and the user themselves
+	// - Private: Visible checking is similar to followers logic here, usually more strict (e.g. valid connection)
 	canViewDetails := true
 	if user.ProfileVisibility == "followers" || user.ProfileVisibility == "private" {
 		if requestingUserID == nil || *requestingUserID != userID {
@@ -69,14 +75,14 @@ func (s *ProfileService) GetProfile(ctx context.Context, userID primitive.Object
 		}
 	}
 
-	// Populate counts if visible
+	// Populate additional stats (Followers, Following, Posts) if allowed
 	var followersCount, followingCount, postsCount int64
 	if canViewDetails {
 		followersCount, _ = s.followRepo.CountFollowers(ctx, userID)
 		followingCount, _ = s.followRepo.CountFollowing(ctx, userID)
 		postsCount, _ = s.postRepo.CountPostsByAuthor(ctx, userID)
 	} else {
-		// Set to -1 to indicate restricted access
+		// Set to -1 to indicate restricted access/hidden counts
 		followersCount = -1
 		followingCount = -1
 		postsCount = -1
@@ -155,36 +161,38 @@ func (s *ProfileService) DeactivateAccount(ctx context.Context, userID primitive
 }
 
 // DeleteAccount permanently deletes a user account (US1.X)
+// This is a destructive operation that removes all data associated with the user,
+// including posts, likes, comments, follows, sessions, and activity logs.
 func (s *ProfileService) DeleteAccount(ctx context.Context, userID primitive.ObjectID) error {
-	// 1. Delete posts
+	// 1. Delete all posts authored by the user
 	if err := s.postRepo.DeletePostsByAuthor(ctx, userID); err != nil {
 		return err
 	}
-	// 2. Delete likes
+	// 2. Remove likes made by the user on other posts
 	if err := s.postRepo.DeleteLikesByUser(ctx, userID); err != nil {
 		return err
 	}
-	// 3. Delete comments
+	// 3. Remove comments made by the user
 	if err := s.postRepo.DeleteCommentsByUser(ctx, userID); err != nil {
 		return err
 	}
-	// 4. Delete follows
+	// 4. Remove all follow relationships (both following and followers)
 	if err := s.followRepo.DeleteAllFollows(ctx, userID); err != nil {
 		return err
 	}
-	// 5. Delete sessions
+	// 5. Invalidate and delete all active sessions
 	if err := s.sessionRepo.DeleteAllUserSessions(ctx, userID); err != nil {
 		return err
 	}
-	// 6. Delete verification codes
+	// 6. Delete any pending verification codes
 	if err := s.verificationRepo.DeleteVerificationCodesByUser(ctx, userID); err != nil {
 		return err
 	}
-	// 7. Delete activity logs
+	// 7. Delete audit/activity logs
 	if err := s.activityRepo.DeleteUserActivity(ctx, userID); err != nil {
 		return err
 	}
-	// 8. Delete user
+	// 8. Finally, delete the user record itself
 	if err := s.userRepo.DeleteUser(ctx, userID); err != nil {
 		return err
 	}

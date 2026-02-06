@@ -21,10 +21,12 @@ const (
 	RoleKey   contextKey = "userRole"
 )
 
-// AuthMiddleware validates JWT tokens
+// AuthMiddleware validates JWT tokens and ensures the user session is active
+// It extracts the token from the Authorization header, validates the signature,
+// checks against the sessions collection, and verifies the user is not deactivated.
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Skip OPTIONS requests (preflight requests)
+		// Skip OPTIONS requests (preflight requests) used in CORS
 		if r.Method == "OPTIONS" {
 			next.ServeHTTP(w, r)
 			return
@@ -36,7 +38,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		// Extract token from "Bearer <token>"
+		// Extract token from "Bearer <token>" format
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
 			http.Error(w, "Invalid authorization format", http.StatusUnauthorized)
@@ -45,7 +47,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 
 		tokenString := parts[1]
 
-		// Parse and validate token
+		// Parse and validate token signature using the secret key
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			return []byte(config.AppConfig.JWTSecret), nil
 		})
@@ -55,7 +57,8 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		// Verify against sessions collection to handle invalidation (e.g. role change)
+		// Verify against sessions collection to handle invalidation (e.g. role change or logout)
+		// This provides a way to revoke tokens before their expiration time
 		sessionsCol := database.GetCollection("sessions")
 		var session struct {
 			IsValid bool `bson:"is_valid"`
@@ -75,6 +78,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			}
 
 			// Check if user is deactivated or deleted
+			// This ensures deactivated users cannot access the API even with a valid token
 			usersCol := database.GetCollection("users")
 			objID, err := primitive.ObjectIDFromHex(userID)
 			if err != nil {
@@ -97,6 +101,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 				return
 			}
 
+			// Inject user ID and Role into the request context for downstream handlers
 			ctx := context.WithValue(r.Context(), UserIDKey, userID)
 			ctx = context.WithValue(ctx, RoleKey, role)
 			next.ServeHTTP(w, r.WithContext(ctx))

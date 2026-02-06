@@ -5,6 +5,8 @@ import { useAuthStore } from '../store/authStore';
 import type { LoginRequest } from '../types';
 import './Auth.css';
 
+// LoginPage handles user authentication
+// Features: Email/Password login, 2FA OTP verification, and Error handling
 export const LoginPage: React.FC = () => {
     const navigate = useNavigate();
     const setAuth = useAuthStore((state) => state.setAuth);
@@ -13,11 +15,12 @@ export const LoginPage: React.FC = () => {
         email: '',
         password: '',
     });
-    const [step, setStep] = useState(1); // 1: Login, 2: OTP
+    const [step, setStep] = useState(1); // 1: Login Credentials, 2: OTP Verification
     const [otp, setOtp] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
+    // handleSubmit manages the multi-step login process
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
@@ -25,23 +28,23 @@ export const LoginPage: React.FC = () => {
 
         try {
             if (step === 1) {
-                // Step 1: Initiate Login
+                // Step 1: Submit email/password
                 const response = await authApi.login(formData);
                 if (response.token) {
-                    // Direct login (2FA disabled)
+                    // Success: Direct login (2FA disabled)
                     setAuth(response.user, response.token);
                     navigate('/dashboard');
                 } else {
-                    // 2FA enabled
+                    // Success: 2FA required, move to step 2
                     setStep(2);
                 }
             } else {
-                // Step 2: Verify OTP
+                // Step 2: Submit OTP
                 const response = await authApi.verifyOTP({ email: formData.email, code: otp });
                 setAuth(response.user, response.token);
                 navigate('/dashboard');
             }
-        } catch (err) {
+        } catch (err: any) {
             setError(err.response?.data?.message || 'Authentication failed. Please try again.');
         } finally {
             setLoading(false);

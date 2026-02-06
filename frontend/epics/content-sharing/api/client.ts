@@ -23,6 +23,7 @@ const api = axios.create({
 });
 
 // Add token to requests
+// Interceptor automatically injects Authorization header
 api.interceptors.request.use((config) => {
     const token = useAuthStore.getState().token;
     if (token) {
@@ -32,6 +33,7 @@ api.interceptors.request.use((config) => {
 });
 
 // Handle 401 Unauthorized globally
+// Also handles account deactivation (403) re-routing
 api.interceptors.response.use(
     (response) => response,
     (error) => {
@@ -56,7 +58,7 @@ api.interceptors.response.use(
 );
 
 
-// Posts
+// Posts API - Feed, Creation, Interactions
 export const createPost = async (data: CreatePostRequest): Promise<Post> => {
     const response = await api.post('/api/posts', data);
     return response.data.data;
@@ -125,7 +127,7 @@ export const interactPost = async (postId: string, data: PostInteractionRequest)
     await api.post(`/api/posts/${postId}/interact`, data);
 };
 
-// Comments
+// Comments API
 export const createComment = async (
     postId: string,
     data: CreateCommentRequest
@@ -143,7 +145,7 @@ export const deleteComment = async (commentId: string): Promise<void> => {
     await api.delete(`/api/comments/${commentId}`);
 };
 
-// Follow
+// Follow/Relationship API
 export const followUser = async (userId: string): Promise<void> => {
     await api.post(`/api/users/${userId}/follow`);
 };
@@ -162,7 +164,7 @@ export const getFollowing = async (userId: string): Promise<PublicUser[]> => {
     return response.data.data;
 };
 
-// Notifications
+// Notifications API
 export const getNotifications = async (limit = 50): Promise<Notification[]> => {
     const response = await api.get(`/api/notifications?limit=${limit}`);
     return response.data.data;
@@ -184,7 +186,7 @@ export const getUnreadCount = async (): Promise<number> => {
     return response.data.data.count;
 };
 
-// Search
+// Search API
 export const searchUsers = async (query: string, limit = 20): Promise<PublicUser[]> => {
     const response = await api.get(`/api/users/search?q=${encodeURIComponent(query)}&limit=${limit}`);
     return response.data.data;

@@ -78,6 +78,8 @@ func (s *FollowService) GetFollowing(ctx context.Context, userID primitive.Objec
 }
 
 // Follow creates a follow relationship
+// It first checks if the user is blocking/blocked by the target, and if they are already following.
+// If valid, it records the follow and creates a notification for the target user.
 func (s *FollowService) Follow(ctx context.Context, followerID, followingID primitive.ObjectID) error {
 	if followerID == followingID {
 		return nil // Cannot follow yourself

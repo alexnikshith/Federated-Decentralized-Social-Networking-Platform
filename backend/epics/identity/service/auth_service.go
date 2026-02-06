@@ -40,6 +40,8 @@ func NewAuthService() *AuthService {
 }
 
 // Signup creates a new user account (US1.1)
+// It validates unique constraints (email, username), hashes the password,
+// and creates the initial user record with default settings.
 func (s *AuthService) Signup(ctx context.Context, req dto.SignupRequest) (*models.User, error) {
 	// Validate input
 	if req.Username == "" || req.Email == "" || req.Password == "" {
@@ -88,6 +90,8 @@ func (s *AuthService) Signup(ctx context.Context, req dto.SignupRequest) (*model
 }
 
 // InitiateLogin validates credentials and triggers 2FA or logs in directly (US1.2 updated)
+// If 2FA is enabled, it sends an OTP and returns a string message.
+// If 2FA is disabled, it returns a JWT token directly.
 func (s *AuthService) InitiateLogin(ctx context.Context, req dto.LoginRequest, ipAddress, userAgent string) (interface{}, error) {
 	// Normalize email
 	req.Email = strings.ToLower(req.Email)

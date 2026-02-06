@@ -9,6 +9,12 @@ import (
 )
 
 // RegisterContentSharingRoutes registers all content-sharing related routes
+// This includes methods for:
+// - Posts: Create, feed, user posts, deletion
+// - Interactions: Like, unlike, comment, save, report
+// - Follows: Follow, unfollow, get followers/following
+// - Notifications: Get, mark read
+// - Search: User search
 func RegisterContentSharingRoutes(router *mux.Router) {
 	postHandler := handlers.NewPostHandler()
 	followHandler := handlers.NewFollowHandler()
@@ -16,20 +22,27 @@ func RegisterContentSharingRoutes(router *mux.Router) {
 	searchHandler := handlers.NewSearchHandler()
 
 	// Post routes
+	// All require authentication to ensure user accountability
 	router.Handle("/api/posts", middleware.AuthMiddleware(http.HandlerFunc(postHandler.CreatePost))).Methods("POST", "OPTIONS")
 	router.Handle("/api/feed", middleware.AuthMiddleware(http.HandlerFunc(postHandler.GetFeed))).Methods("GET", "OPTIONS")
 	router.Handle("/api/users/{id}/posts", middleware.AuthMiddleware(http.HandlerFunc(postHandler.GetUserPosts))).Methods("GET", "OPTIONS")
 	router.Handle("/api/users/{id}/likes", middleware.AuthMiddleware(http.HandlerFunc(postHandler.GetUserLikedPosts))).Methods("GET", "OPTIONS")
 	router.Handle("/api/users/{id}/comments", middleware.AuthMiddleware(http.HandlerFunc(postHandler.GetUserCommentedPosts))).Methods("GET", "OPTIONS")
+
+	// Post Actions
 	router.Handle("/api/posts/{id}/like", middleware.AuthMiddleware(http.HandlerFunc(postHandler.LikePost))).Methods("POST", "OPTIONS")
 	router.Handle("/api/posts/{id}/like", middleware.AuthMiddleware(http.HandlerFunc(postHandler.UnlikePost))).Methods("DELETE", "OPTIONS")
 	router.Handle("/api/posts/{id}/comments", middleware.AuthMiddleware(http.HandlerFunc(postHandler.CreateComment))).Methods("POST", "OPTIONS")
 	router.Handle("/api/posts/{id}/comments", middleware.AuthMiddleware(http.HandlerFunc(postHandler.GetComments))).Methods("GET", "OPTIONS")
 	router.Handle("/api/comments/{id}", middleware.AuthMiddleware(http.HandlerFunc(postHandler.DeleteComment))).Methods("DELETE", "OPTIONS")
 	router.Handle("/api/posts/{id}/likers", middleware.AuthMiddleware(http.HandlerFunc(postHandler.GetPostLikers))).Methods("GET", "OPTIONS")
+
+	// Saved Posts
 	router.Handle("/api/posts/saved", middleware.AuthMiddleware(http.HandlerFunc(postHandler.GetSavedPosts))).Methods("GET", "OPTIONS")
 	router.Handle("/api/posts/{id}/save", middleware.AuthMiddleware(http.HandlerFunc(postHandler.SavePost))).Methods("POST", "OPTIONS")
 	router.Handle("/api/posts/{id}/save", middleware.AuthMiddleware(http.HandlerFunc(postHandler.UnsavePost))).Methods("DELETE", "OPTIONS")
+
+	// Individual Post management
 	router.Handle("/api/posts/{id}", middleware.AuthMiddleware(http.HandlerFunc(postHandler.GetPostByID))).Methods("GET", "OPTIONS")
 	router.Handle("/api/posts/{id}", middleware.AuthMiddleware(http.HandlerFunc(postHandler.DeletePost))).Methods("DELETE", "OPTIONS")
 	router.Handle("/api/posts/{id}/report", middleware.AuthMiddleware(http.HandlerFunc(postHandler.ReportPost))).Methods("POST", "OPTIONS")

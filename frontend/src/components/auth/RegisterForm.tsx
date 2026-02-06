@@ -22,24 +22,34 @@ interface RegisterFormProps {
     hideBackNav?: boolean;
 }
 
+// Main RegisterForm component
 export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }: RegisterFormProps) => {
     const navigate = useNavigate();
 
+    // State for password visibility toggle
     const [showPassword, setShowPassword] = useState(false);
+    // State for community/instance selection
     const [selectedInstance, setSelectedInstance] = useState("");
     const [customInstance, setCustomInstance] = useState("");
+    // Form field states
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    // Terms agreement state
     const [agreedToTerms, setAgreedToTerms] = useState(false);
+    // Loading state for submission
     const [isLoading, setIsLoading] = useState(false);
 
+    // Handle form submission
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
 
         try {
+            // Determine which instance to use (custom or selected)
             const instance = customInstance || selectedInstance;
+
+            // Call API to register user
             await authApi.signup({
                 username,
                 email,
@@ -48,6 +58,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                 instance
             });
 
+            // Handle success
             toast.success("Account created successfully! Please sign in to verify your account.");
             if (onSuccess) {
                 onSuccess();
@@ -55,16 +66,19 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                 navigate("/login");
             }
         } catch (err: any) {
+            // Handle registration errors
             toast.error(err.response?.data?.message || "Registration failed. Please try again.");
         } finally {
             setIsLoading(false);
         }
     };
 
+    // Helper to get currently selected instance
     const currentInstance = customInstance || selectedInstance;
 
     return (
         <div className="w-full h-full flex flex-col justify-center">
+            {/* Back navigation button (optional) */}
             {!hideBackNav && (
                 <div className="absolute top-4 left-4 md:top-8 md:left-8 z-[10]">
                     <Button
@@ -94,6 +108,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                     <div className="space-y-4">
                         <Label className="text-base font-medium">Choose your community</Label>
                         <div className="grid gap-3">
+                            {/* List of popular instances */}
                             {popularInstances.map((instance) => (
                                 <button
                                     key={instance.domain}
@@ -130,6 +145,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                             ))}
                         </div>
 
+                        {/* Divider */}
                         <div className="relative py-2">
                             <div className="absolute inset-0 flex items-center">
                                 <div className="w-full border-t border-border"></div>
@@ -139,6 +155,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                             </div>
                         </div>
 
+                        {/* Custom Instance Input */}
                         <div className="relative">
                             <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                             <Input
@@ -160,6 +177,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                     <div className="space-y-4">
                         <Label className="text-base font-medium">Account Details</Label>
 
+                        {/* Username Input */}
                         <div className="space-y-2">
                             <Label htmlFor="username">Username</Label>
                             <div className="flex items-center gap-2">
@@ -180,6 +198,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                             )}
                         </div>
 
+                        {/* Email Input */}
                         <div className="space-y-2">
                             <Label htmlFor="email">Email</Label>
                             <Input
@@ -192,6 +211,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                             />
                         </div>
 
+                        {/* Password Input */}
                         <div className="space-y-2">
                             <Label htmlFor="password">Password</Label>
                             <div className="relative">
@@ -217,6 +237,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                         </div>
                     </div>
 
+                    {/* Terms Agreement */}
                     <div className="pt-2">
                         <div className="flex items-start gap-3">
                             <Checkbox
@@ -239,6 +260,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                         </div>
                     </div>
 
+                    {/* Submit Button */}
                     <Button
                         type="submit"
                         variant="hero"
@@ -253,6 +275,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                         )}
                     </Button>
 
+                    {/* Login Link */}
                     <div className="text-center pt-2">
                         <p className="text-sm text-muted-foreground">
                             Already have an account?{" "}

@@ -17,6 +17,8 @@ import {
 import { cn } from '@/lib/utils';
 import './Feed.css';
 
+// FeedPage is the main content stream
+// It combines Post creation, Feed display, Search, and Notifications
 export const FeedPage: React.FC = () => {
     const { posts, loading, error, fetchFeed, fetchUnreadCount, unreadCount } = useContentStore();
     const [sidebarType, setSidebarType] = useState<'notifications' | 'search' | null>(null);
@@ -25,6 +27,7 @@ export const FeedPage: React.FC = () => {
         fetchFeed();
         fetchUnreadCount();
 
+        // Polling for notifications
         const interval = setInterval(() => {
             fetchUnreadCount();
         }, 30000);

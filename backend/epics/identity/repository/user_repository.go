@@ -25,7 +25,8 @@ func NewUserRepository() *UserRepository {
 	}
 }
 
-// CreateUser creates a new user in the database
+// CreateUser persists a new user to the database
+// It sets default timestamps and active status before insertion.
 func (r *UserRepository) CreateUser(ctx context.Context, user *models.User) error {
 	user.CreatedAt = time.Now()
 	user.UpdatedAt = time.Now()
@@ -42,10 +43,11 @@ func (r *UserRepository) CreateUser(ctx context.Context, user *models.User) erro
 }
 
 // FindByEmail finds a user by email (case-insensitive)
+// It uses a regex case-insensitive search to ensure email uniqueness regardless of case.
 func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*models.User, error) {
 	var user models.User
 	// Use case-insensitive regex for email lookup
-	// We escape special characters to treat them literally, though for simple emails only . and + matter mostly
+	// We escape special characters to treat them literally.
 	pattern := "^" + regexp.QuoteMeta(email) + "$"
 	filter := bson.M{"email": primitive.Regex{Pattern: pattern, Options: "i"}}
 

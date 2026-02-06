@@ -13,18 +13,23 @@ export const adminApi = {
         return response.data;
     },
 
+    // Deactivates/Reactivates a user account
+    // If reason is provided, it may be sent via email
     toggleUserStatus: async (data: UserStatusUpdate): Promise<void> => {
         await api.post('/api/admin/users/status', data);
     },
 
+    // Promotes/Demotes users (e.g. user -> admin)
     updateUserRole: async (userId: string, role: string): Promise<void> => {
         await api.post('/api/admin/users/role', { user_id: userId, role });
     },
 
+    // Force deletion of a post (moderation)
     deletePost: async (postId: string): Promise<void> => {
         await api.delete(`/api/admin/posts?id=${postId}`);
     },
 
+    // Permanently nukes a user
     deleteUser: async (userId: string): Promise<void> => {
         await api.delete(`/api/admin/users?id=${userId}`);
     },

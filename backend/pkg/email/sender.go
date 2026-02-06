@@ -17,6 +17,8 @@ func NewEmailSender() *EmailSender {
 	}
 }
 
+// SendVerificationEmail sends a 2FA or verification code to the user's email.
+// It uses a premium HTML template for a professional look.
 func (s *EmailSender) SendVerificationEmail(toEmail, code string) error {
 	// Use the authenticated user as the sender to avoid spoofing issues with Gmail,
 	// but add a Display Name "Nexus Security" and the SMTPFrom address

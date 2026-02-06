@@ -91,50 +91,51 @@ func (r *BlockRepository) GetBlockedUsers(ctx context.Context, blockerID primiti
 }
 
 // GetBidirectionalBlockedIDs returns a list of User IDs that should be hidden from the given user.
-// This includes:
-// 1. Users that userID has blocked.
-// 2. Users that have blocked userID.
+// This implements a "safe" view by hiding:
+// 1. Users that the current user has blocked (self-initiated safety).
+// 2. Users that have blocked the current user (other-initiated privacy).
+// The result is a unified list of IDs to be excluded from feeds and search results.
 func (r *BlockRepository) GetBidirectionalBlockedIDs(ctx context.Context, userID primitive.ObjectID) ([]primitive.ObjectID, error) {
-    // Find where I am the blocker
-    cursor1, err := r.collection.Find(ctx, bson.M{"blocker_id": userID})
-    if err != nil {
-        return nil, err
-    }
-    
-    // Find where I am the blocked one
-    cursor2, err := r.collection.Find(ctx, bson.M{"blocked_id": userID})
-    if err != nil {
-        cursor1.Close(ctx) // Clean up first cursor
-        return nil, err
-    }
-    
-    defer cursor1.Close(ctx)
-    defer cursor2.Close(ctx)
+	// Find where I am the blocker
+	cursor1, err := r.collection.Find(ctx, bson.M{"blocker_id": userID})
+	if err != nil {
+		return nil, err
+	}
 
-    uniqueIDs := make(map[primitive.ObjectID]bool)
+	// Find where I am the blocked one
+	cursor2, err := r.collection.Find(ctx, bson.M{"blocked_id": userID})
+	if err != nil {
+		cursor1.Close(ctx) // Clean up first cursor
+		return nil, err
+	}
 
-    var blocks1 []models.Block
-    if err = cursor1.All(ctx, &blocks1); err != nil {
-        return nil, err
-    }
-    for _, b := range blocks1 {
-        uniqueIDs[b.BlockedID] = true
-    }
+	defer cursor1.Close(ctx)
+	defer cursor2.Close(ctx)
 
-    var blocks2 []models.Block
-    if err = cursor2.All(ctx, &blocks2); err != nil {
-        return nil, err
-    }
-    for _, b := range blocks2 {
-        uniqueIDs[b.BlockerID] = true
-    }
+	uniqueIDs := make(map[primitive.ObjectID]bool)
 
-    var ids []primitive.ObjectID
-    for id := range uniqueIDs {
-        ids = append(ids, id)
-    }
-    
-    return ids, nil
+	var blocks1 []models.Block
+	if err = cursor1.All(ctx, &blocks1); err != nil {
+		return nil, err
+	}
+	for _, b := range blocks1 {
+		uniqueIDs[b.BlockedID] = true
+	}
+
+	var blocks2 []models.Block
+	if err = cursor2.All(ctx, &blocks2); err != nil {
+		return nil, err
+	}
+	for _, b := range blocks2 {
+		uniqueIDs[b.BlockerID] = true
+	}
+
+	var ids []primitive.ObjectID
+	for id := range uniqueIDs {
+		ids = append(ids, id)
+	}
+
+	return ids, nil
 }
 
 // CreateIndexes creates necessary database indexes
@@ -144,12 +145,12 @@ func (r *BlockRepository) CreateIndexes(ctx context.Context) error {
 			Keys:    bson.D{bson.E{Key: "blocker_id", Value: 1}, bson.E{Key: "blocked_id", Value: 1}},
 			Options: options.Index().SetUnique(true),
 		},
-        {
-            Keys: bson.D{bson.E{Key: "blocker_id", Value: 1}},
-        },
-        {
-            Keys: bson.D{bson.E{Key: "blocked_id", Value: 1}},
-        },
+		{
+			Keys: bson.D{bson.E{Key: "blocker_id", Value: 1}},
+		},
+		{
+			Keys: bson.D{bson.E{Key: "blocked_id", Value: 1}},
+		},
 	}
 
 	_, err := r.collection.Indexes().CreateMany(ctx, indexes)

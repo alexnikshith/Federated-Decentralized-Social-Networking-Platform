@@ -13,19 +13,26 @@ import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useQueryClient } from '@tanstack/react-query';
 
+// AdminDashboard provides a comprehensive view for platform administrators
+// Features: User Management, Content Moderation (Reports), Statistics
 const AdminDashboard: React.FC = () => {
+    // Top-level state
     const [stats, setStats] = useState<AdminStats | null>(null);
     const [users, setUsers] = useState<User[]>([]);
     const [reports, setReports] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // Hooks
     const { useAdminReports } = useReportsApi();
     const { data: userReports } = useAdminReports();
     const queryClient = useQueryClient();
 
+    // Deactivation Dialog State
     const [deactivateId, setDeactivateId] = useState<string | null>(null);
     const [deactivateReason, setDeactivateReason] = useState("");
     const [isDeactivateDialogOpen, setIsDeactivateDialogOpen] = useState(false);
 
+    // Initial Data Fetch
     const fetchData = async () => {
         setLoading(true);
         try {
@@ -49,6 +56,7 @@ const AdminDashboard: React.FC = () => {
         fetchData();
     }, []);
 
+    // Active/Deactivate User Handler
     const handleToggleStatus = async (userId: string, currentStatus: boolean, reason?: string) => {
         try {
             await adminApi.toggleUserStatus({ user_id: userId, is_active: !currentStatus, reason });
@@ -74,6 +82,7 @@ const AdminDashboard: React.FC = () => {
         }
     };
 
+    // Hard Delete User Handler
     const handleDeleteUser = async (userId: string) => {
         try {
             await adminApi.deleteUser(userId);
@@ -84,6 +93,7 @@ const AdminDashboard: React.FC = () => {
         }
     };
 
+    // Report Resolution Handler (Just dismiss report)
     const handleResolveReport = async (reportId: string) => {
         try {
             await adminApi.resolveReport(reportId);
@@ -94,6 +104,7 @@ const AdminDashboard: React.FC = () => {
         }
     };
 
+    // Delete Post Handler (Confirm valid report)
     const handleDeleteReportedPost = async (postId: string, reportId: string) => {
         try {
             await adminApi.deletePost(postId);
@@ -244,7 +255,7 @@ const AdminDashboard: React.FC = () => {
                                                 <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">{report.status}</span>
                                             </div>
                                             <div className="text-sm flex items-center gap-2">
-                                                <span className="text-muted-foreground">Reported User:</span> 
+                                                <span className="text-muted-foreground">Reported User:</span>
                                                 <span className="font-medium text-foreground">{report.user_details?.display_name || 'Unknown'} (@{report.user_details?.username || 'unknown'})</span>
                                             </div>
                                             <p className="text-sm text-foreground/80 italic">
@@ -255,8 +266,8 @@ const AdminDashboard: React.FC = () => {
                                             </p>
                                         </div>
                                         <div className="flex gap-2">
-                                            <Button 
-                                                size="sm" 
+                                            <Button
+                                                size="sm"
                                                 variant="outline"
                                                 onClick={() => window.open(`/profile/${report.user_details?.username}`, '_blank')}
                                             >
@@ -264,16 +275,16 @@ const AdminDashboard: React.FC = () => {
                                             </Button>
 
                                             {report.user_details?.is_active ? (
-                                                <Button 
-                                                    size="sm" 
+                                                <Button
+                                                    size="sm"
                                                     variant="destructive"
                                                     onClick={() => initiateDeactivation(report.reported_id)}
                                                 >
                                                     Deactivate User
                                                 </Button>
                                             ) : (
-                                                <Button 
-                                                    size="sm" 
+                                                <Button
+                                                    size="sm"
                                                     variant="default" // or a 'success' variant if available, default is primary
                                                     className="bg-green-600 hover:bg-green-700"
                                                     onClick={() => handleToggleStatus(report.reported_id, false)} // status is false (inactive), so !false = true (active)

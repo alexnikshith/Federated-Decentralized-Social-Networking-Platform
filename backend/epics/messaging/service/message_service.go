@@ -25,6 +25,9 @@ func NewMessageService() *MessageService {
 	}
 }
 
+// SendMessage handles sending a new message
+// It validates the receiver, checks/creates the conversation, saves the message,
+// and broadcasts it via WebSocket to the recipient using GlobalHub.
 func (s *MessageService) SendMessage(ctx context.Context, senderID primitive.ObjectID, req dto.SendMessageRequest) (*models.Message, error) {
 	receiverID, err := primitive.ObjectIDFromHex(req.ReceiverID)
 	if err != nil {
@@ -47,6 +50,7 @@ func (s *MessageService) SendMessage(ctx context.Context, senderID primitive.Obj
 		return nil, err
 	}
 
+	// Create conversation if it doesn't exist
 	if conv == nil {
 		conv, err = s.repo.CreateConversation(ctx, participants)
 		if err != nil {
@@ -67,7 +71,7 @@ func (s *MessageService) SendMessage(ctx context.Context, senderID primitive.Obj
 		return nil, err
 	}
 
-	// Broadcast via WebSocket
+	// Broadcast via WebSocket to enable real-time updates
 	if websocket.GlobalHub != nil {
 		msgDTO := dto.MessageDTO{
 			ID:             msg.ID.Hex(),
@@ -84,7 +88,7 @@ func (s *MessageService) SendMessage(ctx context.Context, senderID primitive.Obj
 		// Send to receiver
 		websocket.GlobalHub.BroadcastToUser(req.ReceiverID, "new_message", msgDTO)
 
-		// Optional: also send to sender's other sessions? For now receiver is most important.
+		// Optional: also send to sender's other sessions
 	}
 
 	return msg, nil
