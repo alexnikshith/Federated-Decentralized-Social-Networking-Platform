@@ -9,8 +9,8 @@ import (
 // VerificationCode represents an OTP code for 2FA/verification
 type VerificationCode struct {
 	ID        primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	UserID    primitive.ObjectID `json:"user_id" bson:"user_id"`
-	Code      string             `json:"code" bson:"code"`
-	ExpiresAt time.Time          `json:"expires_at" bson:"expires_at"`
+	UserID    primitive.ObjectID `json:"user_id" bson:"user_id"`       // Reference to the user requesting verification
+	Code      string             `json:"code" bson:"code"`             // The 6-digit numeric code
+	ExpiresAt time.Time          `json:"expires_at" bson:"expires_at"` // Expiration timestamp (usually 10 mins)
 	CreatedAt time.Time          `json:"created_at" bson:"created_at"`
 }

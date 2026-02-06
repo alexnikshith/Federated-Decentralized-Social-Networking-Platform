@@ -25,6 +25,8 @@ interface ContentState {
     markAsRead: (notificationId: string) => Promise<void>;
 }
 
+// useContentStore manages the state for the feed, posts, and notifications
+// It handles optimistic updates for UI responsiveness
 export const useContentStore = create<ContentState>((set, get) => ({
     posts: [],
     notifications: [],
@@ -32,6 +34,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
     loading: false,
     error: null,
 
+    // Fetches the main activity feed
     fetchFeed: async () => {
         set({ loading: true, error: null });
         try {
@@ -42,6 +45,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
         }
     },
 
+    // Creates a new post and refreshes the feed
     createPost: async (content: string) => {
         set({ loading: true, error: null });
         try {
@@ -53,6 +57,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
         }
     },
 
+    // Optimistically likes a post
     likePost: async (postId: string) => {
         try {
             await api.likePost(postId);
@@ -68,6 +73,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
         }
     },
 
+    // Optimistically unlikes a post
     unlikePost: async (postId: string) => {
         try {
             await api.unlikePost(postId);
@@ -83,6 +89,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
         }
     },
 
+    // Removes a post from the local feed immediately
     deletePost: async (postId: string) => {
         try {
             await api.deletePost(postId);
@@ -101,6 +108,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
         }
     },
 
+    // Marks a single notification as read with optimistic update
     markAsRead: async (notificationId: string) => {
         try {
             // Optimistic update
@@ -116,14 +124,14 @@ export const useContentStore = create<ContentState>((set, get) => ({
             // Re-fetch to confirm sync (optional, but good for consistency)
             get().fetchUnreadCount();
         } catch (error) {
-            // Revert on failure (complex to revert unreadCount perfectly without fetch, 
-            // so just fetching is safer or just alerting error)
+            // Revert on failure
             set({ error: error.response?.data?.message || 'Failed to mark as read' });
             get().fetchNotifications(); // Revert local state
             get().fetchUnreadCount();
         }
     },
 
+    // Marks all notifications as read
     markAllAsRead: async () => {
         try {
             // Optimistic update
@@ -194,7 +202,6 @@ export const useContentStore = create<ContentState>((set, get) => ({
                 // Hide locally
                 set({ posts: get().posts.filter((post) => post.id !== postId) });
             }
-            // For 'interested', we might want to refresh feed later or just notify user
         } catch (error) {
             set({ error: error.response?.data?.message || 'Failed to track interaction' });
         }

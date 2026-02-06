@@ -7,6 +7,7 @@ import (
 )
 
 // PostResponse represents a post with author information
+// It includes the post content, author details, interaction counts, and the current user's interaction status.
 type PostResponse struct {
 	ID           primitive.ObjectID `json:"id"`
 	AuthorID     primitive.ObjectID `json:"author_id"`

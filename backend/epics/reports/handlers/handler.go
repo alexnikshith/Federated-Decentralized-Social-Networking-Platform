@@ -21,7 +21,8 @@ func NewReportHandler() *ReportHandler {
 	}
 }
 
-// Heartbeat processes a user activity heartbeat
+// Heartbeat handles POST /api/reports/heartbeat
+// Records user activity for the current day. Called periodically by the frontend.
 func (h *ReportHandler) Heartbeat(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	userID := middleware.GetUserIDFromContext(ctx)
@@ -138,7 +139,7 @@ func (h *ReportHandler) SubmitUserReport(w http.ResponseWriter, r *http.Request)
 // GetAdminReports retrieves all reports
 func (h *ReportHandler) GetAdminReports(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	
+
 	reports, err := h.Repo.GetReports(ctx)
 	if err != nil {
 		http.Error(w, "Failed to fetch reports", http.StatusInternalServerError)

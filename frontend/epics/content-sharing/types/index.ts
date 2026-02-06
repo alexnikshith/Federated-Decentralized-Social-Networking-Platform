@@ -1,3 +1,4 @@
+// Post represents a single content item in the feed
 export interface Post {
     id: string;
     author_id: string;
@@ -13,6 +14,7 @@ export interface Post {
     updated_at: string;
 }
 
+// Comment represents a user response to a post
 export interface Comment {
     id: string;
     post_id: string;
@@ -26,6 +28,7 @@ export interface Comment {
     created_at: string;
 }
 
+// Notification alerts the user to interactions
 export interface Notification {
     id: string;
     type: 'like' | 'comment' | 'follow';
@@ -41,11 +44,13 @@ export interface Notification {
     created_at: string;
 }
 
+// Responses Types
 export interface FeedResponse {
     posts: Post[];
     total: number;
 }
 
+// Request DTOs
 export interface CreatePostRequest {
     content: string;
 }

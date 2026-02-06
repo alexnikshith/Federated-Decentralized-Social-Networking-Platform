@@ -24,6 +24,9 @@ func NewMessageRepository() *MessageRepository {
 	}
 }
 
+// CreateMessage inserts a new message and updates the conversation
+// A message creation automatically updates the 'last_message' and 'updated_at' fields
+// of the parent conversation to keep the inbox view sorted and current.
 func (r *MessageRepository) CreateMessage(ctx context.Context, msg *models.Message) error {
 	msg.CreatedAt = time.Now()
 	msg.IsRead = false

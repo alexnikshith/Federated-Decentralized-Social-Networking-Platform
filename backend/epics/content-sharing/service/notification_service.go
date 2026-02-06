@@ -22,6 +22,8 @@ func NewNotificationService() *NotificationService {
 }
 
 // GetNotifications retrieves notifications for a user with user information
+// It fetches raw notifications then enriches them with details about the related users (name, avatar).
+// It also filters out notifications from deactivated users to keep the list clean.
 func (s *NotificationService) GetNotifications(ctx context.Context, userID primitive.ObjectID, limit int64) ([]dto.NotificationResponse, error) {
 	notifications, err := s.notificationRepo.GetNotifications(ctx, userID, limit)
 	if err != nil {

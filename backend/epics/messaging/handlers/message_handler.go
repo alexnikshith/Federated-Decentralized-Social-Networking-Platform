@@ -22,6 +22,8 @@ func NewMessageHandler() *MessageHandler {
 	}
 }
 
+// SendMessage handles POST /api/messages
+// Validates input, sends the message via service, and returns the created message.
 func (h *MessageHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserIDFromContext(r.Context())
 

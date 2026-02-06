@@ -23,6 +23,8 @@ func NewProfileHandler() *ProfileHandler {
 }
 
 // GetProfile retrieves a user's profile (US1.4)
+// It supports retrieval by both Hex ID and Username.
+// If the requester is authenticated, it passes their ID to check follow status and private visibility.
 func (h *ProfileHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	identifier := vars["id"] // This can be hex ID or username

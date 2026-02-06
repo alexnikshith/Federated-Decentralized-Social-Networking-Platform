@@ -1,3 +1,4 @@
+// User represents the core user profile entity
 export interface User {
     id: string;
     username: string;
@@ -19,6 +20,7 @@ export interface User {
     is_active?: boolean;
 }
 
+// ActivityLog tracks security-relevant user actions (login, updates, etc.)
 export interface ActivityLog {
     id: string;
     user_id: string;
@@ -29,6 +31,7 @@ export interface ActivityLog {
     timestamp: string;
 }
 
+// Request/Response DTOs
 export interface LoginRequest {
     email: string;
     password: string;

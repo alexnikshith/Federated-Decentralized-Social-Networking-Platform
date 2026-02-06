@@ -7,11 +7,18 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// RegisterMessagingRoutes registers all messaging-related routes
+// Includes endpoints for:
+// - Message sending and deletion
+// - Conversation management (list, read, delete)
+// - Media upload and download
+// - Unread counts
 func RegisterMessagingRoutes(router *mux.Router) {
 	h := handlers.NewMessageHandler()
 	mh := handlers.NewMediaHandler()
 
 	// Public media access (must be registered before the /api/messages subrouter)
+	// This allows loading images without checking the Auth header explicitly (browser request)
 	router.HandleFunc("/api/messages/media/{id}", mh.DownloadMedia).Methods("GET")
 
 	api := router.PathPrefix("/api/messages").Subrouter()

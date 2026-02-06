@@ -95,10 +95,18 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return <>{children}</>;
 };
 
+// Main App Component
+// Handles:
+// 1. Global providers (Theme, Query, Toast)
+// 2. Routing configuration (Public, Protected, Admin)
+// 3. Session persistence and synchronization
+// 4. Auto-logout and activity tracking wrappers
+
 const AppContent: React.FC = () => {
     const { isAuthenticated, user, token, setAuth, clearAuth, clearAllSessions } = useAuthStore();
 
     // Session Sync: Ensure user data and token are fresh
+    // This runs on mount/auth-change to validate the stored token against the backend
     useEffect(() => {
         const sync = async () => {
             if (isAuthenticated && token) {
@@ -115,6 +123,7 @@ const AppContent: React.FC = () => {
     }, [isAuthenticated, token, setAuth]);
 
     // Safety Valve: Recover from corrupted login state without wiping other background sessions
+    // Checks if we have an "authenticated" flag but missing critical user data
     useEffect(() => {
         if (isAuthenticated && (!user || !user.id || !user.username)) {
             console.warn("Targeted session recovery triggered for corrupted state.");
@@ -126,7 +135,10 @@ const AppContent: React.FC = () => {
         <div className="h-full">
             <BrowserRouter>
                 <Routes>
+                    {/* Public Routes */}
                     <Route path="/" element={<Index />} />
+
+                    {/* Authentication Routes - Redirects to dashboard if already logged in */}
                     <Route
                         path="/login"
                         element={

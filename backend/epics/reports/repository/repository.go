@@ -35,6 +35,8 @@ func NewReportRepository() *ReportRepository {
 }
 
 // IncrementActivity increments the activity minutes for a user on a specific date
+// It normalizes the date to midnight UTC to ensure daily aggregation.
+// Uses an upsert operation to create the record if it doesn't exist for that day.
 func (r *ReportRepository) IncrementActivity(ctx context.Context, userID primitive.ObjectID, date time.Time) error {
 	// Normalize date to midnight (UTC)
 	normalizedDate := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)

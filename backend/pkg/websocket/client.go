@@ -22,6 +22,8 @@ const (
 	maxMessageSize = 512
 )
 
+// upgrader configures the WebSocket connection parameters.
+// It sets buffer sizes and currently allows all origins (CheckOrigin returns true) for development flexibility.
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,

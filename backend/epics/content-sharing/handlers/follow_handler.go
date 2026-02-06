@@ -20,6 +20,7 @@ func NewFollowHandler() *FollowHandler {
 }
 
 // Follow handles POST /api/users/:id/follow
+// Initiates a follow relationship. Errors if valid ID is not provided or user tries to follow themselves (handled in service).
 func (h *FollowHandler) Follow(w http.ResponseWriter, r *http.Request) {
 	followerID := middleware.GetUserIDFromContext(r.Context())
 	vars := mux.Vars(r)

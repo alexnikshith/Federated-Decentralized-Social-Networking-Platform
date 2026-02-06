@@ -39,6 +39,8 @@ func (r *SearchRepository) CreateIndexes(ctx context.Context) error {
 }
 
 // SearchUsers searches for users by username, display name, email, or bio
+// It splits the query into tokens and creates a regex filter for each token to match against usernames.
+// It effectively performs an "AND" operation for multiple search terms.
 func (r *SearchRepository) SearchUsers(ctx context.Context, query string, limit int64) ([]identityModels.User, error) {
 	// Clean and tokenize query
 	query = strings.TrimSpace(query)
@@ -57,11 +59,10 @@ func (r *SearchRepository) SearchUsers(ctx context.Context, query string, limit 
 			continue
 		}
 
-		// Escape word for regex
+		// Escape word for regex to treat characters literally
 		escapedWord := regexp.QuoteMeta(word)
 
-		// Each word must match at least one of these fields
-		// Each word must match the username
+		// Each word must match the username (partially, case-insensitive)
 		filters = append(filters, bson.M{
 			"username": bson.M{"$regex": escapedWord, "$options": "i"},
 		})

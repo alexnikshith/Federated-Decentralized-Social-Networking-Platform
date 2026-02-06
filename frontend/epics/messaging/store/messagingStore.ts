@@ -7,6 +7,8 @@ interface MessagingState {
     refreshUnreadCount: () => Promise<void>;
 }
 
+// useMessagingStore tracks the global unread count
+// Detailed conversation state is currently handled locally in components
 export const useMessagingStore = create<MessagingState>((set) => ({
     unreadMessageCount: 0,
     setUnreadMessageCount: (count) => set({ unreadMessageCount: count }),

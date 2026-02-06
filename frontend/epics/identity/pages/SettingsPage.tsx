@@ -18,6 +18,11 @@ import { cn } from "@/lib/utils";
 import type { User as UserType, ActivityLog } from "../types";
 import { useToast } from "@/hooks/use-toast";
 
+// SettingsPage manages user account preferences
+// It includes tabs for:
+// 1. Profile: Edit display name, bio, etc.
+// 2. Account: Activity logs, Deactivation, Deletion
+// 3. Privacy & Security: Password change, 2FA toggle
 export const SettingsPage = () => {
     const { user: currentUser, updateUser, clearAuth } = useAuthStore();
     const [loading, setLoading] = useState(false);

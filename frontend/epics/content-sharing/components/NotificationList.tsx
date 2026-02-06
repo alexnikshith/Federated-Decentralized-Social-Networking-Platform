@@ -14,6 +14,11 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+// NotificationList displays user notifications (Likes, Comments, Follows)
+// It supports:
+// 1. Grouping by date (Today, Yesterday, etc.)
+// 2. Different formatting for Comment (direct vs reply) vs Like vs Follow
+// 3. Rich interaction (click user, click notification to view post)
 export const NotificationList: React.FC = () => {
     const navigate = useNavigate();
     const { notifications, fetchNotifications, markAsRead, fetchUnreadCount } =
@@ -32,10 +37,12 @@ export const NotificationList: React.FC = () => {
         markAsRead(notificationId);
     };
 
+    // Helper to get icon based on notification type
     const getNotificationIcon = (type: string) => {
         switch (type) {
             case 'like':
                 return <Heart className="w-4 h-4 text-destructive fill-current" />;
+            // ...
             case 'comment':
                 return <MessageSquare className="w-4 h-4 text-primary fill-current" />;
             case 'follow':
@@ -54,6 +61,7 @@ export const NotificationList: React.FC = () => {
         return format(date, 'MMM dd, yyyy');
     };
 
+    // Helper to generate notification text with links and truncation
     const getNotificationText = (notif: AppNotification) => {
         const handleUserClick = (e: React.MouseEvent) => {
             e.stopPropagation();
