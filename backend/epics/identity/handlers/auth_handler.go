@@ -34,7 +34,7 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondSuccess(w, "Account created successfully", user.ToPublicUser(), http.StatusCreated)
+	respondSuccess(w, "Account created successfully", user.ToPrivateUser(), http.StatusCreated)
 }
 
 // Login handles user authentication trigger (US1.2 updated)

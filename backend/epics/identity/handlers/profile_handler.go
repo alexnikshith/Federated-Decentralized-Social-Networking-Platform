@@ -147,3 +147,26 @@ func (h *ProfileHandler) GetActivity(w http.ResponseWriter, r *http.Request) {
 
 	respondJSON(w, activities, http.StatusOK)
 }
+
+// AddJoinedCommunity handles adding a community to the user's joined list
+func (h *ProfileHandler) AddJoinedCommunity(w http.ResponseWriter, r *http.Request) {
+	var req dto.AddCommunityRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	userIDStr := r.Context().Value(middleware.UserIDKey).(string)
+	userID, err := primitive.ObjectIDFromHex(userIDStr)
+	if err != nil {
+		respondError(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.profileService.AddJoinedCommunity(r.Context(), userID, req.CommunityID); err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondSuccess(w, "Community added to joined list", nil, http.StatusOK)
+}

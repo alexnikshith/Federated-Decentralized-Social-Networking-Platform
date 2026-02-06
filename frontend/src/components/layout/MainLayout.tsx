@@ -40,6 +40,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LogOut, User as LucideUser, Plus } from "lucide-react";
 import { AuthModal } from "@/components/auth/AuthModal";
+import { CommunitySwitcher } from "../CommunitySwitcher";
+import { COMMUNITIES } from "../../config/communities";
 
 export const MainLayout = ({ children }: { children: React.ReactNode }) => {
     const { user, clearAuth, sessions, switchAccount, pauseSession, clearAllSessions } = useAuthStore();
@@ -174,6 +176,12 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                 <SidebarBody className="justify-between gap-10">
                     <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto">
                         {(open || isDropdownOpen) ? <Logo /> : <LogoIcon />}
+
+                        {/* Community Switcher */}
+                        <div className={cn("mt-4 px-2", (!open && !isDropdownOpen) && "px-0 flex justify-center")}>
+                            <CommunitySwitcher collapsed={!open && !isDropdownOpen} />
+                        </div>
+
                         <div className="mt-8 flex flex-col gap-2">
                             {sidebarLinks.map((link, idx) => (
                                 <SidebarLink
@@ -256,35 +264,45 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                                     Switch Accounts
                                 </DropdownMenuLabel>
                                 {sessions
-                                    .filter(s => s.user.id !== user?.id)
-                                    .map((session) => (
-                                        <DropdownMenuItem
-                                            key={session.user.id}
-                                            onClick={() => {
-                                                if (session.token) {
-                                                    switchAccount(session.user.id);
-                                                    navigate("/dashboard");
-                                                    window.location.reload();
-                                                } else {
-                                                    // Just go to login for this specific account
-                                                    switchAccount(session.user.id, true);
-                                                    navigate("/login");
-                                                }
-                                            }}
-                                            className="cursor-pointer flex items-center justify-between"
-                                        >
-                                            <div className="flex items-center gap-2">
-                                                <Avatar className="h-5 w-5">
-                                                    <AvatarImage src={session.user.avatar_url} />
-                                                    <AvatarFallback className="text-[9px]">
-                                                        {session.user.username?.substring(0, 2).toUpperCase()}
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                                <span className="truncate max-w-[120px]">{session.user.username}</span>
-                                            </div>
-                                            {!session.token && <span className="text-[10px] text-muted-foreground uppercase">Logged out</span>}
-                                        </DropdownMenuItem>
-                                    ))}
+                                    .filter(s => s.user.id !== user?.id && (
+                                        !s.user.email || !user?.email ||
+                                        s.user.email !== user.email ||
+                                        s.user.username !== user.username
+                                    ))
+                                    .map((session) => {
+                                        const comm = COMMUNITIES.find(c => c.id === session.communityId);
+                                        return (
+                                            <DropdownMenuItem
+                                                key={session.user.id}
+                                                onClick={() => {
+                                                    if (session.token) {
+                                                        switchAccount(session.user.id);
+                                                        navigate("/dashboard");
+                                                        window.location.reload();
+                                                    } else {
+                                                        // Just go to login for this specific account
+                                                        switchAccount(session.user.id, true);
+                                                        navigate("/login");
+                                                    }
+                                                }}
+                                                className="cursor-pointer flex items-center justify-between"
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <Avatar className="h-5 w-5">
+                                                        <AvatarImage src={session.user.avatar_url} />
+                                                        <AvatarFallback className="text-[9px]">
+                                                            {session.user.username?.substring(0, 2).toUpperCase()}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <div className="flex flex-col">
+                                                        <span className="truncate max-w-[120px] font-medium leading-tight">{session.user.username}</span>
+                                                        <span className="text-[9px] text-muted-foreground">{comm?.name || "Unknown"}</span>
+                                                    </div>
+                                                </div>
+                                                {!session.token && <span className="text-[10px] text-muted-foreground uppercase">Logged out</span>}
+                                            </DropdownMenuItem>
+                                        )
+                                    })}
 
                                 <DropdownMenuItem
                                     onClick={() => {

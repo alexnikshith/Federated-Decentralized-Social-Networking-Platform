@@ -17,6 +17,7 @@ export interface User {
     is_2fa_enabled?: boolean;
     role?: 'user' | 'admin';
     is_active?: boolean;
+    joined_communities?: string[];
 }
 
 export interface ActivityLog {
@@ -43,7 +44,8 @@ export interface SignupRequest {
     username: string;
     email: string;
     password: string;
-    display_name: string;
+    display_name?: string;
+    instance?: string;
 }
 
 export interface LoginResponse {

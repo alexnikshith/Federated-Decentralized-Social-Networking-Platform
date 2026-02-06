@@ -29,6 +29,7 @@ func RegisterIdentityRoutes(router *mux.Router) {
 	router.Handle("/api/profile/me", middleware.AuthMiddleware(http.HandlerFunc(profileHandler.UpdateProfile))).Methods("PUT", "OPTIONS")
 	router.Handle("/api/profile/me", middleware.AuthMiddleware(http.HandlerFunc(profileHandler.DeleteAccount))).Methods("DELETE", "OPTIONS")
 	router.Handle("/api/profile/me/deactivate", middleware.AuthMiddleware(http.HandlerFunc(profileHandler.DeactivateAccount))).Methods("POST", "OPTIONS")
+	router.Handle("/api/profile/me/communities", middleware.AuthMiddleware(http.HandlerFunc(profileHandler.AddJoinedCommunity))).Methods("POST", "OPTIONS")
 	router.Handle("/api/profile/me/activity", middleware.AuthMiddleware(http.HandlerFunc(profileHandler.GetActivity))).Methods("GET", "OPTIONS")
 
 	// Public profile view (Optional auth to see follow status)

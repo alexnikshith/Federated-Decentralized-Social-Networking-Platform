@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { authApi } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import type { SignupRequest } from '../types';
+import { COMMUNITIES } from '../../../src/config/communities';
 import './Auth.css';
 
 export const SignupPage: React.FC = () => {
@@ -18,6 +19,20 @@ export const SignupPage: React.FC = () => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+
+    const handleCommunityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const commId = e.target.value;
+        const comm = COMMUNITIES.find(c => c.id === commId);
+        if (comm) {
+            localStorage.setItem('active_community_url', comm.url);
+            localStorage.setItem('active_community_id', comm.id);
+            const existing = JSON.parse(localStorage.getItem('joined_community_ids') || '[]');
+            if (!existing.includes(comm.id)) {
+                existing.push(comm.id);
+            }
+            localStorage.setItem('joined_community_ids', JSON.stringify(existing));
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -67,6 +82,29 @@ export const SignupPage: React.FC = () => {
 
                 <form onSubmit={handleSubmit} className="auth-form">
                     {error && <div className="error-message">{error}</div>}
+
+                    <div className="form-group">
+                        <label htmlFor="community">Select Community</label>
+                        <select
+                            id="community"
+                            onChange={handleCommunityChange}
+                            defaultValue={COMMUNITIES[0].id}
+                            style={{
+                                width: '100%',
+                                padding: '0.75rem',
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '0.375rem',
+                                backgroundColor: 'white',
+                                marginBottom: '1rem'
+                            }}
+                        >
+                            {COMMUNITIES.map(c => (
+                                <option key={c.id} value={c.id}>
+                                    {c.name} ({c.url.replace('http://', '')})
+                                </option>
+                            ))}
+                        </select>
+                    </div>
 
                     <div className="form-group">
                         <label htmlFor="username">Username</label>

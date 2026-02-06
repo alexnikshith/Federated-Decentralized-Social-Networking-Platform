@@ -168,8 +168,7 @@ func (s *AuthService) InitiateLogin(ctx context.Context, req dto.LoginRequest, i
 	// Log activity
 	s.logActivity(ctx, user.ID, "login", "User logged in (2FA disabled)", ipAddress, userAgent)
 
-	publicUser := user.ToPublicUser()
-	publicUser.Is2FAEnabled = &user.Is2FAEnabled
+	publicUser := user.ToPrivateUser()
 
 	return &dto.LoginResponse{
 		Token:     tokenString,
@@ -242,8 +241,7 @@ func (s *AuthService) VerifyOTP(ctx context.Context, req dto.VerifyOTPRequest, i
 	// Log activity
 	s.logActivity(ctx, user.ID, "login", "User logged in via 2FA", ipAddress, userAgent)
 
-	publicUser := user.ToPublicUser()
-	publicUser.Is2FAEnabled = &user.Is2FAEnabled
+	publicUser := user.ToPrivateUser()
 
 	return &dto.LoginResponse{
 		Token:     tokenString,
@@ -359,8 +357,7 @@ func (s *AuthService) SyncProfile(ctx context.Context, userID primitive.ObjectID
 		return nil, err
 	}
 
-	publicUser := user.ToPublicUser()
-	publicUser.Is2FAEnabled = &user.Is2FAEnabled
+	publicUser := user.ToPrivateUser()
 
 	return &dto.LoginResponse{
 		Token:     tokenString,
