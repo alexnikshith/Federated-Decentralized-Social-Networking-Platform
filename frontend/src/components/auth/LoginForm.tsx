@@ -124,7 +124,7 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister, hideBackNav = false, 
                                     <Input
                                         id="instance"
                                         type="text"
-                                        placeholder="your-community.nexus.social"
+                                        placeholder="localhost:8080"
                                         value={instance}
                                         onChange={(e) => setInstance(e.target.value)}
                                         className="pl-10 h-11 bg-secondary border-border"

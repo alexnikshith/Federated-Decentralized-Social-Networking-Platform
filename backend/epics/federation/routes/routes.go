@@ -15,4 +15,7 @@ func RegisterFederationRoutes(router *mux.Router) {
 
 	// Federation inbox (public, but with instance validation inside handler)
 	router.HandleFunc("/federation/inbox", handler.ReceiveActivity).Methods("POST", "OPTIONS")
+
+	// Get list of trusted instances (public)
+	router.HandleFunc("/api/federation/instances", handler.GetTrustedInstances).Methods("GET", "OPTIONS")
 }

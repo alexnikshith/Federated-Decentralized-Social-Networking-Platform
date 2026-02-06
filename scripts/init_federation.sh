@@ -6,12 +6,14 @@
 echo "=== Federation Database Initialization ==="
 
 # MongoDB connection details (from .env)
+# Note: Update this with your actual MongoDB URI (without the database name)
 MONGO_URI="mongodb+srv://kaushal:mongodb_123@ecoquest.kntdk2q.mongodb.net/?retryWrites=true&w=majority"
 
 echo "Initializing Server 1 database (federated_social)..."
 
 # Initialize Server 1 - Add Server 2 as trusted instance
-mongosh "$MONGO_URI/federated_social" --quiet --eval '
+mongosh "$MONGO_URI" --quiet --eval '
+use federated_social;
 db.instances.insertOne({
   domain: "localhost:8081",
   inbox_url: "http://localhost:8081/federation/inbox",
@@ -27,7 +29,8 @@ echo ""
 echo "Initializing Server 2 database (federated_social_server2)..."
 
 # Initialize Server 2 - Add Server 1 as trusted instance  
-mongosh "$MONGO_URI/federated_social_server2" --quiet --eval '
+mongosh "$MONGO_URI" --quiet --eval '
+use federated_social_server2;
 db.instances.insertOne({
   domain: "localhost:8080",
   inbox_url: "http://localhost:8080/federation/inbox",
