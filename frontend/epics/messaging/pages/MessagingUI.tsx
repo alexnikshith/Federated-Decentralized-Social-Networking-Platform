@@ -33,10 +33,15 @@ import { toast } from '@/hooks/use-toast';
 import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog';
 import { useMessagingStore } from '../store/messagingStore';
 
+// MessagingUI handles the full chat interface
+// Features: Real-time messaging (WebSocket), Media uploads, Conversation management
 const MessagingUI: React.FC = () => {
+    // URL Params for deep linking (e.g., "Message User" button from profile)
     const [searchParams, setSearchParams] = useSearchParams();
     const { user: currentUser } = useAuthStore();
     const { refreshUnreadCount } = useMessagingStore();
+
+    // Local State
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
@@ -44,15 +49,22 @@ const MessagingUI: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [loadingMessages, setLoadingMessages] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
+
+    // Refs
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const wsRef = useRef<WebSocket | null>(null);
+    const { token } = useAuthStore();
 
+    // Media State
     const [selectedMedia, setSelectedMedia] = useState<{
         file: File;
         preview: string;
         type: 'image' | 'video' | 'file';
     } | null>(null);
     const [uploadingMedia, setUploadingMedia] = useState(false);
+
+    // New Chat State (Virtual conversation before first message)
     const [isNewChat, setIsNewChat] = useState(false);
     const [newChatUser, setNewChatUser] = useState<Participant | null>(null);
 
@@ -66,13 +78,11 @@ const MessagingUI: React.FC = () => {
     // Ensure conversations is ALWAYS an array even if state somehow becomes null
     const safeConversations = Array.isArray(conversations) ? conversations : [];
 
-    const wsRef = useRef<WebSocket | null>(null);
-    const { token } = useAuthStore();
-
+    // Initialize Conversations
     useEffect(() => {
         loadConversations();
 
-        // WebSocket Connection
+        // WebSocket Connection Setup
         if (!token) return;
 
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
@@ -123,20 +133,21 @@ const MessagingUI: React.FC = () => {
         return () => {
             ws.close();
         };
-    }, [token]); // Re-connect only if token changes
+    }, [token]);
 
+    // Load messages when conversation is selected
     useEffect(() => {
         if (selectedConversation?.id) {
             loadMessages(selectedConversation.id);
         }
     }, [selectedConversation?.id]);
 
+    // Auto-scroll to bottom on new messages
     useEffect(() => {
-        // Only scroll if we are near bottom or it's initial load? 
-        // For now, let's keep it simple but maybe avoid scrolling if user is reading up history
         scrollToBottom();
     }, [messages]);
 
+    // Keyboard shortcuts (Escape to close chat)
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {

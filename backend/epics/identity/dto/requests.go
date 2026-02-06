@@ -28,6 +28,7 @@ type LoginResponse struct {
 }
 
 // UpdateProfileRequest represents profile update payload
+// Fields are pointers to allow partial updates (nil means no change)
 type UpdateProfileRequest struct {
 	DisplayName       *string `json:"display_name,omitempty"`
 	Bio               *string `json:"bio,omitempty"`
@@ -46,13 +47,13 @@ type Toggle2FARequest struct {
 	Enable bool `json:"enable"`
 }
 
-// ErrorResponse represents error response
+// ErrorResponse represents standard error response format
 type ErrorResponse struct {
-	Error   string `json:"error"`
-	Message string `json:"message"`
+	Error   string `json:"error"`   // Short error code or type
+	Message string `json:"message"` // Human readable message
 }
 
-// SuccessResponse represents success response
+// SuccessResponse represents standard success response format
 type SuccessResponse struct {
 	Success bool        `json:"success"`
 	Message string      `json:"message"`

@@ -6,36 +6,37 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// Post represents a user post
+// Post represents a user-created content item
+// It is the central entity in the content sharing epic.
 type Post struct {
 	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	AuthorID     primitive.ObjectID `json:"author_id" bson:"author_id"`
-	Content      string             `json:"content" bson:"content"`
+	AuthorID     primitive.ObjectID `json:"author_id" bson:"author_id"` // Reference to the User who created the post
+	Content      string             `json:"content" bson:"content"`     // Text content of the post
 	LikeCount    int                `json:"like_count" bson:"like_count"`
 	CommentCount int                `json:"comment_count" bson:"comment_count"`
 	CreatedAt    time.Time          `json:"created_at" bson:"created_at"`
 	UpdatedAt    time.Time          `json:"updated_at" bson:"updated_at"`
 }
 
-// Like represents a like on a post
+// Like represents a user's positive reaction to a post
 type Like struct {
 	ID        primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	PostID    primitive.ObjectID `json:"post_id" bson:"post_id"`
-	UserID    primitive.ObjectID `json:"user_id" bson:"user_id"`
+	PostID    primitive.ObjectID `json:"post_id" bson:"post_id"` // Reference to the liked Post
+	UserID    primitive.ObjectID `json:"user_id" bson:"user_id"` // Reference to the User who liked the post
 	CreatedAt time.Time          `json:"created_at" bson:"created_at"`
 }
 
-// Comment represents a comment on a post
+// Comment represents a user's textual response to a post or another comment
 type Comment struct {
 	ID        primitive.ObjectID  `json:"id" bson:"_id,omitempty"`
 	PostID    primitive.ObjectID  `json:"post_id" bson:"post_id"`
 	UserID    primitive.ObjectID  `json:"user_id" bson:"user_id"`
 	Content   string              `json:"content" bson:"content"`
-	ParentID  *primitive.ObjectID `json:"parent_id,omitempty" bson:"parent_id,omitempty"`
+	ParentID  *primitive.ObjectID `json:"parent_id,omitempty" bson:"parent_id,omitempty"` // Nullable for top-level comments
 	CreatedAt time.Time           `json:"created_at" bson:"created_at"`
 }
 
-// Follow represents a follow relationship
+// Follow represents a directional relationship between two users
 type Follow struct {
 	ID          primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	FollowerID  primitive.ObjectID `json:"follower_id" bson:"follower_id"`   // User who follows

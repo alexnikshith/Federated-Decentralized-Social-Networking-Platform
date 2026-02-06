@@ -25,13 +25,13 @@ import (
 )
 
 func main() {
-	// Load configuration
+	// Load configuration from .env or environment variables
 	config.LoadConfig()
 
-	// Connect to database
+	// Connect to MongoDB database
 	database.Connect()
 
-	// Create indexes
+	// Create database indexes to ensure performance and uniqueness
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -45,7 +45,7 @@ func main() {
 		log.Printf("Warning: Failed to create verification indexes: %v", err)
 	}
 
-	// Create content-sharing indexes
+	// Create content-sharing indexes (Posts, Follows, Notifications, Search)
 	postRepo := contentRepo.NewPostRepository()
 	if err := postRepo.CreateIndexes(ctx); err != nil {
 		log.Printf("Warning: Failed to create post indexes: %v", err)
@@ -72,19 +72,19 @@ func main() {
 		log.Printf("Warning: Failed to create messaging indexes: %v", err)
 	}
 
-	// Create safety indexes
+	// Create safety indexes (Blocking)
 	blockRepo := safetyRepo.NewBlockRepository()
 	if err := blockRepo.CreateIndexes(ctx); err != nil {
 		log.Printf("Warning: Failed to create block indexes: %v", err)
 	}
 
-	// Setup router
+	// Setup Gorilla Mux router
 	router := mux.NewRouter()
 
-	// Apply global middleware
+	// Apply global middleware (Logging)
 	router.Use(middleware.Logging)
 
-	// Register routes
+	// Register module routes
 	routes.RegisterIdentityRoutes(router)
 	contentRoutes.RegisterContentSharingRoutes(router)
 	reportRoutes.RegisterReportRoutes(router)
@@ -92,15 +92,15 @@ func main() {
 	adminRoutes.RegisterAdminRoutes(router)
 	messagingRoutes.RegisterMessagingRoutes(router)
 
-	// Public media access
+	// Public media access handler
 	router.PathPrefix("/uploads/").Handler(http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
 
-	// WebSocket Hub
+	// WebSocket Hub Initialization
 	hub := websocket.NewHub()
 	websocket.GlobalHub = hub
 	go hub.Run()
 
-	// WebSocket Endpoint
+	// WebSocket Endpoint with manual token validation
 	router.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		// Extract token from query param since headers are limited in WS
 		tokenString := r.URL.Query().Get("token")
@@ -137,7 +137,7 @@ func main() {
 		w.Write([]byte("OK"))
 	}).Methods("GET")
 
-	// Start server
+	// Start HTTP server with CORS and Timeouts
 	addr := ":" + config.AppConfig.Port
 	log.Printf("Server starting on %s", addr)
 

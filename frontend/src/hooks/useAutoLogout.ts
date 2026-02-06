@@ -2,14 +2,13 @@ import { useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../epics/identity/store/authStore';
 
-/**
- * Hook to handle automatic logout after inactivity
- * Tracks user activity and logs out after 30 minutes of inactivity
- */
+// Hook to handle automatic logout after inactivity
+// Tracks user activity (mouse move, key press, etc.) and logs out after 30 minutes of inactivity
 export const useAutoLogout = () => {
     const navigate = useNavigate();
     const { isAuthenticated, updateActivity, checkAutoLogout } = useAuthStore();
 
+    // Callback to update "last active" timestamp in store
     const handleActivity = useCallback(() => {
         if (isAuthenticated) {
             updateActivity();
@@ -19,7 +18,7 @@ export const useAutoLogout = () => {
     useEffect(() => {
         if (!isAuthenticated) return;
 
-        // Check for auto-logout on mount
+        // Check for auto-logout immediately on mount in case they were inactive before reload
         if (checkAutoLogout()) {
             navigate('/login', { replace: true });
             return;

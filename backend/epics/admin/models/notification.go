@@ -9,11 +9,12 @@ import (
 type AdminNotificationType string
 
 const (
-	NotificationReviewAlert   AdminNotificationType = "review_alert"
-	NotificationAutoDisabled  AdminNotificationType = "auto_disabled"
+	NotificationReviewAlert  AdminNotificationType = "review_alert"
+	NotificationAutoDisabled AdminNotificationType = "auto_disabled"
 )
 
 // AdminNotification represents a notification for the admin dashboard
+// Used to alert admins about critical events like high report volumes or system issues.
 type AdminNotification struct {
 	ID           primitive.ObjectID    `json:"id" bson:"_id,omitempty"`
 	Type         AdminNotificationType `json:"type" bson:"type"`

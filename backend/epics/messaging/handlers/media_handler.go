@@ -21,6 +21,9 @@ func NewMediaHandler() *MediaHandler {
 }
 
 // UploadMedia handles POST /api/messaging/upload
+// Parses multipart form data, streams the file to MongoDB GridFS,
+// and returns the URL to access the uploaded file.
+// It limits file size to 20MB.
 func (h *MediaHandler) UploadMedia(w http.ResponseWriter, r *http.Request) {
 	if database.GridFS == nil {
 		respondError(w, "Media storage not initialized", http.StatusInternalServerError)

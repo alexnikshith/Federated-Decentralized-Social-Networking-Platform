@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import type { SignupRequest } from '../types';
 import './Auth.css';
 
+// SignupPage handles new user registration
 export const SignupPage: React.FC = () => {
     const navigate = useNavigate();
     const setAuth = useAuthStore((state) => state.setAuth);
@@ -19,11 +20,12 @@ export const SignupPage: React.FC = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
+    // handleSubmit handles form validation and API call
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
-        // Validation
+        // Client-side Validation
         if (formData.password !== confirmPassword) {
             setError('Passwords do not match');
             return;
@@ -37,9 +39,10 @@ export const SignupPage: React.FC = () => {
         setLoading(true);
 
         try {
+            // 1. Create Account
             await authApi.signup(formData);
 
-            // Auto-login after signup
+            // 2. Auto-login after successful signup to improve UX
             const loginResponse = await authApi.login({
                 email: formData.email,
                 password: formData.password,

@@ -1,3 +1,4 @@
+// Message represents an individual text or media message
 export interface Message {
     id: string;
     conversation_id: string;
@@ -10,6 +11,7 @@ export interface Message {
     is_read: boolean;
 }
 
+// Conversation groups messages between participants
 export interface Conversation {
     id: string;
     participants: Participant[];
@@ -18,6 +20,7 @@ export interface Conversation {
     unread_count?: number;
 }
 
+// Participant represents a user in a conversation
 export interface Participant {
     id: string;
     username: string;
@@ -26,6 +29,7 @@ export interface Participant {
     is_deactivated?: boolean;
 }
 
+// SendMessageRequest DTO for creating new messages
 export interface SendMessageRequest {
     receiver_id: string;
     content: string;

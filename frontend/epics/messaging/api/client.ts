@@ -39,6 +39,9 @@ api.interceptors.response.use(
     }
 );
 
+// Basic API setup - similar to other modules
+// ...
+
 export const messagingApi = {
     getConversations: async (): Promise<Conversation[]> => {
         const response = await api.get('/api/messages/conversations');
@@ -55,6 +58,7 @@ export const messagingApi = {
         return response.data.data || [];
     },
 
+    // Handles media uploads for messages (image/video/file)
     async uploadMedia(formData: FormData): Promise<{ url: string; fileName: string; type: string }> {
         const response = await api.post('/api/messages/upload', formData, {
             headers: {

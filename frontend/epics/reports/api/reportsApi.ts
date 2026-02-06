@@ -4,16 +4,19 @@ import { useAuthStore } from '../../identity/store/authStore';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
+// DailyActivity represents time spent on the platform
 export interface DailyActivity {
     date: string;
     minutes: number;
 }
 
+// ActivityReport aggregates daily activity
 export interface ActivityReport {
     total_hours: number;
     daily_stats: DailyActivity[];
 }
 
+// DailyInteraction represents actions taken/received (likes, comments, etc)
 export interface DailyInteraction {
     date: string;
     likes: number;
@@ -63,6 +66,7 @@ export const useReportsApi = () => {
         return response.data;
     };
 
+    // Fetches interactions RECEIVED by the user
     const fetchInteractions = async (startDate?: string, endDate?: string): Promise<InteractionReport> => {
         const params = new URLSearchParams();
         if (startDate) params.append('start_date', startDate);

@@ -33,6 +33,11 @@ interface AuthState {
 
 const AUTO_LOGOUT_TIME = 30 * 60 * 1000; // 30 minutes
 
+// useAuthStore uses Zustand with persistent storage logic
+// It manages:
+// 1. Current Active Session (user, token)
+// 2. Multi-session background state (stored in `sessions[]`)
+// 3. Activity tracking for auto-logout
 export const useAuthStore = create<AuthState>()(
     persist(
         (set, get) => ({
@@ -42,6 +47,7 @@ export const useAuthStore = create<AuthState>()(
             lastActivity: null,
             sessions: [],
 
+            // setAuth logs in a user and updates the session registry
             setAuth: (user, token) => {
                 const now = Date.now();
                 set((state) => {
@@ -77,6 +83,7 @@ export const useAuthStore = create<AuthState>()(
                 });
             },
 
+            // clearAuth logs out the current user or all users
             clearAuth: (logoutAll: boolean = false) => {
                 if (logoutAll) {
                     get().clearAllSessions();
@@ -119,6 +126,7 @@ export const useAuthStore = create<AuthState>()(
                 }
             },
 
+            // clearAllSessions removes everything locally
             clearAllSessions: () => {
                 localStorage.clear(); // Hard reset of storage
                 set({
@@ -130,6 +138,7 @@ export const useAuthStore = create<AuthState>()(
                 });
             },
 
+            // pauseSession deactivates UI but keeps token valid (for switching)
             pauseSession: () => {
                 // Deactivate current user but keep session alive (token valid)
                 // This allows logging in as someone else while keeping this session in background
@@ -188,6 +197,7 @@ export const useAuthStore = create<AuthState>()(
                 return false;
             },
 
+            // switchAccount moves a background session to active state
             switchAccount: (userId: string, intentToLogin: boolean = false) => {
                 set((state) => {
                     const session = state.sessions.find(s => s.user.id === userId);

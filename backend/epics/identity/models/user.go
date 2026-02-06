@@ -7,29 +7,30 @@ import (
 )
 
 // User represents a user account in the system
+// It contains all personal, security, and profile information for a registered user.
 type User struct {
 	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Username     string             `json:"username" bson:"username"`
-	Email        string             `json:"email" bson:"email"`
-	PasswordHash string             `json:"-" bson:"password_hash"` // Never expose in JSON
+	Username     string             `json:"username" bson:"username"` // Unique identifier for the user
+	Email        string             `json:"email" bson:"email"`       // Unique email address
+	PasswordHash string             `json:"-" bson:"password_hash"`   // Bcrypt hash of the password, never exposed in JSON
 	DisplayName  string             `json:"display_name" bson:"display_name"`
 	Bio          string             `json:"bio" bson:"bio"`
 	AvatarURL    string             `json:"avatar_url" bson:"avatar_url"`
 
 	// Privacy settings
-	ProfileVisibility string `json:"profile_visibility" bson:"profile_visibility"` // "public" or "followers"
+	ProfileVisibility string `json:"profile_visibility" bson:"profile_visibility"` // "public" or "followers" - controls who can see detailed profile info
 
 	// Account status
-	IsActive      bool   `json:"is_active" bson:"is_active"`
-	IsDeactivated bool   `json:"is_deactivated" bson:"is_deactivated"`
-	Is2FAEnabled  bool   `json:"is_2fa_enabled" bson:"is_2fa_enabled"`
-	Role          string `json:"role" bson:"role"` // "user" or "admin"
+	IsActive      bool   `json:"is_active" bson:"is_active"`           // True if the user has verified email/is approved
+	IsDeactivated bool   `json:"is_deactivated" bson:"is_deactivated"` // True if user or admin has deactivated the account
+	Is2FAEnabled  bool   `json:"is_2fa_enabled" bson:"is_2fa_enabled"` // True if Two-Factor Authentication is enabled
+	Role          string `json:"role" bson:"role"`                     // "user" or "admin" - determines access privileges
 
 	// Timestamps
 	CreatedAt interface{} `json:"created_at" bson:"created_at"`
 	UpdatedAt interface{} `json:"updated_at" bson:"updated_at"`
 
-	// Instance info
+	// Instance info for federation
 	InstanceID string `json:"instance_id" bson:"instance_id"`
 }
 
