@@ -9,8 +9,8 @@ import (
 type AdminNotificationType string
 
 const (
-	NotificationReviewAlert   AdminNotificationType = "review_alert"
-	NotificationAutoDisabled  AdminNotificationType = "auto_disabled"
+	NotificationReviewAlert  AdminNotificationType = "review_alert"
+	NotificationAutoDisabled AdminNotificationType = "auto_disabled"
 )
 
 // AdminNotification represents a notification for the admin dashboard

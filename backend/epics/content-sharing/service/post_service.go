@@ -3,9 +3,11 @@ package service
 import (
 	"context"
 	"errors"
+	"federated-social/backend/config"
 	"federated-social/backend/epics/content-sharing/dto"
 	"federated-social/backend/epics/content-sharing/models"
 	"federated-social/backend/epics/content-sharing/repository"
+	federationService "federated-social/backend/epics/federation/service"
 	safetyRepo "federated-social/backend/epics/safety/repository"
 	safetyService "federated-social/backend/epics/safety/service"
 	"log"
@@ -15,20 +17,27 @@ import (
 )
 
 type PostService struct {
-	postRepo         *repository.PostRepository
-	followRepo       *repository.FollowRepository
-	searchRepo       *repository.SearchRepository
-	notificationRepo *repository.NotificationRepository
-	blockService     *safetyService.BlockService
+	postRepo          *repository.PostRepository
+	followRepo        *repository.FollowRepository
+	searchRepo        *repository.SearchRepository
+	notificationRepo  *repository.NotificationRepository
+	blockService      *safetyService.BlockService
+	federationService *federationService.FederationService
 }
 
 func NewPostService() *PostService {
+	var fedService *federationService.FederationService
+	if config.AppConfig.FederationEnabled {
+		fedService = federationService.NewFederationService()
+	}
+
 	return &PostService{
-		postRepo:         repository.NewPostRepository(),
-		followRepo:       repository.NewFollowRepository(),
-		searchRepo:       repository.NewSearchRepository(),
-		notificationRepo: repository.NewNotificationRepository(),
-		blockService:     safetyService.NewBlockService(safetyRepo.NewBlockRepository()),
+		postRepo:          repository.NewPostRepository(),
+		followRepo:        repository.NewFollowRepository(),
+		searchRepo:        repository.NewSearchRepository(),
+		notificationRepo:  repository.NewNotificationRepository(),
+		blockService:      safetyService.NewBlockService(safetyRepo.NewBlockRepository()),
+		federationService: fedService,
 	}
 }
 
@@ -41,6 +50,32 @@ func (s *PostService) CreatePost(ctx context.Context, userID primitive.ObjectID,
 
 	if err := s.postRepo.CreatePost(ctx, post); err != nil {
 		return nil, err
+	}
+
+	// Trigger federation if enabled
+	if s.federationService != nil {
+		// Get user info for federation
+		users, err := s.searchRepo.GetUsersByIDs(ctx, []primitive.ObjectID{userID})
+		if err == nil && users[userID] != nil {
+			user := users[userID]
+
+			// Broadcast to all trusted instances asynchronously
+			go func() {
+				instances, err := s.federationService.GetTrustedInstances(context.Background())
+				if err != nil {
+					log.Printf("Failed to get trusted instances: %v", err)
+					return
+				}
+
+				for _, instance := range instances {
+					if err := s.federationService.SendCreatePost(context.Background(), post, user, instance.Domain); err != nil {
+						log.Printf("Federation to %s failed for post %s: %v", instance.Domain, post.ID.Hex(), err)
+					} else {
+						log.Printf("Federation to %s succeeded for post %s", instance.Domain, post.ID.Hex())
+					}
+				}
+			}()
+		}
 	}
 
 	return post, nil
