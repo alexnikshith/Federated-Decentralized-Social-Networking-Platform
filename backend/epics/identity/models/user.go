@@ -30,7 +30,8 @@ type User struct {
 	UpdatedAt interface{} `json:"updated_at" bson:"updated_at"`
 
 	// Instance info
-	InstanceID string `json:"instance_id" bson:"instance_id"`
+	InstanceID        string   `json:"instance_id" bson:"instance_id"`
+	JoinedCommunities []string `json:"joined_communities" bson:"joined_communities"`
 }
 
 // ActivityLog represents user activity tracking
@@ -59,6 +60,14 @@ type PublicUser struct {
 	PostsCount        int64              `json:"posts_count"`
 	IsFollowing       bool               `json:"is_following"`
 	Is2FAEnabled      *bool              `json:"is_2fa_enabled,omitempty"` // Only visible to self
+}
+
+// PrivateUser represents user data visible to the owner (includes email)
+type PrivateUser struct {
+	PublicUser
+	Email             string   `json:"email"`
+	InstanceID        string   `json:"instance_id"`
+	JoinedCommunities []string `json:"joined_communities"`
 }
 
 // Session represents an active user session
@@ -91,5 +100,15 @@ func (u *User) ToPublicUser() PublicUser {
 		FollowersCount:    0,
 		FollowingCount:    0,
 		PostsCount:        0,
+	}
+}
+
+// ToPrivateUser converts User to PrivateUser (for owner)
+func (u *User) ToPrivateUser() PrivateUser {
+	return PrivateUser{
+		PublicUser:        u.ToPublicUser(),
+		Email:             u.Email,
+		InstanceID:        u.InstanceID,
+		JoinedCommunities: u.JoinedCommunities,
 	}
 }

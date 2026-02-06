@@ -228,6 +228,14 @@ func (s *ProfileService) GetProfileByIdOrUsername(ctx context.Context, identifie
 	return s.GetProfile(ctx, user.ID, requestingUserID)
 }
 
+// AddJoinedCommunity adds a community to the user's joined list
+func (s *ProfileService) AddJoinedCommunity(ctx context.Context, userID primitive.ObjectID, communityID string) error {
+	if communityID == "" {
+		return errors.New("community ID required")
+	}
+	return s.userRepo.AddJoinedCommunity(ctx, userID, communityID)
+}
+
 // Helper function to log activity
 func (s *ProfileService) logActivity(ctx context.Context, userID primitive.ObjectID, action, details string) {
 	log := &models.ActivityLog{
