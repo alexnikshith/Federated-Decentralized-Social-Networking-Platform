@@ -7,6 +7,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// Config holds all the application configuration
 type Config struct {
 	Port         string
 	MongoURI     string
@@ -19,17 +20,20 @@ type Config struct {
 	SMTPFrom     string
 }
 
+// AppConfig represents the global configuration instance
 var AppConfig *Config
 
 // LoadConfig loads environment variables and initializes the config
+// It attempts to load .env files and falls back to system environment variables
 func LoadConfig() {
-	// Try loading .env from the current directory, then fallback to parent directory
+	// Try loading .env from the current directory, then fallback to parent directory for development convenience
 	if err := godotenv.Load(); err != nil {
 		if err := godotenv.Load("../.env"); err != nil {
 			log.Println("No .env file found, using environment variables and defaults")
 		}
 	}
 
+	// Initialize the configuration with environment variables or default values
 	AppConfig = &Config{
 		Port:         getEnv("PORT", "8080"),
 		MongoURI:     getEnv("MONGO_URI", "mongodb://localhost:27017"),

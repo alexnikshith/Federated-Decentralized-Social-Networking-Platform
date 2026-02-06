@@ -50,6 +50,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { showToast } from "@/lib/toast";
 
+// PostCard displays a single post with interactive features (Like, Comment, Share)
 interface PostCardProps {
     post: Post;
     initialShowComments?: boolean;
@@ -57,6 +58,7 @@ interface PostCardProps {
 }
 
 export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = false, onLikeToggle }) => {
+    // UI State
     const [showComments, setShowComments] = useState(initialShowComments);
     const [showLikers, setShowLikers] = useState(false);
     const [likers, setLikers] = useState<PostLiker[]>([]);
@@ -66,6 +68,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
     const [reportReason, setReportReason] = useState('');
     const [isReporting, setIsReporting] = useState(false);
 
+    // Global Stores
     const {
         likePost,
         unlikePost,
@@ -77,6 +80,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
     } = useContentStore();
     const { user } = useAuthStore();
 
+    // Fetch list of users who liked the post (Lazy load)
     const fetchLikers = async () => {
         if (!showLikers) {
             setIsLoadingLikers(true);
@@ -92,6 +96,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
         setShowLikers(!showLikers);
     };
 
+    // Toggle heart interaction
     const handleLike = () => {
         if (post.is_liked) {
             unlikePost(post.id);
@@ -103,6 +108,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
         }
     };
 
+    // Delete post owner action
     const handleDelete = async () => {
         try {
             await deletePost(post.id);
@@ -113,6 +119,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
         }
     };
 
+    // Save/Bookmark functionality
     const handleSave = async () => {
         try {
             if (post.is_saved) {
@@ -127,6 +134,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
         }
     };
 
+    // Submit a content report
     const handleReport = async () => {
         if (!reportReason.trim()) return;
         setIsReporting(true);
@@ -142,6 +150,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
         }
     };
 
+    // Track user interest for feed algorithm
     const handleInteraction = async (type: 'interested' | 'not_interested') => {
         try {
             await interactPost(post.id, type);
@@ -161,8 +170,10 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
     return (
         <div className="post-item animate-in fade-in slide-in-from-bottom-2 duration-500">
             <div className="p-6">
+                {/* Header: Author info and Actions */}
                 <div className="flex items-start justify-between mb-5">
                     <div className="flex items-center gap-4">
+                        {/* Author Avatar */}
                         <div className="relative group/avatar">
                             {post.author_avatar ? (
                                 <img src={post.author_avatar} alt={post.author_name} className="w-12 h-12 rounded-full object-cover ring-2 ring-transparent group-hover/avatar:ring-primary/30 transition-all" />
@@ -176,6 +187,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
                             </div>
                         </div>
 
+                        {/* Author Name and Info */}
                         <div>
                             <div className="flex items-center gap-2 flex-wrap">
                                 <Link to={`/profile/${post.author_name}`} className="font-display font-bold text-foreground text-lg tracking-tight leading-tight hover:underline">
@@ -195,6 +207,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
                         </div>
                     </div>
 
+                    {/* Post Menu Actions */}
                     <div className="flex items-center gap-1">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -239,12 +252,14 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
                     </div>
                 </div>
 
+                {/* Post Body/Content */}
                 <div className="post-content-area mb-6">
                     <p className="text-[1.05rem] text-foreground/90 leading-relaxed whitespace-pre-wrap font-sans">
                         {post.content}
                     </p>
                 </div>
 
+                {/* Footer Interactions (Like, Comment, Share) */}
                 <div className="flex items-center gap-2 pt-4 border-t border-border/20">
                     <div className="flex items-center">
                         <Button
@@ -295,6 +310,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
                     </Button>
                 </div>
 
+                {/* Comments Section */}
                 {showComments && (
                     <div className="mt-4 pt-5 border-t border-border/20 animate-in fade-in slide-in-from-top-2 duration-300">
                         <CommentList postId={post.id} />
@@ -302,6 +318,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
                 )}
             </div>
 
+            {/* Likers Modal */}
             <Dialog open={showLikers} onOpenChange={setShowLikers}>
                 <DialogContent className="sm:max-w-md bg-card border-border/50">
                     <DialogHeader>

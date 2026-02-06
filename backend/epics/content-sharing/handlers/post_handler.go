@@ -43,6 +43,7 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetFeed handles GET /api/feed
+// Retrieves the main activity feed for the authenticated user, prioritized by follows.
 func (h *PostHandler) GetFeed(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserIDFromContext(r.Context())
 

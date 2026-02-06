@@ -72,6 +72,9 @@ func (h *AdminHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(users)
 }
 
+// ToggleUserStatus active/deactives a user account
+// If deactivating, it attempts to send an email notification with the reason.
+// It also forcefully invalidates all active sessions for that user to ensure immediate lockout.
 func (h *AdminHandler) ToggleUserStatus(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		UserID string `json:"user_id"`
@@ -84,7 +87,7 @@ func (h *AdminHandler) ToggleUserStatus(w http.ResponseWriter, r *http.Request) 
 	}
 
 	oid, _ := primitive.ObjectIDFromHex(req.UserID)
-	
+
 	// If deactivating, try to send email first
 	if !req.Status {
 		user, err := h.userRepo.FindByID(r.Context(), oid)
@@ -93,7 +96,7 @@ func (h *AdminHandler) ToggleUserStatus(w http.ResponseWriter, r *http.Request) 
 			if reason == "" {
 				reason = "Violation of Terms of Service"
 			}
-			
+
 			// Send Synchronously (Soft Fail)
 			if err := h.emailSender.SendAccountDeactivationNotification(user.Email, user.Username, reason); err != nil {
 				log.Printf("WARNING: Failed to send deactivation email to %s: %v", user.Email, err)

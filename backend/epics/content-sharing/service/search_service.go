@@ -17,6 +17,7 @@ func NewSearchService() *SearchService {
 }
 
 // SearchUsers searches for users by username
+// It delegates to the repository to find matches and then converts them to safe PublicUser objects.
 func (s *SearchService) SearchUsers(ctx context.Context, query string, limit int64) ([]identityModels.PublicUser, error) {
 	users, err := s.searchRepo.SearchUsers(ctx, query, limit)
 	if err != nil {

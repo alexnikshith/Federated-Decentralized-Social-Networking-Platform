@@ -1,17 +1,20 @@
 import { User } from '../../identity/types';
 
+// Basic stats for the admin dashboard
 export interface AdminStats {
     total_users: number;
     total_posts: number;
     daily_activity: number;
 }
 
+// DTO for blocking/unblocking users
 export interface UserStatusUpdate {
     user_id: string;
     is_active: boolean;
     reason?: string;
 }
 
+// Simplified post view for admin moderation
 export interface AdminPost {
     id: string;
     author_id: string;

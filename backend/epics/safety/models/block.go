@@ -7,6 +7,7 @@ import (
 )
 
 // Block represents a block relationship between two users
+// It stores the active directional block from Blocker to Blocked.
 type Block struct {
 	ID        primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	BlockerID primitive.ObjectID `json:"blocker_id" bson:"blocker_id"`

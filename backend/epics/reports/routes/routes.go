@@ -7,6 +7,13 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// RegisterReportRoutes registers routes for user activity and reporting
+// Includes endpoints for:
+// - Activity tracking (heartbeat)
+// - Activity reports (daily stats)
+// - Interaction reports (likes, comments, etc.)
+// - User reporting (safety)
+// - Admin view of reports
 func RegisterReportRoutes(router *mux.Router) {
 	handler := handlers.NewReportHandler()
 

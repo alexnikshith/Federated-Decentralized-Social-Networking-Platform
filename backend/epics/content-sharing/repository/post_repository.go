@@ -117,7 +117,8 @@ func (r *PostRepository) CreateIndexes(ctx context.Context) error {
 	return nil
 }
 
-// CreatePost creates a new post
+// CreatePost creates a new post in the database
+// It initializes timestamps and counters (likes, comments) to zero.
 func (r *PostRepository) CreatePost(ctx context.Context, post *models.Post) error {
 	post.CreatedAt = time.Now()
 	post.UpdatedAt = time.Now()
@@ -133,7 +134,7 @@ func (r *PostRepository) CreatePost(ctx context.Context, post *models.Post) erro
 	return nil
 }
 
-// GetPostByID retrieves a post by ID
+// GetPostByID retrieves a single post by its unique ID
 func (r *PostRepository) GetPostByID(ctx context.Context, postID primitive.ObjectID) (*models.Post, error) {
 	var post models.Post
 	err := r.posts.FindOne(ctx, bson.M{"_id": postID}).Decode(&post)

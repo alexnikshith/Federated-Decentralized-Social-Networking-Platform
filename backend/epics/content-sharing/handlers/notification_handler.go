@@ -21,6 +21,8 @@ func NewNotificationHandler() *NotificationHandler {
 }
 
 // GetNotifications handles GET /api/notifications
+// Retrieves a paginated list of notifications for the authenticated user.
+// Uses `limit` query parameter to control page size (default 50).
 func (h *NotificationHandler) GetNotifications(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserIDFromContext(r.Context())
 

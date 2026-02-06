@@ -116,20 +116,32 @@ const UserListModal = ({ isOpen, onClose, title, users, loading }: UserListModal
 };
 
 
+// ProfileUI displays the user profile
+// It handles:
+// 1. User information display (bio, stats, avatar)
+// 2. Tabular content (Posts, Activity) and sub-tabs
+// 3. Interactions (Follow, Block, Report)
 const ProfileUI = () => {
   const { username } = useParams();
   const navigate = useNavigate();
   const { user: currentUser } = useAuthStore();
 
   const { toast } = useToast();
+  // UI State for tabs
   const [activeTab, setActiveTab] = useState("Posts");
+
+  // Relationship State
   const [isFollowing, setIsFollowing] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
+
+  // Data State
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [likedPosts, setLikedPosts] = useState<Post[]>([]);
   const [commentedPosts, setCommentedPosts] = useState<Post[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
+
+  // Navigation State
   const [activeSubTab, setActiveSubTab] = useState("All");
   const [activitySubTab, setActivitySubTab] = useState("Likes");
   const [loading, setLoading] = useState(true);
@@ -146,6 +158,7 @@ const ProfileUI = () => {
 
   const isOwnProfile = !username || username === currentUser?.username || username === currentUser?.id;
 
+  // Load Initial Profile Data
   useEffect(() => {
     const loadProfileData = async () => {
       setLoading(true);
@@ -183,7 +196,7 @@ const ProfileUI = () => {
     loadProfileData();
   }, [username, isOwnProfile, currentUser]);
 
-  // Handle scrolling to target post
+  // Handle scrolling to target post (deep linking)
   useEffect(() => {
     if (targetPostId && !loading && posts.length > 0) {
       const timer = setTimeout(() => {
@@ -197,6 +210,8 @@ const ProfileUI = () => {
   }, [targetPostId, loading, posts]);
 
   const [activityLoading, setActivityLoading] = useState(false);
+
+  // Lazy load activity data when tabs change
   useEffect(() => {
     const fetchActivityData = async () => {
       if (activeTab === "Activity" && profileUser) {
@@ -250,7 +265,7 @@ const ProfileUI = () => {
   const [listModalLoading, setListModalLoading] = useState(false);
   const [showBlockConfirmation, setShowBlockConfirmation] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
-  
+
 
   const handleOpenFollowers = async () => {
     if (!profileUser) return;
@@ -286,6 +301,7 @@ const ProfileUI = () => {
     setProfileUser(updatedUser);
   };
 
+  // Toggle block/unblock user
   const handleBlockUser = async () => {
     if (!profileUser) return;
 
@@ -310,6 +326,7 @@ const ProfileUI = () => {
     }
   };
 
+  // Confirm block action
   const confirmBlockUser = async () => {
     if (!profileUser) return;
     try {
@@ -359,6 +376,7 @@ const ProfileUI = () => {
     return true;
   });
 
+  // Toggle like on a post and update local state
   const handlePostLike = (postId: string) => {
     const updateList = (list: Post[]) => list.map(p => {
       if (p.id === postId) {
@@ -377,6 +395,7 @@ const ProfileUI = () => {
     setSavedPosts(prev => updateList(prev));
   };
 
+  // Helper to format date for separators
   const getDateLabel = (dateStr: string) => {
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return "";
@@ -385,8 +404,10 @@ const ProfileUI = () => {
     return format(date, 'MMM dd, yyyy');
   };
 
+  // Render list of posts with date separators
   const renderPostList = (items: Post[], targetId?: string) => {
     return items.map((post, index) => {
+      // Determine if a date separator is needed
       const showSeparator = index === 0 || !isSameDay(new Date(post.created_at), new Date(items[index - 1].created_at));
       return (
         <div key={post.id} className="animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ animationDelay: `${Math.min(index * 0.05, 0.5)}s`, animationFillMode: 'backwards' }}>
@@ -437,10 +458,11 @@ const ProfileUI = () => {
 
   const tabs = isOwnProfile ? ["Posts", "Activity"] : ["Posts"];
 
+  // Main Profile Layout
   return (
     <div className="min-h-screen bg-background">
       <main className="pb-8">
-        {/* Cover */}
+        {/* Cover Image Section */}
         <div className="h-32 md:h-48 bg-gradient-to-br from-primary/20 via-accent/10 to-background relative overflow-hidden">
           <div className="absolute inset-0 grid-pattern opacity-10" />
           <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />

@@ -22,7 +22,8 @@ func NewBlockHandler() *BlockHandler {
 	}
 }
 
-// BlockUser handles the blocking of a user
+// BlockUser handles POST /api/users/{id}/block
+// Extracts the target ID and the authenticated user's ID to create a block.
 func (h *BlockHandler) BlockUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	blockedIDStr := vars["id"]

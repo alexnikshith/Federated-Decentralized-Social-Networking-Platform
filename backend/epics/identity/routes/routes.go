@@ -9,22 +9,27 @@ import (
 )
 
 // RegisterIdentityRoutes registers all identity-related routes
+// It defines endpoints for authentication (signup, login, OTP) and profile management.
+// Routes are categorized into Public, Protected (requiring Auth Middleware), and Optional Auth.
 func RegisterIdentityRoutes(router *mux.Router) {
 	authHandler := handlers.NewAuthHandler()
 	profileHandler := handlers.NewProfileHandler()
 
 	// Public routes (no authentication required)
+	// These endpoints are open to all users, including guests
 	router.HandleFunc("/api/auth/signup", authHandler.Signup).Methods("POST", "OPTIONS")
 	router.HandleFunc("/api/auth/login", authHandler.Login).Methods("POST", "OPTIONS")
 	router.HandleFunc("/api/auth/verify-otp", authHandler.VerifyOTP).Methods("POST", "OPTIONS")
 
 	// Auth routes (protected)
+	// These endpoints require a valid JWT token in the Authorization header
 	router.Handle("/api/auth/logout", middleware.AuthMiddleware(http.HandlerFunc(authHandler.Logout))).Methods("POST", "OPTIONS")
 	router.Handle("/api/auth/change-password", middleware.AuthMiddleware(http.HandlerFunc(authHandler.ChangePassword))).Methods("POST", "OPTIONS")
 	router.Handle("/api/auth/2fa", middleware.AuthMiddleware(http.HandlerFunc(authHandler.Toggle2FA))).Methods("POST", "OPTIONS")
 	router.Handle("/api/auth/me", middleware.AuthMiddleware(http.HandlerFunc(authHandler.Me))).Methods("GET", "OPTIONS")
 
 	// Profile routes (protected)
+	// These allow users to manage their own profile data
 	router.Handle("/api/profile/me", middleware.AuthMiddleware(http.HandlerFunc(profileHandler.GetMyProfile))).Methods("GET", "OPTIONS")
 	router.Handle("/api/profile/me", middleware.AuthMiddleware(http.HandlerFunc(profileHandler.UpdateProfile))).Methods("PUT", "OPTIONS")
 	router.Handle("/api/profile/me", middleware.AuthMiddleware(http.HandlerFunc(profileHandler.DeleteAccount))).Methods("DELETE", "OPTIONS")
@@ -32,5 +37,6 @@ func RegisterIdentityRoutes(router *mux.Router) {
 	router.Handle("/api/profile/me/activity", middleware.AuthMiddleware(http.HandlerFunc(profileHandler.GetActivity))).Methods("GET", "OPTIONS")
 
 	// Public profile view (Optional auth to see follow status)
+	// If authenticated, the response includes "is_following" status and potentially more details
 	router.Handle("/api/profile/{id}", middleware.OptionalAuth(http.HandlerFunc(profileHandler.GetProfile))).Methods("GET", "OPTIONS")
 }

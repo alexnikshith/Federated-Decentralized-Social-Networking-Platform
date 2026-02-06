@@ -11,10 +11,12 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+// Global database variables
 var DB *mongo.Database
 var GridFS *gridfs.Bucket
 
 // Connect establishes connection to MongoDB with retries
+// It attempts to connect multiple times before failing to handle transient startup issues (e.g., docker composition)
 func Connect() {
 	maxRetries := 5
 	retryDelay := 10 * time.Second
@@ -22,6 +24,7 @@ func Connect() {
 	for attempt := 1; attempt <= maxRetries; attempt++ {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
+		// Create client options from the URI
 		clientOptions := options.Client().ApplyURI(config.AppConfig.MongoURI)
 		client, err := mongo.Connect(ctx, clientOptions)
 		cancel()
@@ -35,7 +38,7 @@ func Connect() {
 			log.Fatal("Failed to connect to MongoDB after retries:", err)
 		}
 
-		// Ping the database
+		// Ping the database to verify the connection is alive
 		ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
 		if err := client.Ping(ctx, nil); err != nil {
 			cancel()
@@ -48,9 +51,10 @@ func Connect() {
 		}
 		cancel()
 
+		// Set the global database instance
 		DB = client.Database(config.AppConfig.DatabaseName)
 
-		// Initialize GridFS bucket
+		// Initialize GridFS bucket for media storage (images, videos)
 		var errBucket error
 		GridFS, errBucket = gridfs.NewBucket(DB, options.GridFSBucket().SetName("messaging_media"))
 		if errBucket != nil {

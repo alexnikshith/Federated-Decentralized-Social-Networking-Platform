@@ -36,7 +36,8 @@ func (r *SessionRepository) CreateSession(ctx context.Context, session *models.S
 	return nil
 }
 
-// FindSessionByToken finds a session by token
+// FindSessionByToken finds a valid session by token string
+// It also checks the ExpiresAt timestamp to ensure the session hasn't expired naturally.
 func (r *SessionRepository) FindSessionByToken(ctx context.Context, token string) (*models.Session, error) {
 	var session models.Session
 	err := r.collection.FindOne(ctx, bson.M{

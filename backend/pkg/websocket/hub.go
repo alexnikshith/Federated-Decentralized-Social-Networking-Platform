@@ -5,6 +5,8 @@ import (
 	"sync"
 )
 
+// Hub maintains the set of active clients and broadcasts messages to them.
+// It uses a map to track clients per UserID to support multiple devices/tab per user.
 type Hub struct {
 	// Registered clients map: userID -> map of client pointers (to support multiple tabs/devices)
 	clients map[string]map[*Client]bool
@@ -29,6 +31,7 @@ type BroadcastMessage struct {
 
 var GlobalHub *Hub
 
+// NewHub creates a new Hub instance
 func NewHub() *Hub {
 	return &Hub{
 		broadcast:  make(chan *BroadcastMessage),

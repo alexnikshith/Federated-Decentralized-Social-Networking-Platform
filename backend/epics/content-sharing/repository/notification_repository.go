@@ -57,7 +57,8 @@ func (r *NotificationRepository) CreateNotification(ctx context.Context, notific
 	return nil
 }
 
-// GetNotifications retrieves notifications for a user
+// GetNotifications retrieves a paginated list of notifications for a user
+// Notifications are sorted by creation date in descending order (newest first).
 func (r *NotificationRepository) GetNotifications(ctx context.Context, userID primitive.ObjectID, limit int64) ([]models.Notification, error) {
 	filter := bson.M{"user_id": userID}
 	opts := options.Find().

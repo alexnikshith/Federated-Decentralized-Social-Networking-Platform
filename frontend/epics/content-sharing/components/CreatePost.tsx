@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Send, Image, Hash, AtSign } from 'lucide-react';
 import { useAuthStore } from '../../identity/store/authStore';
 
+// CreatePost component allows users to publish new content
 export const CreatePost: React.FC = () => {
     const [content, setContent] = useState('');
     const { createPost, loading } = useContentStore();
@@ -14,7 +15,7 @@ export const CreatePost: React.FC = () => {
         if (!content.trim()) return;
 
         await createPost(content);
-        setContent('');
+        setContent(''); // Reset form
     };
 
     return (
