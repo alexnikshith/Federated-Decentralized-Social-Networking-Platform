@@ -62,3 +62,39 @@ func (h *FederationHandler) ReceiveActivity(w http.ResponseWriter, r *http.Reque
 		"status": "accepted",
 	})
 }
+
+// GetTrustedInstances returns all trusted federated instances
+// GET /api/federation/instances
+func (h *FederationHandler) GetTrustedInstances(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Get trusted instances from database
+	instances, err := h.federationService.GetTrustedInstances(ctx)
+	if err != nil {
+		log.Printf("Error fetching trusted instances: %v", err)
+		http.Error(w, "Failed to fetch instances", http.StatusInternalServerError)
+		return
+	}
+
+	// Add local instance to the response
+	localInstance := map[string]interface{}{
+		"instance":    config.AppConfig.InstanceName,
+		"domain":      config.AppConfig.InstanceDomain,
+		"trust_level": "local",
+		"is_local":    true,
+	}
+
+	// Convert instances to response format
+	response := []map[string]interface{}{localInstance}
+	for _, inst := range instances {
+		response = append(response, map[string]interface{}{
+			"instance":    inst.Domain,
+			"domain":      inst.Domain,
+			"trust_level": inst.TrustLevel,
+			"is_local":    false,
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}

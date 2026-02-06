@@ -10,10 +10,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Globe, ArrowRight, Eye, EyeOff, Shield, Check, Users, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// Note: In a real federated setup, this list would come from an API
+// For this demo, users register on the local instance
 const popularInstances = [
-    { domain: "art.nexus.social", name: "Art & Creative", members: "12.4k" },
-    { domain: "tech.nexus.social", name: "Tech Enthusiasts", members: "28.9k" },
-    { domain: "music.nexus.social", name: "Music Zone", members: "15.6k" },
+    { domain: "localhost:8080", name: "Local Instance (Server 1)", members: "Active" },
+    { domain: "localhost:8081", name: "Federated Instance (Server 2)", members: "Active" },
 ];
 
 interface RegisterFormProps {
@@ -143,7 +144,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                             <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                             <Input
                                 type="text"
-                                placeholder="custom-instance.nexus.social"
+                                placeholder="localhost:8080"
                                 value={customInstance}
                                 onChange={(e) => {
                                     setCustomInstance(e.target.value);
