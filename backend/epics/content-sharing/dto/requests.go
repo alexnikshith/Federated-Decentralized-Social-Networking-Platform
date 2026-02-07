@@ -3,7 +3,9 @@ package dto
 // CreatePostRequest represents the request to create a post
 // Content must be between 1 and 5000 characters.
 type CreatePostRequest struct {
-	Content string `json:"content" binding:"required,min=1,max=5000"`
+	Content   string `json:"content" binding:"required,min=1,max=5000"`
+	MediaURL  string `json:"media_url,omitempty"`
+	MediaType string `json:"media_type,omitempty"`
 }
 
 // CreateCommentRequest represents the request to create a comment

@@ -11,7 +11,7 @@ interface ContentState {
 
     // Actions
     fetchFeed: () => Promise<void>;
-    createPost: (content: string) => Promise<void>;
+    createPost: (content: string, mediaUrl?: string, mediaType?: 'image' | 'video' | string) => Promise<void>;
     likePost: (postId: string) => Promise<void>;
     unlikePost: (postId: string) => Promise<void>;
     deletePost: (postId: string) => Promise<void>;
@@ -46,10 +46,10 @@ export const useContentStore = create<ContentState>((set, get) => ({
     },
 
     // Creates a new post and refreshes the feed
-    createPost: async (content: string) => {
+    createPost: async (content: string, mediaUrl?: string, mediaType?: 'image' | 'video' | string) => {
         set({ loading: true, error: null });
         try {
-            await api.createPost({ content });
+            await api.createPost({ content, media_url: mediaUrl, media_type: mediaType });
             // Refresh the entire feed to get the enriched post with author data
             await get().fetchFeed();
         } catch (error) {
