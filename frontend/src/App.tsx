@@ -111,7 +111,12 @@ const AppContent: React.FC = () => {
                 }
             }
         };
+
         sync();
+        // Refetch on window focus to ensure real-time data
+        window.addEventListener('focus', sync);
+
+        return () => window.removeEventListener('focus', sync);
     }, [isAuthenticated, token, setAuth]);
 
     // Safety Valve: Recover from corrupted login state without wiping other background sessions
