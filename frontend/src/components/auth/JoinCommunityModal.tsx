@@ -21,6 +21,7 @@ interface JoinCommunityModalProps {
     targetCommunity: { id: string; name: string; url: string } | null;
     currentUserEmail: string;
     onSuccess: () => void;
+    initialStep?: 'register' | 'login';
 }
 
 export const JoinCommunityModal = ({
@@ -28,9 +29,10 @@ export const JoinCommunityModal = ({
     onClose,
     targetCommunity,
     currentUserEmail,
-    onSuccess
+    onSuccess,
+    initialStep = 'register'
 }: JoinCommunityModalProps) => {
-    const [step, setStep] = useState<'register' | 'login' | 'otp'>('register');
+    const [step, setStep] = useState<'register' | 'login' | 'otp'>(initialStep);
     const [username, setUsername] = useState("");
     const [emailInput, setEmailInput] = useState(currentUserEmail);
     const [password, setPassword] = useState("");
@@ -138,24 +140,50 @@ export const JoinCommunityModal = ({
         }
     };
 
-    const finalizeJoin = (newUser: User, newToken: string) => {
+    const finalizeJoin = async (newUser: User, newToken: string) => {
         try {
-            // Sync with previous community if logged in
+            // Bi-Directional Sync: Ensure both communities know about each other
             const currentToken = useAuthStore.getState().token;
             const currentUrl = localStorage.getItem('active_community_url');
+            const currentId = localStorage.getItem('active_community_id');
 
+            // 1. Sync NEW community ID to OLD community (if logged in previously)
             if (currentToken && currentUrl && currentUrl !== targetCommunity.url) {
                 // Fire and forget sync to old community
                 axios.post(`${currentUrl}/api/profile/me/communities`,
                     { community_id: targetCommunity.id },
                     { headers: { Authorization: `Bearer ${currentToken}` } }
-                ).catch(err => console.error("Background sync failed", err));
+                ).catch(err => console.error("Background sync to old community failed", err));
+            }
+
+            // 2. Sync OLD community ID to NEW community (so the new profile includes previous history)
+            if (currentId && currentId !== targetCommunity.id) {
+                try {
+                    console.log(`Syncing current community ${currentId} to new profile on ${targetCommunity.name}`);
+                    await axios.post(`${targetCommunity.url}/api/profile/me/communities`,
+                        { community_id: currentId },
+                        { headers: { Authorization: `Bearer ${newToken}` } }
+                    );
+                    toast.success(`Successfully linked ${currentId} to your ${targetCommunity.name} account.`);
+
+                    // Update the local user object to reflect this change immediately
+                    // This ensures the "Join Now" button for the old community disappears immediately
+                    if (!newUser.joined_communities) newUser.joined_communities = [];
+                    if (!newUser.joined_communities.includes(currentId)) {
+                        newUser.joined_communities.push(currentId);
+                    }
+                } catch (err) {
+                    console.error("Background sync to new community failed", err);
+                    toast.error(`Failed to link ${currentId} to new account. You may need to join it manually.`);
+                }
             }
 
             localStorage.setItem('active_community_id', targetCommunity.id);
             localStorage.setItem('active_community_url', targetCommunity.url);
 
-            setAuth(newUser, newToken);
+            // Use the potentially updated 'newUser' object
+            // Ensure we create a new object reference to trigger Store updates if needed
+            setAuth({ ...newUser }, newToken);
 
             onSuccess();
         } catch (e) {
@@ -263,7 +291,7 @@ export const JoinCommunityModal = ({
                     <div className="pt-2">
                         <Button type="submit" className="w-full" disabled={isLoading}>
                             {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                            {step === 'register' ? 'Create Account & Join' : (step === 'login' ? 'Sign In & Join' : 'Verify & Join')}
+                            {step === 'register' ? 'Create Account' : (step === 'login' ? 'Sign In' : 'Verify')}
                         </Button>
                     </div>
 
