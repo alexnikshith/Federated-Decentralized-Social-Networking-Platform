@@ -20,6 +20,7 @@ type ProfileService struct {
 	verificationRepo *repository.VerificationRepository
 	followRepo       *followRepo.FollowRepository
 	postRepo         *followRepo.PostRepository
+	notificationRepo *followRepo.NotificationRepository
 }
 
 func NewProfileService() *ProfileService {
@@ -30,6 +31,7 @@ func NewProfileService() *ProfileService {
 		verificationRepo: repository.NewVerificationRepository(),
 		followRepo:       followRepo.NewFollowRepository(),
 		postRepo:         followRepo.NewPostRepository(),
+		notificationRepo: followRepo.NewNotificationRepository(),
 	}
 }
 
@@ -184,7 +186,11 @@ func (s *ProfileService) DeleteAccount(ctx context.Context, userID primitive.Obj
 	if err := s.activityRepo.DeleteUserActivity(ctx, userID); err != nil {
 		return err
 	}
-	// 8. Delete user
+	// 8. Delete notifications
+	if err := s.notificationRepo.DeleteUserNotifications(ctx, userID); err != nil {
+		return err
+	}
+	// 9. Delete user
 	if err := s.userRepo.DeleteUser(ctx, userID); err != nil {
 		return err
 	}
@@ -234,6 +240,14 @@ func (s *ProfileService) AddJoinedCommunity(ctx context.Context, userID primitiv
 		return errors.New("community ID required")
 	}
 	return s.userRepo.AddJoinedCommunity(ctx, userID, communityID)
+}
+
+// RemoveJoinedCommunity removes a community from the user's joined list
+func (s *ProfileService) RemoveJoinedCommunity(ctx context.Context, userID primitive.ObjectID, communityID string) error {
+	if communityID == "" {
+		return errors.New("community ID required")
+	}
+	return s.userRepo.RemoveJoinedCommunity(ctx, userID, communityID)
 }
 
 // Helper function to log activity
