@@ -7,6 +7,10 @@ import (
 	adminRoutes "federated-social/backend/epics/admin/routes"
 	contentRepo "federated-social/backend/epics/content-sharing/repository"
 	contentRoutes "federated-social/backend/epics/content-sharing/routes"
+	federationModels "federated-social/backend/epics/federation/models"
+	federationRepo "federated-social/backend/epics/federation/repository"
+	federationRoutes "federated-social/backend/epics/federation/routes"
+	federationService "federated-social/backend/epics/federation/service"
 	"federated-social/backend/epics/identity/repository"
 	"federated-social/backend/epics/identity/routes"
 	messagingRepo "federated-social/backend/epics/messaging/repository"
@@ -23,6 +27,54 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/mux"
 )
+
+// bootstrapFederationInstances ensures that known federated instances are registered in the database
+func bootstrapFederationInstances(ctx context.Context, instanceRepo *federationRepo.InstanceRepository) {
+	// Define the peer server based on current instance
+	var peerDomain, peerInbox string
+
+	if config.AppConfig.InstanceName == "server1" {
+		peerDomain = "localhost:8081"
+		peerInbox = "http://server2:8080/federation/inbox"
+	} else if config.AppConfig.InstanceName == "server2" {
+		peerDomain = "localhost:8080"
+		peerInbox = "http://server1:8080/federation/inbox"
+	} else {
+		// If instance name is something else, skip bootstrap
+		log.Printf("Skipping federation bootstrap for unknown instance: %s", config.AppConfig.InstanceName)
+		return
+	}
+
+	// Check if peer instance already exists
+	existingInstances, err := instanceRepo.ListAllInstances(ctx)
+	if err != nil {
+		log.Printf("Warning: Failed to check existing instances: %v", err)
+		return
+	}
+
+	// Check if peer already registered
+	for _, instance := range existingInstances {
+		if instance.Domain == peerDomain {
+			log.Printf("Federation peer %s already registered", peerDomain)
+			return
+		}
+	}
+
+	// Register the peer instance using UpsertInstance
+	peerInstance := &federationModels.Instance{
+		Domain:     peerDomain,
+		InboxURL:   peerInbox,
+		TrustLevel: "trusted",
+		LastSeenAt: time.Now(),
+	}
+
+	err = instanceRepo.UpsertInstance(ctx, peerInstance)
+	if err != nil {
+		log.Printf("Warning: Failed to bootstrap federation peer %s: %v", peerDomain, err)
+	} else {
+		log.Printf("✓ Bootstrapped federation peer: %s (inbox: %s)", peerDomain, peerInbox)
+	}
+}
 
 func main() {
 	// Load configuration
@@ -78,6 +130,34 @@ func main() {
 		log.Printf("Warning: Failed to create block indexes: %v", err)
 	}
 
+	// Create federation indexes
+	if config.AppConfig.FederationEnabled {
+		log.Println("Federation enabled - creating federation indexes")
+
+		instanceRepo := federationRepo.NewInstanceRepository()
+		if err := instanceRepo.CreateIndexes(ctx); err != nil {
+			log.Printf("Warning: Failed to create instance indexes: %v", err)
+		}
+
+		remoteUserRepo := federationRepo.NewRemoteUserRepository()
+		if err := remoteUserRepo.CreateIndexes(ctx); err != nil {
+			log.Printf("Warning: Failed to create remote user indexes: %v", err)
+		}
+
+		remotePostRepo := federationRepo.NewRemotePostRepository()
+		if err := remotePostRepo.CreateIndexes(ctx); err != nil {
+			log.Printf("Warning: Failed to create remote post indexes: %v", err)
+		}
+
+		eventRepo := federationRepo.NewFederationEventRepository()
+		if err := eventRepo.CreateIndexes(ctx); err != nil {
+			log.Printf("Warning: Failed to create federation event indexes: %v", err)
+		}
+
+		// Bootstrap federated instances
+		bootstrapFederationInstances(ctx, instanceRepo)
+	}
+
 	// Setup router
 	router := mux.NewRouter()
 
@@ -91,6 +171,12 @@ func main() {
 	safetyRoutes.RegisterSafetyRoutes(router)
 	adminRoutes.RegisterAdminRoutes(router)
 	messagingRoutes.RegisterMessagingRoutes(router)
+
+	// Register federation routes
+	if config.AppConfig.FederationEnabled {
+		federationRoutes.RegisterFederationRoutes(router)
+		log.Println("Federation routes registered")
+	}
 
 	// Public media access
 	router.PathPrefix("/uploads/").Handler(http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
@@ -137,9 +223,17 @@ func main() {
 		w.Write([]byte("OK"))
 	}).Methods("GET")
 
+	// Start federation activity processor
+	if config.AppConfig.FederationEnabled {
+		processor := federationService.NewActivityProcessor()
+		processor.Start()
+		log.Println("Federation activity processor started")
+	}
+
 	// Start server
 	addr := ":" + config.AppConfig.Port
-	log.Printf("Server starting on %s", addr)
+	log.Printf("Server starting on %s (Instance: %s, Federation: %v)",
+		addr, config.AppConfig.InstanceName, config.AppConfig.FederationEnabled)
 
 	server := &http.Server{
 		Addr:         addr,

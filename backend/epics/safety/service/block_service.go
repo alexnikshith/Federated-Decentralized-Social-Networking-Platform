@@ -42,10 +42,10 @@ func (s *BlockService) GetBlockedUsers(ctx context.Context, blockerID primitive.
 
 func (s *BlockService) IsBlocked(ctx context.Context, blockerID, blockedID primitive.ObjectID) (bool, error) {
 	// Check unidirectional: Is blockedID blocked by blockerID?
-    return s.repo.IsBlocked(ctx, blockerID, blockedID)
+	return s.repo.IsBlocked(ctx, blockerID, blockedID)
 }
 
 // GetHiddenUserIDs returns IDs of users whose content should be hidden from userID
 func (s *BlockService) GetHiddenUserIDs(ctx context.Context, userID primitive.ObjectID) ([]primitive.ObjectID, error) {
-    return s.repo.GetBidirectionalBlockedIDs(ctx, userID)
+	return s.repo.GetBidirectionalBlockedIDs(ctx, userID)
 }
