@@ -337,6 +337,17 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
                             )}>
                                 {post.content}
                             </p>
+
+                            {/* Media Content */}
+                            {post.media_url && (
+                                <div className="mt-4 rounded-xl overflow-hidden border border-border/50 shadow-sm">
+                                    {post.media_type === 'video' ? (
+                                        <video controls src={post.media_url.startsWith('http') ? post.media_url : `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}${post.media_url}`} className="w-full max-h-[500px] object-cover bg-black" />
+                                    ) : (
+                                        <img src={post.media_url.startsWith('http') ? post.media_url : `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}${post.media_url}`} alt="Post content" className="w-full max-h-[500px] object-cover hover:scale-[1.01] transition-transform duration-500" />
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         {/* Footer Interactions (Like, Comment, Share) */}

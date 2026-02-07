@@ -6,6 +6,8 @@ export interface Post {
     author_avatar: string;
     author_instance: string;
     content: string;
+    media_url?: string;
+    media_type?: string;
     like_count: number;
     comment_count: number;
     is_liked: boolean;
@@ -53,6 +55,8 @@ export interface FeedResponse {
 // Request DTOs
 export interface CreatePostRequest {
     content: string;
+    media_url?: string;
+    media_type?: string;
 }
 
 export interface CreateCommentRequest {
