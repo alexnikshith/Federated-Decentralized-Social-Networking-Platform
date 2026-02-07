@@ -139,7 +139,6 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                                         </div>
                                         <div>
                                             <div className="font-semibold text-sm">{community.name}</div>
-                                            <div className="text-xs text-muted-foreground">{community.url.replace('http://', '')}</div>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
