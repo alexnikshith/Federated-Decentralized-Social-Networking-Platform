@@ -10,8 +10,10 @@ import (
 // It is the central entity in the content sharing epic.
 type Post struct {
 	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	AuthorID     primitive.ObjectID `json:"author_id" bson:"author_id"` // Reference to the User who created the post
-	Content      string             `json:"content" bson:"content"`     // Text content of the post
+	AuthorID     primitive.ObjectID `json:"author_id" bson:"author_id"`                       // Reference to the User who created the post
+	Content      string             `json:"content" bson:"content"`                           // Text content of the post
+	MediaURL     string             `json:"media_url,omitempty" bson:"media_url,omitempty"`   // URL of attached media (image/video)
+	MediaType    string             `json:"media_type,omitempty" bson:"media_type,omitempty"` // Type of media: "image", "video"
 	LikeCount    int                `json:"like_count" bson:"like_count"`
 	CommentCount int                `json:"comment_count" bson:"comment_count"`
 	CreatedAt    time.Time          `json:"created_at" bson:"created_at"`

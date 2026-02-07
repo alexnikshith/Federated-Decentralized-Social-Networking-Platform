@@ -35,8 +35,10 @@ func NewPostService() *PostService {
 // CreatePost creates a new post
 func (s *PostService) CreatePost(ctx context.Context, userID primitive.ObjectID, req dto.CreatePostRequest) (*models.Post, error) {
 	post := &models.Post{
-		AuthorID: userID,
-		Content:  req.Content,
+		AuthorID:  userID,
+		Content:   req.Content,
+		MediaURL:  req.MediaURL,
+		MediaType: req.MediaType,
 	}
 
 	if err := s.postRepo.CreatePost(ctx, post); err != nil {
@@ -552,6 +554,8 @@ func (s *PostService) enrichPosts(ctx context.Context, posts []models.Post, curr
 			AuthorName:   author.Username,
 			AuthorAvatar: author.AvatarURL,
 			Content:      post.Content,
+			MediaURL:     post.MediaURL,
+			MediaType:    post.MediaType,
 			LikeCount:    post.LikeCount,
 			CommentCount: post.CommentCount,
 			IsLiked:      isLiked,
