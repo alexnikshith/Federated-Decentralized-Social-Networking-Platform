@@ -170,3 +170,28 @@ func (h *ProfileHandler) AddJoinedCommunity(w http.ResponseWriter, r *http.Reque
 
 	respondSuccess(w, "Community added to joined list", nil, http.StatusOK)
 }
+
+// LeaveCommunity handles removing a community from the user's joined list
+func (h *ProfileHandler) LeaveCommunity(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	communityID := vars["id"]
+
+	if communityID == "" {
+		respondError(w, "Community ID required", http.StatusBadRequest)
+		return
+	}
+
+	userIDStr := r.Context().Value(middleware.UserIDKey).(string)
+	userID, err := primitive.ObjectIDFromHex(userIDStr)
+	if err != nil {
+		respondError(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.profileService.RemoveJoinedCommunity(r.Context(), userID, communityID); err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondSuccess(w, "Community removed from joined list", nil, http.StatusOK)
+}

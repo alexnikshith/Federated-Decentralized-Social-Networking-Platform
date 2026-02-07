@@ -244,7 +244,7 @@ const AdminDashboard: React.FC = () => {
                                                 <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">{report.status}</span>
                                             </div>
                                             <div className="text-sm flex items-center gap-2">
-                                                <span className="text-muted-foreground">Reported User:</span> 
+                                                <span className="text-muted-foreground">Reported User:</span>
                                                 <span className="font-medium text-foreground">{report.user_details?.display_name || 'Unknown'} (@{report.user_details?.username || 'unknown'})</span>
                                             </div>
                                             <p className="text-sm text-foreground/80 italic">
@@ -255,8 +255,8 @@ const AdminDashboard: React.FC = () => {
                                             </p>
                                         </div>
                                         <div className="flex gap-2">
-                                            <Button 
-                                                size="sm" 
+                                            <Button
+                                                size="sm"
                                                 variant="outline"
                                                 onClick={() => window.open(`/profile/${report.user_details?.username}`, '_blank')}
                                             >
@@ -264,16 +264,16 @@ const AdminDashboard: React.FC = () => {
                                             </Button>
 
                                             {report.user_details?.is_active ? (
-                                                <Button 
-                                                    size="sm" 
+                                                <Button
+                                                    size="sm"
                                                     variant="destructive"
                                                     onClick={() => initiateDeactivation(report.reported_id)}
                                                 >
                                                     Deactivate User
                                                 </Button>
                                             ) : (
-                                                <Button 
-                                                    size="sm" 
+                                                <Button
+                                                    size="sm"
                                                     variant="default" // or a 'success' variant if available, default is primary
                                                     className="bg-green-600 hover:bg-green-700"
                                                     onClick={() => handleToggleStatus(report.reported_id, false)} // status is false (inactive), so !false = true (active)

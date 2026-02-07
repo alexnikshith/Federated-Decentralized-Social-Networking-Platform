@@ -151,7 +151,6 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister, hideBackNav = false, 
                                             <SelectItem key={community.id} value={community.url}>
                                                 <div className="flex flex-col text-left">
                                                     <span className="font-medium">{community.name}</span>
-                                                    <span className="text-xs text-muted-foreground">{community.url.replace('http://', '')}</span>
                                                 </div>
                                             </SelectItem>
                                         ))}
