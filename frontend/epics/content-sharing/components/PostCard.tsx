@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { Post } from '../types';
+import type { Post, PublicUser } from '../types';
 import { useContentStore } from '../store/contentStore';
 import { CommentList } from './CommentList';
 import { useAuthStore } from '../../identity/store/authStore';
@@ -12,13 +12,18 @@ import {
     MoreHorizontal,
     Globe,
     ExternalLink,
+    Maximize2,
+    Minimize2,
     Users,
     AlertTriangle,
     Bookmark,
     ThumbsUp,
     ThumbsDown,
     Flag,
-    MoreVertical
+    Send,
+    Check,
+    Search,
+    X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,14 +34,17 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
-import { getPostLikers } from '../api/client';
+import { getPostLikers, getFollowers } from '../api/client';
+import { messagingApi } from '../../messaging/api/client';
 import type { PostLiker } from '../types';
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
+    DialogFooter,
 } from "@/components/ui/dialog";
 import {
     AlertDialog,
@@ -68,6 +76,15 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
     const [reportReason, setReportReason] = useState('');
     const [isReporting, setIsReporting] = useState(false);
 
+    // New Features State
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [showShareDialog, setShowShareDialog] = useState(false);
+    const [followers, setFollowers] = useState<PublicUser[]>([]);
+    const [isLoadingFollowers, setIsLoadingFollowers] = useState(false);
+    const [selectedFollowerId, setSelectedFollowerId] = useState<string | null>(null);
+    const [isSending, setIsSending] = useState(false);
+    const [followerSearchQuery, setFollowerSearchQuery] = useState('');
+
     // Global Stores
     const {
         likePost,
@@ -94,6 +111,43 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
             }
         }
         setShowLikers(!showLikers);
+    };
+
+    // Fetch followers for sharing
+    const handleShareClick = async () => {
+        setShowShareDialog(true);
+        if (followers.length === 0 && user?.id) {
+            setIsLoadingFollowers(true);
+            try {
+                const data = await getFollowers(user.id);
+                setFollowers(data);
+            } catch (error) {
+                showToast.error("Failed to load followers");
+            } finally {
+                setIsLoadingFollowers(false);
+            }
+        }
+    };
+
+    // Send post to selected follower
+    const handleSendShare = async () => {
+        if (!selectedFollowerId) return;
+
+        setIsSending(true);
+        try {
+            await messagingApi.sendMessage({
+                receiver_id: selectedFollowerId,
+                content: `Check out this post from @${post.author_name}:\n\n"${post.content.substring(0, 100)}${post.content.length > 100 ? '...' : ''}"`,
+                type: 'text'
+            });
+            showToast.success("Post sent successfully!");
+            setShowShareDialog(false);
+            setSelectedFollowerId(null);
+        } catch (error) {
+            showToast.error("Failed to send post");
+        } finally {
+            setIsSending(false);
+        }
     };
 
     // Toggle heart interaction
@@ -167,156 +221,287 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
     const isOwner = user?.id === post.author_id;
     const timeAgo = getTimeAgo(new Date(post.created_at));
 
+    // Filter followers based on search
+    const filteredFollowers = followers.filter(f =>
+        f.username.toLowerCase().includes(followerSearchQuery.toLowerCase()) ||
+        f.display_name.toLowerCase().includes(followerSearchQuery.toLowerCase())
+    );
+
     return (
-        <div className="post-item animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <div className="p-6">
-                {/* Header: Author info and Actions */}
-                <div className="flex items-start justify-between mb-5">
-                    <div className="flex items-center gap-4">
-                        {/* Author Avatar */}
-                        <div className="relative group/avatar">
-                            {post.author_avatar ? (
-                                <img src={post.author_avatar} alt={post.author_name} className="w-12 h-12 rounded-full object-cover ring-2 ring-transparent group-hover/avatar:ring-primary/30 transition-all" />
-                            ) : (
-                                <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-muted-foreground font-display font-bold text-lg border border-border/50 group-hover/avatar:border-primary/30 transition-all">
-                                    {post.author_name[0]?.toUpperCase()}
+        <>
+            {/* Main Post Container - Handles Full Screen Logic */}
+            <div
+                className={cn(
+                    "post-item transition-all duration-300",
+                    isExpanded
+                        ? "fixed inset-0 z-50 bg-background/95 backdrop-blur-md overflow-y-auto p-4 md:p-8 flex items-start justify-center"
+                        : "animate-in fade-in slide-in-from-bottom-2 duration-500"
+                )}
+            >
+                <div
+                    className={cn(
+                        "bg-card rounded-xl",
+                        isExpanded
+                            ? "w-full max-w-4xl mx-auto shadow-2xl border border-border/50 min-h-[50vh]"
+                            : ""
+                    )}
+                >
+                    <div className="p-6">
+                        {/* Header: Author info and Actions */}
+                        <div className="flex items-start justify-between mb-5">
+                            <div className="flex items-center gap-4">
+                                {/* Author Avatar */}
+                                <div className="relative group/avatar">
+                                    {post.author_avatar ? (
+                                        <img src={post.author_avatar} alt={post.author_name} className="w-12 h-12 rounded-full object-cover ring-2 ring-transparent group-hover/avatar:ring-primary/30 transition-all" />
+                                    ) : (
+                                        <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-muted-foreground font-display font-bold text-lg border border-border/50 group-hover/avatar:border-primary/30 transition-all">
+                                            {post.author_name[0]?.toUpperCase()}
+                                        </div>
+                                    )}
+                                    <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-background border border-border flex items-center justify-center shadow-sm">
+                                        <Globe className="w-3 h-3 text-accent" />
+                                    </div>
                                 </div>
-                            )}
-                            <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-background border border-border flex items-center justify-center shadow-sm">
-                                <Globe className="w-3 h-3 text-accent" />
-                            </div>
-                        </div>
 
-                        {/* Author Name and Info */}
-                        <div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                                <Link to={`/profile/${post.author_name}`} className="font-display font-bold text-foreground text-lg tracking-tight leading-tight hover:underline">
-                                    {post.author_name}
-                                </Link>
-                                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-secondary/80 border border-border/50">
-                                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
-                                        {post.author_instance || 'nexus.social'}
-                                    </span>
+                                {/* Author Name and Info */}
+                                <div>
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <Link to={`/profile/${post.author_name}`} className="font-display font-bold text-foreground text-lg tracking-tight leading-tight hover:underline">
+                                            {post.author_name}
+                                        </Link>
+                                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-secondary/80 border border-border/50">
+                                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
+                                                {post.author_instance || 'nexus.social'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                        <span className="text-xs text-muted-foreground font-medium">{timeAgo}</span>
+                                        <span className="w-1 h-1 rounded-full bg-border" />
+                                        <span className="text-[10px] text-muted-foreground/60 uppercase tracking-tighter">Public</span>
+                                    </div>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-xs text-muted-foreground font-medium">{timeAgo}</span>
-                                <span className="w-1 h-1 rounded-full bg-border" />
-                                <span className="text-[10px] text-muted-foreground/60 uppercase tracking-tighter">Public</span>
-                            </div>
-                        </div>
-                    </div>
 
-                    {/* Post Menu Actions */}
-                    <div className="flex items-center gap-1">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground transition-colors rounded-xl">
-                                    <MoreHorizontal className="w-4 h-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48 bg-card border-border/50 backdrop-blur-md">
-                                <DropdownMenuItem onClick={handleSave} className="gap-2 cursor-pointer">
-                                    <Bookmark className={cn("w-4 h-4", post.is_saved && "fill-primary text-primary")} />
-                                    <span>{post.is_saved ? 'Unsave Post' : 'Save Post'}</span>
-                                </DropdownMenuItem>
-
-                                <DropdownMenuItem onClick={() => handleInteraction('interested')} className="gap-2 cursor-pointer">
-                                    <ThumbsUp className="w-4 h-4" />
-                                    <span>Interested</span>
-                                </DropdownMenuItem>
-
-                                <DropdownMenuItem onClick={() => handleInteraction('not_interested')} className="gap-2 cursor-pointer">
-                                    <ThumbsDown className="w-4 h-4" />
-                                    <span>Not Interested</span>
-                                </DropdownMenuItem>
-
-                                <DropdownMenuSeparator className="bg-border/50" />
-
-                                <DropdownMenuItem onClick={() => setShowReportDialog(true)} className="gap-2 text-orange-500 focus:text-orange-500 cursor-pointer">
-                                    <Flag className="w-4 h-4" />
-                                    <span>Report Post</span>
-                                </DropdownMenuItem>
-
-                                {isOwner && (
-                                    <>
-                                        <DropdownMenuSeparator className="bg-border/50" />
-                                        <DropdownMenuItem onClick={() => setShowDeleteAlert(true)} className="gap-2 text-destructive focus:text-destructive cursor-pointer">
-                                            <Trash2 className="w-4 h-4" />
-                                            <span>Delete Post</span>
+                            {/* Post Menu Actions */}
+                            <div className="flex items-center gap-1">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground transition-colors rounded-xl">
+                                            <MoreHorizontal className="w-4 h-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-48 bg-card border-border/50 backdrop-blur-md">
+                                        <DropdownMenuItem onClick={handleSave} className="gap-2 cursor-pointer">
+                                            <Bookmark className={cn("w-4 h-4", post.is_saved && "fill-primary text-primary")} />
+                                            <span>{post.is_saved ? 'Unsave Post' : 'Save Post'}</span>
                                         </DropdownMenuItem>
-                                    </>
+
+                                        <DropdownMenuItem onClick={() => handleInteraction('interested')} className="gap-2 cursor-pointer">
+                                            <ThumbsUp className="w-4 h-4" />
+                                            <span>Interested</span>
+                                        </DropdownMenuItem>
+
+                                        <DropdownMenuItem onClick={() => handleInteraction('not_interested')} className="gap-2 cursor-pointer">
+                                            <ThumbsDown className="w-4 h-4" />
+                                            <span>Not Interested</span>
+                                        </DropdownMenuItem>
+
+                                        <DropdownMenuSeparator className="bg-border/50" />
+
+                                        <DropdownMenuItem onClick={() => setShowReportDialog(true)} className="gap-2 text-orange-500 focus:text-orange-500 cursor-pointer">
+                                            <Flag className="w-4 h-4" />
+                                            <span>Report Post</span>
+                                        </DropdownMenuItem>
+
+                                        {isOwner && (
+                                            <>
+                                                <DropdownMenuSeparator className="bg-border/50" />
+                                                <DropdownMenuItem onClick={() => setShowDeleteAlert(true)} className="gap-2 text-destructive focus:text-destructive cursor-pointer">
+                                                    <Trash2 className="w-4 h-4" />
+                                                    <span>Delete Post</span>
+                                                </DropdownMenuItem>
+                                            </>
+                                        )}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+                        </div>
+
+                        {/* Post Body/Content */}
+                        <div className="post-content-area mb-6">
+                            <p className={cn(
+                                "text-foreground/90 leading-relaxed whitespace-pre-wrap font-sans",
+                                isExpanded ? "text-lg md:text-xl" : "text-[1.05rem]"
+                            )}>
+                                {post.content}
+                            </p>
+                        </div>
+
+                        {/* Footer Interactions (Like, Comment, Share) */}
+                        <div className="flex items-center gap-2 pt-4 border-t border-border/20">
+                            <div className="flex items-center">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className={cn(
+                                        "group/like gap-2.5 px-3 py-1.5 h-auto rounded-l-full transition-all duration-300",
+                                        post.is_liked ? "text-destructive bg-destructive/5" : "text-muted-foreground hover:text-destructive hover:bg-destructive/5"
+                                    )}
+                                    onClick={handleLike}
+                                >
+                                    <Heart className={cn("w-4.5 h-4.5 transition-transform duration-300 group-active/like:scale-125", post.is_liked && "fill-current")} />
+                                    <span className="font-bold text-xs">{post.like_count}</span>
+                                </Button>
+
+                                {isOwner && post.like_count > 0 && (
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-auto py-1.5 px-2 rounded-r-full text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all border-l border-border/10"
+                                        onClick={fetchLikers}
+                                        title="View who liked this post"
+                                    >
+                                        <Users className="w-3.5 h-3.5" />
+                                    </Button>
                                 )}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div>
-                </div>
+                            </div>
 
-                {/* Post Body/Content */}
-                <div className="post-content-area mb-6">
-                    <p className="text-[1.05rem] text-foreground/90 leading-relaxed whitespace-pre-wrap font-sans">
-                        {post.content}
-                    </p>
-                </div>
-
-                {/* Footer Interactions (Like, Comment, Share) */}
-                <div className="flex items-center gap-2 pt-4 border-t border-border/20">
-                    <div className="flex items-center">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className={cn(
-                                "group/like gap-2.5 px-3 py-1.5 h-auto rounded-l-full transition-all duration-300",
-                                post.is_liked ? "text-destructive bg-destructive/5" : "text-muted-foreground hover:text-destructive hover:bg-destructive/5"
-                            )}
-                            onClick={handleLike}
-                        >
-                            <Heart className={cn("w-4.5 h-4.5 transition-transform duration-300 group-active/like:scale-125", post.is_liked && "fill-current")} />
-                            <span className="font-bold text-xs">{post.like_count}</span>
-                        </Button>
-
-                        {isOwner && post.like_count > 0 && (
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-auto py-1.5 px-2 rounded-r-full text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all border-l border-border/10"
-                                onClick={fetchLikers}
-                                title="View who liked this post"
+                                className={cn(
+                                    "group/comment gap-2.5 px-3 py-1.5 h-auto rounded-full transition-all duration-300",
+                                    showComments ? "text-primary bg-primary/5" : "text-muted-foreground hover:text-primary hover:bg-primary/5"
+                                )}
+                                onClick={() => setShowComments(!showComments)}
                             >
-                                <Users className="w-3.5 h-3.5" />
+                                <MessageSquare className="w-4.5 h-4.5" />
+                                <span className="font-bold text-xs">{post.comment_count}</span>
                             </Button>
+
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-9 w-9 p-0 text-muted-foreground hover:text-accent hover:bg-accent/5 rounded-full ml-auto"
+                                onClick={handleShareClick}
+                                title="Share to followers"
+                            >
+                                <Share2 className="w-4 h-4" />
+                            </Button>
+
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-9 w-9 p-0 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-full"
+                                onClick={() => setIsExpanded(!isExpanded)}
+                                title={isExpanded ? "Minimize" : "Maximize"}
+                            >
+                                {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                            </Button>
+                        </div>
+
+                        {/* Comments Section */}
+                        {(showComments || isExpanded) && (
+                            <div className="mt-4 pt-5 border-t border-border/20 animate-in fade-in slide-in-from-top-2 duration-300">
+                                <CommentList postId={post.id} />
+                            </div>
                         )}
                     </div>
-
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className={cn(
-                            "group/comment gap-2.5 px-3 py-1.5 h-auto rounded-full transition-all duration-300",
-                            showComments ? "text-primary bg-primary/5" : "text-muted-foreground hover:text-primary hover:bg-primary/5"
-                        )}
-                        onClick={() => setShowComments(!showComments)}
-                    >
-                        <MessageSquare className="w-4.5 h-4.5" />
-                        <span className="font-bold text-xs">{post.comment_count}</span>
-                    </Button>
-
-                    <Button variant="ghost" size="sm" className="h-9 w-9 p-0 text-muted-foreground hover:text-accent hover:bg-accent/5 rounded-full ml-auto">
-                        <Share2 className="w-4 h-4" />
-                    </Button>
-
-                    <Button variant="ghost" size="sm" className="h-9 w-9 p-0 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-full">
-                        <ExternalLink className="w-4 h-4" />
-                    </Button>
                 </div>
-
-                {/* Comments Section */}
-                {showComments && (
-                    <div className="mt-4 pt-5 border-t border-border/20 animate-in fade-in slide-in-from-top-2 duration-300">
-                        <CommentList postId={post.id} />
-                    </div>
-                )}
             </div>
+
+            {/* Share Dialog */}
+            <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+                <DialogContent className="sm:max-w-md bg-card border-border/50">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 font-display text-xl">
+                            <Share2 className="w-5 h-5 text-accent" />
+                            Share with Followers
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    <div className="py-4 space-y-4">
+                        <div className="relative">
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Search followers..."
+                                className="pl-9 bg-secondary/50 border-input/50"
+                                value={followerSearchQuery}
+                                onChange={(e) => setFollowerSearchQuery(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="h-[300px] overflow-y-auto pr-2 space-y-2 scroller">
+                            {isLoadingFollowers ? (
+                                <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground">
+                                    <div className="w-6 h-6 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+                                    <span className="text-xs">Loading followers...</span>
+                                </div>
+                            ) : filteredFollowers.length > 0 ? (
+                                filteredFollowers.map((follower) => (
+                                    <div
+                                        key={follower.id}
+                                        onClick={() => setSelectedFollowerId(selectedFollowerId === follower.id ? null : follower.id)}
+                                        className={cn(
+                                            "flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all",
+                                            selectedFollowerId === follower.id
+                                                ? "bg-accent/10 border-accent/50 ring-1 ring-accent/20"
+                                                : "bg-transparent border-transparent hover:bg-secondary/50"
+                                        )}
+                                    >
+                                        {/* Avatar */}
+                                        <div className="relative">
+                                            {follower.avatar_url ? (
+                                                <img src={follower.avatar_url} alt={follower.username} className="w-10 h-10 rounded-full object-cover" />
+                                            ) : (
+                                                <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-muted-foreground font-bold border border-border">
+                                                    {follower.username[0]?.toUpperCase()}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="flex-1 min-w-0">
+                                            <h4 className="font-bold text-sm truncate">{follower.display_name}</h4>
+                                            <p className="text-xs text-muted-foreground truncate">@{follower.username}</p>
+                                        </div>
+
+                                        {selectedFollowerId === follower.id && (
+                                            <div className="w-5 h-5 bg-accent rounded-full flex items-center justify-center animate-in zoom-in-90">
+                                                <Check className="w-3 h-3 text-white font-bold" />
+                                            </div>
+                                        )}
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="flex flex-col items-center justify-center h-full text-muted-foreground opacity-60">
+                                    <Users className="w-10 h-10 mb-2" />
+                                    <p className="text-sm">No followers found</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <DialogFooter className="flex-col sm:flex-row gap-2">
+                        <Button
+                            variant="default"
+                            className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-white gap-2"
+                            disabled={!selectedFollowerId || isSending}
+                            onClick={handleSendShare}
+                        >
+                            {isSending ? (
+                                <>Sending...</>
+                            ) : (
+                                <>
+                                    <Send className="w-4 h-4" />
+                                    Send Post
+                                </>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* Likers Modal */}
             <Dialog open={showLikers} onOpenChange={setShowLikers}>
@@ -429,7 +614,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
                     </div>
                 </DialogContent>
             </Dialog>
-        </div>
+        </>
     );
 };
 
