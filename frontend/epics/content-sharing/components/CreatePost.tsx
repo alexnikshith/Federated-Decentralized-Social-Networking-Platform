@@ -161,7 +161,7 @@ export const CreatePost: React.FC = () => {
 
                     {/* Popups for Hashtags and Mentions */}
                     {(showHashtags || showMentions) && (
-                        <div className="absolute left-0 right-0 z-20 mt-1 mx-4 bg-card border border-border rounded-xl shadow-2xl p-3 animate-in fade-in zoom-in-95 duration-200">
+                        <div className="mt-3 mb-2 bg-card/50 border border-border/50 rounded-xl shadow-sm p-4 animate-in fade-in slide-in-from-top-2 duration-200">
                             {showHashtags && (
                                 <div>
                                     <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Trending Hashtags</div>
