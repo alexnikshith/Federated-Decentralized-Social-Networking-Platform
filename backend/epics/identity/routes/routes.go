@@ -17,6 +17,7 @@ func RegisterIdentityRoutes(router *mux.Router) {
 	router.HandleFunc("/api/auth/signup", authHandler.Signup).Methods("POST", "OPTIONS")
 	router.HandleFunc("/api/auth/login", authHandler.Login).Methods("POST", "OPTIONS")
 	router.HandleFunc("/api/auth/verify-otp", authHandler.VerifyOTP).Methods("POST", "OPTIONS")
+	router.HandleFunc("/api/auth/check-email", authHandler.CheckEmail).Methods("POST", "OPTIONS")
 
 	// Auth routes (protected)
 	router.Handle("/api/auth/logout", middleware.AuthMiddleware(http.HandlerFunc(authHandler.Logout))).Methods("POST", "OPTIONS")
@@ -30,6 +31,7 @@ func RegisterIdentityRoutes(router *mux.Router) {
 	router.Handle("/api/profile/me", middleware.AuthMiddleware(http.HandlerFunc(profileHandler.DeleteAccount))).Methods("DELETE", "OPTIONS")
 	router.Handle("/api/profile/me/deactivate", middleware.AuthMiddleware(http.HandlerFunc(profileHandler.DeactivateAccount))).Methods("POST", "OPTIONS")
 	router.Handle("/api/profile/me/communities", middleware.AuthMiddleware(http.HandlerFunc(profileHandler.AddJoinedCommunity))).Methods("POST", "OPTIONS")
+	router.Handle("/api/profile/me/communities/{id}", middleware.AuthMiddleware(http.HandlerFunc(profileHandler.LeaveCommunity))).Methods("DELETE", "OPTIONS")
 	router.Handle("/api/profile/me/activity", middleware.AuthMiddleware(http.HandlerFunc(profileHandler.GetActivity))).Methods("GET", "OPTIONS")
 
 	// Public profile view (Optional auth to see follow status)
