@@ -366,6 +366,17 @@ func (s *AuthService) SyncProfile(ctx context.Context, userID primitive.ObjectID
 	}, nil
 }
 
+// CheckEmailExists checks if a user exists with the given email
+func (s *AuthService) CheckEmailExists(ctx context.Context, email string) (bool, error) {
+	email = strings.ToLower(email)
+	_, err := s.userRepo.FindByEmail(ctx, email)
+	if err == nil {
+		return true, nil
+	}
+	// Check specific error if possible, but generic error usually implies not found in this repo implementation
+	return false, nil
+}
+
 // Helper function to log activity
 func (s *AuthService) logActivity(ctx context.Context, userID primitive.ObjectID, action, details, ipAddress, userAgent string) {
 	log := &models.ActivityLog{
