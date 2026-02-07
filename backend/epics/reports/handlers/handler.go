@@ -138,7 +138,7 @@ func (h *ReportHandler) SubmitUserReport(w http.ResponseWriter, r *http.Request)
 // GetAdminReports retrieves all reports
 func (h *ReportHandler) GetAdminReports(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	
+
 	reports, err := h.Repo.GetReports(ctx)
 	if err != nil {
 		http.Error(w, "Failed to fetch reports", http.StatusInternalServerError)
