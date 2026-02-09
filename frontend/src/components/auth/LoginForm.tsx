@@ -7,6 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Globe, ArrowRight, Eye, EyeOff, Shield, ArrowLeft } from "lucide-react";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { COMMUNITIES, DEFAULT_COMMUNITY } from "../../config/communities";
 
 interface LoginFormProps {
     onSuccess?: () => void;
@@ -20,14 +28,17 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister, hideBackNav = false, 
     const { user, setAuth } = useAuthStore();
 
     const [showPassword, setShowPassword] = useState(false);
-    const [instance, setInstance] = useState("");
+    // Default to stored instance or Default Community
+    const [instance, setInstance] = useState(
+        localStorage.getItem('active_community_url') || DEFAULT_COMMUNITY.url
+    );
     const [email, setEmail] = useState("");
 
     // Pre-fill from store
     useState(() => {
         if (user && !disablePrefill) {
             if (user.email) setEmail(user.email);
-            if (user.instance) setInstance(user.instance);
+            // instance handled by initial state
         }
     });
 
@@ -44,6 +55,15 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister, hideBackNav = false, 
         setIsLoading(true);
         setError(null);
 
+        // Ensure API client points to the correct instance
+        if (instance) {
+            localStorage.setItem('active_community_url', instance);
+            const match = COMMUNITIES.find(c => c.url === instance || c.url === `http://${instance}`);
+            if (match) {
+                localStorage.setItem('active_community_id', match.id);
+            }
+        }
+
         try {
             if (step === 1) {
                 const response = await authApi.login({ email, password });
@@ -54,7 +74,7 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister, hideBackNav = false, 
                     return;
                 }
                 setStep(2);
-                toast.success(`Verification code sent to ${email}. Check your inbox and spam folder.`);
+                toast.success(`Verification code sent to ${email}. Check your inbox.`);
             } else {
                 const response = await authApi.verifyOTP({ email, code: otp });
                 setAuth(response.user, response.token);
@@ -119,19 +139,25 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister, hideBackNav = false, 
                         <>
                             <div className="space-y-2">
                                 <Label htmlFor="instance">Instance</Label>
-                                <div className="relative">
-                                    <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                                    <Input
-                                        id="instance"
-                                        type="text"
-                                        placeholder="your-community.nexus.social"
-                                        value={instance}
-                                        onChange={(e) => setInstance(e.target.value)}
-                                        className="pl-10 h-11 bg-secondary border-border"
-                                    />
-                                </div>
+                                <Select value={instance} onValueChange={setInstance}>
+                                    <SelectTrigger className="h-11 bg-secondary border-border">
+                                        <div className="flex items-center gap-2">
+                                            <Globe className="w-4 h-4 text-muted-foreground" />
+                                            <SelectValue placeholder="Select community" />
+                                        </div>
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {COMMUNITIES.map((community) => (
+                                            <SelectItem key={community.id} value={community.url}>
+                                                <div className="flex flex-col text-left">
+                                                    <span className="font-medium">{community.name}</span>
+                                                </div>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                                 <p className="text-xs text-muted-foreground">
-                                    Enter the domain of your community instance
+                                    Select the community instance your account belongs to
                                 </p>
                             </div>
 

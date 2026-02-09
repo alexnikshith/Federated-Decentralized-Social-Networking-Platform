@@ -22,6 +22,30 @@ services:
     networks:
       - federated_network
 
+  # Backend 2 (Community 2)
+  backend2:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: federated_social_server2
+    restart: unless-stopped
+    ports:
+      - "8081:8080"  # Map host 8081 to container 8080
+    env_file:
+      - ./backend/.env
+    environment:
+      - INSTANCE_ID=community-2
+      - PORT=8080
+      - DB_NAME=federated_social_server2
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    depends_on:
+      - mongodb
+    networks:
+      - federated_network
+
   # MongoDB
   mongodb:
     image: mongo:7.0

@@ -13,7 +13,7 @@ import type {
 } from '../types';
 import { useAuthStore } from '../store/authStore';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const API_URL = localStorage.getItem('active_community_url') || import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 // Create axios instance with base configuration
 const api = axios.create({
@@ -25,6 +25,7 @@ const api = axios.create({
 
 // Request Interceptor: Injects the Bearer token into headers
 api.interceptors.request.use((config) => {
+    config.baseURL = localStorage.getItem('active_community_url') || config.baseURL;
     const token = useAuthStore.getState().token;
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;

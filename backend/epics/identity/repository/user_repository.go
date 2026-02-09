@@ -102,6 +102,28 @@ func (r *UserRepository) UpdateUser(ctx context.Context, userID primitive.Object
 	return err
 }
 
+// AddJoinedCommunity adds a community ID to the user's joined list
+func (r *UserRepository) AddJoinedCommunity(ctx context.Context, userID primitive.ObjectID, communityID string) error {
+	update := bson.M{
+		"$addToSet": bson.M{"joined_communities": communityID},
+		"$set":      bson.M{"updated_at": time.Now()},
+	}
+
+	_, err := r.collection.UpdateOne(ctx, bson.M{"_id": userID}, update)
+	return err
+}
+
+// RemoveJoinedCommunity removes a community ID from the user's joined list
+func (r *UserRepository) RemoveJoinedCommunity(ctx context.Context, userID primitive.ObjectID, communityID string) error {
+	update := bson.M{
+		"$pull": bson.M{"joined_communities": communityID},
+		"$set":  bson.M{"updated_at": time.Now()},
+	}
+
+	_, err := r.collection.UpdateOne(ctx, bson.M{"_id": userID}, update)
+	return err
+}
+
 // DeactivateUser soft deletes a user
 func (r *UserRepository) DeactivateUser(ctx context.Context, userID primitive.ObjectID) error {
 	update := bson.M{

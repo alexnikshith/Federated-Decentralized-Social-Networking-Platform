@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { profileApi, authApi } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import type { UpdateProfileRequest, ChangePasswordRequest, ActivityLog } from '../types';
+import { COMMUNITIES } from "../../../src/config/communities";
+import axios from 'axios';
 import './Profile.css';
 
 export const ProfilePage: React.FC = () => {
@@ -22,6 +24,18 @@ export const ProfilePage: React.FC = () => {
         profile_visibility: user?.profile_visibility || 'public',
     });
 
+    // Sync form with store updates (Real-time)
+    useEffect(() => {
+        if (user) {
+            setProfileData({
+                display_name: user.display_name || '',
+                bio: user.bio || '',
+                avatar_url: user.avatar_url || '',
+                profile_visibility: user.profile_visibility || 'public',
+            });
+        }
+    }, [user]);
+
     // Password state
     const [passwordData, setPasswordData] = useState<ChangePasswordRequest>({
         old_password: '',
@@ -36,6 +50,14 @@ export const ProfilePage: React.FC = () => {
         if (activeTab === 'activity') {
             loadActivity();
         }
+
+        const onFocus = () => {
+            if (activeTab === 'activity') {
+                loadActivity();
+            }
+        };
+        window.addEventListener('focus', onFocus);
+        return () => window.removeEventListener('focus', onFocus);
     }, [activeTab]);
 
     const loadActivity = async () => {
@@ -111,6 +133,29 @@ export const ProfilePage: React.FC = () => {
             navigate('/login');
         } catch (err: any) {
             setError(err.response?.data?.message || 'Failed to deactivate account');
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!confirm('Are you sure you want to PERMANENTLY DELETE your account on THIS community? This action CANNOT be undone.')) {
+            return;
+        }
+
+        const confirmText = prompt("Type 'DELETE' to confirm:");
+        if (confirmText !== 'DELETE') return;
+
+        setLoading(true);
+
+        try {
+            // Delete from current community only
+            await profileApi.deleteAccount();
+            clearAuth();
+            navigate('/login');
+            alert("Account deleted successfully.");
+        } catch (err: any) {
+            setError(err.response?.data?.message || 'Failed to delete account');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -217,6 +262,9 @@ export const ProfilePage: React.FC = () => {
                         <h3>Danger Zone</h3>
                         <button onClick={handleDeactivate} className="btn-danger">
                             Deactivate Account
+                        </button>
+                        <button onClick={handleDelete} className="btn-danger" style={{ marginTop: '10px', backgroundColor: '#dc2626' }}>
+                            Delete Account Permanently
                         </button>
                     </div>
                 </div>

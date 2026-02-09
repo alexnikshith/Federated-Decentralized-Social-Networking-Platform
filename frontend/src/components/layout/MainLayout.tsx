@@ -40,6 +40,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LogOut, User as LucideUser, Plus } from "lucide-react";
 import { AuthModal } from "@/components/auth/AuthModal";
+import { CommunitySwitcher } from "../CommunitySwitcher";
+import { COMMUNITIES } from "../../config/communities";
 
 export const MainLayout = ({ children }: { children: React.ReactNode }) => {
     const { user, clearAuth, sessions, switchAccount, pauseSession, clearAllSessions } = useAuthStore();
@@ -62,6 +64,36 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
             return () => clearInterval(interval);
         }
     }, [user, refreshUnreadCount]);
+
+    const activeCommunityId = localStorage.getItem('active_community_id');
+
+    const displaySessions = React.useMemo(() => {
+        if (!user) return [];
+
+        // 1. Exclude current user AND any session with same email as current user
+        const others = sessions.filter(s =>
+            s.user.id !== user.id &&
+            s.user.email !== user.email &&
+            s.user.email // Ensure email exists
+        );
+
+        // 2. Deduplicate by email, prioritizing current community
+        const unique = new Map<string, typeof sessions[0]>();
+
+        others.forEach(s => {
+            const email = s.user.email!; // content verified above
+            const existing = unique.get(email);
+
+            if (!existing) {
+                unique.set(email, s);
+            } else if (s.communityId === activeCommunityId && existing.communityId !== activeCommunityId) {
+                // Replace with current community version if available
+                unique.set(email, s);
+            }
+        });
+
+        return Array.from(unique.values());
+    }, [sessions, user, activeCommunityId]);
 
     // If on landing page, don't show navigation
     if (location.pathname === "/") {
@@ -174,6 +206,12 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                 <SidebarBody className="justify-between gap-10">
                     <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto">
                         {(open || isDropdownOpen) ? <Logo /> : <LogoIcon />}
+
+                        {/* Community Switcher */}
+                        <div className={cn("mt-4 px-2", (!open && !isDropdownOpen) && "px-0 flex justify-center")}>
+                            <CommunitySwitcher collapsed={!open && !isDropdownOpen} />
+                        </div>
+
                         <div className="mt-8 flex flex-col gap-2">
                             {sidebarLinks.map((link, idx) => (
                                 <SidebarLink
@@ -255,13 +293,20 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                                 <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-2">
                                     Switch Accounts
                                 </DropdownMenuLabel>
-                                {sessions
-                                    .filter(s => s.user.id !== user?.id)
-                                    .map((session) => (
+                                {displaySessions.map((session) => {
+                                    const comm = COMMUNITIES.find(c => c.id === session.communityId);
+                                    return (
                                         <DropdownMenuItem
                                             key={session.user.id}
                                             onClick={() => {
                                                 if (session.token) {
+                                                    const targetComm = COMMUNITIES.find(c => c.id === session.communityId);
+                                                    // Update community context if switching across communities
+                                                    if (targetComm && targetComm.id !== activeCommunityId) {
+                                                        localStorage.setItem('active_community_id', targetComm.id);
+                                                        localStorage.setItem('active_community_url', targetComm.url);
+                                                    }
+
                                                     switchAccount(session.user.id);
                                                     navigate("/dashboard");
                                                     window.location.reload();
@@ -280,11 +325,15 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                                                         {session.user.username?.substring(0, 2).toUpperCase()}
                                                     </AvatarFallback>
                                                 </Avatar>
-                                                <span className="truncate max-w-[120px]">{session.user.username}</span>
+                                                <div className="flex flex-col">
+                                                    <span className="truncate max-w-[120px] font-medium leading-tight">{session.user.username}</span>
+                                                    <span className="text-[9px] text-muted-foreground">{comm?.name || "Unknown"}</span>
+                                                </div>
                                             </div>
                                             {!session.token && <span className="text-[10px] text-muted-foreground uppercase">Logged out</span>}
                                         </DropdownMenuItem>
-                                    ))}
+                                    )
+                                })}
 
                                 <DropdownMenuItem
                                     onClick={() => {
