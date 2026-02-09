@@ -47,6 +47,11 @@ type Toggle2FARequest struct {
 	Enable bool `json:"enable"`
 }
 
+// AddCommunityRequest represents payload for adding a joined community
+type AddCommunityRequest struct {
+	CommunityID string `json:"community_id"`
+}
+
 // ErrorResponse represents standard error response format
 type ErrorResponse struct {
 	Error   string `json:"error"`   // Short error code or type

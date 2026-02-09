@@ -1,37 +1,42 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { User } from '../types';
+import { COMMUNITIES } from '../../../src/config/communities';
 
 interface Session {
     user: User;
     token: string | null; // null if signed out
     lastActivity: number;
+    communityId: string;
 }
 
 interface AuthState {
-    // Current active state (backward compatible)
+    // Current active state
     user: User | null;
     token: string | null;
     isAuthenticated: boolean;
     lastActivity: number | null;
+
     // Multi-session state
     sessions: Session[];
 
     // Actions
     setAuth: (user: User, token: string) => void;
-    clearAuth: (logoutAll?: boolean) => void; // Logout current
+    clearAuth: (logoutAll?: boolean) => void;
     updateUser: (user: User) => void;
     updateActivity: () => void;
     checkAutoLogout: () => boolean;
 
     // Multi-session actions
     switchAccount: (userId: string, intentToLogin?: boolean) => void;
+    switchCommunity: (communityId: string) => void; // New Action
     removeAccount: (userId: string) => void;
     pauseSession: () => void;
     clearAllSessions: () => void;
 }
 
 const AUTO_LOGOUT_TIME = 30 * 60 * 1000; // 30 minutes
+const DEFAULT_COMMUNITY_ID = 'community-1'; // Hardcoded fallback match config
 
 // useAuthStore uses Zustand with persistent storage logic
 // It manages:
@@ -50,27 +55,20 @@ export const useAuthStore = create<AuthState>()(
             // setAuth logs in a user and updates the session registry
             setAuth: (user, token) => {
                 const now = Date.now();
-                set((state) => {
-                    // If there's an active user and it's not the same user we're logging in as,
-                    // pause the current session before setting the new one.
-                    // This effectively "logs out" the current user from the active state
-                    // but keeps their session data (including token) in the sessions array.
-                    if (state.user && state.user.id !== user.id) {
-                        // Apply pauseSession logic directly
-                        state.user = null;
-                        state.token = null;
-                        state.isAuthenticated = false;
-                        state.lastActivity = null;
-                    }
+                // Capture the context in which this auth happened
+                const currentCommunityId = localStorage.getItem('active_community_id') || DEFAULT_COMMUNITY_ID;
 
-                    // Update or add session
-                    const existingSessionIndex = state.sessions.findIndex(s => s.user.id === user.id);
+                set((state) => {
+                    // Update or add session for this COMMUNITY + USER combination
+                    const existingIndex = state.sessions.findIndex(s =>
+                        s.communityId === currentCommunityId && s.user.id === user.id
+                    );
                     const newSessions = [...state.sessions];
 
-                    if (existingSessionIndex >= 0) {
-                        newSessions[existingSessionIndex] = { user, token, lastActivity: now };
+                    if (existingIndex >= 0) {
+                        newSessions[existingIndex] = { user, token, lastActivity: now, communityId: currentCommunityId };
                     } else {
-                        newSessions.push({ user, token, lastActivity: now });
+                        newSessions.push({ user, token, lastActivity: now, communityId: currentCommunityId });
                     }
 
                     return {
@@ -91,44 +89,32 @@ export const useAuthStore = create<AuthState>()(
                 }
 
                 // Logout active user: keep in sessions but nullify token
+                // Identify via current active community
+                const currentCommunityId = localStorage.getItem('active_community_id') || DEFAULT_COMMUNITY_ID;
                 const state = get();
-                const currentUserId = state.user?.id;
 
                 const newSessions = state.sessions.map(s =>
-                    s.user.id === currentUserId
+                    s.communityId === currentCommunityId
                         ? { ...s, token: null }
                         : s
                 );
 
-                // Find next active session (first one that isn't the one we just logged out of, although map handled token nulling)
-                const nextActiveSession = newSessions.find(s => s.token !== null);
+                set({
+                    user: null,
+                    token: null,
+                    isAuthenticated: false,
+                    lastActivity: null,
+                    sessions: newSessions
+                });
 
-                if (nextActiveSession) {
-                    set({
-                        user: nextActiveSession.user,
-                        token: nextActiveSession.token,
-                        isAuthenticated: true,
-                        lastActivity: Date.now(),
-                        sessions: newSessions
-                    });
-                    setTimeout(() => window.location.href = '/dashboard', 100);
-                } else {
-                    set({
-                        user: null,
-                        token: null,
-                        isAuthenticated: false,
-                        lastActivity: null,
-                        sessions: newSessions
-                    });
-                    if (window.location.pathname !== '/' && window.location.pathname !== '/register') {
-                        setTimeout(() => window.location.href = '/login', 100);
-                    }
+                if (window.location.pathname !== '/' && window.location.pathname !== '/register') {
+                    setTimeout(() => window.location.href = '/login', 100);
                 }
             },
 
             // clearAllSessions removes everything locally
             clearAllSessions: () => {
-                localStorage.clear(); // Hard reset of storage
+                localStorage.clear();
                 set({
                     user: null,
                     token: null,
@@ -140,8 +126,6 @@ export const useAuthStore = create<AuthState>()(
 
             // pauseSession deactivates UI but keeps token valid (for switching)
             pauseSession: () => {
-                // Deactivate current user but keep session alive (token valid)
-                // This allows logging in as someone else while keeping this session in background
                 set({
                     user: null,
                     token: null,
@@ -152,18 +136,16 @@ export const useAuthStore = create<AuthState>()(
 
             updateUser: (user) => {
                 set((state) => {
+                    const currentCommunityId = localStorage.getItem('active_community_id') || DEFAULT_COMMUNITY_ID;
                     const newSessions = state.sessions.map(s =>
-                        s.user.id === user.id
+                        s.communityId === currentCommunityId
                             ? { ...s, user }
                             : s
                     );
 
-                    // If updating current user
-                    const isCurrentUser = state.user?.id === user.id;
-
                     return {
                         sessions: newSessions,
-                        user: isCurrentUser ? user : state.user
+                        user: state.user // Update active user usually handled by session restore
                     };
                 });
             },
@@ -171,10 +153,11 @@ export const useAuthStore = create<AuthState>()(
             updateActivity: () => {
                 const now = Date.now();
                 set((state) => {
-                    if (!state.user) return {}; // No active user
+                    if (!state.isAuthenticated) return {};
 
+                    const currentCommunityId = localStorage.getItem('active_community_id') || DEFAULT_COMMUNITY_ID;
                     const newSessions = state.sessions.map(s =>
-                        s.user.id === state.user?.id
+                        s.communityId === currentCommunityId
                             ? { ...s, lastActivity: now }
                             : s
                     );
@@ -199,71 +182,77 @@ export const useAuthStore = create<AuthState>()(
 
             // switchAccount moves a background session to active state
             switchAccount: (userId: string, intentToLogin: boolean = false) => {
-                set((state) => {
-                    const session = state.sessions.find(s => s.user.id === userId);
+                const state = get();
+                const session = state.sessions.find(s => s.user.id === userId);
 
-                    if (session && session.token) {
-                        // Switch to active session
-                        const now = Date.now();
-                        const newSessions = state.sessions.map(s =>
-                            s.user.id === userId
-                                ? { ...s, lastActivity: now }
-                                : s
-                        );
-
-                        return {
-                            user: session.user,
-                            token: session.token,
-                            isAuthenticated: true,
-                            lastActivity: now,
-                            sessions: newSessions
-                        };
-                    } else if (session && intentToLogin) {
-                        // Return the user object so the UI can pre-fill email/instance, 
-                        // but stay unauthenticated
-                        return {
-                            user: session.user,
-                            token: null,
-                            isAuthenticated: false,
-                            lastActivity: null
-                        };
-                    } else if (session) {
-                        // Session exists but logged out, and no intent to login via switcher
-                        return {
-                            user: null,
-                            token: null,
-                            isAuthenticated: false,
-                            lastActivity: null
-                        };
+                if (session && session.token) {
+                    // Update active community context
+                    const comm = COMMUNITIES.find(c => c.id === session.communityId);
+                    if (comm) {
+                        localStorage.setItem('active_community_id', comm.id);
+                        localStorage.setItem('active_community_url', comm.url);
                     }
-                    return {};
-                });
+
+                    set({
+                        user: session.user,
+                        token: session.token,
+                        isAuthenticated: true,
+                        lastActivity: Date.now()
+                    });
+                } else if (intentToLogin) {
+                    // Prepare for login: clear current auth but keep sessions
+                    // If we know the community, set it
+                    if (session) {
+                        const comm = COMMUNITIES.find(c => c.id === session.communityId);
+                        if (comm) {
+                            localStorage.setItem('active_community_id', comm.id);
+                            localStorage.setItem('active_community_url', comm.url);
+                        }
+                    }
+                    set({ user: null, token: null, isAuthenticated: false });
+                } else {
+                    set({ user: null, token: null, isAuthenticated: false });
+                }
+            },
+
+            switchCommunity: (communityId: string) => {
+                const state = get();
+                // Find the most recently active session for this community
+                const session = state.sessions
+                    .filter(s => s.communityId === communityId && s.token)
+                    .sort((a, b) => b.lastActivity - a.lastActivity)[0];
+
+                if (session) {
+                    // Restore session
+                    set({
+                        user: session.user,
+                        token: session.token,
+                        isAuthenticated: true,
+                        lastActivity: Date.now()
+                    });
+                } else {
+                    // No valid session for this community
+                    set({
+                        user: null,
+                        token: null,
+                        isAuthenticated: false,
+                        lastActivity: null
+                    });
+                }
             },
 
             removeAccount: (userId: string) => {
-                set((state) => {
-                    const newSessions = state.sessions.filter(s => s.user.id !== userId);
-                    const isCurrentUser = state.user?.id === userId;
-
-                    return {
-                        sessions: newSessions,
-                        ...(isCurrentUser ? {
-                            user: null,
-                            token: null,
-                            isAuthenticated: false,
-                            lastActivity: null
-                        } : {})
-                    };
-                });
+                set((state) => ({
+                    sessions: state.sessions.filter(s => s.user.id !== userId)
+                }));
             }
         }),
         {
             name: 'auth-storage',
             storage: createJSONStorage(() => localStorage),
-            version: 2, // Increment version to force clear old state
+            version: 3, // Migrating to V3 for Community Support
             migrate: (persistedState: unknown, version: number) => {
-                if (version < 2) {
-                    // Critical schema change, wipe old state
+                if (version < 3) {
                     return {
                         user: null,
                         token: null,

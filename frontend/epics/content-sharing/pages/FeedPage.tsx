@@ -24,15 +24,27 @@ export const FeedPage: React.FC = () => {
     const [sidebarType, setSidebarType] = useState<'notifications' | 'search' | null>(null);
 
     useEffect(() => {
+        // Initial Fetch
         fetchFeed();
         fetchUnreadCount();
 
-        // Polling for notifications
+        // Polling for unread count
         const interval = setInterval(() => {
             fetchUnreadCount();
+            // Optional: fetchFeed() on interval too? Maybe heavy.
         }, 30000);
 
-        return () => clearInterval(interval);
+        // Refetch on Window Focus (Real-time feel)
+        const onFocus = () => {
+            fetchFeed();
+            fetchUnreadCount();
+        };
+        window.addEventListener('focus', onFocus);
+
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('focus', onFocus);
+        };
     }, [fetchFeed, fetchUnreadCount]);
 
     const toggleSidebar = (type: 'notifications' | 'search') => {

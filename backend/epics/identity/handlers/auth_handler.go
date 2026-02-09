@@ -35,7 +35,7 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondSuccess(w, "Account created successfully", user.ToPublicUser(), http.StatusCreated)
+	respondSuccess(w, "Account created successfully", user.ToPrivateUser(), http.StatusCreated)
 }
 
 // Login handles user authentication trigger (US1.2 updated)
@@ -183,6 +183,26 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondJSON(w, loginResp, http.StatusOK)
+}
+
+// CheckEmail checks if an email exists (Public endpoint)
+func (h *AuthHandler) CheckEmail(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Email string `json:"email"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	exists, err := h.authService.CheckEmailExists(r.Context(), req.Email)
+	if err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"exists": exists})
 }
 
 // Helper to extract token from Authorization header

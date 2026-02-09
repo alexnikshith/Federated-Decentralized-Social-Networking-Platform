@@ -18,6 +18,11 @@ type Config struct {
 	SMTPUser     string
 	SMTPPassword string
 	SMTPFrom     string
+
+	// Federation settings
+	InstanceName      string
+	InstanceDomain    string
+	FederationEnabled bool
 }
 
 // AppConfig represents the global configuration instance
@@ -44,14 +49,27 @@ func LoadConfig() {
 		SMTPUser:     getEnv("SMTP_USER", ""),
 		SMTPPassword: getEnv("SMTP_PASSWORD", ""),
 		SMTPFrom:     getEnv("SMTP_FROM", "noreply@federated-social.com"),
+
+		// Federation settings
+		InstanceName:      getEnv("INSTANCE_NAME", "default-instance"),
+		InstanceDomain:    getEnv("INSTANCE_DOMAIN", "localhost:8080"),
+		FederationEnabled: getEnvBool("FEDERATION_ENABLED", true),
 	}
 
-	log.Printf("Config loaded: Port=%s, DB=%s", AppConfig.Port, AppConfig.DatabaseName)
+	log.Printf("Config loaded: Port=%s, DB=%s, Instance=%s, Federation=%v",
+		AppConfig.Port, AppConfig.DatabaseName, AppConfig.InstanceName, AppConfig.FederationEnabled)
 }
 
 func getEnv(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
+	}
+	return defaultValue
+}
+
+func getEnvBool(key string, defaultValue bool) bool {
+	if value := os.Getenv(key); value != "" {
+		return value == "true" || value == "1" || value == "yes"
 	}
 	return defaultValue
 }

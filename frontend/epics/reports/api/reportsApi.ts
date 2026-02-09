@@ -2,7 +2,7 @@ import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../identity/store/authStore';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const API_URL = localStorage.getItem('active_community_url') || import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 // DailyActivity represents time spent on the platform
 export interface DailyActivity {
@@ -38,7 +38,7 @@ export const useReportsApi = () => {
     const queryClient = useQueryClient();
 
     const api = axios.create({
-        baseURL: API_URL,
+        baseURL: localStorage.getItem('active_community_url') || API_URL,
         headers: {
             Authorization: `Bearer ${token}`
         }

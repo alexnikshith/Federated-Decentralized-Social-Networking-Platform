@@ -1,121 +1,185 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Users, Globe, Shield, Star, ChevronRight, Filter } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { Search, Users, Globe, Shield, ChevronRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import axios from "axios";
+import { COMMUNITIES, DEFAULT_COMMUNITY } from "../../../src/config/communities";
+import { toast } from "sonner";
+import { JoinCommunityModal } from "../../../src/components/auth/JoinCommunityModal";
+import { useAuthStore } from "../../identity/store/authStore";
 
-const communities = [
-  {
-    id: 1,
-    name: "Art & Creative",
-    domain: "art.nexus.social",
-    description: "A vibrant community for artists, illustrators, and creative minds to share their work and inspire each other.",
-    members: 12400,
-    posts: 45200,
-    category: "Creative",
-    featured: true,
-    trustLevel: "high",
-  },
-  {
-    id: 2,
-    name: "Tech Enthusiasts",
-    domain: "tech.nexus.social",
-    description: "Discuss the latest in technology, programming, open source, and digital privacy.",
-    members: 28900,
-    posts: 89300,
-    category: "Technology",
-    featured: true,
-    trustLevel: "high",
-  },
-  {
-    id: 3,
-    name: "Science Hub",
-    domain: "science.nexus.social",
-    description: "Share and discuss scientific discoveries, research, and the wonders of the natural world.",
-    members: 8700,
-    posts: 23400,
-    category: "Education",
-    featured: false,
-    trustLevel: "high",
-  },
-  {
-    id: 4,
-    name: "Music Zone",
-    domain: "music.nexus.social",
-    description: "For musicians, producers, and music lovers. Share your creations and discover new sounds.",
-    members: 15600,
-    posts: 67800,
-    category: "Creative",
-    featured: true,
-    trustLevel: "high",
-  },
-  {
-    id: 5,
-    name: "Writers Guild",
-    domain: "writers.nexus.social",
-    description: "A space for writers of all genres to share their work, get feedback, and connect with fellow authors.",
-    members: 6200,
-    posts: 31500,
-    category: "Creative",
-    featured: false,
-    trustLevel: "medium",
-  },
-  {
-    id: 6,
-    name: "Gaming World",
-    domain: "gaming.nexus.social",
-    description: "From indie gems to AAA titles, discuss games, share experiences, and find teammates.",
-    members: 34500,
-    posts: 124000,
-    category: "Entertainment",
-    featured: true,
-    trustLevel: "high",
-  },
-  {
-    id: 7,
-    name: "Photography Club",
-    domain: "photo.nexus.social",
-    description: "Showcase your photography, learn techniques, and appreciate the art of capturing moments.",
-    members: 9800,
-    posts: 52100,
-    category: "Creative",
-    featured: false,
-    trustLevel: "high",
-  },
-  {
-    id: 8,
-    name: "Book Lovers",
-    domain: "books.nexus.social",
-    description: "Discuss literature, share recommendations, and connect with fellow bibliophiles.",
-    members: 7400,
-    posts: 28900,
-    category: "Education",
-    featured: false,
-    trustLevel: "high",
-  },
-];
-
-const categories = ["All", "Creative", "Technology", "Education", "Entertainment"];
-
-const trustColors = {
-  high: "text-success bg-success/15",
-  medium: "text-primary bg-primary/15",
-  low: "text-destructive bg-destructive/15",
-};
+import { api } from "../../identity/api/client";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const Communities = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  // Modal State
+  // Modal State
+  const [joinModalOpen, setJoinModalOpen] = useState(false);
+  const [targetCommunity, setTargetCommunity] = useState<typeof COMMUNITIES[0] | null>(null);
+  const [leaveCommunity, setLeaveCommunity] = useState<typeof COMMUNITIES[0] | null>(null);
+  const [password, setPassword] = useState("");
 
-  const filteredCommunities = communities.filter((community) => {
-    const matchesSearch = community.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      community.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === "All" || community.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+  const { user, sessions } = useAuthStore();
+
+  // Self-heal: Sync local sessions to backend profile
+  useEffect(() => {
+    if (user && sessions.length > 0) {
+      sessions.forEach(s => {
+        // If we have a session for a community, but backend doesn't know about it
+        if (s.communityId && !user.joined_communities?.includes(s.communityId)) {
+          // Skip if it's the current community ID (implied)
+          const activeId = localStorage.getItem('active_community_id');
+          if (s.communityId !== activeId) {
+            api.post('/profile/me/communities', { community_id: s.communityId })
+              .catch(err => console.error("Auto-sync failed", err));
+          }
+        }
+      });
+    }
+  }, [user?.id, sessions.length]);
+  // Real-time validation state: null = unknown, true = valid linked account, false = remote account missing/invalid
+  const [validations, setValidations] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const verifyConnections = async () => {
+      if (!user?.email) return;
+
+      const results: Record<string, boolean> = {};
+
+      await Promise.all(COMMUNITIES.map(async (community) => {
+        const communityId = community.id;
+        const session = sessions.find(s => s.communityId === communityId && s.user.email === user.email);
+
+        // 1. Try Token
+        if (session?.token) {
+          try {
+            await axios.get(`${community.url}/api/auth/me`, {
+              headers: { Authorization: `Bearer ${session.token}` }
+            });
+            results[communityId] = true;
+            return;
+          } catch (e) {
+            // Token failed, fall through to email check
+          }
+        }
+
+        // 2. Try Email Check (Public Endpoint)
+        try {
+          const res = await axios.post(`${community.url}/api/auth/check-email`, { email: user.email });
+          results[communityId] = res.data.exists;
+        } catch (e) {
+          // Offline or error, fallback to local Profile knowledge if available
+          results[communityId] = user.joined_communities?.includes(communityId) ?? false;
+        }
+      }));
+
+      setValidations(results);
+    };
+
+    verifyConnections();
+  }, [user?.joined_communities, sessions, user?.email]);
+
+  const handleJoinClick = (community: typeof COMMUNITIES[0]) => {
+    // Open Modal to Register/Login to the target community
+    setTargetCommunity(community);
+    setJoinModalOpen(true);
+  };
+
+  const handleJoinSuccess = () => {
+    // Logic after successful Auth on new community
+    if (targetCommunity) {
+      toast.success(`Joined ${targetCommunity.name} successfully!`);
+      // No reload needed potentially if we update store, but reload is safer for now
+      setTimeout(() => window.location.reload(), 500);
+    }
+    setJoinModalOpen(false);
+  };
+
+  const handleLeaveClick = (community: typeof COMMUNITIES[0]) => {
+    setLeaveCommunity(community);
+  };
+
+  const handleLeaveConfirm = async () => {
+    if (!leaveCommunity) return;
+
+    try {
+      if (!password) {
+        toast.error("Please enter your password to confirm.");
+        return;
+      }
+
+      // Login to verify and get token
+      let deleteToken = null;
+      try {
+        const res = await axios.post(`${leaveCommunity.url}/api/auth/login`, {
+          email: user?.email,
+          password: password
+        });
+        deleteToken = res.data.token;
+      } catch (e) {
+        console.error("Verification failed", e);
+        toast.error("Incorrect password or unable to connect to community.");
+        return;
+      }
+
+      // Delete Account
+      if (deleteToken) {
+        try {
+          await axios.delete(`${leaveCommunity.url}/api/profile/me`, {
+            headers: { Authorization: `Bearer ${deleteToken}` }
+          });
+          toast.success(`Account deleted from ${leaveCommunity.name}`);
+
+          const targetSession = user?.email ? sessions.find(s => s.communityId === leaveCommunity.id && s.user.email === user.email) : null;
+          if (targetSession) {
+            useAuthStore.getState().removeAccount(targetSession.user.id);
+          }
+        } catch (e) {
+          console.error("Deletion failed", e);
+          toast.error("Failed to delete account data.");
+          return;
+        }
+      }
+
+      await api.delete(`/api/profile/me/communities/${leaveCommunity.id}`);
+      toast.success(`Left ${leaveCommunity.name}`);
+
+      // Auto-update UI without reload
+      setValidations(prev => ({ ...prev, [leaveCommunity.id]: false }));
+
+      const state = useAuthStore.getState();
+      if (state.user) {
+        const updatedUser = {
+          ...state.user,
+          joined_communities: (state.user.joined_communities || []).filter(id => id !== leaveCommunity.id)
+        };
+        state.setAuth(updatedUser, state.token);
+      }
+
+      setLeaveCommunity(null);
+      setPassword("");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to leave community");
+    }
+    setLeaveCommunity(null);
+    setPassword("");
+  };
+
+  const filteredCommunities = COMMUNITIES.filter((community) => {
+    return community.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      community.description?.toLowerCase().includes(searchQuery.toLowerCase());
   });
-
-  const featuredCommunities = filteredCommunities.filter((c) => c.featured);
-  const otherCommunities = filteredCommunities.filter((c) => !c.featured);
 
   return (
     <div className="min-h-screen">
@@ -127,12 +191,11 @@ const Communities = () => {
               Explore <span className="text-gradient-gold">Communities</span>
             </h1>
             <p className="text-lg text-muted-foreground">
-              Find your people. Each community is independently operated with its own culture,
-              rules, and moderation. Join one that aligns with your interests and values.
+              Find your people. Each community is independently operated. Join one to create an account there.
             </p>
           </div>
 
-          {/* Search and filters */}
+          {/* Search */}
           <div className="flex flex-col md:flex-row gap-4 mb-8">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -144,113 +207,121 @@ const Communities = () => {
                 className="pl-10 h-11 bg-secondary border-border"
               />
             </div>
-            <div className="flex gap-2 flex-wrap">
-              {categories.map((category) => (
-                <Button
-                  key={category}
-                  variant={selectedCategory === category ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedCategory(category)}
-                  className={selectedCategory === category ? "" : "border-border"}
-                >
-                  {category}
-                </Button>
-              ))}
-            </div>
           </div>
 
-          {/* Featured Communities */}
-          {featuredCommunities.length > 0 && (
-            <div className="mb-12">
-              <div className="flex items-center gap-2 mb-6">
-                <Star className="w-5 h-5 text-primary" />
-                <h2 className="font-display font-semibold text-xl">Featured Communities</h2>
-              </div>
-              <div className="grid md:grid-cols-2 gap-6">
-                {featuredCommunities.map((community, index) => (
-                  <CommunityCard key={community.id} community={community} featured index={index} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* All Communities */}
+          {/* Communities Grid */}
           <div>
-            <div className="flex items-center gap-2 mb-6">
-              <Globe className="w-5 h-5 text-accent" />
-              <h2 className="font-display font-semibold text-xl">All Communities</h2>
-              <span className="text-sm text-muted-foreground">({filteredCommunities.length})</span>
-            </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {otherCommunities.map((community, index) => (
-                <CommunityCard key={community.id} community={community} index={index} />
-              ))}
+              {filteredCommunities.map((community, index) => {
+                const activeId = localStorage.getItem('active_community_id');
+                const hasSession = user?.email
+                  ? sessions.some(s => s.communityId === community.id && s.token && s.user.email === user.email)
+                  : false;
+
+                const inProfile = user?.joined_communities?.includes(community.id);
+                const isCurrent = activeId === community.id;
+                const validation = validations[community.id];
+                // Trust real-time validation if available, else fallback to local hints
+                const isJoined = validation !== undefined
+                  ? validation
+                  : (inProfile || (user?.email && sessions.some(s => s.communityId === community.id && s.token && s.user.email === user.email)));
+
+                return (
+                  <div
+                    key={community.id}
+                    className="glass-card rounded-xl p-6 flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between mb-4">
+                        <div>
+                          <h3 className="font-display font-semibold text-lg">
+                            {community.name}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">{community.url.replace('http://', '')}</p>
+                        </div>
+                        <div className="px-2 py-1 text-xs font-medium rounded-full text-success bg-success/15">
+                          <span className="capitalize">Verified</span>
+                        </div>
+                      </div>
+
+                      <p className="text-sm text-muted-foreground mb-6 line-clamp-3">
+                        {community.description}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between mt-auto">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Users className="w-4 h-4" />
+                        <span>Active</span>
+                      </div>
+
+                      {isCurrent ? (
+                        <Button variant="outline" disabled className="opacity-50 cursor-not-allowed">
+                          Current
+                        </Button>
+                      ) : isJoined ? (
+                        <Button
+                          variant="destructive"
+                          onClick={() => handleLeaveClick(community)}
+                          className="bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20"
+                        >
+                          Leave
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={() => handleJoinClick(community)}
+                          className="gap-2"
+                        >
+                          Join Now
+                          <ChevronRight className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
-
-          {filteredCommunities.length === 0 && (
-            <div className="text-center py-16">
-              <Globe className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="font-display font-semibold text-xl mb-2">No communities found</h3>
-              <p className="text-muted-foreground">Try adjusting your search or filters</p>
-            </div>
-          )}
         </div>
       </main>
+
+      <JoinCommunityModal
+        isOpen={joinModalOpen}
+        onClose={() => setJoinModalOpen(false)}
+        targetCommunity={targetCommunity}
+        currentUserEmail={user?.email || ""}
+        onSuccess={handleJoinSuccess}
+      />
+
+      <AlertDialog open={!!leaveCommunity} onOpenChange={() => { setLeaveCommunity(null); setPassword(""); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Leave {leaveCommunity?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to leave {leaveCommunity?.name}?
+              This will <strong>permanently delete your account and data</strong> on {leaveCommunity?.name}.
+              <br /><br />
+              Please enter your password for <strong>{leaveCommunity?.name}</strong> to confirm:
+            </AlertDialogDescription>
+            <div className="py-4">
+              <Input
+                type="password"
+                placeholder="Enter Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleLeaveConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Confirm & Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
-
-interface CommunityCardProps {
-  community: typeof communities[0];
-  featured?: boolean;
-  index: number;
-}
-
-function CommunityCard({ community, featured, index }: CommunityCardProps) {
-  return (
-    <div
-      className={cn(
-        "glass-card rounded-xl p-6 transition-all duration-300 hover:border-primary/30 group cursor-pointer opacity-0 animate-fade-in-up",
-        featured && "border-primary/20"
-      )}
-      style={{ animationDelay: `${index * 0.05}s` }}
-    >
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <h3 className="font-display font-semibold text-lg group-hover:text-primary transition-colors">
-            {community.name}
-          </h3>
-          <p className="text-sm text-muted-foreground">{community.domain}</p>
-        </div>
-        <div className={cn(
-          "px-2 py-1 text-xs font-medium rounded-full",
-          trustColors[community.trustLevel as keyof typeof trustColors]
-        )}>
-          <div className="flex items-center gap-1">
-            <Shield className="w-3 h-3" />
-            <span className="capitalize">{community.trustLevel}</span>
-          </div>
-        </div>
-      </div>
-
-      <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-        {community.description}
-      </p>
-
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <Users className="w-4 h-4" />
-            <span>{community.members.toLocaleString()}</span>
-          </div>
-          <span className="text-border">•</span>
-          <span>{community.posts.toLocaleString()} posts</span>
-        </div>
-        <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
-      </div>
-    </div>
-  );
-}
 
 export default Communities;

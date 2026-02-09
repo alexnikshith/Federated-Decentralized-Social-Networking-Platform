@@ -9,12 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Globe, ArrowRight, Eye, EyeOff, Shield, Check, Users, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const popularInstances = [
-    { domain: "art.nexus.social", name: "Art & Creative", members: "12.4k" },
-    { domain: "tech.nexus.social", name: "Tech Enthusiasts", members: "28.9k" },
-    { domain: "music.nexus.social", name: "Music Zone", members: "15.6k" },
-];
+import { COMMUNITIES, DEFAULT_COMMUNITY } from "../../config/communities";
 
 interface RegisterFormProps {
     onSuccess?: () => void;
@@ -28,8 +23,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
 
     // State for password visibility toggle
     const [showPassword, setShowPassword] = useState(false);
-    // State for community/instance selection
-    const [selectedInstance, setSelectedInstance] = useState("");
+    const [selectedInstanceId, setSelectedInstanceId] = useState(DEFAULT_COMMUNITY.id);
     const [customInstance, setCustomInstance] = useState("");
     // Form field states
     const [username, setUsername] = useState("");
@@ -40,26 +34,53 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
     // Loading state for submission
     const [isLoading, setIsLoading] = useState(false);
 
+    const handleCommunitySelect = (community: typeof COMMUNITIES[0]) => {
+        setSelectedInstanceId(community.id);
+        setCustomInstance("");
+
+        // IMMEDIATE ACTION: Set the context for the API client
+        localStorage.setItem('active_community_url', community.url);
+        localStorage.setItem('active_community_id', community.id);
+
+        // Also pre-mark as joined so UX is consistent immediately
+        try {
+            const stored = localStorage.getItem('joined_community_ids');
+            let ids = stored ? JSON.parse(stored) : [];
+
+            // If no history, assume they are part of the default community (The Hub)
+            if (ids.length === 0) {
+                ids = [DEFAULT_COMMUNITY.id];
+            }
+
+            if (!ids.includes(community.id)) {
+                ids.push(community.id);
+                localStorage.setItem('joined_community_ids', JSON.stringify(ids));
+            }
+        } catch (e) {
+            // Ignore storage errors
+        }
+    };
+
     // Handle form submission
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
 
         try {
-            // Determine which instance to use (custom or selected)
-            const instance = customInstance || selectedInstance;
+            // Ensure context is set before request (redundant safety)
+            const selectedComm = COMMUNITIES.find(c => c.id === selectedInstanceId);
+            if (selectedComm && !customInstance) {
+                localStorage.setItem('active_community_url', selectedComm.url);
+            }
 
-            // Call API to register user
             await authApi.signup({
                 username,
                 email,
                 password,
-                // @ts-expect-error - adding instance which might be expected by backend
-                instance
+                instance: customInstance || (selectedComm?.url || "")
             });
 
-            // Handle success
-            toast.success("Account created successfully! Please sign in to verify your account.");
+            toast.success("Account created successfully! Please sign in.");
             if (onSuccess) {
                 onSuccess();
             } else {
@@ -73,8 +94,8 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
         }
     };
 
-    // Helper to get currently selected instance
-    const currentInstance = customInstance || selectedInstance;
+    const selectedComm = COMMUNITIES.find(c => c.id === selectedInstanceId);
+    const currentInstanceUrl = customInstance || selectedComm?.url || "";
 
     return (
         <div className="w-full h-full flex flex-col justify-center">
@@ -108,18 +129,14 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                     <div className="space-y-4">
                         <Label className="text-base font-medium">Choose your community</Label>
                         <div className="grid gap-3">
-                            {/* List of popular instances */}
-                            {popularInstances.map((instance) => (
+                            {COMMUNITIES.map((community) => (
                                 <button
-                                    key={instance.domain}
+                                    key={community.id}
                                     type="button"
-                                    onClick={() => {
-                                        setSelectedInstance(instance.domain);
-                                        setCustomInstance("");
-                                    }}
+                                    onClick={() => handleCommunitySelect(community)}
                                     className={cn(
                                         "flex items-center justify-between p-4 rounded-xl border transition-all text-left",
-                                        selectedInstance === instance.domain && !customInstance
+                                        selectedInstanceId === community.id && !customInstance
                                             ? "border-primary bg-primary/10 shadow-sm"
                                             : "border-border hover:border-primary/50 hover:bg-secondary/50"
                                     )}
@@ -129,34 +146,34 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                                             <Users className="w-5 h-5 text-muted-foreground" />
                                         </div>
                                         <div>
-                                            <div className="font-semibold text-sm">{instance.name}</div>
-                                            <div className="text-xs text-muted-foreground">{instance.domain}</div>
+                                            <div className="font-semibold text-sm">{community.name}</div>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-xs text-muted-foreground">{instance.members} members</span>
-                                        {selectedInstance === instance.domain && !customInstance && (
+                                        <span className="text-xs text-muted-foreground">Active</span>
+                                        {selectedInstanceId === community.id && !customInstance && (
                                             <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
                                                 <Check className="w-3 h-3 text-primary-foreground" />
                                             </div>
                                         )}
                                     </div>
                                 </button>
-                            ))}
-                        </div>
+                            ))
+                            }
+                        </div >
 
                         {/* Divider */}
-                        <div className="relative py-2">
+                        < div className="relative py-2" >
                             <div className="absolute inset-0 flex items-center">
                                 <div className="w-full border-t border-border"></div>
                             </div>
                             <div className="relative flex justify-center text-xs uppercase">
                                 <span className="bg-background px-2 text-muted-foreground">or join a custom instance</span>
                             </div>
-                        </div>
+                        </div >
 
                         {/* Custom Instance Input */}
-                        <div className="relative">
+                        < div className="relative" >
                             <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                             <Input
                                 type="text"
@@ -164,16 +181,16 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                                 value={customInstance}
                                 onChange={(e) => {
                                     setCustomInstance(e.target.value);
-                                    setSelectedInstance("");
+                                    setSelectedInstanceId("");
                                 }}
                                 className="pl-10 h-12 bg-secondary border-border"
                             />
-                        </div>
-                    </div>
-                </div>
+                        </div >
+                    </div >
+                </div >
 
                 {/* RIGHT COLUMN: User Details Form */}
-                <div className="glass-card rounded-2xl p-8 space-y-6 shadow-xl border border-white/10 relative">
+                < div className="glass-card rounded-2xl p-8 space-y-6 shadow-xl border border-white/10 relative" >
                     <div className="space-y-4">
                         <Label className="text-base font-medium">Account Details</Label>
 
@@ -191,9 +208,9 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                                     className="h-11 bg-secondary border-border flex-1"
                                 />
                             </div>
-                            {currentInstance && username && (
+                            {currentInstanceUrl && username && (
                                 <p className="text-xs text-muted-foreground">
-                                    Your full handle: <span className="text-primary font-medium">@{username}@{currentInstance}</span>
+                                    Your full handle: <span className="text-primary font-medium">@{username}@{currentInstanceUrl.replace('http://', '')}</span>
                                 </p>
                             )}
                         </div>
@@ -265,7 +282,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                         type="submit"
                         variant="hero"
                         className="w-full h-11 text-base mt-2"
-                        disabled={!currentInstance || !username || !email || !password || !agreedToTerms || isLoading}
+                        disabled={(!selectedInstanceId && !customInstance) || !username || !email || !password || !agreedToTerms || isLoading}
                     >
                         {isLoading ? "Creating Account..." : (
                             <>
@@ -299,8 +316,8 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                         <Shield className="w-3 h-3" />
                         <span>Your data stays on your chosen community instance</span>
                     </div>
-                </div>
-            </form>
-        </div>
+                </div >
+            </form >
+        </div >
     );
 };

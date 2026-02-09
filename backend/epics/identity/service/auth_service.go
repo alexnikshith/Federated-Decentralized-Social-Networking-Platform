@@ -172,8 +172,7 @@ func (s *AuthService) InitiateLogin(ctx context.Context, req dto.LoginRequest, i
 	// Log activity
 	s.logActivity(ctx, user.ID, "login", "User logged in (2FA disabled)", ipAddress, userAgent)
 
-	publicUser := user.ToPublicUser()
-	publicUser.Is2FAEnabled = &user.Is2FAEnabled
+	publicUser := user.ToPrivateUser()
 
 	return &dto.LoginResponse{
 		Token:     tokenString,
@@ -246,8 +245,7 @@ func (s *AuthService) VerifyOTP(ctx context.Context, req dto.VerifyOTPRequest, i
 	// Log activity
 	s.logActivity(ctx, user.ID, "login", "User logged in via 2FA", ipAddress, userAgent)
 
-	publicUser := user.ToPublicUser()
-	publicUser.Is2FAEnabled = &user.Is2FAEnabled
+	publicUser := user.ToPrivateUser()
 
 	return &dto.LoginResponse{
 		Token:     tokenString,
@@ -363,14 +361,24 @@ func (s *AuthService) SyncProfile(ctx context.Context, userID primitive.ObjectID
 		return nil, err
 	}
 
-	publicUser := user.ToPublicUser()
-	publicUser.Is2FAEnabled = &user.Is2FAEnabled
+	publicUser := user.ToPrivateUser()
 
 	return &dto.LoginResponse{
 		Token:     tokenString,
 		ExpiresAt: expiresAt.Format(time.RFC3339),
 		User:      publicUser,
 	}, nil
+}
+
+// CheckEmailExists checks if a user exists with the given email
+func (s *AuthService) CheckEmailExists(ctx context.Context, email string) (bool, error) {
+	email = strings.ToLower(email)
+	_, err := s.userRepo.FindByEmail(ctx, email)
+	if err == nil {
+		return true, nil
+	}
+	// Check specific error if possible, but generic error usually implies not found in this repo implementation
+	return false, nil
 }
 
 // Helper function to log activity
