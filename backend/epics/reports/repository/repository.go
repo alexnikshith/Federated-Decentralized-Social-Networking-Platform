@@ -436,3 +436,46 @@ func (r *ReportRepository) GetInteractionsReceived(ctx context.Context, userID p
 
 	return interactions, nil
 }
+
+// GetReportedUserIDs retrieves IDs of users reported by a specific user
+func (r *ReportRepository) GetReportedUserIDs(ctx context.Context, reporterID primitive.ObjectID) ([]primitive.ObjectID, error) {
+	filter := bson.M{
+		"reporter_id": reporterID,
+	}
+
+	cursor, err := r.reportsCollection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var reports []models.UserReport
+	if err := cursor.All(ctx, &reports); err != nil {
+		return nil, err
+	}
+
+	seen := make(map[primitive.ObjectID]bool)
+	var ids []primitive.ObjectID
+
+	for _, report := range reports {
+		if !seen[report.ReportedID] {
+			ids = append(ids, report.ReportedID)
+			seen[report.ReportedID] = true
+		}
+	}
+
+	return ids, nil
+}
+
+// IsUserReported checks if a specific user has been reported by another user
+func (r *ReportRepository) IsUserReported(ctx context.Context, reporterID, reportedID primitive.ObjectID) (bool, error) {
+	filter := bson.M{
+		"reporter_id": reporterID,
+		"reported_id": reportedID,
+	}
+	count, err := r.reportsCollection.CountDocuments(ctx, filter)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}

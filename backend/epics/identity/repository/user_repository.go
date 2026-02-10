@@ -32,6 +32,9 @@ func (r *UserRepository) CreateUser(ctx context.Context, user *models.User) erro
 	user.UpdatedAt = time.Now()
 	user.IsActive = true
 	user.IsDeactivated = false
+	if user.JoinedCommunities == nil {
+		user.JoinedCommunities = []string{}
+	}
 
 	result, err := r.collection.InsertOne(ctx, user)
 	if err != nil {
@@ -110,6 +113,14 @@ func (r *UserRepository) AddJoinedCommunity(ctx context.Context, userID primitiv
 	}
 
 	_, err := r.collection.UpdateOne(ctx, bson.M{"_id": userID}, update)
+
+	// If error is related to type, we try to fix it
+	if err != nil {
+		// Attempt to fix: Set to empty array then retry
+		r.collection.UpdateOne(ctx, bson.M{"_id": userID}, bson.M{"$set": bson.M{"joined_communities": []string{}}})
+		_, err = r.collection.UpdateOne(ctx, bson.M{"_id": userID}, update)
+	}
+
 	return err
 }
 
