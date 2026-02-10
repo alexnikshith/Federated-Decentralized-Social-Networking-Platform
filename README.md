@@ -38,14 +38,6 @@ Each server instance is independently managed and stores its own data, while com
 
 This project is developed as part of **23CSE311 – Software Engineering**.
 
-### Objectives
-- ✅ Decentralized user identity and authentication (Epic 1 - DONE)
-- 🔄 Instance-level data ownership
-- 🔄 REST-based cross-instance federation
-- 🔄 Privacy-aware content visibility
-- 🔄 Transparent and ethical moderation
-
----
 
 ## Technology Stack
 
@@ -178,100 +170,6 @@ Federated-Decentralized-Social-Networking-Platform/
 
 ---
 
-## Implementation Status
-
-### ✅ Epic 1: Identity (COMPLETED)
-**Location:** Backend: `backend/epics/identity/` | Frontend: `frontend/epics/identity/`
-
-**Features:**
-- ✅ Account Creation with unique usernames
-- ✅ Secure JWT-based authentication
-- ✅ Profile management and editing
-- ✅ Dedicated Settings page with split navigation
-- ✅ Privacy controls (public/followers-only)
-- ✅ Account deactivation (Danger Zone)
-- ✅ Password change functionality
-- ✅ Activity logging and tracking
-- ✅ Secure logout with token invalidation
-
-**Frontend Routes:**
-- `/login` - User login (Epic 1)
-- `/register` - Registration (Epic 1)
-- `/profile` - Current user profile (Epic 1)
-- `/profile/:username` - View other user profiles (Epic 1)
-- `/settings` - User settings & account management (Epic 1)
-
-**Status:** ✅ **Fully Implemented & Tested**
-
----
-
-### 🔄 Epic 2: Content Sharing (PARTIAL)
-**Location:** Backend: `backend/epics/content_sharing/` | Frontend: `frontend/epics/content-sharing/`
-
-**Features:**
-- ✅ Post creation and display
-- ✅ Enhanced Comment system with premium UI
-- ✅ Like/reaction system
-- ✅ User notifications
-- ✅ Follow/Unfollow
-- ✅ Feed generation
-
-**Frontend Routes:**
-- `/feed` - Main content feed
-- `/dashboard` - User dashboard
-
-**Status:** ✅ **Implemented with Premium UI**
-
----
-
-### 📋 Epic 3: Federation (UI READY)
-**Location:** Backend: `backend/epics/federation/` | Frontend: `frontend/epics/federation/`
-
-**Features:**
-- 📋 Community discovery (UI ready)
-- 📋 Content exploration (UI ready)
-- 📋 Cross-instance communication (Backend needed)
-- 📋 Instance networking (Backend needed)
-- 📋 Federation protocol (Backend needed)
-
-**Frontend Routes:**
-- `/communities` - Browse communities (UI ready)
-- `/explore` - Explore content (UI ready)
-
-**Status:** 📋 **UI Ready, Backend Integration Needed**
-
----
-
-### 📋 Epic 4: Reports & Moderation (PARTIAL)
-**Location:** Backend: `backend/epics/reports/` | Frontend: `frontend/epics/reports/`
-
-**Features:**
-- ✅ About page (UI ready)
-- 📋 Content reporting (Backend needed)
-- 📋 Moderation dashboard (Backend needed)
-- 📋 User reports and bans (Backend needed)
-
-**Frontend Routes:**
-- `/about` - About/Help page
-
-**Status:** 📋 **Partial UI Ready**
-
----
-
-### 📋 Epic 5: Safety & Security (PLACEHOLDER)
-**Location:** Backend: `backend/epics/safety/` | Frontend: `frontend/epics/safety/`
-
-**Planned Features:**
-- 📋 Privacy controls
-- 📋 Two-factor authentication
-- 📋 Session management
-- 📋 Account recovery
-- 📋 Security alerts
-
-**Status:** 📋 **Structure Ready, Implementation Needed**
-
----
-
 ## API Endpoints (Epic 1)
 
 ### Public Endpoints
@@ -290,9 +188,6 @@ Federated-Decentralized-Social-Networking-Platform/
 ### System
 - `GET /health` - Health check
 
-**📖 Full API documentation: [docs/EPIC1_IDENTITY.md](docs/EPIC1_IDENTITY.md)**
-
----
 
 ## Frontend Features & Components
 
@@ -396,36 +291,6 @@ npm run test                # Run tests
 
 ---
 
-## Documentation
-
-- **Setup & Usage Guide:** [GETTING_STARTED.md](GETTING_STARTED.md)
-- **Epic 1 Documentation:** [docs/EPIC1_IDENTITY.md](docs/EPIC1_IDENTITY.md)
-- **Architecture:** [docs/architecture/system-architecture.md](docs/architecture/system-architecture.md)
-- **Database Schema:** [docs/architecture/database-schema.md](docs/architecture/database-schema.md)
-- **API Flow:** [docs/architecture/api-flow.md](docs/architecture/api-flow.md)
-
----
-
-## Best Practices
-
-### Frontend Development
-- Keep epic-specific code inside its folder
-- Use global components from `src/components/`
-- Export public API from each epic
-- Use absolute imports: `@/components/ui/button`
-- Maintain TypeScript type safety
-- Use shadcn UI components for consistency
-
-### Backend Development
-- Follow layered architecture (Handler → Service → Repository)
-- Organize code by epic
-- Use interfaces for loose coupling
-- Implement proper error handling
-- Write unit and integration tests
-- Document public APIs
-
----
-
 ## Team
 
 - **Riteesh TM**
@@ -435,15 +300,3 @@ npm run test                # Run tests
 - **Vishnu Sathvik R**
 
 **Course:** 23CSE311 – Software Engineering
-
----
-
-## Next Steps
-
-1. **Test Epic 1** - Thoroughly test all identity features
-2. **Epic 2: Content Sharing** - Integrate feed and post features
-3. **Epic 3: Federation** - Build cross-instance communication
-4. **Epic 4: Safety** - Add moderation and reporting
-5. **Epic 5: Reports** - Create analytics dashboard
-
----
