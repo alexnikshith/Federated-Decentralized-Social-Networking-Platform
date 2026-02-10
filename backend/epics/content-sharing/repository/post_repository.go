@@ -114,6 +114,23 @@ func (r *PostRepository) CreateIndexes(ctx context.Context) error {
 		return err
 	}
 
+	// Index for reports
+	reportIndexes := []mongo.IndexModel{
+		{
+			Keys: bson.D{
+				{Key: "reporter_id", Value: 1},
+				{Key: "post_id", Value: 1},
+			},
+			Options: options.Index().SetUnique(true),
+		},
+		{
+			Keys: bson.D{{Key: "created_at", Value: -1}},
+		},
+	}
+	if _, err := r.reports.Indexes().CreateMany(ctx, reportIndexes); err != nil {
+		return err
+	}
+
 	return nil
 }
 

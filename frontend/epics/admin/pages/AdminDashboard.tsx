@@ -152,13 +152,9 @@ const AdminDashboard: React.FC = () => {
                                 <Users className="h-4 w-4" />
                                 User Management
                             </TabsTrigger>
-                            <TabsTrigger value="posts" className="gap-2">
-                                <FileText className="h-4 w-4" />
-                                Content Moderation
-                            </TabsTrigger>
-                            <TabsTrigger value="reports" className="gap-2">
-                                <Flag className="h-4 w-4" />
-                                Reports
+                            <TabsTrigger value="moderation" className="gap-2">
+                                <ShieldAlert className="h-4 w-4" />
+                                Moderation
                             </TabsTrigger>
                         </TabsList>
                     </div>
@@ -185,118 +181,133 @@ const AdminDashboard: React.FC = () => {
                         />
                     </TabsContent>
 
-                    <TabsContent value="posts" className="mt-0">
-                        <div className="bg-card/20 border border-border/40 rounded-xl p-6 space-y-6">
-                            <div className="flex items-center justify-between">
-                                <h3 className="text-xl font-semibold flex items-center gap-2">
-                                    <FileText className="h-5 w-5 text-primary" />
-                                    Active Reports ({reports.length})
-                                </h3>
-                            </div>
+                    <TabsContent value="moderation" className="mt-0">
+                        <Tabs defaultValue="content" className="w-full space-y-6">
+                            <TabsList className="bg-muted/30 backdrop-blur-sm border border-border/40 w-fit">
+                                <TabsTrigger value="content" className="gap-2">
+                                    <FileText className="h-4 w-4" />
+                                    Content
+                                </TabsTrigger>
+                                <TabsTrigger value="users" className="gap-2">
+                                    <Flag className="h-4 w-4" />
+                                    Users
+                                </TabsTrigger>
+                            </TabsList>
 
-                            {reports.length > 0 ? (
+                            <TabsContent value="content" className="mt-0">
+                                <div className="bg-card/20 border border-border/40 rounded-xl p-6 space-y-6">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-xl font-semibold flex items-center gap-2">
+                                            <FileText className="h-5 w-5 text-primary" />
+                                            Active Reports ({reports.length})
+                                        </h3>
+                                    </div>
+
+                                    {reports.length > 0 ? (
+                                        <div className="space-y-4">
+                                            {reports.map((report) => (
+                                                <div key={report.id} className="p-4 rounded-lg bg-background/50 border border-border/40 space-y-3">
+                                                    <div className="flex justify-between items-start">
+                                                        <div className="space-y-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-sm font-bold text-orange-500 flex items-center gap-1">
+                                                                    <Flag className="h-3 w-3" />
+                                                                    REPORTED
+                                                                </span>
+                                                                <span className="text-xs text-muted-foreground">•</span>
+                                                                <span className="text-xs text-muted-foreground">{new Date(report.created_at).toLocaleString()}</span>
+                                                            </div>
+                                                            <p className="text-sm font-medium">
+                                                                <span className="text-muted-foreground font-normal text-xs uppercase tracking-wider mr-2">Reporter:</span>
+                                                                @{report.reporter_name}
+                                                            </p>
+                                                            <p className="text-sm">
+                                                                <span className="text-muted-foreground font-normal text-xs uppercase tracking-wider mr-2">Reason:</span>
+                                                                {report.reason}
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex gap-2">
+                                                            <Button variant="ghost" size="sm" onClick={() => handleResolveReport(report.id)}>
+                                                                Dismiss
+                                                            </Button>
+                                                            <Button variant="destructive" size="sm" onClick={() => handleDeleteReportedPost(report.post_id, report.id)}>
+                                                                Delete Post
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                    <div className="p-3 rounded-md bg-muted/30 border border-border/20">
+                                                        <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-2">Post Content (by @{report.author_name})</p>
+                                                        <p className="text-sm italic text-foreground/80">"{report.post_content}"</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-12 space-y-4">
+                                            <ShieldAlert className="h-12 w-12 text-muted-foreground/30 mx-auto" />
+                                            <p className="text-muted-foreground">No active reports. The platform is clean!</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </TabsContent>
+
+                            <TabsContent value="users" className="mt-0">
                                 <div className="space-y-4">
-                                    {reports.map((report) => (
-                                        <div key={report.id} className="p-4 rounded-lg bg-background/50 border border-border/40 space-y-3">
-                                            <div className="flex justify-between items-start">
+                                    {!userReports || userReports.length === 0 ? (
+                                        <div className="text-center p-8 text-muted-foreground">No reports found</div>
+                                    ) : (
+                                        userReports.map((report: any) => (
+                                            <div key={report.id} className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border border-border/40 rounded-xl bg-card/20 gap-4">
                                                 <div className="space-y-1">
                                                     <div className="flex items-center gap-2">
-                                                        <span className="text-sm font-bold text-orange-500 flex items-center gap-1">
-                                                            <Flag className="h-3 w-3" />
-                                                            REPORTED
-                                                        </span>
-                                                        <span className="text-xs text-muted-foreground">•</span>
-                                                        <span className="text-xs text-muted-foreground">{new Date(report.created_at).toLocaleString()}</span>
+                                                        <span className="font-bold text-destructive">{report.reason}</span>
+                                                        <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">{report.status}</span>
                                                     </div>
-                                                    <p className="text-sm font-medium">
-                                                        <span className="text-muted-foreground font-normal text-xs uppercase tracking-wider mr-2">Reporter:</span>
-                                                        @{report.reporter_name}
+                                                    <div className="text-sm flex items-center gap-2">
+                                                        <span className="text-muted-foreground">Reported User:</span>
+                                                        <span className="font-medium text-foreground">{report.user_details?.display_name || 'Unknown'} (@{report.user_details?.username || 'unknown'})</span>
+                                                    </div>
+                                                    <p className="text-sm text-foreground/80 italic">
+                                                        "{report.description || 'No description provided'}"
                                                     </p>
-                                                    <p className="text-sm">
-                                                        <span className="text-muted-foreground font-normal text-xs uppercase tracking-wider mr-2">Reason:</span>
-                                                        {report.reason}
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {format(new Date(report.created_at), 'PPP p')}
                                                     </p>
                                                 </div>
                                                 <div className="flex gap-2">
-                                                    <Button variant="ghost" size="sm" onClick={() => handleResolveReport(report.id)}>
-                                                        Dismiss
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => window.open(`/profile/${report.user_details?.username}`, '_blank')}
+                                                    >
+                                                        View Profile
                                                     </Button>
-                                                    <Button variant="destructive" size="sm" onClick={() => handleDeleteReportedPost(report.post_id, report.id)}>
-                                                        Delete Post
-                                                    </Button>
+
+                                                    {report.user_details?.is_active ? (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="destructive"
+                                                            onClick={() => initiateDeactivation(report.reported_id)}
+                                                        >
+                                                            Deactivate User
+                                                        </Button>
+                                                    ) : (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="default" // or a 'success' variant if available, default is primary
+                                                            className="bg-green-600 hover:bg-green-700"
+                                                            onClick={() => handleToggleStatus(report.reported_id, false)} // status is false (inactive), so !false = true (active)
+                                                        >
+                                                            Activate User
+                                                        </Button>
+                                                    )}
                                                 </div>
                                             </div>
-                                            <div className="p-3 rounded-md bg-muted/30 border border-border/20">
-                                                <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-2">Post Content (by @{report.author_name})</p>
-                                                <p className="text-sm italic text-foreground/80">"{report.post_content}"</p>
-                                            </div>
-                                        </div>
-                                    ))}
+                                        ))
+                                    )}
                                 </div>
-                            ) : (
-                                <div className="text-center py-12 space-y-4">
-                                    <ShieldAlert className="h-12 w-12 text-muted-foreground/30 mx-auto" />
-                                    <p className="text-muted-foreground">No active reports. The platform is clean!</p>
-                                </div>
-                            )}
-                        </div>
-                    </TabsContent>
-
-                    <TabsContent value="reports" className="mt-0">
-                        <div className="space-y-4">
-                            {!userReports || userReports.length === 0 ? (
-                                <div className="text-center p-8 text-muted-foreground">No reports found</div>
-                            ) : (
-                                userReports.map((report: any) => (
-                                    <div key={report.id} className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border border-border/40 rounded-xl bg-card/20 gap-4">
-                                        <div className="space-y-1">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-bold text-destructive">{report.reason}</span>
-                                                <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">{report.status}</span>
-                                            </div>
-                                            <div className="text-sm flex items-center gap-2">
-                                                <span className="text-muted-foreground">Reported User:</span>
-                                                <span className="font-medium text-foreground">{report.user_details?.display_name || 'Unknown'} (@{report.user_details?.username || 'unknown'})</span>
-                                            </div>
-                                            <p className="text-sm text-foreground/80 italic">
-                                                "{report.description || 'No description provided'}"
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">
-                                                {format(new Date(report.created_at), 'PPP p')}
-                                            </p>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={() => window.open(`/profile/${report.user_details?.username}`, '_blank')}
-                                            >
-                                                View Profile
-                                            </Button>
-
-                                            {report.user_details?.is_active ? (
-                                                <Button
-                                                    size="sm"
-                                                    variant="destructive"
-                                                    onClick={() => initiateDeactivation(report.reported_id)}
-                                                >
-                                                    Deactivate User
-                                                </Button>
-                                            ) : (
-                                                <Button
-                                                    size="sm"
-                                                    variant="default" // or a 'success' variant if available, default is primary
-                                                    className="bg-green-600 hover:bg-green-700"
-                                                    onClick={() => handleToggleStatus(report.reported_id, false)} // status is false (inactive), so !false = true (active)
-                                                >
-                                                    Activate User
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
+                            </TabsContent>
+                        </Tabs>
                     </TabsContent>
                 </Tabs>
             </div>

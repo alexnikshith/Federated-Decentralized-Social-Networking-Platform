@@ -63,9 +63,10 @@ interface PostCardProps {
     post: Post;
     initialShowComments?: boolean;
     onLikeToggle?: () => void;
+    onPostAction?: (action: 'delete' | 'report' | 'hide', postId: string) => void;
 }
 
-export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = false, onLikeToggle }) => {
+export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = false, onLikeToggle, onPostAction }) => {
     // UI State
     const [showComments, setShowComments] = useState(initialShowComments);
     const [showLikers, setShowLikers] = useState(false);
@@ -168,6 +169,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
             await deletePost(post.id);
             setShowDeleteAlert(false);
             showToast.postDeleted();
+            onPostAction?.('delete', post.id);
         } catch (error) {
             showToast.error("Failed to delete post", "Please try again later.");
         }
@@ -197,6 +199,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
             setShowReportDialog(false);
             setReportReason('');
             showToast.success("Post reported", "Moderators will review it soon.");
+            onPostAction?.('report', post.id);
         } catch (error) {
             showToast.error("Failed to submit report");
         } finally {
