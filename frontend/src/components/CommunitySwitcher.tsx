@@ -18,9 +18,14 @@ import {
 import { COMMUNITIES, DEFAULT_COMMUNITY } from '../config/communities';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../epics/identity/store/authStore';
-import { JoinCommunityModal } from './auth/JoinCommunityModal';
 
-export function CommunitySwitcher({ collapsed = false }: { collapsed?: boolean }) {
+export function CommunitySwitcher({
+    collapsed = false,
+    onOpenJoinModal
+}: {
+    collapsed?: boolean;
+    onOpenJoinModal: (community: typeof COMMUNITIES[0]) => void;
+}) {
     const [open, setOpen] = React.useState(false);
     const navigate = useNavigate();
 
@@ -63,9 +68,6 @@ export function CommunitySwitcher({ collapsed = false }: { collapsed?: boolean }
     };
     const joinedCommunities = getJoinedCommunities();
 
-    const [loginModalOpen, setLoginModalOpen] = React.useState(false);
-    const [targetCommunity, setTargetCommunity] = React.useState<typeof COMMUNITIES[0] | null>(null);
-
     const handleCommunityChange = (communityId: string) => {
         const community = COMMUNITIES.find(c => c.id === communityId);
         if (community && community.id !== currentId) {
@@ -80,9 +82,8 @@ export function CommunitySwitcher({ collapsed = false }: { collapsed?: boolean }
                 useAuthStore.getState().switchAccount(matchingSession.user.id);
                 window.location.reload();
             } else {
-                // Open Login Modal to create session for THIS user
-                setTargetCommunity(community);
-                setLoginModalOpen(true);
+                // Open Login Modal via parent handler
+                onOpenJoinModal(community);
             }
         }
         setOpen(false);
@@ -173,15 +174,6 @@ export function CommunitySwitcher({ collapsed = false }: { collapsed?: boolean }
                     </PopoverContent>
                 </Popover>
             )}
-
-            <JoinCommunityModal
-                isOpen={loginModalOpen}
-                onClose={() => setLoginModalOpen(false)}
-                targetCommunity={targetCommunity}
-                currentUserEmail={user?.email || ""}
-                onSuccess={handleLoginSuccess}
-                initialStep="login"
-            />
         </>
     );
 }
