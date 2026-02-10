@@ -430,6 +430,18 @@ const ProfileUI = () => {
                 post={post}
                 initialShowComments={targetId === post.id && shouldOpenComments}
                 onLikeToggle={() => handlePostLike(post.id)}
+                onPostAction={(action, postId) => {
+                  if (action === 'report' || action === 'delete' || action === 'hide') {
+                    setPosts(prev => prev.filter(p => p.id !== postId));
+                    setLikedPosts(prev => prev.filter(p => p.id !== postId));
+                    setCommentedPosts(prev => prev.filter(p => p.id !== postId));
+                    setSavedPosts(prev => prev.filter(p => p.id !== postId));
+
+                    if (action === 'report') {
+                      // Optional: Show specific toast if not handled by PostCard, but PostCard handles success toast.
+                    }
+                  }
+                }}
               />
             </div>
           </div>
@@ -933,6 +945,13 @@ const ProfileUI = () => {
         isOpen={showReportModal}
         onClose={() => setShowReportModal(false)}
         reportedUser={profileUser}
+        onSuccess={() => {
+          // Clear all posts from the reported user
+          setPosts([]);
+          setLikedPosts([]);
+          setCommentedPosts([]);
+          setSavedPosts([]);
+        }}
       />
     </div>
   );
