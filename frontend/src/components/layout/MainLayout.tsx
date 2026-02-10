@@ -42,6 +42,7 @@ import { LogOut, User as LucideUser, Plus } from "lucide-react";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { CommunitySwitcher } from "../CommunitySwitcher";
 import { COMMUNITIES } from "../../config/communities";
+import { JoinCommunityModal } from "@/components/auth/JoinCommunityModal";
 
 export const MainLayout = ({ children }: { children: React.ReactNode }) => {
     const { user, clearAuth, sessions, switchAccount, pauseSession, clearAllSessions } = useAuthStore();
@@ -54,6 +55,8 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
     const [showSearch, setShowSearch] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [showAuthModal, setShowAuthModal] = useState(false);
+    const [showJoinModal, setShowJoinModal] = useState(false);
+    const [targetCommunity, setTargetCommunity] = useState<typeof COMMUNITIES[0] | null>(null);
 
     // Refresh unread count on mount and periodically
     useEffect(() => {
@@ -102,6 +105,16 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
 
     const handleLogout = () => {
         clearAuth();
+    };
+
+    const handleOpenJoinModal = (community: typeof COMMUNITIES[0]) => {
+        setTargetCommunity(community);
+        setShowJoinModal(true);
+    };
+
+    const handleJoinSuccess = () => {
+        setShowJoinModal(false);
+        window.location.reload();
     };
 
 
@@ -209,7 +222,10 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
 
                         {/* Community Switcher */}
                         <div className={cn("mt-4 px-2", (!open && !isDropdownOpen) && "px-0 flex justify-center")}>
-                            <CommunitySwitcher collapsed={!open && !isDropdownOpen} />
+                            <CommunitySwitcher
+                                collapsed={!open && !isDropdownOpen}
+                                onOpenJoinModal={handleOpenJoinModal}
+                            />
                         </div>
 
                         <div className="mt-8 flex flex-col gap-2">
@@ -420,6 +436,15 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
             </div>
             {/* Auth Modal */}
             <AuthModal open={showAuthModal} onOpenChange={setShowAuthModal} />
+            {/* Federation Join Modal */}
+            <JoinCommunityModal
+                isOpen={showJoinModal}
+                onClose={() => setShowJoinModal(false)}
+                targetCommunity={targetCommunity}
+                currentUserEmail={user?.email || ""}
+                onSuccess={handleJoinSuccess}
+                initialStep="login"
+            />
         </div>
     );
 };
