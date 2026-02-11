@@ -17,7 +17,7 @@ import { DashboardPage } from '../epics/content-sharing/pages/DashboardPage';
 
 // Epic 1: Identity - Import pages
 import LoginPage from '../epics/identity/pages/LoginUI';
-import RegisterPage from '../epics/identity/pages/RegisterUI';
+import { SignupPage as RegisterPage } from '../epics/identity/pages/SignupPage';
 import ProfileUI from '../epics/identity/pages/ProfileUI';
 import { SettingsPage } from '../epics/identity/pages/SettingsPage';
 
@@ -38,7 +38,7 @@ import Index from './pages/Index';
 import NotFound from './pages/NotFound';
 import { NotificationsPage } from './pages/NotificationsPage';
 
-import './App.css';
+
 
 const queryClient = new QueryClient();
 

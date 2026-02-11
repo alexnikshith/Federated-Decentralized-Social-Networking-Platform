@@ -6,7 +6,7 @@ import type { SignupRequest } from '../types';
 import { COMMUNITIES } from '../../../src/config/communities';
 import { Users, Globe, ArrowRight, Check, AlertCircle, Loader2, ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import './Auth.css';
+
 
 // SignupPage handles new user registration
 export const SignupPage: React.FC = () => {
@@ -121,7 +121,7 @@ export const SignupPage: React.FC = () => {
     };
 
     return (
-        <div className="auth-container min-h-screen bg-[#050505] flex items-center justify-center p-4">
+        <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4">
             <div className={cn(
                 "relative w-full transition-all duration-700 ease-in-out flex flex-col md:flex-row gap-8 items-stretch",
                 step === 1 ? "max-w-xl" : "max-w-5xl"
