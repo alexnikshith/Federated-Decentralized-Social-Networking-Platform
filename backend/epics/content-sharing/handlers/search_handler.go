@@ -20,10 +20,9 @@ func NewSearchHandler() *SearchHandler {
 // It searches for users by username or other fields based on the query parameter `q`.
 func (h *SearchHandler) SearchUsers(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
-	if query == "" {
-		respondError(w, "Search query is required", http.StatusBadRequest)
-		return
-	}
+	// If query is empty, we still want to proceed to get either no results or some defaults,
+	// rather than returning a 400 error which breaks the UI flow.
+	// The repository handles empty query by returning an empty slice.
 
 	// Get limit from query params (default 20)
 	limit := int64(20)

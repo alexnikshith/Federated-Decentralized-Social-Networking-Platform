@@ -24,7 +24,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
     // State for password visibility toggle
     const [showPassword, setShowPassword] = useState(false);
     const [selectedInstanceId, setSelectedInstanceId] = useState(DEFAULT_COMMUNITY.id);
-    const [customInstance, setCustomInstance] = useState("");
+    const [customInstance] = useState("");
     // Form field states
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
@@ -36,7 +36,6 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
 
     const handleCommunitySelect = (community: typeof COMMUNITIES[0]) => {
         setSelectedInstanceId(community.id);
-        setCustomInstance("");
 
         // IMMEDIATE ACTION: Set the context for the API client
         localStorage.setItem('active_community_url', community.url);
@@ -47,7 +46,6 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
             const stored = localStorage.getItem('joined_community_ids');
             let ids = stored ? JSON.parse(stored) : [];
 
-            // If no history, assume they are part of the default community (The Hub)
             if (ids.length === 0) {
                 ids = [DEFAULT_COMMUNITY.id];
             }
@@ -67,9 +65,8 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
         setIsLoading(true);
 
         try {
-            // Ensure context is set before request (redundant safety)
             const selectedComm = COMMUNITIES.find(c => c.id === selectedInstanceId);
-            if (selectedComm && !customInstance) {
+            if (selectedComm) {
                 localStorage.setItem('active_community_url', selectedComm.url);
             }
 
@@ -77,7 +74,6 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                 username,
                 email,
                 password,
-                instance: customInstance || (selectedComm?.url || "")
             });
 
             toast.success("Account created successfully! Please sign in.");
@@ -87,7 +83,6 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                 navigate("/login");
             }
         } catch (err: any) {
-            // Handle registration errors
             toast.error(err.response?.data?.message || "Registration failed. Please try again.");
         } finally {
             setIsLoading(false);
@@ -95,7 +90,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
     };
 
     const selectedComm = COMMUNITIES.find(c => c.id === selectedInstanceId);
-    const currentInstanceUrl = customInstance || selectedComm?.url || "";
+    const currentInstanceUrl = selectedComm?.url || "";
 
     return (
         <div className="w-full h-full flex flex-col justify-center">
@@ -113,7 +108,6 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
             )}
 
             <form onSubmit={handleSubmit} className="w-full max-w-6xl mx-auto grid md:grid-cols-2 gap-8 md:gap-16 items-start p-6">
-
                 {/* LEFT COLUMN: Header + Community Selection */}
                 <div className="space-y-8">
                     <div className="text-left space-y-4">
@@ -136,7 +130,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                                     onClick={() => handleCommunitySelect(community)}
                                     className={cn(
                                         "flex items-center justify-between p-4 rounded-xl border transition-all text-left",
-                                        selectedInstanceId === community.id && !customInstance
+                                        selectedInstanceId === community.id
                                             ? "border-primary bg-primary/10 shadow-sm"
                                             : "border-border hover:border-primary/50 hover:bg-secondary/50"
                                     )}
@@ -151,50 +145,23 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <span className="text-xs text-muted-foreground">Active</span>
-                                        {selectedInstanceId === community.id && !customInstance && (
+                                        {selectedInstanceId === community.id && (
                                             <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
                                                 <Check className="w-3 h-3 text-primary-foreground" />
                                             </div>
                                         )}
                                     </div>
                                 </button>
-                            ))
-                            }
-                        </div >
-
-                        {/* Divider */}
-                        < div className="relative py-2" >
-                            <div className="absolute inset-0 flex items-center">
-                                <div className="w-full border-t border-border"></div>
-                            </div>
-                            <div className="relative flex justify-center text-xs uppercase">
-                                <span className="bg-background px-2 text-muted-foreground">or join a custom instance</span>
-                            </div>
-                        </div >
-
-                        {/* Custom Instance Input */}
-                        < div className="relative" >
-                            <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                            <Input
-                                type="text"
-                                placeholder="custom-instance.nexus.social"
-                                value={customInstance}
-                                onChange={(e) => {
-                                    setCustomInstance(e.target.value);
-                                    setSelectedInstanceId("");
-                                }}
-                                className="pl-10 h-12 bg-secondary border-border"
-                            />
-                        </div >
-                    </div >
-                </div >
+                            ))}
+                        </div>
+                    </div>
+                </div>
 
                 {/* RIGHT COLUMN: User Details Form */}
-                < div className="glass-card rounded-2xl p-8 space-y-6 shadow-xl border border-white/10 relative" >
+                <div className="glass-card rounded-2xl p-8 space-y-6 shadow-xl border border-white/10 relative">
                     <div className="space-y-4">
                         <Label className="text-base font-medium">Account Details</Label>
 
-                        {/* Username Input */}
                         <div className="space-y-2">
                             <Label htmlFor="username">Username</Label>
                             <div className="flex items-center gap-2">
@@ -204,7 +171,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                                     type="text"
                                     placeholder="your_username"
                                     value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
+                                    onChange={(e) => setUsername(e.target.value.toLowerCase())}
                                     className="h-11 bg-secondary border-border flex-1"
                                 />
                             </div>
@@ -215,7 +182,6 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                             )}
                         </div>
 
-                        {/* Email Input */}
                         <div className="space-y-2">
                             <Label htmlFor="email">Email</Label>
                             <Input
@@ -228,7 +194,6 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                             />
                         </div>
 
-                        {/* Password Input */}
                         <div className="space-y-2">
                             <Label htmlFor="password">Password</Label>
                             <div className="relative">
@@ -254,7 +219,6 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                         </div>
                     </div>
 
-                    {/* Terms Agreement */}
                     <div className="pt-2">
                         <div className="flex items-start gap-3">
                             <Checkbox
@@ -264,25 +228,16 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                                 className="mt-1"
                             />
                             <label htmlFor="terms" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
-                                I agree to the{" "}
-                                <Link to="/terms" className="text-primary hover:underline">
-                                    Terms of Service
-                                </Link>{" "}
-                                and{" "}
-                                <Link to="/privacy" className="text-primary hover:underline">
-                                    Privacy Policy
-                                </Link>
-                                . I understand my data will be stored on my chosen instance.
+                                I agree to the <Link to="/terms" className="text-primary hover:underline">Terms of Service</Link> and <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
                             </label>
                         </div>
                     </div>
 
-                    {/* Submit Button */}
                     <Button
                         type="submit"
                         variant="hero"
                         className="w-full h-11 text-base mt-2"
-                        disabled={(!selectedInstanceId && !customInstance) || !username || !email || !password || !agreedToTerms || isLoading}
+                        disabled={!selectedInstanceId || !username || !email || !password || !agreedToTerms || isLoading}
                     >
                         {isLoading ? "Creating Account..." : (
                             <>
@@ -292,7 +247,6 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                         )}
                     </Button>
 
-                    {/* Login Link */}
                     <div className="text-center pt-2">
                         <p className="text-sm text-muted-foreground">
                             Already have an account?{" "}
@@ -316,8 +270,8 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                         <Shield className="w-3 h-3" />
                         <span>Your data stays on your chosen community instance</span>
                     </div>
-                </div >
-            </form >
-        </div >
+                </div>
+            </form>
+        </div>
     );
 };

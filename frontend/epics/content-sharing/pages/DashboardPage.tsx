@@ -31,6 +31,8 @@ export const DashboardPage: React.FC = () => {
         }
     }, [searchParams]);
 
+    const activeCommunityId = localStorage.getItem('active_community_id');
+
     useEffect(() => {
         fetchFeed();
         fetchUnreadCount();
@@ -41,7 +43,7 @@ export const DashboardPage: React.FC = () => {
         }, 30000);
 
         return () => clearInterval(interval);
-    }, [fetchFeed, fetchUnreadCount]);
+    }, [fetchFeed, fetchUnreadCount, user?.id, activeCommunityId]);
 
     const toggleSidebar = (type: 'notifications' | 'search') => {
         setSidebarType(prev => prev === type ? null : type);

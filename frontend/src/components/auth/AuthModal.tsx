@@ -6,6 +6,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import { useNavigate } from "react-router-dom";
 import { LoginForm } from "./LoginForm";
 import { RegisterForm } from "./RegisterForm";
 
@@ -16,6 +17,7 @@ interface AuthModalProps {
 
 export const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
     const [view, setView] = useState<'login' | 'register'>('login');
+    const navigate = useNavigate();
 
     // Reset view when modal closes/opens
     useEffect(() => {
@@ -45,7 +47,7 @@ export const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
                                 // But typically we are already ON the dashboard if we opened this.
                                 // Actually we might be anywhere.
                                 // If we are on dashboard, switching account automatically updates the view via store subscription.
-                                window.location.reload(); // Force reload to ensure clean state with new account
+                                navigate('/dashboard');
                             }}
                             onSwitchToRegister={() => setView('register')}
                             hideBackNav={true}

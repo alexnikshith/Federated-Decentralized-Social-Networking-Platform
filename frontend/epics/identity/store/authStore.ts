@@ -106,10 +106,6 @@ export const useAuthStore = create<AuthState>()(
                     lastActivity: null,
                     sessions: newSessions
                 });
-
-                if (window.location.pathname !== '/' && window.location.pathname !== '/register') {
-                    setTimeout(() => window.location.href = '/login', 100);
-                }
             },
 
             // clearAllSessions removes everything locally
@@ -145,7 +141,7 @@ export const useAuthStore = create<AuthState>()(
 
                     return {
                         sessions: newSessions,
-                        user: state.user // Update active user usually handled by session restore
+                        user: user // Update active user state as well
                     };
                 });
             },

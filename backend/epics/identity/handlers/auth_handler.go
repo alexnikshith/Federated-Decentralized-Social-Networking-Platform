@@ -205,6 +205,26 @@ func (h *AuthHandler) CheckEmail(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]bool{"exists": exists})
 }
 
+// CheckUsername checks if a username exists (Public endpoint)
+func (h *AuthHandler) CheckUsername(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Username string `json:"username"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	exists, err := h.authService.CheckUsernameExists(r.Context(), req.Username)
+	if err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"exists": exists})
+}
+
 // Helper to extract token from Authorization header
 func extractToken(r *http.Request) string {
 	authHeader := r.Header.Get("Authorization")
