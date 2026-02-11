@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useContentStore } from '../store/contentStore';
+import { useAuthStore } from '../../../epics/identity/store/authStore';
 import { CreatePost } from '../components/CreatePost';
 import { UserSearch } from '../components/UserSearch';
 import { NotificationList } from '../components/NotificationList';
@@ -19,7 +20,9 @@ import './Feed.css';
 // FeedPage is the main content stream
 // It combines Post creation, Feed display, Search, and Notifications
 export const FeedPage: React.FC = () => {
+    const { user } = useAuthStore();
     const { loading, error, fetchFeed, fetchUnreadCount, unreadCount } = useContentStore();
+    const activeCommunityId = localStorage.getItem('active_community_id');
     const [sidebarType, setSidebarType] = useState<'notifications' | 'search' | null>(null);
     const [showGuidelines, setShowGuidelines] = useState(false);
     const [showDrafts, setShowDrafts] = useState(false);
@@ -45,7 +48,7 @@ export const FeedPage: React.FC = () => {
             clearInterval(interval);
             window.removeEventListener('focus', onFocus);
         };
-    }, [fetchFeed, fetchUnreadCount]);
+    }, [fetchFeed, fetchUnreadCount, user?.id, activeCommunityId]);
 
     const toggleSidebar = (type: 'notifications' | 'search') => {
         setSidebarType(prev => prev === type ? null : type);

@@ -10,7 +10,8 @@ import {
     MessageSquare,
     UserPlus,
     Circle,
-    BellOff
+    BellOff,
+    AtSign
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -47,6 +48,8 @@ export const NotificationList: React.FC = () => {
                 return <MessageSquare className="w-4 h-4 text-primary fill-current" />;
             case 'follow':
                 return <UserPlus className="w-4 h-4 text-accent fill-current" />;
+            case 'mention':
+                return <AtSign className="w-4 h-4 text-orange-500" />;
             default:
                 return <Circle className="w-4 h-4 text-muted-foreground" />;
         }
@@ -116,6 +119,8 @@ export const NotificationList: React.FC = () => {
                 return <span>{usernameElement} commented on your post</span>;
             case 'follow':
                 return <span>{usernameElement} followed you</span>;
+            case 'mention':
+                return <span>{usernameElement} mentioned you in their post</span>;
             default:
                 return 'New interaction';
         }
@@ -149,7 +154,7 @@ export const NotificationList: React.FC = () => {
 
                                     if (notif.type === 'follow') {
                                         navigate(`/profile/${notif.related_user_name}`);
-                                    } else if (notif.type === 'like') {
+                                    } else if (notif.type === 'like' || notif.type === 'mention') {
                                         // Open post in dialog
                                         setSelectedPostId(notif.related_entity_id);
                                         setOpenCommentsOnPost(false);

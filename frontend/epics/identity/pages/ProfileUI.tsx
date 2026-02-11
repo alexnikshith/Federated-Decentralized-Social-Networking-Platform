@@ -158,41 +158,39 @@ const ProfileUI = () => {
 
   const isOwnProfile = !username || username === currentUser?.username || username === currentUser?.id;
 
+  const loadProfileData = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
+    setError(null);
+    try {
+      let userToDisplay: User;
+
+      if (isOwnProfile && currentUser) {
+        // Fetch fresh data for own profile
+        userToDisplay = await profileApi.getMyProfile();
+      } else if (username) {
+        // Fetch other user's profile
+        userToDisplay = await profileApi.getProfile(username);
+      } else {
+        throw new Error("User not found");
+      }
+
+      setProfileUser(userToDisplay);
+      setIsFollowing(!!userToDisplay.is_following);
+
+      // Fetch posts for this user
+      const postsData = await getUserPosts(userToDisplay.id);
+      setPosts(postsData.posts);
+
+    } catch (err) {
+      console.error("Failed to load profile:", err);
+      setError(err.response?.data?.message || "Failed to load profile");
+    } finally {
+      if (showLoading) setLoading(false);
+    }
+  };
+
   // Load Initial Profile Data
   useEffect(() => {
-    const loadProfileData = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        let userToDisplay: User;
-
-        if (isOwnProfile && currentUser) {
-          // Fetch fresh data for own profile
-          userToDisplay = await profileApi.getMyProfile();
-        } else if (username) {
-          // Fetch other user's profile
-          userToDisplay = await profileApi.getProfile(username);
-        } else {
-          throw new Error("User not found");
-        }
-
-        setProfileUser(userToDisplay);
-        setIsFollowing(!!userToDisplay.is_following);
-
-        // Fetch posts for this user
-        const postsData = await getUserPosts(userToDisplay.id);
-        setPosts(postsData.posts);
-
-
-
-      } catch (err) {
-        console.error("Failed to load profile:", err);
-        setError(err.response?.data?.message || "Failed to load profile");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadProfileData();
   }, [username, isOwnProfile, currentUser]);
 
@@ -650,13 +648,22 @@ const ProfileUI = () => {
                               await unfollowUser(profileUser.id);
                               setIsFollowing(false);
                               setProfileUser(prev => prev ? { ...prev, followers_count: (prev.followers_count || 0) - 1 } : null);
+                              // Refetch posts and updated profile stats from server for real-time consistency
+                              setTimeout(() => loadProfileData(false), 500);
                             } else {
                               await followUser(profileUser.id);
                               setIsFollowing(true);
                               setProfileUser(prev => prev ? { ...prev, followers_count: (prev.followers_count || 0) + 1 } : null);
+                              // Refetch posts and updated profile stats from server for real-time consistency
+                              setTimeout(() => loadProfileData(false), 500);
                             }
                           } catch (err) {
                             console.error("Follow/unfollow failed:", err);
+                            toast({
+                              title: "Error",
+                              description: "Action failed. Please try again.",
+                              variant: "destructive"
+                            });
                           }
                         }}
                       >
@@ -715,19 +722,19 @@ const ProfileUI = () => {
                 <div className="grid grid-cols-3 gap-4 w-full">
                   <div className="group cursor-pointer text-center">
                     <div className="text-3xl font-display font-black text-foreground group-hover:text-primary transition-colors">
-                      {(profileUser.posts_count === -1) ? "-" : (profileUser.posts_count || posts.length)}
+                      {profileUser.posts_count || (posts.length > 0 ? posts.length : 0)}
                     </div>
                     <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground mt-1">Posts</div>
                   </div>
-                  <div className="group cursor-pointer text-center" onClick={(isBlocked || profileUser.followers_count === -1) ? undefined : handleOpenFollowers}>
-                    <div className={cn("text-3xl font-display font-black transition-colors", (isBlocked || profileUser.followers_count === -1) ? "text-muted-foreground" : "text-foreground group-hover:text-primary")}>
-                      {(isBlocked || profileUser.followers_count === -1) ? "-" : (profileUser.followers_count || 0)}
+                  <div className="group cursor-pointer text-center" onClick={(isBlocked) ? undefined : handleOpenFollowers}>
+                    <div className={cn("text-3xl font-display font-black transition-colors", (isBlocked) ? "text-muted-foreground" : "text-foreground group-hover:text-primary")}>
+                      {profileUser.followers_count || 0}
                     </div>
                     <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground mt-1">Followers</div>
                   </div>
-                  <div className="group cursor-pointer text-center" onClick={(isBlocked || profileUser.following_count === -1) ? undefined : handleOpenFollowing}>
-                    <div className={cn("text-3xl font-display font-black transition-colors", (isBlocked || profileUser.following_count === -1) ? "text-muted-foreground" : "text-foreground group-hover:text-primary")}>
-                      {(isBlocked || profileUser.following_count === -1) ? "-" : (profileUser.following_count || 0)}
+                  <div className="group cursor-pointer text-center" onClick={(isBlocked) ? undefined : handleOpenFollowing}>
+                    <div className={cn("text-3xl font-display font-black transition-colors", (isBlocked) ? "text-muted-foreground" : "text-foreground group-hover:text-primary")}>
+                      {profileUser.following_count || 0}
                     </div>
                     <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground mt-1">Following</div>
                   </div>
@@ -749,7 +756,7 @@ const ProfileUI = () => {
 
                 </div>
               </div>
-            ) : (profileUser.followers_count === -1) ? (
+            ) : (profileUser.can_view_details === false) ? (
               <div className="w-full">
                 <div className="glass-card rounded-[2rem] p-12 text-center border-primary/10 bg-secondary/5">
                   <div className="w-16 h-16 rounded-full bg-secondary/20 flex items-center justify-center mx-auto mb-6">

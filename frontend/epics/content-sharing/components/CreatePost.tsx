@@ -1,10 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useContentStore } from '../store/contentStore';
 import { Button } from '@/components/ui/button';
 import { Send, Image, Hash, AtSign, X } from 'lucide-react';
 import { useAuthStore } from '../../identity/store/authStore';
 import { messagingApi } from '../../messaging/api/client';
-import { getFollowers } from '../api/client';
+import { getFollowers, searchUsers } from '../api/client';
 import type { PublicUser } from '../types';
 import { cn } from '@/lib/utils';
 import { showToast } from "@/lib/toast";
@@ -19,10 +19,12 @@ export const CreatePost: React.FC = () => {
     // Feature States
     const [showHashtags, setShowHashtags] = useState(false);
     const [showMentions, setShowMentions] = useState(false);
-    const [followers, setFollowers] = useState<PublicUser[]>([]);
-    const [isLoadingFollowers, setIsLoadingFollowers] = useState(false);
+    const [mentionSuggestions, setMentionSuggestions] = useState<PublicUser[]>([]);
+    const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
     const [mentionSearch, setMentionSearch] = useState('');
+    const [caretPos, setCaretPos] = useState({ top: 0, left: 0 });
 
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { createPost, loading } = useContentStore();
     const { user } = useAuthStore();
@@ -56,32 +58,170 @@ export const CreatePost: React.FC = () => {
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
+    const updateCaretPos = () => {
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+
+        const { selectionStart } = textarea;
+        const textBeforeCaret = textarea.value.substring(0, selectionStart);
+
+        // Create a temporary mirror element to calculate coordinates
+        const div = document.createElement('div');
+        const style = window.getComputedStyle(textarea);
+
+        // Copy textarea styles to the mirror div
+        const properties = [
+            'direction', 'boxSizing', 'width', 'height', 'overflowX', 'overflowY',
+            'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth', 'borderStyle',
+            'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
+            'fontStyle', 'fontVariant', 'fontWeight', 'fontStretch', 'fontSize', 'fontSizeAdjust', 'lineHeight', 'fontFamily',
+            'textAlign', 'textTransform', 'wordSpacing', 'letterSpacing', 'whiteSpace', 'wordBreak', 'wordWrap'
+        ];
+
+        properties.forEach(prop => {
+            div.style[prop as any] = style.getPropertyValue(prop);
+        });
+
+        div.style.position = 'absolute';
+        div.style.visibility = 'hidden';
+        div.style.whiteSpace = 'pre-wrap';
+        div.style.wordBreak = 'break-word';
+
+        // Match the textarea's width exactly
+        div.style.width = textarea.clientWidth + 'px';
+
+        // Set the same text content up to the caret
+        div.textContent = textBeforeCaret;
+
+        // Add a span at the caret position to measure its coordinates
+        const span = document.createElement('span');
+        span.textContent = '|'; // Placeholder character
+        div.appendChild(span);
+
+        document.body.appendChild(div);
+
+        // Get the coordinates relative to the textarea
+        const { offsetTop, offsetLeft } = span;
+
+        // Clean up
+        document.body.removeChild(div);
+
+        // Calculate viewport-relative coordinates
+        const rect = textarea.getBoundingClientRect();
+
+        setCaretPos({
+            top: rect.top + offsetTop - textarea.scrollTop + 32, // Added more offset to be safely below line
+            left: Math.min(rect.left + offsetLeft, window.innerWidth - 280) // Stay within viewport width
+        });
+    };
+
     const handleHashtagClick = () => {
+        const textarea = textareaRef.current;
+        if (!showHashtags && textarea) {
+            textarea.focus();
+            const cursor = textarea.selectionStart;
+            const newValue = content.slice(0, cursor) + '#' + content.slice(cursor);
+            setContent(newValue);
+            setTimeout(() => textarea.setSelectionRange(cursor + 1, cursor + 1), 0);
+        }
         setShowHashtags(!showHashtags);
         setShowMentions(false);
     };
 
     const handleAtClick = async () => {
+        const textarea = textareaRef.current;
+        if (!showMentions && textarea) {
+            textarea.focus();
+            const cursor = textarea.selectionStart;
+            const newValue = content.slice(0, cursor) + '@' + content.slice(cursor);
+            setContent(newValue);
+            setTimeout(() => textarea.setSelectionRange(cursor + 1, cursor + 1), 0);
+            setMentionSearch('');
+        }
         setShowMentions(!showMentions);
         setShowHashtags(false);
-        if (!showMentions && followers.length === 0 && user?.id) {
-            setIsLoadingFollowers(true);
+        if (!showMentions && mentionSuggestions.length === 0) {
+            setIsLoadingSuggestions(true);
             try {
-                const data = await getFollowers(user.id);
-                setFollowers(data);
+                // Initial load: show more users for "all users" feel
+                const data = await searchUsers('', 100);
+                setMentionSuggestions(data);
             } catch (error) {
-                console.error("Failed to load followers", error);
+                console.error("Failed to load users", error);
             } finally {
-                setIsLoadingFollowers(false);
+                setIsLoadingSuggestions(false);
             }
         }
+        updateCaretPos();
     };
 
-    const insertText = (text: string) => {
-        setContent(prev => prev + (prev.endsWith(' ') || prev === '' ? '' : ' ') + text + ' ');
+    const insertHashtag = (tag: string) => {
+        setContent(prev => prev + (prev.endsWith(' ') || prev === '' ? '' : ' ') + tag + ' ');
         setShowHashtags(false);
+    };
+
+    const insertMention = (username: string) => {
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+
+        const cursor = textarea.selectionStart;
+        const textBeforeCursor = content.slice(0, cursor);
+        const textAfterCursor = content.slice(cursor);
+
+        // Replace the @query with @username
+        const newTextBeforeCursor = textBeforeCursor.replace(/@(\w*)$/, `@${username} `);
+        const newContent = newTextBeforeCursor + textAfterCursor;
+
+        setContent(newContent);
         setShowMentions(false);
         setMentionSearch('');
+
+        // Focus back and move cursor
+        setTimeout(() => {
+            textarea.focus();
+            const newCursorPos = newTextBeforeCursor.length;
+            textarea.setSelectionRange(newCursorPos, newCursorPos);
+        }, 0);
+    };
+
+    const handleContentChange = async (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const value = e.target.value;
+        const cursor = e.target.selectionStart;
+        setContent(value);
+
+        // Check for word before cursor for mentions
+        const textBeforeCursor = value.slice(0, cursor);
+        const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+
+        if (mentionMatch) {
+            const query = mentionMatch[1];
+            setMentionSearch(query);
+            setShowMentions(true);
+            setShowHashtags(false);
+            updateCaretPos();
+
+            // Fetch users as user types
+            setIsLoadingSuggestions(true);
+            try {
+                const data = await searchUsers(query, 100);
+                setMentionSuggestions(data);
+            } catch (error) {
+                console.error("Failed to search users", error);
+            } finally {
+                setIsLoadingSuggestions(false);
+            }
+        } else {
+            if (showMentions) setShowMentions(false);
+        }
+
+        // Hashtag trigger (optional, if we want same for #)
+        const hashtagMatch = textBeforeCursor.match(/#(\w*)$/);
+        if (hashtagMatch && !mentionMatch) {
+            setShowHashtags(true);
+            setShowMentions(false);
+        } else if (!mentionMatch) {
+            if (showHashtags) setShowHashtags(false);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -117,10 +257,7 @@ export const CreatePost: React.FC = () => {
         setShowMentions(false);
     };
 
-    const filteredFollowers = followers.filter(f =>
-        f.username.toLowerCase().includes(mentionSearch.toLowerCase()) ||
-        f.display_name.toLowerCase().includes(mentionSearch.toLowerCase())
-    );
+    const filteredSuggestions = mentionSuggestions; // Backend already filtered based on search query
 
     return (
         <div className="create-post-card group relative">
@@ -135,8 +272,9 @@ export const CreatePost: React.FC = () => {
                 <form onSubmit={handleSubmit} className="flex-1 space-y-4">
                     <div className="relative">
                         <textarea
+                            ref={textareaRef}
                             value={content}
-                            onChange={(e) => setContent(e.target.value)}
+                            onChange={handleContentChange}
                             placeholder="Share something with the federation..."
                             maxLength={5000}
                             rows={3}
@@ -159,64 +297,62 @@ export const CreatePost: React.FC = () => {
                         )}
                     </div>
 
-                    {/* Popups for Hashtags and Mentions */}
-                    {(showHashtags || showMentions) && (
+                    {/* Popups for Hashtags */}
+                    {showHashtags && (
                         <div className="mt-3 mb-2 bg-card/50 border border-border/50 rounded-xl shadow-sm p-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                            {showHashtags && (
-                                <div>
-                                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Trending Hashtags</div>
-                                    <div className="flex flex-wrap gap-2">
-                                        {TRENDING_HASHTAGS.map(tag => (
-                                            <button
-                                                key={tag}
-                                                type="button"
-                                                onClick={() => insertText(tag)}
-                                                className="px-3 py-1 bg-secondary hover:bg-primary/20 hover:text-primary rounded-full text-xs font-bold transition-colors"
-                                            >
-                                                {tag}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+                            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Trending Hashtags</div>
+                            <div className="flex flex-wrap gap-2">
+                                {TRENDING_HASHTAGS.map(tag => (
+                                    <button
+                                        key={tag}
+                                        type="button"
+                                        onClick={() => insertHashtag(tag)}
+                                        className="px-3 py-1 bg-secondary hover:bg-primary/20 hover:text-primary rounded-full text-xs font-bold transition-colors"
+                                    >
+                                        {tag}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
-                            {showMentions && (
-                                <div>
-                                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Mention User</div>
-                                    <input
-                                        type="text"
-                                        placeholder="Search followers..."
-                                        className="w-full bg-secondary/50 border-border/50 rounded-lg px-3 py-2 text-sm mb-2 focus:ring-1 focus:ring-primary focus:outline-none"
-                                        value={mentionSearch}
-                                        onChange={e => setMentionSearch(e.target.value)}
-                                        autoFocus
-                                    />
-                                    <div className="max-h-[200px] overflow-y-auto space-y-1 scroller">
-                                        {isLoadingFollowers ? (
-                                            <div className="py-4 text-center text-xs text-muted-foreground">Loading...</div>
-                                        ) : filteredFollowers.length > 0 ? (
-                                            filteredFollowers.map(follower => (
-                                                <button
-                                                    key={follower.id}
-                                                    type="button"
-                                                    onClick={() => insertText(`@${follower.username}`)}
-                                                    className="w-full flex items-center gap-2 p-2 hover:bg-secondary/80 rounded-lg text-left transition-colors"
-                                                >
-                                                    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-xs font-bold border border-border">
-                                                        {follower.avatar_url ? <img src={follower.avatar_url} className="w-full h-full rounded-full object-cover" /> : follower.username[0]?.toUpperCase()}
-                                                    </div>
-                                                    <div className="min-w-0 flex-1">
-                                                        <div className="text-sm font-bold truncate">{follower.display_name}</div>
-                                                        <div className="text-xs text-muted-foreground truncate">@{follower.username}</div>
-                                                    </div>
-                                                </button>
-                                            ))
-                                        ) : (
-                                            <div className="py-4 text-center text-xs text-muted-foreground">No followers found</div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
+                    {/* Floating Mention List */}
+                    {showMentions && (
+                        <div
+                            className="fixed z-[9999] bg-card border border-border shadow-2xl rounded-xl p-2 w-64 animate-in fade-in zoom-in-95 duration-200"
+                            style={{
+                                top: caretPos.top,
+                                left: caretPos.left,
+                            }}
+                        >
+                            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2 px-2 border-b border-border/50 pb-1.5 flex justify-between items-center">
+                                <span>Mention User</span>
+                                {isLoadingSuggestions && <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
+                            </div>
+                            <div className="max-h-[240px] overflow-y-auto space-y-1 scroller px-1">
+                                {isLoadingSuggestions && mentionSuggestions.length === 0 ? (
+                                    <div className="py-4 text-center text-xs text-muted-foreground">Searching...</div>
+                                ) : filteredSuggestions.length > 0 ? (
+                                    filteredSuggestions.map(user => (
+                                        <button
+                                            key={user.id}
+                                            type="button"
+                                            onClick={() => insertMention(user.username)}
+                                            className="w-full flex items-center gap-2 p-2 hover:bg-secondary/80 rounded-lg text-left transition-colors group"
+                                        >
+                                            <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-xs font-bold border border-border group-hover:border-primary/30 transition-colors">
+                                                {user.avatar_url ? <img src={user.avatar_url} className="w-full h-full rounded-full object-cover" /> : user.username[0]?.toUpperCase()}
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="text-sm font-bold truncate text-foreground group-hover:text-primary transition-colors">{user.display_name}</div>
+                                                <div className="text-xs text-muted-foreground truncate">@{user.username}</div>
+                                            </div>
+                                        </button>
+                                    ))
+                                ) : (
+                                    <div className="py-4 text-center text-xs text-muted-foreground italic">No users found</div>
+                                )}
+                            </div>
                         </div>
                     )}
 
@@ -281,7 +417,7 @@ export const CreatePost: React.FC = () => {
                         </div>
                     </div>
                 </form>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };

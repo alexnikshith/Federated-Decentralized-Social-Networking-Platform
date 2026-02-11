@@ -111,9 +111,20 @@ export const SettingsPage = () => {
         e.preventDefault();
         if (!currentUser) return;
 
+        // Space validation for username
+        if (formData.username.includes(" ")) {
+            toast({
+                title: "Invalid Username",
+                description: "Username cannot contain spaces.",
+                variant: "destructive",
+            });
+            return;
+        }
+
         setLoading(true);
         try {
             const response = await profileApi.updateProfile({
+                username: formData.username,
                 display_name: formData.display_name,
                 bio: formData.bio,
                 profile_visibility: formData.profile_visibility as "public" | "followers",
@@ -316,10 +327,16 @@ export const SettingsPage = () => {
                                                 <Input
                                                     id="username"
                                                     value={formData.username}
-                                                    disabled
-                                                    className="h-11 bg-gray-100 dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-muted-foreground cursor-not-allowed"
+                                                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                                                    disabled={!isEditing}
+                                                    className={cn(
+                                                        "h-11 transition-all duration-200",
+                                                        isEditing
+                                                            ? "bg-background border-primary/20 focus:border-primary shadow-sm"
+                                                            : "bg-gray-100 dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-muted-foreground cursor-not-allowed"
+                                                    )}
                                                 />
-                                                <p className="text-xs text-muted-foreground">Usernames cannot be changed freely.</p>
+                                                <p className="text-xs text-muted-foreground">Usernames cannot contain spaces.</p>
                                             </div>
 
                                             <div className="space-y-2 md:col-span-2">

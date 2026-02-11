@@ -9,19 +9,20 @@ import (
 // PostResponse represents a post with author information
 // It includes the post content, author details, interaction counts, and the current user's interaction status.
 type PostResponse struct {
-	ID           primitive.ObjectID `json:"id"`
-	AuthorID     primitive.ObjectID `json:"author_id"`
-	AuthorName   string             `json:"author_name"`
-	AuthorAvatar string             `json:"author_avatar"`
-	Content      string             `json:"content"`
-	MediaURL     string             `json:"media_url,omitempty"`
-	MediaType    string             `json:"media_type,omitempty"`
-	LikeCount    int                `json:"like_count"`
-	CommentCount int                `json:"comment_count"`
-	IsLiked      bool               `json:"is_liked"` // Whether current user has liked
-	IsSaved      bool               `json:"is_saved"` // Whether current user has saved
-	CreatedAt    time.Time          `json:"created_at"`
-	UpdatedAt    time.Time          `json:"updated_at"`
+	ID                 primitive.ObjectID `json:"id"`
+	AuthorID           primitive.ObjectID `json:"author_id"`
+	AuthorName         string             `json:"author_name"`
+	AuthorAvatar       string             `json:"author_avatar"`
+	Content            string             `json:"content"`
+	MediaURL           string             `json:"media_url,omitempty"`
+	MediaType          string             `json:"media_type,omitempty"`
+	LikeCount          int                `json:"like_count"`
+	CommentCount       int                `json:"comment_count"`
+	IsLiked            bool               `json:"is_liked"` // Whether current user has liked
+	IsSaved            bool               `json:"is_saved"` // Whether current user has saved
+	MentionedUsernames []string           `json:"mentioned_usernames,omitempty"`
+	CreatedAt          time.Time          `json:"created_at"`
+	UpdatedAt          time.Time          `json:"updated_at"`
 }
 
 // CommentResponse represents a comment with user information

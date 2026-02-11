@@ -114,7 +114,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
 
     const handleJoinSuccess = () => {
         setShowJoinModal(false);
-        window.location.reload();
+        navigate('/dashboard');
     };
 
 
@@ -325,7 +325,6 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
 
                                                     switchAccount(session.user.id);
                                                     navigate("/dashboard");
-                                                    window.location.reload();
                                                 } else {
                                                     // Just go to login for this specific account
                                                     switchAccount(session.user.id, true);

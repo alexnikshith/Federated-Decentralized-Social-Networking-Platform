@@ -9,16 +9,17 @@ import (
 // Post represents a user-created content item
 // It is the central entity in the content sharing epic.
 type Post struct {
-	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	AuthorID     primitive.ObjectID `json:"author_id" bson:"author_id"`                       // Reference to the User who created the post
-	Content      string             `json:"content" bson:"content"`                           // Text content of the post
-	MediaURL     string             `json:"media_url,omitempty" bson:"media_url,omitempty"`   // URL of attached media (image/video)
-	MediaType    string             `json:"media_type,omitempty" bson:"media_type,omitempty"` // Type of media: "image", "video"
-	LikeCount    int                `json:"like_count" bson:"like_count"`
-	CommentCount int                `json:"comment_count" bson:"comment_count"`
-	Status       string             `json:"status,omitempty" bson:"status,omitempty"` // "active", "under_review", "deleted"
-	CreatedAt    time.Time          `json:"created_at" bson:"created_at"`
-	UpdatedAt    time.Time          `json:"updated_at" bson:"updated_at"`
+	ID                 primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	AuthorID           primitive.ObjectID `json:"author_id" bson:"author_id"`                       // Reference to the User who created the post
+	Content            string             `json:"content" bson:"content"`                           // Text content of the post
+	MediaURL           string             `json:"media_url,omitempty" bson:"media_url,omitempty"`   // URL of attached media (image/video)
+	MediaType          string             `json:"media_type,omitempty" bson:"media_type,omitempty"` // Type of media: "image", "video"
+	LikeCount          int                `json:"like_count" bson:"like_count"`
+	CommentCount       int                `json:"comment_count" bson:"comment_count"`
+	Status             string             `json:"status,omitempty" bson:"status,omitempty"` // "active", "under_review", "deleted"
+	MentionedUsernames []string           `json:"mentioned_usernames,omitempty" bson:"mentioned_usernames,omitempty"`
+	CreatedAt          time.Time          `json:"created_at" bson:"created_at"`
+	UpdatedAt          time.Time          `json:"updated_at" bson:"updated_at"`
 }
 
 // Like represents a user's positive reaction to a post
@@ -51,7 +52,7 @@ type Follow struct {
 type Notification struct {
 	ID                   primitive.ObjectID  `json:"id" bson:"_id,omitempty"`
 	UserID               primitive.ObjectID  `json:"user_id" bson:"user_id"`                                                   // User receiving the notification
-	Type                 string              `json:"type" bson:"type"`                                                         // "like", "comment", "follow"
+	Type                 string              `json:"type" bson:"type"`                                                         // "like", "comment", "follow", "mention"
 	RelatedEntityID      primitive.ObjectID  `json:"related_entity_id" bson:"related_entity_id"`                               // PostID or CommentID
 	RelatedUserID        primitive.ObjectID  `json:"related_user_id" bson:"related_user_id"`                                   // User who triggered the notification
 	CommentContent       string              `json:"comment_content,omitempty" bson:"comment_content,omitempty"`               // Content of the comment (for comment notifications)

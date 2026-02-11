@@ -14,6 +14,7 @@ export interface User {
     following_count?: number;
     posts_count?: number;
     is_following?: boolean;
+    can_view_details?: boolean;
     instance?: string;
     is_2fa_enabled?: boolean;
     role?: 'user' | 'admin';
@@ -58,6 +59,7 @@ export interface LoginResponse {
 }
 
 export interface UpdateProfileRequest {
+    username?: string;
     display_name?: string;
     bio?: string;
     avatar_url?: string;

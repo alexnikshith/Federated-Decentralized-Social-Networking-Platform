@@ -11,7 +11,7 @@ import { useActivityHeartbeat } from './hooks/useActivityHeartbeat';
 
 import { useAuthStore } from '../epics/identity/store/authStore';
 import { authApi } from '../epics/identity/api/client';
-import { ProfilePage } from '../epics/identity/pages/ProfilePage';
+
 import { FeedPage } from '../epics/content-sharing/pages/FeedPage';
 import { DashboardPage } from '../epics/content-sharing/pages/DashboardPage';
 

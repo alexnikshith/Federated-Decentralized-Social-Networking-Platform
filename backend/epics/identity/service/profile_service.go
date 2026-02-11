@@ -8,6 +8,7 @@ import (
 	"federated-social/backend/epics/identity/models"
 	"federated-social/backend/epics/identity/repository"
 	"log"
+	"strings"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -68,27 +69,19 @@ func (s *ProfileService) GetProfile(ctx context.Context, userID primitive.Object
 	// - Public: Visible to everyone
 	// - Followers: Visible only to followers and the user themselves
 	// - Private: Visible checking is similar to followers logic here, usually more strict (e.g. valid connection)
-	canViewDetails := true
+	publicUser.CanViewDetails = true
 	if user.ProfileVisibility == "followers" || user.ProfileVisibility == "private" {
 		if requestingUserID == nil || *requestingUserID != userID {
 			if !publicUser.IsFollowing {
-				canViewDetails = false
+				publicUser.CanViewDetails = false
 			}
 		}
 	}
 
-	// Populate additional stats (Followers, Following, Posts) if allowed
-	var followersCount, followingCount, postsCount int64
-	if canViewDetails {
-		followersCount, _ = s.followRepo.CountFollowers(ctx, userID)
-		followingCount, _ = s.followRepo.CountFollowing(ctx, userID)
-		postsCount, _ = s.postRepo.CountPostsByAuthor(ctx, userID)
-	} else {
-		// Set to -1 to indicate restricted access/hidden counts
-		followersCount = -1
-		followingCount = -1
-		postsCount = -1
-	}
+	// Always populate stats regardless of visibility (US requirements)
+	followersCount, _ := s.followRepo.CountFollowers(ctx, userID)
+	followingCount, _ := s.followRepo.CountFollowing(ctx, userID)
+	postsCount, _ := s.postRepo.CountPostsByAuthor(ctx, userID)
 
 	log.Printf("DEBUG: ProfileService.GetProfile for userID=%v: followers=%d, following=%d, posts=%d", userID.Hex(), followersCount, followingCount, postsCount)
 
@@ -103,6 +96,17 @@ func (s *ProfileService) GetProfile(ctx context.Context, userID primitive.Object
 func (s *ProfileService) UpdateProfile(ctx context.Context, userID primitive.ObjectID, req dto.UpdateProfileRequest) (*models.PublicUser, error) {
 	update := bson.M{}
 
+	if req.Username != nil {
+		newUsername := *req.Username
+		if strings.Contains(newUsername, " ") {
+			return nil, errors.New("username cannot contain spaces")
+		}
+		// Check if username is already taken by someone else
+		if existingUser, err := s.userRepo.FindByUsername(ctx, newUsername); err == nil && existingUser.ID != userID {
+			return nil, errors.New("username already taken")
+		}
+		update["username"] = newUsername
+	}
 	if req.DisplayName != nil {
 		update["display_name"] = *req.DisplayName
 	}

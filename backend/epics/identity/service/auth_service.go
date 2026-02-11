@@ -47,6 +47,9 @@ func (s *AuthService) Signup(ctx context.Context, req dto.SignupRequest) (*model
 	if req.Username == "" || req.Email == "" || req.Password == "" {
 		return nil, errors.New("username, email, and password are required")
 	}
+	if strings.Contains(req.Username, " ") {
+		return nil, errors.New("username cannot contain spaces")
+	}
 
 	// Normalize email
 	req.Email = strings.ToLower(req.Email)
@@ -377,7 +380,15 @@ func (s *AuthService) CheckEmailExists(ctx context.Context, email string) (bool,
 	if err == nil {
 		return true, nil
 	}
-	// Check specific error if possible, but generic error usually implies not found in this repo implementation
+	return false, nil
+}
+
+// CheckUsernameExists checks if a username is already taken
+func (s *AuthService) CheckUsernameExists(ctx context.Context, username string) (bool, error) {
+	_, err := s.userRepo.FindByUsername(ctx, username)
+	if err == nil {
+		return true, nil
+	}
 	return false, nil
 }
 

@@ -30,6 +30,7 @@ type LoginResponse struct {
 // UpdateProfileRequest represents profile update payload
 // Fields are pointers to allow partial updates (nil means no change)
 type UpdateProfileRequest struct {
+	Username          *string `json:"username,omitempty"`
 	DisplayName       *string `json:"display_name,omitempty"`
 	Bio               *string `json:"bio,omitempty"`
 	AvatarURL         *string `json:"avatar_url,omitempty"`

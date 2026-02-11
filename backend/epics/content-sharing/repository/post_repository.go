@@ -155,9 +155,26 @@ func (r *PostRepository) CreatePost(ctx context.Context, post *models.Post) erro
 	return nil
 }
 
+// UpdatePost updates an existing post
+func (r *PostRepository) UpdatePost(ctx context.Context, post *models.Post) error {
+	post.UpdatedAt = time.Now()
+	_, err := r.posts.ReplaceOne(ctx, bson.M{"_id": post.ID}, post)
+	return err
+}
+
+// UpdatePostMentions updates only the mentioned usernames of a post
+func (r *PostRepository) UpdatePostMentions(ctx context.Context, postID primitive.ObjectID, usernames []string) error {
+	_, err := r.posts.UpdateOne(
+		ctx,
+		bson.M{"_id": postID},
+		bson.M{"$set": bson.M{"mentioned_usernames": usernames}},
+	)
+	return err
+}
+
 // GetPostByID retrieves a single post by its unique ID
 func (r *PostRepository) GetPostByID(ctx context.Context, postID primitive.ObjectID) (*models.Post, error) {
-	// We must fetch even 'under_review' posts for admin dashboard, 
+	// We must fetch even 'under_review' posts for admin dashboard,
 	// but this method is generally used for displaying content.
 	// Since PostService.GetAllReports fetches post details, we DO need a way to fetch raw posts even if hidden.
 	// So I will add a new method GetPostByIDUnfiltered and restore the old GetPostByID for safety?
@@ -172,7 +189,7 @@ func (r *PostRepository) GetPostByID(ctx context.Context, postID primitive.Objec
 	// Direct access via ID might be less critical or handled by frontend state.
 	// But `GetPostByID` is also used for the post detail page.
 	// I will keep the filter here (so users can't see it), and add `GetPostByIDAdmin` for `GetAllReports`.
-	
+
 	var post models.Post
 	filter := bson.M{
 		"_id": postID,
@@ -652,7 +669,7 @@ func (r *PostRepository) CheckIfSaved(ctx context.Context, postID, userID primit
 func (r *PostRepository) CreateReport(ctx context.Context, report *models.ReportedPost) error {
 	report.CreatedAt = time.Now()
 	report.Status = "pending"
-	
+
 	// Create the report
 	if _, err := r.reports.InsertOne(ctx, report); err != nil {
 		return err
