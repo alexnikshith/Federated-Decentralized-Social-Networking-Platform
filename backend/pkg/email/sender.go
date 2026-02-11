@@ -62,7 +62,7 @@ func (s *EmailSender) SendVerificationEmail(toEmail, code string) error {
 <body>
     <div class="container">
         <div class="header">
-            <div class="logo">Nexus<span>Protocol</span></div>
+            <div class="logo">Nexus <span>Protocol</span></div>
         </div>
         <div class="content">
             <h1 class="title">Login Verification</h1>
@@ -73,7 +73,7 @@ func (s *EmailSender) SendVerificationEmail(toEmail, code string) error {
             </div>
             
             <p>This code will expire in 10 minutes.</p>
-            <p class="warning">If you requested this code, you can safely ignore this email.</p>
+            
         </div>
         <div class="footer">
             &copy; 2026 Nexus Protocol. All rights reserved.<br>
