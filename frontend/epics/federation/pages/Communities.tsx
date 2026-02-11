@@ -99,8 +99,8 @@ const Communities = () => {
     // Logic after successful Auth on new community
     if (targetCommunity) {
       toast.success(`Joined ${targetCommunity.name} successfully!`);
-      // No reload needed potentially if we update store, but reload is safer for now
-      setTimeout(() => window.location.reload(), 500);
+      // Update validations immediately for visual feedback
+      setValidations(prev => ({ ...prev, [targetCommunity.id]: true }));
     }
     setJoinModalOpen(false);
   };

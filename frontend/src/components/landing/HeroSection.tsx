@@ -28,13 +28,8 @@ export function HeroSection() {
           <div className="flex flex-col sm:flex-row gap-4 mb-16 opacity-0 animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
             <Link to="/register">
               <Button variant="hero" size="xl" className="w-full sm:w-auto group min-w-[180px]">
-                Get Started
+                Sign Up
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
-            <Link to="/explore">
-              <Button variant="hero-outline" size="xl" className="w-full sm:w-auto min-w-[180px]">
-                Explore Communities
               </Button>
             </Link>
           </div>

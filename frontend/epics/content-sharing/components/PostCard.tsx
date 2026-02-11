@@ -231,6 +231,34 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
         f.display_name.toLowerCase().includes(followerSearchQuery.toLowerCase())
     );
 
+    // Helper to render content with clickable mentions
+    const renderContentWithMentions = (content: string) => {
+        const parts = content.split(/(@\w+)/g);
+        return parts.map((part, index) => {
+            if (part.startsWith('@')) {
+                const username = part.substring(1);
+
+                // Only highlight if it's a valid mention stored in the post metadata.
+                // The backend now populates this field for all posts (including legacy ones).
+                const isValidMention = post.mentioned_usernames?.some(u => u.toLowerCase() === username.toLowerCase());
+
+                if (!isValidMention) return part;
+
+                return (
+                    <Link
+                        key={index}
+                        to={`/profile/${username}`}
+                        className="text-primary hover:underline font-bold transition-all"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {part}
+                    </Link>
+                );
+            }
+            return part;
+        });
+    };
+
     return (
         <>
             {/* Main Post Container - Handles Full Screen Logic */}
@@ -338,7 +366,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
                                 "text-foreground/90 leading-relaxed whitespace-pre-wrap font-sans",
                                 isExpanded ? "text-lg md:text-xl" : "text-[1.05rem]"
                             )}>
-                                {post.content}
+                                {renderContentWithMentions(post.content)}
                             </p>
 
                             {/* Media Content */}
@@ -636,7 +664,6 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
         </>
     );
 };
-
 function getTimeAgo(date: Date): string {
     const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
 

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { authApi } from "../../../epics/identity/api/client";
 import { useAuthStore } from "../../../epics/identity/store/authStore";
 import { toast } from "sonner";
@@ -33,14 +33,23 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister, hideBackNav = false, 
         localStorage.getItem('active_community_url') || DEFAULT_COMMUNITY.url
     );
     const [email, setEmail] = useState("");
+    const location = useLocation();
+    const [signupSuccess, setSignupSuccess] = useState(false);
 
-    // Pre-fill from store
-    useState(() => {
-        if (user && !disablePrefill) {
-            if (user.email) setEmail(user.email);
-            // instance handled by initial state
+    // Handle pre-fill from registration or store
+    useEffect(() => {
+        const state = location.state as { email?: string; signupSuccess?: boolean };
+        if (state?.email) {
+            setEmail(state.email);
+        } else if (user && !disablePrefill && user.email) {
+            setEmail(user.email);
         }
-    });
+
+        if (state?.signupSuccess) {
+            setSignupSuccess(true);
+            toast.success("Account created successfully! Please sign in.");
+        }
+    }, [location.state, user, disablePrefill]);
 
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -128,7 +137,7 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister, hideBackNav = false, 
                 </div>
 
                 {/* Right Column: Form */}
-                <form onSubmit={handleSubmit} className="glass-card rounded-2xl p-8 space-y-6 shadow-xl border border-white/10 relative">
+                <form onSubmit={handleSubmit} className="glass-card rounded-2xl p-8 space-y-6 shadow-xl border border-border relative">
                     {error && (
                         <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
                             {error}

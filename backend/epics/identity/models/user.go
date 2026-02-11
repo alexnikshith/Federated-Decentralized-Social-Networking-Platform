@@ -60,6 +60,7 @@ type PublicUser struct {
 	FollowingCount    int64              `json:"following_count"`
 	PostsCount        int64              `json:"posts_count"`
 	IsFollowing       bool               `json:"is_following"`
+	CanViewDetails    bool               `json:"can_view_details"`
 	Is2FAEnabled      *bool              `json:"is_2fa_enabled,omitempty"` // Only visible to self
 }
 
@@ -101,6 +102,7 @@ func (u *User) ToPublicUser() PublicUser {
 		FollowersCount:    0,
 		FollowingCount:    0,
 		PostsCount:        0,
+		CanViewDetails:    true,
 	}
 }
 

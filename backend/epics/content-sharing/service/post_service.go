@@ -12,6 +12,7 @@ import (
 	safetyRepo "federated-social/backend/epics/safety/repository"
 	safetyService "federated-social/backend/epics/safety/service"
 	"log"
+	"regexp"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -55,6 +56,13 @@ func (s *PostService) CreatePost(ctx context.Context, userID primitive.ObjectID,
 
 	if err := s.postRepo.CreatePost(ctx, post); err != nil {
 		return nil, err
+	}
+
+	// Handle Mentions: @username
+	validMentions := s.parseAndNotifyMentions(ctx, req.Content, userID, post.ID)
+	if len(validMentions) > 0 {
+		post.MentionedUsernames = validMentions
+		s.postRepo.UpdatePost(ctx, post)
 	}
 
 	// Trigger federation if enabled
@@ -415,6 +423,9 @@ func (s *PostService) CreateComment(ctx context.Context, postID, userID primitiv
 		s.notificationRepo.CreateNotification(ctx, notification)
 	}
 
+	// Handle Mentions in comments: @username
+	s.parseAndNotifyMentions(ctx, req.Content, userID, postID)
+
 	return comment, nil
 }
 
@@ -551,6 +562,79 @@ func (s *PostService) DeletePost(ctx context.Context, postID, userID primitive.O
 	return s.postRepo.DeletePost(ctx, postID)
 }
 
+// getValidUsernamesFromContent extracts @mentions and returns only those that belong to existing users
+func (s *PostService) getValidUsernamesFromContent(ctx context.Context, content string) []string {
+	re := regexp.MustCompile(`@(\w+)`)
+	matches := re.FindAllStringSubmatch(content, -1)
+	if len(matches) == 0 {
+		return nil
+	}
+
+	mentionMap := make(map[string]bool)
+	var usernames []string
+	for _, match := range matches {
+		username := match[1]
+		if !mentionMap[username] {
+			mentionMap[username] = true
+			usernames = append(usernames, username)
+		}
+	}
+
+	if len(usernames) > 0 {
+		mentionedUsers, err := s.searchRepo.GetUsersByUsernames(ctx, usernames)
+		if err == nil {
+			var validUsernames []string
+			for _, mentionedUser := range mentionedUsers {
+				validUsernames = append(validUsernames, mentionedUser.Username)
+			}
+			return validUsernames
+		}
+	}
+	return nil
+}
+
+// parseAndNotifyMentions scans content for @username, validates them, and creates notifications
+func (s *PostService) parseAndNotifyMentions(ctx context.Context, content string, authorID, postID primitive.ObjectID) []string {
+	re := regexp.MustCompile(`@(\w+)`)
+	matches := re.FindAllStringSubmatch(content, -1)
+	if len(matches) == 0 {
+		return nil
+	}
+
+	mentionMap := make(map[string]bool)
+	var usernames []string
+	for _, match := range matches {
+		username := match[1]
+		if !mentionMap[username] {
+			mentionMap[username] = true
+			usernames = append(usernames, username)
+		}
+	}
+
+	if len(usernames) > 0 {
+		mentionedUsers, err := s.searchRepo.GetUsersByUsernames(ctx, usernames)
+		if err == nil {
+			var validUsernames []string
+			for _, mentionedUser := range mentionedUsers {
+				validUsernames = append(validUsernames, mentionedUser.Username)
+				// Don't notify self
+				if mentionedUser.ID != authorID {
+					notification := &models.Notification{
+						UserID:          mentionedUser.ID,
+						Type:            "mention",
+						RelatedEntityID: postID,
+						RelatedUserID:   authorID,
+						CreatedAt:       time.Now(),
+					}
+					s.notificationRepo.CreateNotification(ctx, notification)
+				}
+			}
+			return validUsernames
+		}
+	}
+	return nil
+}
+
 // enrichPosts adds author information and like status to posts
 func (s *PostService) enrichPosts(ctx context.Context, posts []models.Post, currentUserID primitive.ObjectID) ([]dto.PostResponse, error) {
 	if len(posts) == 0 {
@@ -577,6 +661,35 @@ func (s *PostService) enrichPosts(ctx context.Context, posts []models.Post, curr
 		log.Printf("ERROR enrichPosts: Failed to fetch user info: %v", err)
 		return nil, err
 	}
+
+	// Dynamic Mention Extraction for Legacy Posts
+	// Collect all usernames mentioned in posts that are missing MentionedUsernames metadata
+	re := regexp.MustCompile(`@(\w+)`)
+	legacyMentionsToResolve := make(map[string]bool)
+	for _, post := range posts {
+		if post.MentionedUsernames == nil {
+			matches := re.FindAllStringSubmatch(post.Content, -1)
+			for _, match := range matches {
+				legacyMentionsToResolve[match[1]] = true
+			}
+		}
+	}
+
+	// Resolve these usernames to get only the existing ones
+	validLegacyUsernames := make(map[string]bool)
+	if len(legacyMentionsToResolve) > 0 {
+		usernames := make([]string, 0, len(legacyMentionsToResolve))
+		for u := range legacyMentionsToResolve {
+			usernames = append(usernames, u)
+		}
+		users, err := s.searchRepo.GetUsersByUsernames(ctx, usernames)
+		if err == nil {
+			for _, user := range users {
+				validLegacyUsernames[user.Username] = true
+			}
+		}
+	}
+
 	log.Printf("DEBUG enrichPosts: Successfully fetched %d users from database", len(authors))
 	for id, user := range authors {
 		if user != nil {
@@ -635,20 +748,50 @@ func (s *PostService) enrichPosts(ctx context.Context, posts []models.Post, curr
 		// Check if current user has saved this post
 		isSaved, _ := s.postRepo.CheckIfSaved(ctx, post.ID, currentUserID)
 
+		// Handle mentioned usernames (legacy support)
+		mentionedUsernames := post.MentionedUsernames
+		if mentionedUsernames == nil {
+			// Extract and filter valid ones from the content based on our batch result
+			matches := re.FindAllStringSubmatch(post.Content, -1)
+			uniqueValid := make(map[string]bool)
+			for _, match := range matches {
+				username := match[1]
+				if validLegacyUsernames[username] {
+					uniqueValid[username] = true
+				}
+			}
+			if len(uniqueValid) > 0 {
+				mentionedUsernames = make([]string, 0, len(uniqueValid))
+				for u := range uniqueValid {
+					mentionedUsernames = append(mentionedUsernames, u)
+				}
+
+				// Lazy DB update: Save the resolved mentions so we don't have to do it again
+				// Doing this in a goroutine to avoid slowing down the response
+				go func(pID primitive.ObjectID, mus []string) {
+					s.postRepo.UpdatePostMentions(context.Background(), pID, mus)
+				}(post.ID, mentionedUsernames)
+			} else {
+				// Mark as initialized so we don't try again repeatedly if none match
+				mentionedUsernames = []string{}
+			}
+		}
+
 		postResponses = append(postResponses, dto.PostResponse{
-			ID:           post.ID,
-			AuthorID:     post.AuthorID,
-			AuthorName:   author.Username,
-			AuthorAvatar: author.AvatarURL,
-			Content:      post.Content,
-			MediaURL:     post.MediaURL,
-			MediaType:    post.MediaType,
-			LikeCount:    post.LikeCount,
-			CommentCount: post.CommentCount,
-			IsLiked:      isLiked,
-			IsSaved:      isSaved,
-			CreatedAt:    post.CreatedAt,
-			UpdatedAt:    post.UpdatedAt,
+			ID:                 post.ID,
+			AuthorID:           post.AuthorID,
+			AuthorName:         author.Username,
+			AuthorAvatar:       author.AvatarURL,
+			Content:            post.Content,
+			MediaURL:           post.MediaURL,
+			MediaType:          post.MediaType,
+			LikeCount:          post.LikeCount,
+			CommentCount:       post.CommentCount,
+			IsLiked:            isLiked,
+			IsSaved:            isSaved,
+			MentionedUsernames: mentionedUsernames,
+			CreatedAt:          post.CreatedAt,
+			UpdatedAt:          post.UpdatedAt,
 		})
 	}
 

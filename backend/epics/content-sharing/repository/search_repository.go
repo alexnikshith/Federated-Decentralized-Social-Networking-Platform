@@ -45,7 +45,20 @@ func (r *SearchRepository) SearchUsers(ctx context.Context, query string, limit 
 	// Clean and tokenize query
 	query = strings.TrimSpace(query)
 	if query == "" {
-		return []identityModels.User{}, nil
+		// If query is empty, return some active users as default suggestions
+		statusFilter := bson.M{
+			"is_active":      true,
+			"is_deactivated": false,
+		}
+		opts := options.Find().SetLimit(limit).SetSort(bson.D{{Key: "created_at", Value: -1}})
+		cursor, err := r.collection.Find(ctx, statusFilter, opts)
+		if err != nil {
+			return []identityModels.User{}, nil
+		}
+		defer cursor.Close(ctx)
+		var users []identityModels.User
+		cursor.All(ctx, &users)
+		return users, nil
 	}
 
 	// Split by space and clean tokens
@@ -160,4 +173,30 @@ func (r *SearchRepository) GetUsersByIDs(ctx context.Context, userIDs []primitiv
 	}
 
 	return userMap, nil
+}
+
+// GetUsersByUsernames retrieves multiple users by their usernames
+func (r *SearchRepository) GetUsersByUsernames(ctx context.Context, usernames []string) ([]identityModels.User, error) {
+	if len(usernames) == 0 {
+		return []identityModels.User{}, nil
+	}
+
+	var regexes []primitive.Regex
+	for _, username := range usernames {
+		regexes = append(regexes, primitive.Regex{Pattern: "^" + regexp.QuoteMeta(username) + "$", Options: "i"})
+	}
+
+	filter := bson.M{"username": bson.M{"$in": regexes}}
+	cursor, err := r.collection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var users []identityModels.User
+	if err = cursor.All(ctx, &users); err != nil {
+		return nil, err
+	}
+
+	return users, nil
 }

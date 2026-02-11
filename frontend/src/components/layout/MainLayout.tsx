@@ -73,11 +73,12 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
     const displaySessions = React.useMemo(() => {
         if (!user) return [];
 
-        // 1. Exclude current user AND any session with same email as current user
+        // 1. Exclude current user AND any session with same email as current user. 
+        // Use optional chaining to prevent crashes if user or s.user is partially undefined
         const others = sessions.filter(s =>
-            s.user.id !== user.id &&
-            s.user.email !== user.email &&
-            s.user.email // Ensure email exists
+            s.user?.id !== user?.id &&
+            s.user?.email !== user?.email &&
+            s.user?.email // Ensure email exists
         );
 
         // 2. Deduplicate by email, prioritizing current community
@@ -114,7 +115,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
 
     const handleJoinSuccess = () => {
         setShowJoinModal(false);
-        window.location.reload();
+        navigate('/dashboard');
     };
 
 
@@ -279,9 +280,9 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                                     onMouseEnter={() => setOpen(true)}
                                 >
                                     <Avatar className="h-6 w-6 shrink-0">
-                                        <AvatarImage src={user?.avatar_url} alt={user?.username} />
+                                        <AvatarImage src={user?.avatar_url} alt={user?.display_name || user?.username} />
                                         <AvatarFallback className="text-[10px] bg-neutral-200 dark:bg-neutral-700">
-                                            {user?.username?.substring(0, 2).toUpperCase()}
+                                            {(user?.display_name || user?.username)?.substring(0, 2).toUpperCase()}
                                         </AvatarFallback>
                                     </Avatar>
 
@@ -292,14 +293,14 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                                         }}
                                         className="text-neutral-700 dark:text-neutral-200 text-sm font-medium group-hover/sidebar:translate-x-1 transition duration-150 whitespace-pre inline-block truncate"
                                     >
-                                        {user?.username}
+                                        {user?.display_name || user?.username}
                                     </motion.span>
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="w-60 mb-2 z-[100]" side="top" align="center" forceMount>
                                 <DropdownMenuLabel className="font-normal">
                                     <div className="flex flex-col space-y-1">
-                                        <p className="text-sm font-medium leading-none">{user?.username}</p>
+                                        <p className="text-sm font-medium leading-none">{user?.display_name || user?.username}</p>
                                         <p className="text-xs leading-none text-muted-foreground">
                                             {user?.email}
                                         </p>
@@ -325,7 +326,6 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
 
                                                     switchAccount(session.user.id);
                                                     navigate("/dashboard");
-                                                    window.location.reload();
                                                 } else {
                                                     // Just go to login for this specific account
                                                     switchAccount(session.user.id, true);
@@ -338,11 +338,11 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                                                 <Avatar className="h-5 w-5">
                                                     <AvatarImage src={session.user.avatar_url} />
                                                     <AvatarFallback className="text-[9px]">
-                                                        {session.user.username?.substring(0, 2).toUpperCase()}
+                                                        {(session.user.display_name || session.user.username)?.substring(0, 2).toUpperCase()}
                                                     </AvatarFallback>
                                                 </Avatar>
                                                 <div className="flex flex-col">
-                                                    <span className="truncate max-w-[120px] font-medium leading-tight">{session.user.username}</span>
+                                                    <span className="truncate max-w-[120px] font-medium leading-tight">{session.user.display_name || session.user.username}</span>
                                                     <span className="text-[9px] text-muted-foreground">{comm?.name || "Unknown"}</span>
                                                 </div>
                                             </div>
@@ -364,7 +364,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-500 focus:text-red-500">
                                     <LogOut className="mr-2 h-4 w-4" />
-                                    <span>Log out of {user?.username}</span>
+                                    <span>Log out of {user?.display_name || user?.username}</span>
                                 </DropdownMenuItem>
                                 {sessions.filter(s => s.user.id !== user?.id).length > 0 && (
                                     <DropdownMenuItem

@@ -64,10 +64,14 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*models
 	return &user, nil
 }
 
-// FindByUsername finds a user by username
+// FindByUsername finds a user by username (case-insensitive)
 func (r *UserRepository) FindByUsername(ctx context.Context, username string) (*models.User, error) {
 	var user models.User
-	err := r.collection.FindOne(ctx, bson.M{"username": username}).Decode(&user)
+	// Use case-insensitive regex for username lookup to ensure uniqueness across cases
+	pattern := "^" + regexp.QuoteMeta(username) + "$"
+	filter := bson.M{"username": primitive.Regex{Pattern: pattern, Options: "i"}}
+
+	err := r.collection.FindOne(ctx, filter).Decode(&user)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, errors.New("user not found")
