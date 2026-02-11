@@ -108,6 +108,12 @@ func (h *ReportHandler) SubmitUserReport(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Prevent self-reporting
+	if reporterID == reportedObjID {
+		http.Error(w, "You cannot report yourself", http.StatusBadRequest)
+		return
+	}
+
 	report := models.UserReport{
 		ID:          primitive.NewObjectID(),
 		ReporterID:  reporterID,

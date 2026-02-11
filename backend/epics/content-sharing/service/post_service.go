@@ -777,9 +777,14 @@ func (s *PostService) GetSavedPosts(ctx context.Context, userID primitive.Object
 // ReportPost logic
 func (s *PostService) ReportPost(ctx context.Context, postID, userID primitive.ObjectID, req dto.ReportPostRequest) error {
 	// Verify post exists
-	_, err := s.postRepo.GetPostByID(ctx, postID)
+	post, err := s.postRepo.GetPostByID(ctx, postID)
 	if err != nil {
 		return errors.New("post not found")
+	}
+
+	// Prevent reporting own posts
+	if post.AuthorID == userID {
+		return errors.New("you cannot report your own post")
 	}
 
 	report := &models.ReportedPost{
