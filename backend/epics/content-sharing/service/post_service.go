@@ -561,6 +561,10 @@ func (s *PostService) enrichPosts(ctx context.Context, posts []models.Post, curr
 	}
 
 	// Build post responses (filter out posts whose authors can't be found or are deactivated)
+	// Also filter out posts from private accounts if the user doesn't follow them
+	var followingMap map[primitive.ObjectID]bool
+	fetchedFollowing := false
+
 	postResponses := make([]dto.PostResponse, 0, len(posts))
 	for _, post := range posts {
 		author := authors[post.AuthorID]
@@ -575,6 +579,29 @@ func (s *PostService) enrichPosts(ctx context.Context, posts []models.Post, curr
 		if author.IsDeactivated {
 			log.Printf("DEBUG enrichPosts: Skipping post %v - author %v is deactivated", post.ID, post.AuthorID)
 			continue
+		}
+
+		// Privacy Check: private account and not self
+		if author.ProfileVisibility == "followers" && author.ID != currentUserID {
+			// Lazy load following list
+			if !fetchedFollowing {
+				fIDs, err := s.followRepo.GetFollowingIDs(ctx, currentUserID)
+				if err != nil {
+					log.Printf("ERROR enrichPosts: Failed to get following IDs for privacy check: %v", err)
+					// Fail safe: assume not following if error? Or skip check?
+					// Safe default is to hide if we can't verify permissions
+				}
+				followingMap = make(map[primitive.ObjectID]bool)
+				for _, id := range fIDs {
+					followingMap[id] = true
+				}
+				fetchedFollowing = true
+			}
+
+			if !followingMap[author.ID] {
+				log.Printf("DEBUG enrichPosts: Skipping post %v - author %v is private and not followed", post.ID, post.AuthorID)
+				continue
+			}
 		}
 
 		// Check if current user has liked this post
