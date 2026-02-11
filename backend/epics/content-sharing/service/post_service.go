@@ -101,12 +101,11 @@ func (s *PostService) GetFeed(ctx context.Context, userID primitive.ObjectID, li
 		blockedMap[id] = true
 	}
 
-	// Get hidden post IDs (reported or not interested)
-	reportedIDs, _ := s.postRepo.GetReportedPostIDsByUser(ctx, userID)
+	// Get hidden post IDs (only not interested)
+	// Reported posts are now handled by DB status="under_review"
 	notInterestedIDs, _ := s.postRepo.GetHiddenPostIDsByUser(ctx, userID)
-	hiddenPostIDs := append(reportedIDs, notInterestedIDs...)
 	hiddenPostMap := make(map[primitive.ObjectID]bool)
-	for _, id := range hiddenPostIDs {
+	for _, id := range notInterestedIDs {
 		hiddenPostMap[id] = true
 	}
 
@@ -513,7 +512,7 @@ func (s *PostService) DeleteComment(ctx context.Context, commentID, userID primi
 
 // DeletePost deletes a post if the user is the owner
 func (s *PostService) DeletePost(ctx context.Context, postID, userID primitive.ObjectID) error {
-	post, err := s.postRepo.GetPostByID(ctx, postID)
+	post, err := s.postRepo.GetPostByIDAdmin(ctx, postID)
 	if err != nil {
 		return err
 	}
@@ -777,7 +776,7 @@ func (s *PostService) GetAllReports(ctx context.Context) ([]dto.ReportResponse, 
 
 	responses := make([]dto.ReportResponse, 0, len(reports))
 	for _, report := range reports {
-		post, _ := s.postRepo.GetPostByID(ctx, report.PostID)
+		post, _ := s.postRepo.GetPostByIDAdmin(ctx, report.PostID)
 
 		postContent := "[Deleted Post]"
 		authorName := "Unknown"

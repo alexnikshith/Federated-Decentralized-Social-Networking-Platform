@@ -188,8 +188,8 @@ export const useContentStore = create<ContentState>((set, get) => ({
     reportPost: async (postId: string, reason: string) => {
         try {
             await api.reportPost(postId, { reason });
-            // Hide the post from local state
-            set({ posts: get().posts.filter((post) => post.id !== postId) });
+            // Do NOT hide the post from local state - wait for admin review
+            // set({ posts: get().posts.filter((post) => post.id !== postId) });
         } catch (error) {
             set({ error: error.response?.data?.message || 'Failed to report post' });
         }
