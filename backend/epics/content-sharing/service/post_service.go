@@ -8,6 +8,7 @@ import (
 	"federated-social/backend/epics/content-sharing/models"
 	"federated-social/backend/epics/content-sharing/repository"
 	federationService "federated-social/backend/epics/federation/service"
+	reportRepo "federated-social/backend/epics/reports/repository"
 	safetyRepo "federated-social/backend/epics/safety/repository"
 	safetyService "federated-social/backend/epics/safety/service"
 	"log"
@@ -21,6 +22,7 @@ type PostService struct {
 	followRepo        *repository.FollowRepository
 	searchRepo        *repository.SearchRepository
 	notificationRepo  *repository.NotificationRepository
+	reportRepo        *reportRepo.ReportRepository
 	blockService      *safetyService.BlockService
 	federationService *federationService.FederationService
 }
@@ -36,6 +38,7 @@ func NewPostService() *PostService {
 		followRepo:        repository.NewFollowRepository(),
 		searchRepo:        repository.NewSearchRepository(),
 		notificationRepo:  repository.NewNotificationRepository(),
+		reportRepo:        reportRepo.NewReportRepository(),
 		blockService:      safetyService.NewBlockService(safetyRepo.NewBlockRepository()),
 		federationService: fedService,
 	}
@@ -96,6 +99,14 @@ func (s *PostService) GetFeed(ctx context.Context, userID primitive.ObjectID, li
 		log.Printf("ERROR GetFeed: Failed to get blocked IDs: %v", err)
 		return nil, err
 	}
+
+	// Also hide users that you have reported
+	reportedUserIDs, _ := s.reportRepo.GetReportedUserIDs(ctx, userID)
+	if len(reportedUserIDs) > 0 {
+		log.Printf("DEBUG GetFeed: Adding %d reported users to hidden list", len(reportedUserIDs))
+		blockedIDs = append(blockedIDs, reportedUserIDs...)
+	}
+
 	blockedMap := make(map[primitive.ObjectID]bool)
 	for _, id := range blockedIDs {
 		blockedMap[id] = true
@@ -235,6 +246,15 @@ func (s *PostService) GetUserPosts(ctx context.Context, userID, requestingUserID
 		return nil, err
 	}
 
+	// Check if reported
+	isReported, _ := s.reportRepo.IsUserReported(ctx, requestingUserID, userID)
+	if isReported {
+		return &dto.FeedResponse{
+			Posts: []dto.PostResponse{},
+			Total: 0,
+		}, nil
+	}
+
 	if isBlocked || isBlockedBy {
 		return &dto.FeedResponse{
 			Posts: []dto.PostResponse{},
@@ -274,6 +294,12 @@ func (s *PostService) GetPostByID(ctx context.Context, postID, requestingUserID 
 	isBlockedBy, err := s.blockService.IsBlocked(ctx, requestingUserID, post.AuthorID)
 	if err != nil {
 		return nil, err
+	}
+
+	// Check if reported
+	isReported, _ := s.reportRepo.IsUserReported(ctx, requestingUserID, post.AuthorID)
+	if isReported {
+		return nil, errors.New("access denied")
 	}
 
 	if isBlocked || isBlockedBy {
@@ -776,6 +802,17 @@ func (s *PostService) GetSavedPosts(ctx context.Context, userID primitive.Object
 
 // ReportPost logic
 func (s *PostService) ReportPost(ctx context.Context, postID, userID primitive.ObjectID, req dto.ReportPostRequest) error {
+	// Verify post exists
+	post, err := s.postRepo.GetPostByID(ctx, postID)
+	if err != nil {
+		return errors.New("post not found")
+	}
+
+	// Prevent reporting own posts
+	if post.AuthorID == userID {
+		return errors.New("you cannot report your own post")
+	}
+
 	report := &models.ReportedPost{
 		PostID:     postID,
 		ReporterID: userID,

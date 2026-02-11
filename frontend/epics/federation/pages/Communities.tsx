@@ -40,7 +40,7 @@ const Communities = () => {
           // Skip if it's the current community ID (implied)
           const activeId = localStorage.getItem('active_community_id');
           if (s.communityId !== activeId) {
-            api.post('/profile/me/communities', { community_id: s.communityId })
+            api.post('/api/profile/me/communities', { community_id: s.communityId })
               .catch(err => console.error("Auto-sync failed", err));
           }
         }

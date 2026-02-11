@@ -21,6 +21,7 @@ interface ContentState {
     savePost: (postId: string) => Promise<void>;
     unsavePost: (postId: string) => Promise<void>;
     reportPost: (postId: string, reason: string) => Promise<void>;
+    reportUser: (userId: string, reason: string, description?: string) => Promise<void>;
     interactPost: (postId: string, type: 'interested' | 'not_interested') => Promise<void>;
     markAsRead: (notificationId: string) => Promise<void>;
 }
@@ -186,12 +187,48 @@ export const useContentStore = create<ContentState>((set, get) => ({
     },
 
     reportPost: async (postId: string, reason: string) => {
+        const previousPosts = get().posts;
+        // Optimistic update: Remove immediately
+        set({ posts: previousPosts.filter((post) => post.id !== postId) });
+
         try {
             await api.reportPost(postId, { reason });
-            // Do NOT hide the post from local state - wait for admin review
-            // set({ posts: get().posts.filter((post) => post.id !== postId) });
         } catch (error) {
-            set({ error: error.response?.data?.message || 'Failed to report post' });
+            // Revert on failure
+            set({
+                posts: previousPosts,
+                error: error.response?.data?.message || 'Failed to report post'
+            });
+        }
+    },
+
+    reportUser: async (userId: string, reason: string, description?: string) => {
+        const previousPosts = get().posts;
+        // Optimistic update: Remove all posts from this user immediately
+        set({ posts: previousPosts.filter((post) => post.author_id !== userId) });
+
+        try {
+            // Call the reports API endpoint
+            const API_URL = localStorage.getItem('active_community_url') || import.meta.env.VITE_API_URL || 'http://localhost:8080';
+            const token = localStorage.getItem('token');
+            await fetch(`${API_URL}/api/reports/user`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    reported_id: userId,
+                    reason,
+                    description
+                })
+            });
+        } catch (error) {
+            // Revert on failure
+            set({
+                posts: previousPosts,
+                error: 'Failed to report user'
+            });
         }
     },
 
