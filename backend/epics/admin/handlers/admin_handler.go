@@ -227,6 +227,21 @@ func (h *AdminHandler) ResolveReport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	oid, _ := primitive.ObjectIDFromHex(reportID)
+	
+	// 1. Get the report to find PostID
+	report, err := h.postRepo.GetReportByID(r.Context(), oid)
+	if err != nil {
+		http.Error(w, "Report not found", http.StatusNotFound)
+		return
+	}
+
+	// 2. Restore Post visibility (set status to 'active')
+	if err := h.postRepo.UpdatePostStatus(r.Context(), report.PostID, "active"); err != nil {
+		http.Error(w, "Failed to restore post visibility: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// 3. Delete the report
 	if err := h.postRepo.DeleteReport(r.Context(), oid); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

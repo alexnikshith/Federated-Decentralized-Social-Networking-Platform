@@ -368,7 +368,11 @@ func (h *PostHandler) GetSavedPosts(w http.ResponseWriter, r *http.Request) {
 func (h *PostHandler) ReportPost(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserIDFromContext(r.Context())
 	vars := mux.Vars(r)
-	postID, _ := primitive.ObjectIDFromHex(vars["id"])
+	postID, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		respondError(w, "Invalid post ID", http.StatusBadRequest)
+		return
+	}
 
 	var req dto.ReportPostRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -377,6 +381,7 @@ func (h *PostHandler) ReportPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.postService.ReportPost(r.Context(), postID, userID, req); err != nil {
+		log.Printf("ERROR ReportPost: Failed to report post %s by user %s: %v", postID.Hex(), userID.Hex(), err)
 		respondError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

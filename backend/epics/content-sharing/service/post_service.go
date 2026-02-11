@@ -112,12 +112,11 @@ func (s *PostService) GetFeed(ctx context.Context, userID primitive.ObjectID, li
 		blockedMap[id] = true
 	}
 
-	// Get hidden post IDs (reported or not interested)
-	reportedIDs, _ := s.postRepo.GetReportedPostIDsByUser(ctx, userID)
+	// Get hidden post IDs (only not interested)
+	// Reported posts are now handled by DB status="under_review"
 	notInterestedIDs, _ := s.postRepo.GetHiddenPostIDsByUser(ctx, userID)
-	hiddenPostIDs := append(reportedIDs, notInterestedIDs...)
 	hiddenPostMap := make(map[primitive.ObjectID]bool)
-	for _, id := range hiddenPostIDs {
+	for _, id := range notInterestedIDs {
 		hiddenPostMap[id] = true
 	}
 
@@ -539,7 +538,7 @@ func (s *PostService) DeleteComment(ctx context.Context, commentID, userID primi
 
 // DeletePost deletes a post if the user is the owner
 func (s *PostService) DeletePost(ctx context.Context, postID, userID primitive.ObjectID) error {
-	post, err := s.postRepo.GetPostByID(ctx, postID)
+	post, err := s.postRepo.GetPostByIDAdmin(ctx, postID)
 	if err != nil {
 		return err
 	}
@@ -588,6 +587,10 @@ func (s *PostService) enrichPosts(ctx context.Context, posts []models.Post, curr
 	}
 
 	// Build post responses (filter out posts whose authors can't be found or are deactivated)
+	// Also filter out posts from private accounts if the user doesn't follow them
+	var followingMap map[primitive.ObjectID]bool
+	fetchedFollowing := false
+
 	postResponses := make([]dto.PostResponse, 0, len(posts))
 	for _, post := range posts {
 		author := authors[post.AuthorID]
@@ -602,6 +605,29 @@ func (s *PostService) enrichPosts(ctx context.Context, posts []models.Post, curr
 		if author.IsDeactivated {
 			log.Printf("DEBUG enrichPosts: Skipping post %v - author %v is deactivated", post.ID, post.AuthorID)
 			continue
+		}
+
+		// Privacy Check: private account and not self
+		if author.ProfileVisibility == "followers" && author.ID != currentUserID {
+			// Lazy load following list
+			if !fetchedFollowing {
+				fIDs, err := s.followRepo.GetFollowingIDs(ctx, currentUserID)
+				if err != nil {
+					log.Printf("ERROR enrichPosts: Failed to get following IDs for privacy check: %v", err)
+					// Fail safe: assume not following if error? Or skip check?
+					// Safe default is to hide if we can't verify permissions
+				}
+				followingMap = make(map[primitive.ObjectID]bool)
+				for _, id := range fIDs {
+					followingMap[id] = true
+				}
+				fetchedFollowing = true
+			}
+
+			if !followingMap[author.ID] {
+				log.Printf("DEBUG enrichPosts: Skipping post %v - author %v is private and not followed", post.ID, post.AuthorID)
+				continue
+			}
 		}
 
 		// Check if current user has liked this post
@@ -814,7 +840,7 @@ func (s *PostService) GetAllReports(ctx context.Context) ([]dto.ReportResponse, 
 
 	responses := make([]dto.ReportResponse, 0, len(reports))
 	for _, report := range reports {
-		post, _ := s.postRepo.GetPostByID(ctx, report.PostID)
+		post, _ := s.postRepo.GetPostByIDAdmin(ctx, report.PostID)
 
 		postContent := "[Deleted Post]"
 		authorName := "Unknown"

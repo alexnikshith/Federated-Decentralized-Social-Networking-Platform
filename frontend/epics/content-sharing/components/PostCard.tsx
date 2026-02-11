@@ -44,6 +44,7 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
+    DialogDescription,
     DialogFooter,
 } from "@/components/ui/dialog";
 import {
@@ -605,11 +606,11 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
                             <Flag className="w-5 h-5 text-orange-500" />
                             Report Post
                         </DialogTitle>
+                        <DialogDescription className="text-sm text-muted-foreground">
+                            Help us understand what's wrong with this post. Your report is anonymous.
+                        </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
-                        <p className="text-sm text-muted-foreground">
-                            Help us understand what's wrong with this post. Your report is anonymous.
-                        </p>
                         <Textarea
                             placeholder="Reason for reporting (e.g., spam, harassment, inappropriate content...)"
                             value={reportReason}
