@@ -45,19 +45,6 @@ api.interceptors.response.use(
             // Token expired or invalid
             const store = useAuthStore.getState();
             store.clearAuth();
-
-            // Check if we switched to another active session or are now fully unauthenticated
-            const stillAuthenticated = useAuthStore.getState().isAuthenticated;
-
-            if (!stillAuthenticated) {
-                if (window.location.pathname !== '/login' && window.location.pathname !== '/register' && window.location.pathname !== '/') {
-                    window.location.href = '/login';
-                }
-            } else {
-                // We switched to another valid session (e.g. from an expired secondary account back to primary admin)
-                // Reload to dashboard or current page with new identity context
-                window.location.reload();
-            }
         }
 
         // Handle Account Deactivation (403)
@@ -118,6 +105,18 @@ export const authApi = {
     syncSession: async (): Promise<LoginResponse> => {
         const response = await api.get('/api/auth/me');
         return response.data;
+    },
+
+    // Checks if email is already taken
+    checkEmail: async (email: string): Promise<boolean> => {
+        const response = await api.post('/api/auth/check-email', { email });
+        return response.data.exists;
+    },
+
+    // Checks if username is already taken
+    checkUsername: async (username: string): Promise<boolean> => {
+        const response = await api.post('/api/auth/check-username', { username });
+        return response.data.exists;
     },
 };
 

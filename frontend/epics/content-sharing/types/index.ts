@@ -12,6 +12,7 @@ export interface Post {
     comment_count: number;
     is_liked: boolean;
     is_saved: boolean;
+    mentioned_usernames?: string[];
     created_at: string;
     updated_at: string;
 }

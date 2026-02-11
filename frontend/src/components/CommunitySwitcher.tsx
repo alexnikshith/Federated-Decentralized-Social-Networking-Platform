@@ -80,7 +80,7 @@ export function CommunitySwitcher({
             if (matchingSession) {
                 // Direct switch to SAME user on target community
                 useAuthStore.getState().switchAccount(matchingSession.user.id);
-                window.location.reload();
+                navigate('/dashboard');
             } else {
                 // Open Login Modal via parent handler
                 onOpenJoinModal(community);
@@ -92,7 +92,8 @@ export function CommunitySwitcher({
     const handleLoginSuccess = () => {
         // Upon successful login in modal, session is created and context switched by modal
         // Just reload to refresh app state
-        window.location.reload();
+        // Just reload to refresh app state
+        navigate('/dashboard');
     };
 
     return (

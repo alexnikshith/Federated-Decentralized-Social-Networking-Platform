@@ -99,7 +99,7 @@ export function Header() {
                 </Link>
                 <Link to="/register">
                   <Button variant="hero" size="sm">
-                    Join a Community
+                    Sign Up
                   </Button>
                 </Link>
               </>
@@ -192,7 +192,7 @@ export function Header() {
                     </Link>
                     <Link to="/register" onClick={() => setMobileMenuOpen(false)}>
                       <Button variant="hero" className="w-full">
-                        Join a Community
+                        Sign Up
                       </Button>
                     </Link>
                   </>
