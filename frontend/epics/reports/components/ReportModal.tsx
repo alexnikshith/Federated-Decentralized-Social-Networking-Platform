@@ -19,6 +19,7 @@ interface ReportModalProps {
   isOpen: boolean;
   onClose: () => void;
   reportedUser: { id: string; display_name: string; username: string } | null;
+  onSuccess?: () => void;
 }
 
 const REASONS = [
@@ -30,7 +31,7 @@ const REASONS = [
   "Other"
 ];
 
-export const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, reportedUser }) => {
+export const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, reportedUser, onSuccess }) => {
   const [reason, setReason] = useState(REASONS[0]);
   const [description, setDescription] = useState("");
   const { useSubmitReport } = useReportsApi();
@@ -39,19 +40,20 @@ export const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, repor
   const handleSubmit = () => {
     if (!reportedUser) return;
     submitReport({
-        reported_id: reportedUser.id,
-        reason,
-        description
+      reported_id: reportedUser.id,
+      reason,
+      description
     }, {
-        onSuccess: () => {
-            toast.success("Report submitted successfully");
-            onClose();
-            setDescription("");
-            setReason(REASONS[0]);
-        },
-        onError: () => {
-            toast.error("Failed to submit report");
-        }
+      onSuccess: () => {
+        toast.success("Report submitted successfully");
+        onClose();
+        setDescription("");
+        setReason(REASONS[0]);
+        onSuccess?.();
+      },
+      onError: () => {
+        toast.error("Failed to submit report");
+      }
     });
   };
 
@@ -75,11 +77,11 @@ export const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, repor
           </RadioGroup>
           <div className="grid w-full gap-1.5">
             <Label htmlFor="description">Additional Details (Optional)</Label>
-            <Textarea 
-                id="description" 
-                placeholder="Please provide more context..." 
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
+            <Textarea
+              id="description"
+              placeholder="Please provide more context..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
             />
           </div>
         </div>

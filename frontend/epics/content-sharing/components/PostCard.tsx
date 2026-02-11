@@ -64,9 +64,10 @@ interface PostCardProps {
     post: Post;
     initialShowComments?: boolean;
     onLikeToggle?: () => void;
+    onPostAction?: (action: 'delete' | 'report' | 'hide', postId: string) => void;
 }
 
-export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = false, onLikeToggle }) => {
+export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = false, onLikeToggle, onPostAction }) => {
     // UI State
     const [showComments, setShowComments] = useState(initialShowComments);
     const [showLikers, setShowLikers] = useState(false);
@@ -169,6 +170,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
             await deletePost(post.id);
             setShowDeleteAlert(false);
             showToast.postDeleted();
+            onPostAction?.('delete', post.id);
         } catch (error) {
             showToast.error("Failed to delete post", "Please try again later.");
         }
@@ -198,6 +200,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
             setShowReportDialog(false);
             setReportReason('');
             showToast.success("Post reported", "Moderators will review it soon.");
+            onPostAction?.('report', post.id);
         } catch (error) {
             showToast.error("Failed to submit report");
         } finally {
@@ -294,10 +297,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end" className="w-48 bg-card border-border/50 backdrop-blur-md">
-                                        <DropdownMenuItem onClick={handleSave} className="gap-2 cursor-pointer">
-                                            <Bookmark className={cn("w-4 h-4", post.is_saved && "fill-primary text-primary")} />
-                                            <span>{post.is_saved ? 'Unsave Post' : 'Save Post'}</span>
-                                        </DropdownMenuItem>
+
 
                                         <DropdownMenuItem onClick={() => handleInteraction('interested')} className="gap-2 cursor-pointer">
                                             <ThumbsUp className="w-4 h-4" />
@@ -311,10 +311,12 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
 
                                         <DropdownMenuSeparator className="bg-border/50" />
 
-                                        <DropdownMenuItem onClick={() => setShowReportDialog(true)} className="gap-2 text-orange-500 focus:text-orange-500 cursor-pointer">
-                                            <Flag className="w-4 h-4" />
-                                            <span>Report Post</span>
-                                        </DropdownMenuItem>
+                                        {!isOwner && (
+                                            <DropdownMenuItem onClick={() => setShowReportDialog(true)} className="gap-2 text-orange-500 focus:text-orange-500 cursor-pointer">
+                                                <Flag className="w-4 h-4" />
+                                                <span>Report Post</span>
+                                            </DropdownMenuItem>
+                                        )}
 
                                         {isOwner && (
                                             <>
@@ -396,22 +398,27 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-9 w-9 p-0 text-muted-foreground hover:text-accent hover:bg-accent/5 rounded-full ml-auto"
+                                className={cn(
+                                    "h-9 w-9 p-0 rounded-full ml-auto transition-all duration-300",
+                                    post.is_saved ? "text-primary hover:bg-primary/5" : "text-muted-foreground hover:text-primary hover:bg-primary/5"
+                                )}
+                                onClick={handleSave}
+                                title={post.is_saved ? "Unsave Post" : "Save Post"}
+                            >
+                                <Bookmark className={cn("w-4 h-4", post.is_saved && "fill-current")} />
+                            </Button>
+
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-9 w-9 p-0 text-muted-foreground hover:text-accent hover:bg-accent/5 rounded-full"
                                 onClick={handleShareClick}
                                 title="Share to followers"
                             >
                                 <Share2 className="w-4 h-4" />
                             </Button>
 
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-9 w-9 p-0 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-full"
-                                onClick={() => setIsExpanded(!isExpanded)}
-                                title={isExpanded ? "Minimize" : "Maximize"}
-                            >
-                                {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-                            </Button>
+
                         </div>
 
                         {/* Comments Section */}

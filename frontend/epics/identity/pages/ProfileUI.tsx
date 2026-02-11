@@ -357,24 +357,25 @@ const ProfileUI = () => {
     }
   };
 
-  // Filter Posts Logic
-  const filteredPosts = posts.filter(post => {
-    if (!startDate && !endDate) return true;
-    const postDate = new Date(post.created_at);
+  // Reusable Filter Logic
+  const applyFilters = (items: Post[]) => {
+    if (!startDate && !endDate) return items;
+    return items.filter(post => {
+      const postDate = new Date(post.created_at);
+      if (startDate && postDate < startDate) return false;
+      if (endDate) {
+        const endOfDay = new Date(endDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        if (postDate > endOfDay) return false;
+      }
+      return true;
+    });
+  };
 
-    if (startDate) {
-      // Reset start date time to 00:00:00 for comparison if just date
-      // But assuming user just picked a date, date picker usually sets 00:00:00
-      if (postDate < startDate) return false;
-    }
-
-    if (endDate) {
-      const endOfDay = new Date(endDate);
-      endOfDay.setHours(23, 59, 59, 999);
-      if (postDate > endOfDay) return false;
-    }
-    return true;
-  });
+  const filteredPosts = applyFilters(posts);
+  const filteredLikedPosts = applyFilters(likedPosts);
+  const filteredCommentedPosts = applyFilters(commentedPosts);
+  const filteredSavedPosts = applyFilters(savedPosts);
 
   // Toggle like on a post and update local state
   const handlePostLike = (postId: string) => {
@@ -394,6 +395,87 @@ const ProfileUI = () => {
     setCommentedPosts(prev => updateList(prev));
     setSavedPosts(prev => updateList(prev));
   };
+
+  // Render Filter Section UI
+  const renderFilterUI = () => (
+    <div className="flex flex-col gap-4 mb-6">
+      <div className="flex flex-wrap items-center gap-2 px-2 overflow-x-auto scrollbar-hide">
+        <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest mr-2">Quick Filters:</span>
+        <Button variant="outline" size="sm" onClick={() => { setStartDate(subDays(new Date(), 7)); setEndDate(new Date()); }} className="rounded-full h-8 text-xs hover:bg-primary/10 hover:border-primary/50 transition-all">Last 7 Days</Button>
+        <Button variant="outline" size="sm" onClick={() => { setStartDate(subDays(new Date(), 30)); setEndDate(new Date()); }} className="rounded-full h-8 text-xs hover:bg-primary/10 hover:border-primary/50 transition-all">Last 30 Days</Button>
+        {(startDate || endDate) && (
+          <Button variant="ghost" size="sm" onClick={() => { setStartDate(undefined); setEndDate(undefined); }} className="rounded-full h-8 text-xs text-destructive hover:bg-destructive/10">Clear</Button>
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-4 py-2 px-2">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant={"outline"}
+              className={cn(
+                "w-[180px] justify-start text-left font-normal rounded-xl border-border/50 bg-secondary/30 hover:bg-secondary/50 transition-all h-10",
+                !startDate && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
+              {startDate ? format(startDate, "MMM dd, yyyy") : <span>Start Date</span>}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <CalendarComponent
+              mode="single"
+              selected={startDate}
+              onSelect={setStartDate}
+              disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+
+        <span className="text-muted-foreground font-medium text-sm">to</span>
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant={"outline"}
+              className={cn(
+                "w-[180px] justify-start text-left font-normal rounded-xl border-border/50 bg-secondary/30 hover:bg-secondary/50 transition-all h-10",
+                !endDate && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
+              {endDate ? format(endDate, "MMM dd, yyyy") : <span>End Date</span>}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <CalendarComponent
+              mode="single"
+              selected={endDate}
+              onSelect={setEndDate}
+              disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+
+        {(startDate || endDate) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setStartDate(undefined);
+              setEndDate(undefined);
+            }}
+            className="text-xs hover:bg-destructive/10 hover:text-destructive h-10 px-4 rounded-xl"
+          >
+            <X className="w-4 h-4 mr-1" />
+            Clear Filter
+          </Button>
+        )}
+      </div>
+    </div>
+  );
 
   // Helper to format date for separators
   const getDateLabel = (dateStr: string) => {
@@ -430,6 +512,18 @@ const ProfileUI = () => {
                 post={post}
                 initialShowComments={targetId === post.id && shouldOpenComments}
                 onLikeToggle={() => handlePostLike(post.id)}
+                onPostAction={(action, postId) => {
+                  if (action === 'report' || action === 'delete' || action === 'hide') {
+                    setPosts(prev => prev.filter(p => p.id !== postId));
+                    setLikedPosts(prev => prev.filter(p => p.id !== postId));
+                    setCommentedPosts(prev => prev.filter(p => p.id !== postId));
+                    setSavedPosts(prev => prev.filter(p => p.id !== postId));
+
+                    if (action === 'report') {
+                      // Optional: Show specific toast if not handled by PostCard, but PostCard handles success toast.
+                    }
+                  }
+                }}
               />
             </div>
           </div>
@@ -697,7 +791,6 @@ const ProfileUI = () => {
                       <div className="flex flex-col gap-4 mb-4">
                         {isOwnProfile && (
                           <div className="flex items-center gap-6 border-b border-border/50 px-2">
-                            {/* ... preserved tabs ... */}
                             {["All", "Saved"].map((subTab) => (
                               <button
                                 key={subTab}
@@ -714,91 +807,14 @@ const ProfileUI = () => {
                             ))}
                           </div>
                         )}
-
-                        {activeSubTab === "All" && (
-                          <div className="flex flex-wrap items-center gap-2 px-2 overflow-x-auto scrollbar-hide">
-                            <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest mr-2">Quick Filters:</span>
-                            <Button variant="outline" size="sm" onClick={() => { setStartDate(subDays(new Date(), 7)); setEndDate(new Date()); }} className="rounded-full h-8 text-xs">Last 7 Days</Button>
-                            <Button variant="outline" size="sm" onClick={() => { setStartDate(subDays(new Date(), 30)); setEndDate(new Date()); }} className="rounded-full h-8 text-xs">Last 30 Days</Button>
-                            {(startDate || endDate) && (
-                              <Button variant="ghost" size="sm" onClick={() => { setStartDate(undefined); setEndDate(undefined); }} className="rounded-full h-8 text-xs text-destructive hover:bg-destructive/10">Clear</Button>
-                            )}
-                          </div>
-                        )}
                       </div>
 
                       {activeSubTab === "All" && (
                         <>
-                          {/* Date Filter */}
-                          <div className="flex flex-wrap items-center gap-4 py-2">
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant={"outline"}
-                                  className={cn(
-                                    "w-[200px] justify-start text-left font-normal rounded-xl border-border/50 bg-secondary/30",
-                                    !startDate && "text-muted-foreground"
-                                  )}
-                                >
-                                  <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {startDate ? format(startDate, "PPP") : <span>Start Date</span>}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
-                                <CalendarComponent
-                                  mode="single"
-                                  selected={startDate}
-                                  onSelect={setStartDate}
-                                  disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
-
-                            <span className="text-muted-foreground">to</span>
-
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant={"outline"}
-                                  className={cn(
-                                    "w-[200px] justify-start text-left font-normal rounded-xl border-border/50 bg-secondary/30",
-                                    !endDate && "text-muted-foreground"
-                                  )}
-                                >
-                                  <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {endDate ? format(endDate, "PPP") : <span>End Date</span>}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
-                                <CalendarComponent
-                                  mode="single"
-                                  selected={endDate}
-                                  onSelect={setEndDate}
-                                  disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
-
-                            {(startDate || endDate) && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setStartDate(undefined);
-                                  setEndDate(undefined);
-                                }}
-                                className="text-xs hover:bg-destructive/10 hover:text-destructive"
-                              >
-                                <X className="w-4 h-4 mr-1" />
-                                Clear Filter
-                              </Button>
-                            )}
-                          </div>
+                          {renderFilterUI()}
 
                           {filteredPosts.length === 0 ? (
-                            <div className="glass-card rounded-3xl p-20 text-center opacity-50">
+                            <div className="glass-card rounded-3xl p-20 text-center opacity-50 border-dashed">
                               <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                               <h3 className="text-xl font-bold mb-1">
                                 {(startDate || endDate) ? "No posts in range" : "No posts yet"}
@@ -815,18 +831,23 @@ const ProfileUI = () => {
 
                       {activeSubTab === "Saved" && isOwnProfile && (
                         <div className="space-y-4">
+                          {renderFilterUI()}
                           {activityLoading ? (
                             <div className="flex justify-center py-20">
                               <Loader2 className="w-8 h-8 animate-spin text-primary" />
                             </div>
-                          ) : savedPosts.length === 0 ? (
-                            <div className="glass-card rounded-3xl p-16 text-center opacity-50">
+                          ) : filteredSavedPosts.length === 0 ? (
+                            <div className="glass-card rounded-3xl p-16 text-center opacity-50 border-dashed">
                               <Bookmark className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                              <h3 className="text-xl font-bold mb-1">No saved posts</h3>
-                              <p className="text-sm">Posts you've saved will appear here.</p>
+                              <h3 className="text-xl font-bold mb-1">
+                                {(startDate || endDate) ? "No saved posts in range" : "No saved posts"}
+                              </h3>
+                              <p className="text-sm">
+                                {(startDate || endDate) ? "Try adjusting your dates." : "Posts you've saved will appear here."}
+                              </p>
                             </div>
                           ) : (
-                            renderPostList(savedPosts)
+                            renderPostList(filteredSavedPosts)
                           )}
                         </div>
                       )}
@@ -854,6 +875,7 @@ const ProfileUI = () => {
                       </div>
 
                       <div className="space-y-4">
+                        {renderFilterUI()}
                         {activityLoading ? (
                           <div className="flex justify-center py-20">
                             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -861,26 +883,34 @@ const ProfileUI = () => {
                         ) : (
                           <>
                             {activitySubTab === "Likes" && (
-                              likedPosts.length === 0 ? (
-                                <div className="glass-card rounded-3xl p-16 text-center opacity-50">
+                              filteredLikedPosts.length === 0 ? (
+                                <div className="glass-card rounded-3xl p-16 text-center opacity-50 border-dashed">
                                   <Heart className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                                  <h3 className="text-xl font-bold mb-1">No liked posts</h3>
-                                  <p className="text-sm">Posts {profileUser.display_name} likes will appear here.</p>
+                                  <h3 className="text-xl font-bold mb-1">
+                                    {(startDate || endDate) ? "No liked posts in range" : "No liked posts"}
+                                  </h3>
+                                  <p className="text-sm">
+                                    {(startDate || endDate) ? "Try adjusting your dates." : `Posts ${profileUser.display_name} likes will appear here.`}
+                                  </p>
                                 </div>
                               ) : (
-                                renderPostList(likedPosts)
+                                renderPostList(filteredLikedPosts)
                               )
                             )}
 
                             {activitySubTab === "Comments" && (
-                              commentedPosts.length === 0 ? (
-                                <div className="glass-card rounded-3xl p-16 text-center opacity-50">
+                              filteredCommentedPosts.length === 0 ? (
+                                <div className="glass-card rounded-3xl p-16 text-center opacity-50 border-dashed">
                                   <MessageSquare className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                                  <h3 className="text-xl font-bold mb-1">No comments</h3>
-                                  <p className="text-sm">Posts {profileUser.display_name} commented on will appear here.</p>
+                                  <h3 className="text-xl font-bold mb-1">
+                                    {(startDate || endDate) ? "No comments in range" : "No comments"}
+                                  </h3>
+                                  <p className="text-sm">
+                                    {(startDate || endDate) ? "Try adjusting your dates." : `Posts ${profileUser.display_name} commented on will appear here.`}
+                                  </p>
                                 </div>
                               ) : (
-                                renderPostList(commentedPosts)
+                                renderPostList(filteredCommentedPosts)
                               )
                             )}
                           </>
@@ -933,6 +963,13 @@ const ProfileUI = () => {
         isOpen={showReportModal}
         onClose={() => setShowReportModal(false)}
         reportedUser={profileUser}
+        onSuccess={() => {
+          // Clear all posts from the reported user
+          setPosts([]);
+          setLikedPosts([]);
+          setCommentedPosts([]);
+          setSavedPosts([]);
+        }}
       />
     </div>
   );

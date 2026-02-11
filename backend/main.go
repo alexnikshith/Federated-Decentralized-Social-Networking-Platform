@@ -15,6 +15,7 @@ import (
 	"federated-social/backend/epics/identity/routes"
 	messagingRepo "federated-social/backend/epics/messaging/repository"
 	messagingRoutes "federated-social/backend/epics/messaging/routes"
+	reportRepo "federated-social/backend/epics/reports/repository"
 	reportRoutes "federated-social/backend/epics/reports/routes"
 	safetyRepo "federated-social/backend/epics/safety/repository"
 	safetyRoutes "federated-social/backend/epics/safety/routes"
@@ -128,6 +129,12 @@ func main() {
 	blockRepo := safetyRepo.NewBlockRepository()
 	if err := blockRepo.CreateIndexes(ctx); err != nil {
 		log.Printf("Warning: Failed to create block indexes: %v", err)
+	}
+
+	// Create report indexes (User Reports)
+	userReportRepo := reportRepo.NewReportRepository()
+	if err := userReportRepo.CreateIndexes(ctx); err != nil {
+		log.Printf("Warning: Failed to create report indexes: %v", err)
 	}
 
 	// Create federation indexes
