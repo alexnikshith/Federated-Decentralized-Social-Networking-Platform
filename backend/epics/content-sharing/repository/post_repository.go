@@ -124,6 +124,7 @@ func (r *PostRepository) CreatePost(ctx context.Context, post *models.Post) erro
 	post.UpdatedAt = time.Now()
 	post.LikeCount = 0
 	post.CommentCount = 0
+	post.Status = "active"
 
 	result, err := r.posts.InsertOne(ctx, post)
 	if err != nil {
@@ -136,6 +137,39 @@ func (r *PostRepository) CreatePost(ctx context.Context, post *models.Post) erro
 
 // GetPostByID retrieves a single post by its unique ID
 func (r *PostRepository) GetPostByID(ctx context.Context, postID primitive.ObjectID) (*models.Post, error) {
+	// We must fetch even 'under_review' posts for admin dashboard, 
+	// but this method is generally used for displaying content.
+	// Since PostService.GetAllReports fetches post details, we DO need a way to fetch raw posts even if hidden.
+	// So I will add a new method GetPostByIDUnfiltered and restore the old GetPostByID for safety?
+	// ACTUALLY: The Service calls GetPostByID in GetAllReports where it needs to see the post content.
+	// If I filter here, the Admin Dashboard will show "Post not found" or empty content.
+	// Conflict: Admin needs to see it, User shouldn't.
+	// Solution: I'll revert strict filtering in Service?
+	// Or even better: Add a specific GetRawPostByID for admin/internal use.
+	// But `GetAllReports` calls `GetPostByID`.
+	// Let's modify GetAllReports to use the raw collection or a new method.
+	// For now, to solve "remove from feed", filtering the list endpoints (GetFeed, GetPostsByAuthor) is key.
+	// Direct access via ID might be less critical or handled by frontend state.
+	// But `GetPostByID` is also used for the post detail page.
+	// I will keep the filter here (so users can't see it), and add `GetPostByIDAdmin` for `GetAllReports`.
+	
+	var post models.Post
+	filter := bson.M{
+		"_id": postID,
+		"$or": []bson.M{
+			{"status": "active"},
+			{"status": bson.M{"$exists": false}},
+		},
+	}
+	err := r.posts.FindOne(ctx, filter).Decode(&post)
+	if err != nil {
+		return nil, err
+	}
+	return &post, nil
+}
+
+// GetPostByIDAdmin retrieves any post by ID regardless of status (for admin usage)
+func (r *PostRepository) GetPostByIDAdmin(ctx context.Context, postID primitive.ObjectID) (*models.Post, error) {
 	var post models.Post
 	err := r.posts.FindOne(ctx, bson.M{"_id": postID}).Decode(&post)
 	if err != nil {
@@ -146,7 +180,13 @@ func (r *PostRepository) GetPostByID(ctx context.Context, postID primitive.Objec
 
 // GetFeed retrieves posts from users that the given user follows, sorted by timestamp
 func (r *PostRepository) GetFeed(ctx context.Context, followingIDs []primitive.ObjectID, limit int64) ([]models.Post, error) {
-	filter := bson.M{"author_id": bson.M{"$in": followingIDs}}
+	filter := bson.M{
+		"author_id": bson.M{"$in": followingIDs},
+		"$or": []bson.M{
+			{"status": "active"},
+			{"status": bson.M{"$exists": false}},
+		},
+	}
 	opts := options.Find().
 		SetSort(bson.D{{Key: "created_at", Value: -1}}).
 		SetLimit(limit)
@@ -167,7 +207,13 @@ func (r *PostRepository) GetFeed(ctx context.Context, followingIDs []primitive.O
 
 // GetPostsByAuthor retrieves posts by a specific author
 func (r *PostRepository) GetPostsByAuthor(ctx context.Context, authorID primitive.ObjectID, limit int64) ([]models.Post, error) {
-	filter := bson.M{"author_id": authorID}
+	filter := bson.M{
+		"author_id": authorID,
+		"$or": []bson.M{
+			{"status": "active"},
+			{"status": bson.M{"$exists": false}},
+		},
+	}
 	opts := options.Find().
 		SetSort(bson.D{{Key: "created_at", Value: -1}}).
 		SetLimit(limit)
@@ -189,7 +235,12 @@ func (r *PostRepository) GetPostsByAuthor(ctx context.Context, authorID primitiv
 // GetAllPosts retrieves all posts sorted by timestamp (newest first)
 // GetAllPosts retrieves all posts sorted by timestamp (newest first), excluding specific authors
 func (r *PostRepository) GetAllPosts(ctx context.Context, excludeIDs []primitive.ObjectID, limit int64) ([]models.Post, error) {
-	filter := bson.M{}
+	filter := bson.M{
+		"$or": []bson.M{
+			{"status": "active"},
+			{"status": bson.M{"$exists": false}},
+		},
+	}
 	if len(excludeIDs) > 0 {
 		filter["author_id"] = bson.M{"$nin": excludeIDs}
 	}
@@ -214,7 +265,13 @@ func (r *PostRepository) GetAllPosts(ctx context.Context, excludeIDs []primitive
 
 // GetPostsByAuthors retrieves posts from specific authors sorted by timestamp (newest first)
 func (r *PostRepository) GetPostsByAuthors(ctx context.Context, authorIDs []primitive.ObjectID, limit int64) ([]models.Post, error) {
-	filter := bson.M{"author_id": bson.M{"$in": authorIDs}}
+	filter := bson.M{
+		"author_id": bson.M{"$in": authorIDs},
+		"$or": []bson.M{
+			{"status": "active"},
+			{"status": bson.M{"$exists": false}},
+		},
+	}
 	opts := options.Find().
 		SetSort(bson.D{{Key: "created_at", Value: -1}}).
 		SetLimit(limit)
@@ -235,7 +292,13 @@ func (r *PostRepository) GetPostsByAuthors(ctx context.Context, authorIDs []prim
 
 // GetPostsExcludingAuthors retrieves posts excluding specific authors sorted by timestamp (newest first)
 func (r *PostRepository) GetPostsExcludingAuthors(ctx context.Context, excludeIDs []primitive.ObjectID, limit int64) ([]models.Post, error) {
-	filter := bson.M{"author_id": bson.M{"$nin": excludeIDs}}
+	filter := bson.M{
+		"author_id": bson.M{"$nin": excludeIDs},
+		"$or": []bson.M{
+			{"status": "active"},
+			{"status": bson.M{"$exists": false}},
+		},
+	}
 	opts := options.Find().
 		SetSort(bson.D{{Key: "created_at", Value: -1}}).
 		SetLimit(limit)
@@ -569,7 +632,14 @@ func (r *PostRepository) CheckIfSaved(ctx context.Context, postID, userID primit
 func (r *PostRepository) CreateReport(ctx context.Context, report *models.ReportedPost) error {
 	report.CreatedAt = time.Now()
 	report.Status = "pending"
-	_, err := r.reports.InsertOne(ctx, report)
+	
+	// Create the report
+	if _, err := r.reports.InsertOne(ctx, report); err != nil {
+		return err
+	}
+
+	// Determine status for the post (immediately put under review)
+	_, err := r.posts.UpdateOne(ctx, bson.M{"_id": report.PostID}, bson.M{"$set": bson.M{"status": "under_review"}})
 	return err
 }
 
@@ -611,6 +681,22 @@ func (r *PostRepository) GetReportedPostIDsByUser(ctx context.Context, userID pr
 // DeleteReport deletes a report
 func (r *PostRepository) DeleteReport(ctx context.Context, reportID primitive.ObjectID) error {
 	_, err := r.reports.DeleteOne(ctx, bson.M{"_id": reportID})
+	return err
+}
+
+// GetReportByID retrieves a single report by ID
+func (r *PostRepository) GetReportByID(ctx context.Context, reportID primitive.ObjectID) (*models.ReportedPost, error) {
+	var report models.ReportedPost
+	err := r.reports.FindOne(ctx, bson.M{"_id": reportID}).Decode(&report)
+	if err != nil {
+		return nil, err
+	}
+	return &report, nil
+}
+
+// UpdatePostStatus updates the status of a post
+func (r *PostRepository) UpdatePostStatus(ctx context.Context, postID primitive.ObjectID, status string) error {
+	_, err := r.posts.UpdateOne(ctx, bson.M{"_id": postID}, bson.M{"$set": bson.M{"status": status}})
 	return err
 }
 
