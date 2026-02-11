@@ -105,12 +105,9 @@ export const SignupPage: React.FC = () => {
 
         try {
             await authApi.signup(formData);
-            const loginResponse = await authApi.login({
-                email: formData.email,
-                password: formData.password,
-            });
-            setAuth(loginResponse.user, loginResponse.token);
-            navigate('/dashboard');
+            // After successful signup, redirect to login
+            // We don't auto-login here because 2FA might be enabled or regular validation might be needed
+            navigate('/login', { state: { email: formData.email, signupSuccess: true } });
         } catch (error) {
             const errorMessage = error && typeof error === 'object' && 'response' in error
                 ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
@@ -121,7 +118,7 @@ export const SignupPage: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4">
+        <div className="min-h-screen bg-background flex items-center justify-center p-4">
             <div className={cn(
                 "relative w-full transition-all duration-700 ease-in-out flex flex-col md:flex-row gap-8 items-stretch",
                 step === 1 ? "max-w-xl" : "max-w-5xl"
@@ -139,7 +136,7 @@ export const SignupPage: React.FC = () => {
                         <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-primary to-primary/50 flex items-center justify-center shadow-lg shadow-primary/20 mb-4">
                             <Globe className="w-6 h-6 text-primary-foreground" />
                         </div>
-                        <h1 className="text-4xl font-extrabold tracking-tight text-white lg:text-5xl">
+                        <h1 className="text-4xl font-extrabold tracking-tight text-foreground lg:text-5xl">
                             Join the <span className="text-primary italic">Federation</span>
                         </h1>
                         <p className="text-lg text-muted-foreground">
@@ -164,17 +161,17 @@ export const SignupPage: React.FC = () => {
                                             "group relative flex items-center gap-4 p-5 rounded-2xl border transition-all duration-300 text-left overflow-hidden",
                                             selectedCommunityId === community.id
                                                 ? "bg-primary/10 border-primary/50 ring-1 ring-primary/20"
-                                                : "bg-[#0a0a0a] border-white/5 hover:border-white/10"
+                                                : "bg-card border-border hover:border-primary/30"
                                         )}
                                     >
                                         <div className={cn(
                                             "w-12 h-12 rounded-xl flex items-center justify-center transition-colors",
-                                            selectedCommunityId === community.id ? "bg-primary text-primary-foreground" : "bg-white/5 text-muted-foreground"
+                                            selectedCommunityId === community.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                                         )}>
                                             <Users className="w-6 h-6" />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <h4 className="font-bold text-white group-hover:text-primary transition-colors">{community.name}</h4>
+                                            <h4 className="font-bold text-foreground group-hover:text-primary transition-colors">{community.name}</h4>
                                             <p className="text-xs text-muted-foreground truncate">{community.description}</p>
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -203,7 +200,7 @@ export const SignupPage: React.FC = () => {
                                         <Users className="w-5 h-5" />
                                     </div>
                                     <div>
-                                        <h4 className="font-bold text-white text-sm">{COMMUNITIES.find(c => c.id === selectedCommunityId)?.name}</h4>
+                                        <h4 className="font-bold text-foreground text-sm">{COMMUNITIES.find(c => c.id === selectedCommunityId)?.name}</h4>
                                         <p className="text-xs text-muted-foreground">{COMMUNITIES.find(c => c.id === selectedCommunityId)?.url}</p>
                                     </div>
                                 </div>
@@ -221,14 +218,14 @@ export const SignupPage: React.FC = () => {
                 {/* Right Side - Form */}
                 {step === 2 && (
                     <div className="flex-1 animate-in fade-in slide-in-from-right-8 duration-700 ease-out">
-                        <div className="bg-[#0a0a0a]/80 backdrop-blur-xl border border-white/5 rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative overflow-hidden h-full">
+                        <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative overflow-hidden h-full">
                             {/* Decorative elements */}
                             <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/20 rounded-full blur-3xl" />
                             <div className="absolute -bottom-24 -left-24 w-32 h-32 bg-primary/10 rounded-full blur-3xl" />
 
                             <div className="relative z-10 flex flex-col h-full">
                                 <div className="mb-8">
-                                    <h2 className="text-2xl font-bold text-white">Account Details</h2>
+                                    <h2 className="text-2xl font-bold text-foreground">Account Details</h2>
                                     <p className="text-sm text-muted-foreground">Fill in the info below to join the community.</p>
                                 </div>
 
@@ -248,7 +245,7 @@ export const SignupPage: React.FC = () => {
                                             onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
                                             required
                                             placeholder="John Doe"
-                                            className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all"
+                                            className="w-full bg-secondary/50 border border-border rounded-2xl p-4 text-foreground focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-muted-foreground/30"
                                         />
                                     </div>
 
@@ -266,8 +263,8 @@ export const SignupPage: React.FC = () => {
                                                 required
                                                 placeholder="your_username"
                                                 className={cn(
-                                                    "w-full bg-white/5 border rounded-2xl p-4 pl-9 text-white focus:outline-none transition-all",
-                                                    usernameError ? "border-destructive/50 ring-destructive/10" : "border-white/10 focus:border-primary/50 focus:ring-primary/10"
+                                                    "w-full bg-secondary/50 border rounded-2xl p-4 pl-9 text-foreground focus:outline-none transition-all placeholder:text-muted-foreground/30",
+                                                    usernameError ? "border-destructive/50 ring-destructive/10" : "border-border focus:border-primary/50 focus:ring-primary/10"
                                                 )}
                                             />
                                             <div className="absolute right-4 top-1/2 -translate-y-1/2">
@@ -287,7 +284,7 @@ export const SignupPage: React.FC = () => {
                                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                             required
                                             placeholder="you@example.com"
-                                            className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all"
+                                            className="w-full bg-secondary/50 border border-border rounded-2xl p-4 text-foreground focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-muted-foreground/30"
                                         />
                                     </div>
 
@@ -300,7 +297,7 @@ export const SignupPage: React.FC = () => {
                                                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                                 required
                                                 placeholder="••••••••"
-                                                className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all"
+                                                className="w-full bg-secondary/50 border border-border rounded-2xl p-4 text-foreground focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-muted-foreground/30"
                                             />
                                         </div>
                                         <div className="space-y-1.5">
@@ -311,7 +308,7 @@ export const SignupPage: React.FC = () => {
                                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                                 required
                                                 placeholder="••••••••"
-                                                className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all"
+                                                className="w-full bg-secondary/50 border border-border rounded-2xl p-4 text-foreground focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-muted-foreground/30"
                                             />
                                         </div>
                                     </div>

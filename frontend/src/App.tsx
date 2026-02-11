@@ -103,7 +103,7 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 // 4. Auto-logout and activity tracking wrappers
 
 const AppContent: React.FC = () => {
-    const { isAuthenticated, user, token, setAuth, clearAuth, clearAllSessions } = useAuthStore();
+    const { isAuthenticated, user, token, setAuth, clearAuth, clearAllSessions, sessions, removeAccount } = useAuthStore();
 
     // Session Sync: Ensure user data and token are fresh
     // This runs on mount/auth-change to validate the stored token against the backend
@@ -127,14 +127,29 @@ const AppContent: React.FC = () => {
         return () => window.removeEventListener('focus', sync);
     }, [isAuthenticated, token, setAuth]);
 
-    // Safety Valve: Recover from corrupted login state without wiping other background sessions
-    // Checks if we have an "authenticated" flag but missing critical user data
+    // Safety Valve: Recover from corrupted login state and purge invalid sessions
+    // Checks if we have an "authenticated" flag but missing critical user data, or if any background session is corrupt
     useEffect(() => {
-        if (isAuthenticated && (!user || !user.id || !user.username)) {
+        const hasCorruptActiveSession = isAuthenticated && (!user || !user.id || !user.username);
+        const hasCorruptBackgroundSessions = sessions.some(s => !s.user || !s.user.id);
+
+        if (hasCorruptActiveSession || hasCorruptBackgroundSessions) {
             console.warn("Targeted session recovery triggered for corrupted state.");
-            clearAuth();
+
+            if (hasCorruptBackgroundSessions) {
+                // Remove all sessions that are missing user data
+                sessions.forEach(s => {
+                    if (!s.user || !s.user.id) {
+                        removeAccount(s.user?.id || 'unknown');
+                    }
+                });
+            }
+
+            if (hasCorruptActiveSession) {
+                clearAuth();
+            }
         }
-    }, [isAuthenticated, user, clearAuth]);
+    }, [isAuthenticated, user, sessions, clearAuth, removeAccount]);
 
     return (
         <div className="h-full">
