@@ -115,6 +115,9 @@ func (r *PostRepository) CreateIndexes(ctx context.Context) error {
 	}
 
 	// Index for reports
+	// First, drop the incorrect index if it exists (legacy/buggy index)
+	_, _ = r.reports.Indexes().DropOne(ctx, "reporter_id_1_reported_id_1")
+
 	reportIndexes := []mongo.IndexModel{
 		{
 			Keys: bson.D{

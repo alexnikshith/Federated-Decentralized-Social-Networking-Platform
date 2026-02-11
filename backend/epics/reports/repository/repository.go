@@ -479,3 +479,22 @@ func (r *ReportRepository) IsUserReported(ctx context.Context, reporterID, repor
 	}
 	return count > 0, nil
 }
+
+// CreateIndexes creates necessary indexes for user reports
+func (r *ReportRepository) CreateIndexes(ctx context.Context) error {
+	indexes := []mongo.IndexModel{
+		{
+			Keys: bson.D{
+				{Key: "reporter_id", Value: 1},
+				{Key: "reported_id", Value: 1},
+			},
+			Options: options.Index().SetUnique(true),
+		},
+		{
+			Keys: bson.D{{Key: "created_at", Value: -1}},
+		},
+	}
+
+	_, err := r.reportsCollection.Indexes().CreateMany(ctx, indexes)
+	return err
+}
