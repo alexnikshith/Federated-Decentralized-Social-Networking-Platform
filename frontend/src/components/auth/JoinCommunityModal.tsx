@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +12,7 @@ import {
 import { Globe, ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react";
 import axios from "axios";
 import { toast } from "sonner";
+import { Check } from "lucide-react";
 import { useAuthStore } from "../../../epics/identity/store/authStore";
 import type { User } from "../../../epics/identity/types";
 
@@ -34,6 +35,7 @@ export const JoinCommunityModal = ({
 }: JoinCommunityModalProps) => {
     const [step, setStep] = useState<'register' | 'login' | 'otp'>(initialStep);
     const [username, setUsername] = useState("");
+    const [displayName, setDisplayName] = useState("");
     const [emailInput, setEmailInput] = useState(currentUserEmail);
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -41,31 +43,80 @@ export const JoinCommunityModal = ({
     const setAuth = useAuthStore((state) => state.setAuth);
     const [otp, setOtp] = useState("");
 
+    // Username validation states
+    const [usernameError, setUsernameError] = useState('');
+    const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+    const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+
     // Sync prop to state if it loads late
     useEffect(() => {
         if (currentUserEmail) setEmailInput(currentUserEmail);
     }, [currentUserEmail]);
 
-    if (!targetCommunity) return null;
-
     // Create a temporary API client for the target server
-    const api = axios.create({
-        baseURL: targetCommunity.url,
+    const api = useMemo(() => axios.create({
+        baseURL: targetCommunity?.url || '',
         headers: {
             'Content-Type': 'application/json'
         }
-    });
+    }), [targetCommunity?.url]);
 
     const activeEmail = currentUserEmail || emailInput;
     const isPreFilled = !!currentUserEmail;
 
+    // Real-time username check with debounce
+    useEffect(() => {
+        if (!username) {
+            setUsernameError('');
+            setUsernameAvailable(null);
+            return;
+        }
+
+        if (username.includes(' ')) {
+            setUsernameError('Username cannot contain spaces');
+            setUsernameAvailable(null);
+            return;
+        }
+
+        if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+            setUsernameError('Only letters, numbers and underscores allowed');
+            setUsernameAvailable(null);
+            return;
+        }
+
+        setUsernameError('');
+        const timer = setTimeout(async () => {
+            setIsCheckingUsername(true);
+            try {
+                // Check against the target community's API
+                const response = await api.post('/api/auth/check-username', { username });
+                const taken = response.data.exists;
+                setUsernameAvailable(!taken);
+                if (taken) {
+                    setUsernameError('This username is already taken');
+                }
+            } catch (err) {
+                console.error('Failed to check username', err);
+                // Fallback: assume available if check fails to avoid blocking, or show warning
+            } finally {
+                setIsCheckingUsername(false);
+            }
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [username, api]);
+
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (usernameError || usernameAvailable === false) return;
+
         setIsLoading(true);
 
         try {
             const response = await api.post('/api/auth/signup', {
                 username,
+                display_name: displayName,
                 email: activeEmail,
                 password,
                 instance: targetCommunity.url
@@ -192,6 +243,8 @@ export const JoinCommunityModal = ({
         }
     };
 
+    if (!targetCommunity) return null;
+
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <DialogContent className="sm:max-w-[425px]">
@@ -229,20 +282,43 @@ export const JoinCommunityModal = ({
                     ) : (
                         <>
                             {step === 'register' && (
-                                <div className="space-y-2">
-                                    <Label htmlFor="username">Username</Label>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-muted-foreground">@</span>
+                                <>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="display_name">Display Name</Label>
                                         <Input
-                                            id="username"
-                                            value={username}
-                                            onChange={(e) => setUsername(e.target.value)}
-                                            placeholder="username"
-                                            className="flex-1"
+                                            id="display_name"
+                                            value={displayName}
+                                            onChange={(e) => setDisplayName(e.target.value)}
+                                            placeholder="John Doe"
                                             required
                                         />
                                     </div>
-                                </div>
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <Label htmlFor="username">Username</Label>
+                                            {isCheckingUsername && <Loader2 className="w-3 h-3 text-primary animate-spin" />}
+                                        </div>
+                                        <div className="relative">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 z-10">@</span>
+                                                <Input
+                                                    id="username"
+                                                    value={username}
+                                                    onChange={(e) => setUsername(e.target.value.toLowerCase())}
+                                                    placeholder="username"
+                                                    className={`pl-8 ${usernameError ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                                {usernameAvailable === true && !usernameError && <Check className="w-4 h-4 text-emerald-500" />}
+                                            </div>
+                                        </div>
+                                        {usernameError && (
+                                            <p className="text-[10px] font-bold text-destructive animate-in fade-in slide-in-from-top-1 ml-1">{usernameError}</p>
+                                        )}
+                                    </div>
+                                </>
                             )}
 
                             <div className="space-y-2">
@@ -289,7 +365,7 @@ export const JoinCommunityModal = ({
                     )}
 
                     <div className="pt-2">
-                        <Button type="submit" className="w-full" disabled={isLoading}>
+                        <Button type="submit" className="w-full" disabled={isLoading || (step === 'register' && (!!usernameError || usernameAvailable === false))}>
                             {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                             {step === 'register' ? 'Create Account' : (step === 'login' ? 'Sign In' : 'Verify')}
                         </Button>
