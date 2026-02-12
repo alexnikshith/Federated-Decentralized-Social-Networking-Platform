@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useContentStore } from '../store/contentStore';
 import { Button } from '@/components/ui/button';
 import { Send, Image, Hash, AtSign, X } from 'lucide-react';
@@ -317,7 +318,7 @@ export const CreatePost: React.FC = () => {
                     )}
 
                     {/* Floating Mention List */}
-                    {showMentions && (
+                    {showMentions && createPortal(
                         <div
                             className="fixed z-[9999] bg-card border border-border shadow-2xl rounded-xl p-2 w-64 animate-in fade-in zoom-in-95 duration-200"
                             style={{
@@ -353,7 +354,8 @@ export const CreatePost: React.FC = () => {
                                     <div className="py-4 text-center text-xs text-muted-foreground italic">No users found</div>
                                 )}
                             </div>
-                        </div>
+                        </div>,
+                        document.body
                     )}
 
                     <div className="flex items-center justify-between pt-2 border-t border-border/30">

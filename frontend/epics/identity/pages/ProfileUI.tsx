@@ -61,6 +61,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format, subDays, isToday, isYesterday, isSameDay } from "date-fns";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { COMMUNITIES, DEFAULT_COMMUNITY } from "@/config/communities";
 
 interface UserListModalProps {
   isOpen: boolean;
@@ -190,9 +191,16 @@ const ProfileUI = () => {
   };
 
   // Load Initial Profile Data
+  // Load Initial Profile Data
   useEffect(() => {
-    loadProfileData();
-  }, [username, isOwnProfile, currentUser]);
+    // Soft reload if we already have the correct user data
+    const isDataLoaded = profileUser && (
+      (isOwnProfile && profileUser.id === currentUser?.id) ||
+      (!isOwnProfile && profileUser.username === username)
+    );
+
+    loadProfileData(!isDataLoaded);
+  }, [username, isOwnProfile, currentUser?.id]);
 
   // Handle scrolling to target post (deep linking)
   useEffect(() => {
@@ -586,7 +594,16 @@ const ProfileUI = () => {
                     <span className="font-medium">@{profileUser.username}</span>
                     <span className="instance-badge bg-secondary/50 text-secondary-foreground flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border border-border/50">
                       <Globe className="w-3 h-3" />
-                      {profileUser.instance || "nexus.social"}
+                      {(() => {
+                        const instance = profileUser.instance;
+                        if (instance && instance !== "nexus.social") {
+                          const known = COMMUNITIES.find(c => c.url.includes(instance) || c.name === instance);
+                          return known ? known.name : instance;
+                        }
+                        const savedCommId = localStorage.getItem('active_community_id');
+                        const currentComm = COMMUNITIES.find(c => c.id === savedCommId) || DEFAULT_COMMUNITY;
+                        return currentComm.name;
+                      })()}
                     </span>
                   </div>
                 </div>
