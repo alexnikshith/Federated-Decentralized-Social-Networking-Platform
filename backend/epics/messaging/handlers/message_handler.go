@@ -140,3 +140,19 @@ func (h *MessageHandler) MarkConversationAsRead(w http.ResponseWriter, r *http.R
 
 	respondSuccess(w, "Messages marked as read", nil, http.StatusOK)
 }
+
+func (h *MessageHandler) ReceiveRemoteMessage(w http.ResponseWriter, r *http.Request) {
+	var req dto.ReceiveRemoteMessageRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	msg, err := h.service.ReceiveRemoteMessage(r.Context(), req)
+	if err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondSuccess(w, "Remote message received", msg, http.StatusCreated)
+}

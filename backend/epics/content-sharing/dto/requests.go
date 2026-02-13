@@ -23,3 +23,14 @@ type ReportPostRequest struct {
 type PostInteractionRequest struct {
 	Type string `json:"type" binding:"required,oneof=interested not_interested"`
 }
+
+// CreateRemoteNotificationRequest represents a notification request from another community
+type CreateRemoteNotificationRequest struct {
+	UserID            string `json:"user_id" binding:"required"`
+	RelatedUserID     string `json:"related_user_id" binding:"required"`
+	Type              string `json:"type" binding:"required"`
+	RelatedEntityID   string `json:"related_entity_id,omitempty"`
+	RelatedUserName   string `json:"related_user_name,omitempty"`
+	RelatedUserAvatar string `json:"related_user_avatar,omitempty"`
+	Content           string `json:"content,omitempty"`
+}

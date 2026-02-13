@@ -10,6 +10,8 @@ interface ContentState {
     error: string | null;
 
     // Actions
+    feedType: 'home' | 'public';
+    setFeedType: (type: 'home' | 'public') => void;
     fetchFeed: () => Promise<void>;
     createPost: (content: string, mediaUrl?: string, mediaType?: 'image' | 'video' | string) => Promise<void>;
     likePost: (postId: string) => Promise<void>;
@@ -29,17 +31,21 @@ interface ContentState {
 // useContentStore manages the state for the feed, posts, and notifications
 // It handles optimistic updates for UI responsiveness
 export const useContentStore = create<ContentState>((set, get) => ({
+    feedType: 'home',
     posts: [],
     notifications: [],
     unreadCount: 0,
     loading: false,
     error: null,
 
-    // Fetches the main activity feed
+    // Sets the feed type
+    setFeedType: (type) => set({ feedType: type }),
+
+    // Fetches the main activity feed based on current feedType
     fetchFeed: async () => {
         set({ loading: true, error: null });
         try {
-            const feed = await api.getFeed();
+            const feed = await api.getFeed(get().feedType);
             set({ posts: feed.posts, loading: false });
         } catch (error) {
             set({ error: error.response?.data?.message || 'Failed to fetch feed', loading: false });

@@ -99,8 +99,8 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
         return Array.from(unique.values());
     }, [sessions, user, activeCommunityId]);
 
-    // If on landing page, don't show navigation
-    if (location.pathname === "/") {
+    // If on landing page or about page, don't show navigation
+    if (location.pathname === "/" || location.pathname === "/about") {
         return <>{children}</>;
     }
 
@@ -385,7 +385,9 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
             </Sidebar>
 
             <div className={cn(
-                "flex-1 min-h-screen transition-all duration-300 pb-32 relative",
+                "flex-1 min-h-screen transition-all duration-300 relative",
+                // Remove padding for messages to allow it to fill viewport
+                location.pathname !== "/messages" && "pb-32",
                 // Ensure margin accounts for fixed sidebar width to prevent overlap
                 "md:ml-[60px]",
                 (open || isDropdownOpen) && "md:ml-[240px]"

@@ -23,6 +23,8 @@ type PostResponse struct {
 	MentionedUsernames []string           `json:"mentioned_usernames,omitempty"`
 	CreatedAt          time.Time          `json:"created_at"`
 	UpdatedAt          time.Time          `json:"updated_at"`
+	AuthorInstance     string             `json:"author_instance,omitempty"`
+	IsRemote           bool               `json:"is_remote,omitempty"`
 }
 
 // CommentResponse represents a comment with user information

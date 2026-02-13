@@ -159,3 +159,23 @@ func (r *RemotePostRepository) DeleteRemotePostsByInstance(ctx context.Context, 
 	_, err := r.remotePosts.DeleteMany(ctx, bson.M{"origin_instance": instance})
 	return err
 }
+
+// GetRemotePostsByAuthors retrieves remote posts authored by specific actor IDs
+func (r *RemotePostRepository) GetRemotePostsByAuthors(ctx context.Context, actorIDs []string, limit int64) ([]models.RemotePost, error) {
+	filter := bson.M{"author_actor_id": bson.M{"$in": actorIDs}}
+	opts := options.Find().
+		SetSort(bson.D{{Key: "created_at", Value: -1}}).
+		SetLimit(limit)
+
+	cursor, err := r.remotePosts.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var posts []models.RemotePost
+	if err := cursor.All(ctx, &posts); err != nil {
+		return nil, err
+	}
+	return posts, nil
+}

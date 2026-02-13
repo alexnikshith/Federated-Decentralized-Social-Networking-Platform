@@ -1,12 +1,17 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"federated-social/backend/config"
 	"federated-social/backend/epics/federation/models"
 	"federated-social/backend/epics/federation/service"
+	"federated-social/backend/middleware"
+	"fmt"
 	"log"
 	"net/http"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type FederationHandler struct {
@@ -50,7 +55,8 @@ func (h *FederationHandler) ReceiveActivity(w http.ResponseWriter, r *http.Reque
 
 	// Handle activity asynchronously
 	go func() {
-		ctx := r.Context()
+		// Use background context since request context will be cancelled when handler returns
+		ctx := context.Background()
 		if err := h.federationService.HandleIncomingActivity(ctx, &envelope); err != nil {
 			log.Printf("Error handling incoming activity: %v", err)
 		}
@@ -97,4 +103,104 @@ func (h *FederationHandler) GetTrustedInstances(w http.ResponseWriter, r *http.R
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
+}
+
+// ResolveUser finds and returns information about a remote user
+// POST /api/federation/users/resolve
+// Protected endpoint
+func (h *FederationHandler) ResolveUser(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Handle string `json:"handle"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if body.Handle == "" {
+		http.Error(w, "Handle is required", http.StatusBadRequest)
+		return
+	}
+
+	remoteUser, err := h.federationService.ResolveRemoteUser(r.Context(), body.Handle)
+	if err != nil {
+		log.Printf("Resolve failed: %v", err)
+		// Return 404 or 500 depending on error, but simple error message here
+		http.Error(w, fmt.Sprintf("Failed to resolve user: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Convert to PublicUser format for frontend compatibility
+	response := map[string]interface{}{
+		"id":           remoteUser.ID.Hex(),
+		"username":     remoteUser.Username,
+		"display_name": remoteUser.DisplayName,
+		"bio":          remoteUser.Bio,
+		"avatar_url":   remoteUser.AvatarURL,
+		"instance":     remoteUser.Instance,
+		"created_at":   remoteUser.CreatedAt,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// FollowRemoteUser initiates a follow request to a remote user
+// POST /api/federation/users/follow
+// Protected endpoint
+func (h *FederationHandler) FollowRemoteUser(w http.ResponseWriter, r *http.Request) {
+	// Parse input
+	var body struct {
+		Handle string `json:"handle"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if body.Handle == "" {
+		http.Error(w, "handle is required", http.StatusBadRequest)
+		return
+	}
+
+	// Detect local user
+	ctx := r.Context()
+	userIDVal := ctx.Value(middleware.UserIDKey)
+
+	if userIDVal == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	userIDStr, ok := userIDVal.(string)
+	if !ok {
+		http.Error(w, "Invalid user ID in context", http.StatusInternalServerError)
+		return
+	}
+
+	localUserID, err := primitive.ObjectIDFromHex(userIDStr)
+	if err != nil {
+		http.Error(w, "Invalid user ID format", http.StatusBadRequest)
+		return
+	}
+
+	// Resolve the remote user first to ensure we have latest info/object
+	remoteUser, err := h.federationService.ResolveRemoteUser(ctx, body.Handle)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to resolve user before following: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	// Trigger follow
+	if err := h.federationService.FollowRemoteUser(ctx, localUserID, remoteUser); err != nil {
+		http.Error(w, fmt.Sprintf("Failed to follow user: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":  "success",
+		"message": fmt.Sprintf("Follow request sent to %s", body.Handle),
+	})
 }

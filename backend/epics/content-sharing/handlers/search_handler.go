@@ -2,8 +2,11 @@ package handlers
 
 import (
 	"federated-social/backend/epics/content-sharing/service"
+	"federated-social/backend/middleware"
 	"net/http"
 	"strconv"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type SearchHandler struct {
@@ -32,7 +35,13 @@ func (h *SearchHandler) SearchUsers(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	users, err := h.searchService.SearchUsers(r.Context(), query, limit)
+	// Get requesting user ID if authenticated (OptionalAuth middleware allows this)
+	var requestingUserID *primitive.ObjectID
+	if uid := middleware.GetUserIDFromContext(r.Context()); uid != primitive.NilObjectID {
+		requestingUserID = &uid
+	}
+
+	users, err := h.searchService.SearchUsers(r.Context(), query, limit, requestingUserID)
 	if err != nil {
 		respondError(w, err.Error(), http.StatusInternalServerError)
 		return

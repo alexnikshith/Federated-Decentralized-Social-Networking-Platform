@@ -80,6 +80,7 @@ func (s *AuthService) Signup(ctx context.Context, req dto.SignupRequest) (*model
 		Is2FAEnabled:      true,
 		IsActive:          true,
 		Role:              "user",
+		IsDiscoverable:    req.IsDiscoverable,
 	}
 
 	if err := s.userRepo.CreateUser(ctx, user); err != nil {
