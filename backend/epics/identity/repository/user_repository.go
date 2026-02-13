@@ -235,3 +235,20 @@ func (r *UserRepository) FindAll(ctx context.Context) ([]models.User, error) {
 	}
 	return users, nil
 }
+
+// MigrateGlobalDiscovery sets IsDiscoverable to true for users who don't have the field set (legacy users)
+func (r *UserRepository) MigrateGlobalDiscovery(ctx context.Context) error {
+	// Only update users where the field does not exist
+	filter := bson.M{"is_discoverable": bson.M{"$exists": false}}
+	update := bson.M{"$set": bson.M{"is_discoverable": true}}
+
+	result, err := r.collection.UpdateMany(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+
+	if result.ModifiedCount > 0 {
+		log.Printf("Migration: Enabled global discovery for %d users", result.ModifiedCount)
+	}
+	return nil
+}

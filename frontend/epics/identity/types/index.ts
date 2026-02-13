@@ -7,6 +7,7 @@ export interface User {
     bio: string;
     avatar_url: string;
     profile_visibility: 'public' | 'followers' | 'private';
+    is_discoverable?: boolean;
     created_at: string;
     location?: string;
     website?: string;
@@ -50,6 +51,7 @@ export interface SignupRequest {
     password: string;
     display_name?: string;
     instance?: string;
+    is_discoverable?: boolean;
 }
 
 export interface LoginResponse {
@@ -64,6 +66,7 @@ export interface UpdateProfileRequest {
     bio?: string;
     avatar_url?: string;
     profile_visibility?: 'public' | 'followers' | 'private';
+    is_discoverable?: boolean;
 }
 
 export interface ChangePasswordRequest {

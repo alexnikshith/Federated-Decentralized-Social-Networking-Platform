@@ -8,12 +8,17 @@ import (
 	"federated-social/backend/epics/content-sharing/models"
 	"federated-social/backend/epics/content-sharing/repository"
 	federationService "federated-social/backend/epics/federation/service"
+	identityModels "federated-social/backend/epics/identity/models"
 	reportRepo "federated-social/backend/epics/reports/repository"
 	safetyRepo "federated-social/backend/epics/safety/repository"
 	safetyService "federated-social/backend/epics/safety/service"
 	"log"
 	"regexp"
+	"sort"
+	"strings"
 	"time"
+
+	fedModels "federated-social/backend/epics/federation/models"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -72,19 +77,28 @@ func (s *PostService) CreatePost(ctx context.Context, userID primitive.ObjectID,
 		if err == nil && users[userID] != nil {
 			user := users[userID]
 
-			// Broadcast to all trusted instances asynchronously
+			// Broadcast to instances with followers asynchronously
 			go func() {
-				instances, err := s.federationService.GetTrustedInstances(context.Background())
+				// Get unique instances where this user has followers
+				instances, err := s.federationService.GetFollowerInstances(context.Background(), userID)
 				if err != nil {
-					log.Printf("Failed to get trusted instances: %v", err)
+					log.Printf("Failed to get follower instances for federation: %v", err)
 					return
 				}
 
-				for _, instance := range instances {
-					if err := s.federationService.SendCreatePost(context.Background(), post, user, instance.Domain); err != nil {
-						log.Printf("Federation to %s failed for post %s: %v", instance.Domain, post.ID.Hex(), err)
+				if len(instances) == 0 {
+					log.Printf("No remote followers found for user %s, skipping federation", user.Username)
+					return
+				}
+
+				for _, domain := range instances {
+					// Validate instance is trusted/known before sending?
+					// Ideally yes, but GetFollowerInstances comes from our DB of accepted followers.
+
+					if err := s.federationService.SendCreatePost(context.Background(), post, user, domain); err != nil {
+						log.Printf("Federation to %s failed for post %s: %v", domain, post.ID.Hex(), err)
 					} else {
-						log.Printf("Federation to %s succeeded for post %s", instance.Domain, post.ID.Hex())
+						log.Printf("Federation to %s succeeded for post %s", domain, post.ID.Hex())
 					}
 				}
 			}()
@@ -94,12 +108,9 @@ func (s *PostService) CreatePost(ctx context.Context, userID primitive.ObjectID,
 	return post, nil
 }
 
-// GetFeed retrieves the feed for a user with prioritized algorithm
-// Shows posts from followed users first (newest), then posts from everyone else.
-// It respects block lists and hidden/reported posts.
-// The feed composition is: 1. Main Feed (Followed Users + Global) 2. "Interested" Recommendations boosted/interleaved.
-func (s *PostService) GetFeed(ctx context.Context, userID primitive.ObjectID, limit int64) (*dto.FeedResponse, error) {
-	log.Printf("DEBUG GetFeed: Starting prioritized feed retrieval for user %v, limit=%d", userID, limit)
+// GetFeed retrieves the feed based on type: "home" (followed + remote followed) or "public" (local all)
+func (s *PostService) GetFeed(ctx context.Context, userID primitive.ObjectID, limit int64, feedType string) (*dto.FeedResponse, error) {
+	log.Printf("DEBUG GetFeed: Starting feed retrieval for user %v, limit=%d, type=%s", userID, limit, feedType)
 
 	// Get blocking info (bidirectional)
 	blockedIDs, err := s.blockService.GetHiddenUserIDs(ctx, userID)
@@ -111,7 +122,6 @@ func (s *PostService) GetFeed(ctx context.Context, userID primitive.ObjectID, li
 	// Also hide users that you have reported
 	reportedUserIDs, _ := s.reportRepo.GetReportedUserIDs(ctx, userID)
 	if len(reportedUserIDs) > 0 {
-		log.Printf("DEBUG GetFeed: Adding %d reported users to hidden list", len(reportedUserIDs))
 		blockedIDs = append(blockedIDs, reportedUserIDs...)
 	}
 
@@ -120,125 +130,158 @@ func (s *PostService) GetFeed(ctx context.Context, userID primitive.ObjectID, li
 		blockedMap[id] = true
 	}
 
-	// Get hidden post IDs (only not interested)
-	// Reported posts are now handled by DB status="under_review"
-	notInterestedIDs, _ := s.postRepo.GetHiddenPostIDsByUser(ctx, userID)
-	hiddenPostMap := make(map[primitive.ObjectID]bool)
-	for _, id := range notInterestedIDs {
-		hiddenPostMap[id] = true
-	}
+	var finalPosts []dto.PostResponse
 
-	// Get list of users the current user follows
-	followingIDs, err := s.followRepo.GetFollowingIDs(ctx, userID)
-	if err != nil {
-		log.Printf("ERROR GetFeed: Failed to get following list: %v", err)
-		return nil, err
-	}
-
-	// Filter blocked users from following list
-	var activeFollowing []primitive.ObjectID
-	for _, id := range followingIDs {
-		if !blockedMap[id] {
-			activeFollowing = append(activeFollowing, id)
-		}
-	}
-	log.Printf("DEBUG GetFeed: User follows %d users (%d active)", len(followingIDs), len(activeFollowing))
-
-	var allPosts []models.Post
-
-	if len(activeFollowing) > 0 {
-		// User follows active users - use prioritized algorithm
-		log.Printf("DEBUG GetFeed: Fetching posts from followed users")
-
-		// Get posts from followed users (newest first)
-		followedPosts, err := s.postRepo.GetPostsByAuthors(ctx, activeFollowing, limit)
+	if feedType == "home" {
+		// 1. Local Following
+		followingIDs, err := s.followRepo.GetFollowingIDs(ctx, userID)
 		if err != nil {
-			log.Printf("ERROR GetFeed: Failed to get posts from followed users: %v", err)
 			return nil, err
 		}
-		log.Printf("DEBUG GetFeed: Retrieved %d posts from followed users", len(followedPosts))
 
-		// Calculate exclusions: activeFollowing + blockedIDs
-		exclusions := append([]primitive.ObjectID{}, activeFollowing...)
-		exclusions = append(exclusions, blockedIDs...)
-
-		// Get posts from everyone else (newest first)
-		otherPosts, err := s.postRepo.GetPostsExcludingAuthors(ctx, exclusions, limit)
-		if err != nil {
-			log.Printf("ERROR GetFeed: Failed to get posts from other users: %v", err)
-			return nil, err
+		// Filter blocked users from following list
+		var activeFollowing []primitive.ObjectID
+		for _, id := range followingIDs {
+			if !blockedMap[id] {
+				activeFollowing = append(activeFollowing, id)
+			}
 		}
-		log.Printf("DEBUG GetFeed: Retrieved %d posts from other users", len(otherPosts))
 
-		// Combine: followed posts first, then other posts
-		allPosts = append(followedPosts, otherPosts...)
-		log.Printf("DEBUG GetFeed: Combined total: %d posts", len(allPosts))
+		var localResponses []dto.PostResponse
+		if len(activeFollowing) > 0 {
+			localPosts, err := s.postRepo.GetPostsByAuthors(ctx, activeFollowing, limit)
+			if err == nil {
+				localResponses, _ = s.enrichPosts(ctx, localPosts, userID)
+			}
+		}
 
-		// Add "Interested" recommendations: posts from authors user is "interested" in
-		interestedAuthorIDs, _ := s.postRepo.GetInterestedAuthorIDsByUser(ctx, userID)
-		if len(interestedAuthorIDs) > 0 {
-			recommendedPosts, err := s.postRepo.GetPostsByAuthors(ctx, interestedAuthorIDs, 5) // Get top 5 newest
-			if err == nil && len(recommendedPosts) > 0 {
-				// Interleave or prepend some recommended posts if they aren't already there
-				postMap := make(map[primitive.ObjectID]bool)
-				for _, p := range allPosts {
-					postMap[p.ID] = true
+		// 2. Remote Following
+		var remoteResponses []dto.PostResponse
+		if s.federationService != nil {
+			remoteFollows, err := s.federationService.GetRemoteFollowing(ctx, userID)
+			if err == nil && len(remoteFollows) > 0 {
+				var actorIDs []string
+				for _, rf := range remoteFollows {
+					actorIDs = append(actorIDs, rf.RemoteActorID)
 				}
 
-				newRecs := make([]models.Post, 0)
-				for _, p := range recommendedPosts {
-					if !postMap[p.ID] {
-						newRecs = append(newRecs, p)
+				if len(actorIDs) > 0 {
+					remotePosts, err := s.federationService.GetRemotePostsByAuthors(ctx, actorIDs, limit)
+					if err == nil {
+						remoteResponses, _ = s.enrichRemotePosts(ctx, remotePosts, userID)
 					}
-				}
-
-				if len(newRecs) > 0 {
-					// Prepend up to 3 recommendations to boost them
-					allPosts = append(newRecs[:min(len(newRecs), 3)], allPosts...)
 				}
 			}
 		}
 
+		// Merge
+		finalPosts = append(localResponses, remoteResponses...)
+
+		// Sort by CreatedAt desc
+		sort.Slice(finalPosts, func(i, j int) bool {
+			return finalPosts[i].CreatedAt.After(finalPosts[j].CreatedAt)
+		})
+
 		// Trim to limit
-		if int64(len(allPosts)) > limit {
-			allPosts = allPosts[:limit]
-			log.Printf("DEBUG GetFeed: Trimmed to limit: %d posts", len(allPosts))
+		if int64(len(finalPosts)) > limit {
+			finalPosts = finalPosts[:limit]
 		}
+
 	} else {
-		// User follows nobody (or only blocked people) - show all posts chronologically (excluding blocks)
-		log.Printf("DEBUG GetFeed: User follows nobody, showing all posts")
-		allPosts, err = s.postRepo.GetAllPosts(ctx, blockedIDs, limit*2) // Fetch more to account for filtering
+		// Public (Local) - Show all posts excluding blocked/hidden AND self
+		blockedIDs = append(blockedIDs, userID)
+
+		allPosts, err := s.postRepo.GetAllPosts(ctx, blockedIDs, limit)
 		if err != nil {
-			log.Printf("ERROR GetFeed: Failed to get all posts: %v", err)
 			return nil, err
 		}
-		log.Printf("DEBUG GetFeed: Retrieved %d posts from all users", len(allPosts))
-	}
 
-	// Filter out hidden posts
-	filteredPosts := make([]models.Post, 0)
-	for _, post := range allPosts {
-		if !hiddenPostMap[post.ID] {
-			filteredPosts = append(filteredPosts, post)
+		// Filter out hidden posts (by ID) if any
+		notInterestedIDs, _ := s.postRepo.GetHiddenPostIDsByUser(ctx, userID)
+		hiddenPostMap := make(map[primitive.ObjectID]bool)
+		for _, id := range notInterestedIDs {
+			hiddenPostMap[id] = true
 		}
-		if int64(len(filteredPosts)) >= limit {
-			break
-		}
-	}
-	allPosts = filteredPosts
 
-	// Enrich posts with author information and like status
-	postResponses, err := s.enrichPosts(ctx, allPosts, userID)
-	if err != nil {
-		log.Printf("ERROR GetFeed: Failed to enrich posts: %v", err)
-		return nil, err
+		var filteredPosts []models.Post
+		for _, p := range allPosts {
+			if !hiddenPostMap[p.ID] {
+				filteredPosts = append(filteredPosts, p)
+			}
+		}
+
+		finalPosts, _ = s.enrichPosts(ctx, filteredPosts, userID)
 	}
-	log.Printf("DEBUG GetFeed: After enrichment, returning %d posts to frontend", len(postResponses))
 
 	return &dto.FeedResponse{
-		Posts: postResponses,
-		Total: len(postResponses),
+		Posts: finalPosts,
+		Total: len(finalPosts),
 	}, nil
+}
+
+// enrichRemotePosts converts RemotePosts to PostResponse
+func (s *PostService) enrichRemotePosts(ctx context.Context, posts []fedModels.RemotePost, currentUserID primitive.ObjectID) ([]dto.PostResponse, error) {
+	if len(posts) == 0 {
+		return []dto.PostResponse{}, nil
+	}
+
+	actorIDs := make([]string, 0)
+	seen := make(map[string]bool)
+	for _, p := range posts {
+		if !seen[p.AuthorActorID] {
+			actorIDs = append(actorIDs, p.AuthorActorID)
+			seen[p.AuthorActorID] = true
+		}
+	}
+
+	remoteUsers, err := s.federationService.GetRemoteUsersByActorIDs(ctx, actorIDs)
+	if err != nil {
+		log.Printf("Error fetching remote users: %v", err)
+	}
+
+	var responses []dto.PostResponse
+	for _, p := range posts {
+		username := p.Author
+
+		avatarURL := ""
+
+		if remoteUsers != nil {
+			if user, ok := remoteUsers[p.AuthorActorID]; ok {
+				username = user.Username
+
+				avatarURL = user.AvatarURL
+			}
+		}
+
+		// Check for mentions or other metadata if available in RemotePost?
+		// Currently RemotePost has minimal fields.
+
+		resp := dto.PostResponse{
+			ID:           p.ID,
+			Content:      p.Content,
+			AuthorID:     primitive.NilObjectID, // No local author ID
+			AuthorName:   username,
+			AuthorAvatar: avatarURL,
+			// We don't have displayName in DTO yet? Check responses.go
+			// DTO has AuthorName. Usually DisplayName is not in DTO?
+			// Client usually uses AuthorName as username or display name?
+			// responses.go only has AuthorName string.
+			// Let's assume AuthorName is display name or username.
+			// Ideally we want both. But DTO is restrictive.
+			// We'll use username for now explicitly.
+
+			CreatedAt:      p.CreatedAt,
+			UpdatedAt:      p.UpdatedAt,
+			LikeCount:      p.LikeCount,
+			CommentCount:   p.CommentCount,
+			AuthorInstance: p.OriginInstance,
+			IsRemote:       true,
+			IsLiked:        false, // Default
+			IsSaved:        false,
+		}
+		responses = append(responses, resp)
+	}
+	return responses, nil
 }
 
 // GetUserPosts retrieves posts for a specific user
@@ -593,34 +636,72 @@ func (s *PostService) getValidUsernamesFromContent(ctx context.Context, content 
 	return nil
 }
 
-// parseAndNotifyMentions scans content for @username, validates them, and creates notifications
+// parseAndNotifyMentions scans content for @username or @username@domain, validates them, and creates notifications
 func (s *PostService) parseAndNotifyMentions(ctx context.Context, content string, authorID, postID primitive.ObjectID) []string {
-	re := regexp.MustCompile(`@(\w+)`)
+	// Support @username and @username@domain
+	re := regexp.MustCompile(`@(\w+)(?:@([\w.-]+))?`)
 	matches := re.FindAllStringSubmatch(content, -1)
 	if len(matches) == 0 {
 		return nil
 	}
 
-	mentionMap := make(map[string]bool)
-	var usernames []string
-	for _, match := range matches {
-		username := match[1]
-		if !mentionMap[username] {
-			mentionMap[username] = true
-			usernames = append(usernames, username)
-		}
+	// Fetch author for notification context
+	authorUsers, _ := s.searchRepo.GetUsersByIDs(ctx, []primitive.ObjectID{authorID})
+	author, ok := authorUsers[authorID]
+	if !ok {
+		return nil
 	}
 
-	if len(usernames) > 0 {
-		mentionedUsers, err := s.searchRepo.GetUsersByUsernames(ctx, usernames)
-		if err == nil {
-			var validUsernames []string
-			for _, mentionedUser := range mentionedUsers {
-				validUsernames = append(validUsernames, mentionedUser.Username)
-				// Don't notify self
-				if mentionedUser.ID != authorID {
+	mentionMap := make(map[string]bool)
+	var validMentions []string
+
+	for _, match := range matches {
+		username := match[1]
+		domain := ""
+		if len(match) > 2 {
+			domain = match[2]
+		}
+
+		fullHandle := username
+		if domain != "" && domain != config.AppConfig.InstanceDomain {
+			fullHandle = username + "@" + domain
+		}
+
+		if mentionMap[fullHandle] {
+			continue
+		}
+		mentionMap[fullHandle] = true
+
+		if domain == "" || domain == config.AppConfig.InstanceDomain {
+			// Local Mention
+			mentionedUsers, err := s.searchRepo.GetUsersByUsernames(ctx, []string{username})
+			if err == nil && len(mentionedUsers) > 1 { // Should only find one but GetUsersByUsernames returns slice
+				// Find EXACT match if possible (case insensitive)
+				var foundLocal *identityModels.User
+				for _, mu := range mentionedUsers {
+					if strings.EqualFold(mu.Username, username) {
+						foundLocal = &mu
+						break
+					}
+				}
+
+				if foundLocal != nil && foundLocal.ID != authorID {
+					validMentions = append(validMentions, foundLocal.Username)
 					notification := &models.Notification{
-						UserID:          mentionedUser.ID,
+						UserID:          foundLocal.ID,
+						Type:            "mention",
+						RelatedEntityID: postID,
+						RelatedUserID:   authorID,
+						CreatedAt:       time.Now(),
+					}
+					s.notificationRepo.CreateNotification(ctx, notification)
+				}
+			} else if err == nil && len(mentionedUsers) == 1 {
+				foundLocal := &mentionedUsers[0]
+				if foundLocal.ID != authorID {
+					validMentions = append(validMentions, foundLocal.Username)
+					notification := &models.Notification{
+						UserID:          foundLocal.ID,
 						Type:            "mention",
 						RelatedEntityID: postID,
 						RelatedUserID:   authorID,
@@ -629,10 +710,31 @@ func (s *PostService) parseAndNotifyMentions(ctx context.Context, content string
 					s.notificationRepo.CreateNotification(ctx, notification)
 				}
 			}
-			return validUsernames
+		} else {
+			// Federated Mention
+			if s.federationService != nil {
+				// Check if we have this remote user cached
+				remoteUser, err := s.federationService.ResolveRemoteUser(ctx, fullHandle)
+				if err == nil && remoteUser != nil {
+					validMentions = append(validMentions, fullHandle)
+
+					// Create a local notification stub for tracking
+					// We use a fake ID or map it to a stub user if needed,
+					// but primarily we send the federation activity
+					notification := &models.Notification{
+						Type:            "mention",
+						RelatedEntityID: postID,
+						RelatedUserID:   authorID,
+						CreatedAt:       time.Now(),
+					}
+
+					// Send to remote instance
+					s.federationService.SendRemoteNotification(ctx, domain, notification, author)
+				}
+			}
 		}
 	}
-	return nil
+	return validMentions
 }
 
 // enrichPosts adds author information and like status to posts

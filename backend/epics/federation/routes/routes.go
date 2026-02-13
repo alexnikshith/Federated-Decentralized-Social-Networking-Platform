@@ -2,6 +2,8 @@ package routes
 
 import (
 	"federated-social/backend/epics/federation/handlers"
+	"federated-social/backend/middleware"
+	"net/http"
 
 	"github.com/gorilla/mux"
 )
@@ -18,4 +20,10 @@ func RegisterFederationRoutes(router *mux.Router) {
 
 	// Get list of trusted instances (public)
 	router.HandleFunc("/api/federation/instances", handler.GetTrustedInstances).Methods("GET", "OPTIONS")
+
+	// Resolve remote user (protected)
+	router.Handle("/api/federation/users/resolve", middleware.AuthMiddleware(http.HandlerFunc(handler.ResolveUser))).Methods("POST", "OPTIONS")
+
+	// Follow remote user (protected)
+	router.Handle("/api/federation/users/follow", middleware.AuthMiddleware(http.HandlerFunc(handler.FollowRemoteUser))).Methods("POST", "OPTIONS")
 }

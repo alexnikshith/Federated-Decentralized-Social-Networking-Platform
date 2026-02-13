@@ -37,14 +37,23 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
     (response) => response,
     (error: AxiosError<ApiError>) => {
-        // Check if error is 401 and NOT from login/verify endpoints (avoid loops)
-        if (error.response?.status === 401 &&
-            !error.config?.url?.includes('/auth/login') &&
-            !error.config?.url?.includes('/auth/verify-otp') &&
-            !error.config?.url?.includes('/auth/google')) {
-            // Token expired or invalid
-            const store = useAuthStore.getState();
-            store.clearAuth();
+        // Check if error is 401 and comes from the active community
+        if (error.response?.status === 401) {
+            const activeUrl = localStorage.getItem('active_community_url') || import.meta.env.VITE_API_URL || 'http://localhost:8080';
+            const requestUrl = error.config?.url || '';
+
+            // Only clear auth if the 401 is from our own server
+            // and NOT from login/verify endpoints (avoid loops)
+            const isLocalRequest = requestUrl.startsWith('/') || requestUrl.startsWith(activeUrl);
+            const isAuthEndpoint = requestUrl.includes('/auth/login') ||
+                requestUrl.includes('/auth/verify-otp') ||
+                requestUrl.includes('/auth/google');
+
+            if (isLocalRequest && !isAuthEndpoint) {
+                // Token expired or invalid on OUR server
+                const store = useAuthStore.getState();
+                store.clearAuth();
+            }
         }
 
         // Handle Account Deactivation (403)

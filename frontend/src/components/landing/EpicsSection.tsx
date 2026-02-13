@@ -1,8 +1,8 @@
-import { 
-  User, 
-  Share2, 
-  Network, 
-  Shield, 
+import {
+  User,
+  Share2,
+  Network,
+  Shield,
   BarChart3,
   ChevronRight
 } from "lucide-react";
@@ -33,7 +33,7 @@ const epics = [
     title: "Federation",
     subtitle: "Connected, not controlled",
     description: "Interact across communities while maintaining local autonomy. Every piece of content carries its origin for full transparency.",
-    features: ["Cross-instance follows", "Remote feeds", "Origin labeling", "Retry mechanisms"],
+    features: ["Global Directory", "Cross-instance follows", "Remote feeds", "Origin labeling"],
     color: "success",
   },
   {
@@ -91,7 +91,7 @@ export function EpicsSection() {
             Five pillars of <span className="text-gradient-gold">federation</span>
           </h2>
           <p className="text-lg text-muted-foreground">
-            Nexus is built on five core epics, each representing a fundamental aspect 
+            Nexus is built on five core epics, each representing a fundamental aspect
             of ethical social networking.
           </p>
         </div>
@@ -99,7 +99,7 @@ export function EpicsSection() {
         <div className="space-y-6">
           {epics.map((epic, index) => {
             const styles = colorStyles[epic.color as keyof typeof colorStyles];
-            
+
             return (
               <div
                 key={epic.id}

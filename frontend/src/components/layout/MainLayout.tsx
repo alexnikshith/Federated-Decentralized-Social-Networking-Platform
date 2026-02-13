@@ -99,8 +99,8 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
         return Array.from(unique.values());
     }, [sessions, user, activeCommunityId]);
 
-    // If on landing page, don't show navigation
-    if (location.pathname === "/") {
+    // If on landing page or about page, don't show navigation
+    if (location.pathname === "/" || location.pathname === "/about") {
         return <>{children}</>;
     }
 

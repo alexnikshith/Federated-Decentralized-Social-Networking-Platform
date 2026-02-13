@@ -2,10 +2,11 @@ package dto
 
 // SignupRequest represents the signup request payload
 type SignupRequest struct {
-	Username    string `json:"username"`
-	Email       string `json:"email"`
-	Password    string `json:"password"`
-	DisplayName string `json:"display_name"`
+	Username       string `json:"username"`
+	Email          string `json:"email"`
+	Password       string `json:"password"`
+	DisplayName    string `json:"display_name"`
+	IsDiscoverable bool   `json:"is_discoverable"`
 }
 
 // LoginRequest represents the login request payload
@@ -35,6 +36,7 @@ type UpdateProfileRequest struct {
 	Bio               *string `json:"bio,omitempty"`
 	AvatarURL         *string `json:"avatar_url,omitempty"`
 	ProfileVisibility *string `json:"profile_visibility,omitempty"`
+	IsDiscoverable    *bool   `json:"is_discoverable,omitempty"`
 }
 
 // ChangePasswordRequest represents password change payload

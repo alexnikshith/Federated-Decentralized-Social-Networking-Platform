@@ -65,8 +65,8 @@ export const createPost = async (data: CreatePostRequest): Promise<Post> => {
     return response.data.data;
 };
 
-export const getFeed = async (limit = 50): Promise<FeedResponse> => {
-    const response = await api.get(`/api/feed?limit=${limit}`);
+export const getFeed = async (feedType = 'home', limit = 50): Promise<FeedResponse> => {
+    const response = await api.get(`/api/feed?type=${feedType}&limit=${limit}`);
     return response.data.data;
 };
 

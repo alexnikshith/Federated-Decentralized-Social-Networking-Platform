@@ -19,7 +19,7 @@ import './Dashboard.css';
 
 export const DashboardPage: React.FC = () => {
     const { user } = useAuthStore();
-    const { posts, loading, error, fetchFeed, fetchUnreadCount, unreadCount } = useContentStore();
+    const { posts, loading, error, fetchFeed, fetchUnreadCount, unreadCount, feedType, setFeedType } = useContentStore();
     const [sidebarType, setSidebarType] = useState<'notifications' | 'search' | null>(null);
     const [searchParams, setSearchParams] = useSearchParams();
 
@@ -43,7 +43,7 @@ export const DashboardPage: React.FC = () => {
         }, 30000);
 
         return () => clearInterval(interval);
-    }, [fetchFeed, fetchUnreadCount, user?.id, activeCommunityId]);
+    }, [fetchFeed, fetchUnreadCount, user?.id, activeCommunityId, feedType]);
 
     const toggleSidebar = (type: 'notifications' | 'search') => {
         setSidebarType(prev => prev === type ? null : type);
@@ -66,10 +66,32 @@ export const DashboardPage: React.FC = () => {
                 <div className="dashboard-grid">
                     {/* Main Feed Section */}
                     <div className="feed-section stagger-2">
-                        <h2 className="section-title">
-                            <Rss className="w-5 h-5 text-primary" />
-                            Your Feed
-                        </h2>
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="section-title mb-0">
+                                <Rss className="w-5 h-5 text-primary" />
+                                {feedType === 'home' ? 'Home Feed' : 'Public Feed'}
+                            </h2>
+                            <div className="flex bg-muted/50 p-1 rounded-lg">
+                                <button
+                                    onClick={() => setFeedType('home')}
+                                    className={cn(
+                                        "px-3 py-1 rounded-md text-sm font-medium transition-all",
+                                        feedType === 'home' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                                    )}
+                                >
+                                    Home
+                                </button>
+                                <button
+                                    onClick={() => setFeedType('public')}
+                                    className={cn(
+                                        "px-3 py-1 rounded-md text-sm font-medium transition-all",
+                                        feedType === 'public' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                                    )}
+                                >
+                                    Public
+                                </button>
+                            </div>
+                        </div>
 
                         <div className="space-y-4">
                             {loading && posts.length === 0 && (

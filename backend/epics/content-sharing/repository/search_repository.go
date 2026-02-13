@@ -47,8 +47,9 @@ func (r *SearchRepository) SearchUsers(ctx context.Context, query string, limit 
 	if query == "" {
 		// If query is empty, return some active users as default suggestions
 		statusFilter := bson.M{
-			"is_active":      true,
-			"is_deactivated": false,
+			"is_active":       true,
+			"is_deactivated":  false,
+			"is_discoverable": true,
 		}
 		opts := options.Find().SetLimit(limit).SetSort(bson.D{{Key: "created_at", Value: -1}})
 		cursor, err := r.collection.Find(ctx, statusFilter, opts)
@@ -90,8 +91,9 @@ func (r *SearchRepository) SearchUsers(ctx context.Context, query string, limit 
 	var finalFilter bson.M
 
 	statusFilter := bson.M{
-		"is_active":      true,
-		"is_deactivated": false,
+		"is_active":       true,
+		"is_deactivated":  false,
+		"is_discoverable": true,
 	}
 
 	if len(filters) == 1 {

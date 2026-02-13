@@ -20,6 +20,7 @@ func RegisterMessagingRoutes(router *mux.Router) {
 	// Public media access (must be registered before the /api/messages subrouter)
 	// This allows loading images without checking the Auth header explicitly (browser request)
 	router.HandleFunc("/api/messages/media/{id}", mh.DownloadMedia).Methods("GET")
+	router.HandleFunc("/api/messages/remote", h.ReceiveRemoteMessage).Methods("POST", "OPTIONS")
 
 	api := router.PathPrefix("/api/messages").Subrouter()
 	api.Use(middleware.AuthMiddleware)

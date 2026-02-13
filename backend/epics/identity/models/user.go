@@ -21,10 +21,11 @@ type User struct {
 	ProfileVisibility string `json:"profile_visibility" bson:"profile_visibility"` // "public" or "followers" - controls who can see detailed profile info
 
 	// Account status
-	IsActive      bool   `json:"is_active" bson:"is_active"`           // True if the user has verified email/is approved
-	IsDeactivated bool   `json:"is_deactivated" bson:"is_deactivated"` // True if user or admin has deactivated the account
-	Is2FAEnabled  bool   `json:"is_2fa_enabled" bson:"is_2fa_enabled"` // True if Two-Factor Authentication is enabled
-	Role          string `json:"role" bson:"role"`                     // "user" or "admin" - determines access privileges
+	IsActive       bool   `json:"is_active" bson:"is_active"`             // True if the user has verified email/is approved
+	IsDeactivated  bool   `json:"is_deactivated" bson:"is_deactivated"`   // True if user or admin has deactivated the account
+	Is2FAEnabled   bool   `json:"is_2fa_enabled" bson:"is_2fa_enabled"`   // True if Two-Factor Authentication is enabled
+	IsDiscoverable bool   `json:"is_discoverable" bson:"is_discoverable"` // True if user opts-in to global directory
+	Role           string `json:"role" bson:"role"`                       // "user" or "admin" - determines access privileges
 
 	// Timestamps
 	CreatedAt interface{} `json:"created_at" bson:"created_at"`
@@ -62,6 +63,7 @@ type PublicUser struct {
 	IsFollowing       bool               `json:"is_following"`
 	CanViewDetails    bool               `json:"can_view_details"`
 	Is2FAEnabled      *bool              `json:"is_2fa_enabled,omitempty"` // Only visible to self
+	InstanceID        string             `json:"instance"`                 // home instance domain
 }
 
 // PrivateUser represents user data visible to the owner (includes email)
@@ -70,6 +72,7 @@ type PrivateUser struct {
 	Email             string   `json:"email"`
 	InstanceID        string   `json:"instance_id"`
 	JoinedCommunities []string `json:"joined_communities"`
+	IsDiscoverable    bool     `json:"is_discoverable"`
 }
 
 // Session represents an active user session
@@ -103,6 +106,7 @@ func (u *User) ToPublicUser() PublicUser {
 		FollowingCount:    0,
 		PostsCount:        0,
 		CanViewDetails:    true,
+		InstanceID:        u.InstanceID,
 	}
 }
 
@@ -113,5 +117,6 @@ func (u *User) ToPrivateUser() PrivateUser {
 		Email:             u.Email,
 		InstanceID:        u.InstanceID,
 		JoinedCommunities: u.JoinedCommunities,
+		IsDiscoverable:    u.IsDiscoverable,
 	}
 }

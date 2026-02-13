@@ -1,0 +1,194 @@
+federated_social_backend  | 2026/02/13 10:16:33 No .env file found, using environment variables and defaults
+federated_social_backend  | 2026/02/13 10:16:33 Config loaded: Port=8080, DB=federated_social, Instance=default-instance, Federation=true
+federated_social_backend  | 2026/02/13 10:16:34 Connected to MongoDB and initialized GridFS successfully
+federated_social_backend  | 2026/02/13 10:16:36 Federation enabled - creating federation indexes
+federated_social_backend  | 2026/02/13 10:16:36 Skipping federation bootstrap for unknown instance: default-instance
+federated_social_backend  | 2026/02/13 10:16:36 Federation routes registered
+federated_social_server2  | 2026/02/13 10:13:49 [172.18.0.1:40822] GET /api/users/blocked
+federated_social_backend  | 2026/02/13 10:16:36 Starting federation activity processor...
+federated_social_backend  | 2026/02/13 10:16:36 Federation activity processor started
+federated_social_backend  | 2026/02/13 10:16:36 Server starting on :8080 (Instance: default-instance, Federation: true)
+federated_social_server2  | 2026/02/13 10:13:49 DEBUG enrichPosts: Need to fetch 1 unique authors
+federated_social_server2  | 2026/02/13 10:13:49   Author 1: ObjectID("698cdffaccd338ae8c53e103")
+federated_social_server2  | 2026/02/13 10:13:49 DEBUG enrichPosts: Successfully fetched 1 users from database
+federated_social_server2  | 2026/02/13 10:13:49   User ObjectID("698cdffaccd338ae8c53e103"): hyperion (avatar: )
+federated_social_backend  | 2026/02/13 10:17:02 [172.18.0.1:37442] POST /api/auth/login
+federated_social_backend  | DEBUG: Login attempt for kaushalloya5@gmail.com, Is2FAEnabled: false
+federated_social_backend  | 2026/02/13 10:17:03 [172.18.0.1:37442] GET /api/auth/me
+federated_social_server2  | 2026/02/13 10:13:49 DEBUG enrichPosts: Returning 2 enriched posts (filtered from 2 original posts)
+federated_social_server2  | 2026/02/13 10:13:50 [172.18.0.1:40812] GET /api/users/698cdffaccd338ae8c53e103/followers
+federated_social_backend  | 2026/02/13 10:17:03 [172.18.0.1:37450] POST /api/reports/heartbeat
+federated_social_backend  | 2026/02/13 10:17:03 [172.18.0.1:37462] GET /api/feed
+federated_social_backend  | 2026/02/13 10:17:03 [172.18.0.1:37476] GET /api/notifications/unread/count
+federated_social_server2  | 2026/02/13 10:13:52 [172.18.0.1:40812] GET /api/users/698cdffaccd338ae8c53e103/following
+federated_social_server2  | 2026/02/13 10:14:10 [172.18.0.1:40812] GET /api/auth/me
+federated_social_server2  | 2026/02/13 10:14:10 [172.18.0.1:40812] GET /api/users/blocked
+federated_social_server2  | 2026/02/13 10:14:10 [172.18.0.1:40822] GET /api/auth/me
+federated_social_server2  | 2026/02/13 10:14:10 [172.18.0.1:40810] GET /api/messages/unread-count
+federated_social_server2  | 2026/02/13 10:14:11 [172.18.0.1:40822] GET /api/users/blocked
+federated_social_server2  | 2026/02/13 10:14:11 [172.18.0.1:40810] GET /api/auth/me
+federated_social_backend  | 2026/02/13 10:17:03 [172.18.0.1:37482] GET /api/messages/unread-count
+federated_social_backend  | 2026/02/13 10:17:03 DEBUG GetFeed: Starting prioritized feed retrieval for user ObjectID("6981def1add070d3cb27692d"), limit=50
+federated_social_backend  | 2026/02/13 10:17:03 [172.18.0.1:37450] GET /api/messages/unread-count
+federated_social_backend  | 2026/02/13 10:17:03 DEBUG GetFeed: User follows 3 users (3 active)
+federated_social_backend  | 2026/02/13 10:17:03 DEBUG GetFeed: Fetching posts from followed users
+federated_social_backend  | 2026/02/13 10:17:03 DEBUG GetFeed: Retrieved 4 posts from followed users
+federated_social_backend  | 2026/02/13 10:17:04 DEBUG GetFeed: Retrieved 7 posts from other users
+federated_social_backend  | 2026/02/13 10:17:04 DEBUG GetFeed: Combined total: 11 posts
+federated_social_backend  | 2026/02/13 10:17:04 DEBUG enrichPosts: Need to fetch 3 unique authors
+federated_social_server2  | 2026/02/13 10:14:11 [172.18.0.1:40812] GET /api/messages/unread-count
+federated_social_server2  | 2026/02/13 10:14:11 [172.18.0.1:40810] GET /api/users/blocked
+federated_social_server2  | 2026/02/13 10:14:11 [172.18.0.1:40822] GET /api/messages/unread-count
+federated_social_server2  | 2026/02/13 10:16:45 [172.18.0.1:60036] GET /api/auth/me
+federated_social_server2  | 2026/02/13 10:17:17 [172.18.0.1:51206] GET /api/users/search
+federated_social_backend  | 2026/02/13 10:17:04   Author 1: ObjectID("6981f47ba206438dd588bec5")
+federated_social_backend  | 2026/02/13 10:17:04   Author 2: ObjectID("6984ec0409c9020d86b8dbc6")
+federated_social_backend  | 2026/02/13 10:17:04   Author 3: ObjectID("6981def1add070d3cb27692d")
+federated_social_backend  | 2026/02/13 10:17:04 DEBUG enrichPosts: Successfully fetched 3 users from database
+federated_social_server2  | 2026/02/13 10:17:18 [172.18.0.1:51206] GET /api/users/search
+federated_social_server2  | 2026/02/13 10:17:18 [172.18.0.1:51206] GET /api/users/search
+federated_social_backend  | 2026/02/13 10:17:04   User ObjectID("6981def1add070d3cb27692d"): kaushal_loya (avatar: )
+federated_social_backend  | 2026/02/13 10:17:04   User ObjectID("6981f47ba206438dd588bec5"): hypnos (avatar: )
+federated_social_server2  | 2026/02/13 10:17:18 [172.18.0.1:51206] GET /api/users/search
+federated_social_server2  | 2026/02/13 10:17:19 [172.18.0.1:51206] GET /api/users/search
+federated_social_backend  | 2026/02/13 10:17:04   User ObjectID("6984ec0409c9020d86b8dbc6"): riteesh-tm (avatar: )
+federated_social_backend  | 2026/02/13 10:17:05 DEBUG enrichPosts: Returning 11 enriched posts (filtered from 11 original posts)
+federated_social_backend  | 2026/02/13 10:17:05 DEBUG GetFeed: After enrichment, returning 11 posts to frontend
+federated_social_server2  | 2026/02/13 10:17:20 [172.18.0.1:51206] GET /api/profile/hyperion
+federated_social_server2  | 2026/02/13 10:17:21 DEBUG: ProfileService.GetProfile for userID=698cdffaccd338ae8c53e103: followers=0, following=0, posts=2
+federated_social_server2  | 2026/02/13 10:17:21 [172.18.0.3:46106] GET /api/profile/hyperion
+federated_social_server2  | 2026/02/13 10:17:21 DEBUG: ProfileService.GetProfile for userID=698cdffaccd338ae8c53e103: followers=0, following=0, posts=2
+federated_social_backend  | 2026/02/13 10:17:05 DEBUG GetFeed: UserID=ObjectID("6981def1add070d3cb27692d"), Requested=50 posts, Returning=11 posts
+federated_social_backend  | 2026/02/13 10:17:05   Post 1: ID=ObjectID("698ce4a76d50958db69e4923"), AuthorID=ObjectID("6981f47ba206438dd588bec5"), AuthorName=hypnos, Content=@kaushal_loya Hello
+federated_social_backend  | 2026/02/13 10:17:05   Post 2: ID=ObjectID("698c233dc533cceaf6a55875"), AuthorID=ObjectID("6981f47ba206438dd588bec5"), AuthorName=hypnos, Content=@Kaushal Hello
+federated_social_backend  | 2026/02/13 10:17:05   Post 3: ID=ObjectID("698c140fe89b6a6547ec3a0d"), AuthorID=ObjectID("6984ec0409c9020d86b8dbc6"), AuthorName=riteesh-tm, Content=is this post reaching community 2
+federated_social_server2  | 2026/02/13 10:17:21 [172.18.0.1:51206] GET /api/users/698efa3267bac580f1cc9303/posts
+federated_social_server2  | 2026/02/13 10:17:26 [172.18.0.3:46106] POST /federation/inbox
+federated_social_backend  | 2026/02/13 10:17:05   Post 4: ID=ObjectID("698c0545af7b837e2600ccca"), AuthorID=ObjectID("6981f47ba206438dd588bec5"), AuthorName=hypnos, Content=Hello
+federated_social_backend  | 2026/02/13 10:17:05   Post 5: ID=ObjectID("698ecc29aff89617c36bd20b"), AuthorID=ObjectID("6981def1add070d3cb27692d"), AuthorName=kaushal_loya, Content=Hllo
+federated_social_backend  | 2026/02/13 10:17:05   Post 6: ID=ObjectID("698d78c192cb0dab7ecc2885"), AuthorID=ObjectID("6981def1add070d3cb27692d"), AuthorName=kaushal_loya, Content=@kronos hello
+federated_social_server2  | 2026/02/13 10:17:26 Received federation activity: type=Follow, origin=localhost:8080, actor=http://localhost:8080/users/kaushal_loya
+federated_social_server2  | 2026/02/13 10:17:26 HandleIncomingActivity: Instance localhost:8080 not found, attempting discovery
+federated_social_server2  | 2026/02/13 10:17:26 DiscoverInstance: Mapped localhost:8080 to backend:8080 for Docker networking
+federated_social_server2  | 2026/02/13 10:17:26 Error handling incoming activity: instance discovery failed for localhost:8080: failed to save instance: context canceled
+federated_social_backend  | 2026/02/13 10:17:05   Post 7: ID=ObjectID("698d78b592cb0dab7ecc2883"), AuthorID=ObjectID("6981def1add070d3cb27692d"), AuthorName=kaushal_loya, Content=@text hello
+federated_social_backend  | 2026/02/13 10:17:05   Post 8: ID=ObjectID("698cb478c0bd127c366207db"), AuthorID=ObjectID("6981def1add070d3cb27692d"), AuthorName=kaushal_loya, Content=@Hypnos Hello
+federated_social_backend  | 2026/02/13 10:17:05   Post 9: ID=ObjectID("698c4b87d760a2e4ee2d8b5f"), AuthorID=ObjectID("6981def1add070d3cb27692d"), AuthorName=kaushal_loya, Content=@hello Hello
+federated_social_backend  | 2026/02/13 10:17:05   Post 10: ID=ObjectID("698c4af9d760a2e4ee2d8b4e"), AuthorID=ObjectID("6981def1add070d3cb27692d"), AuthorName=kaushal_loya, Content=@Hypnos Hello
+federated_social_backend  | 2026/02/13 10:17:05   Post 11: ID=ObjectID("698c229dc533cceaf6a5586d"), AuthorID=ObjectID("6981def1add070d3cb27692d"), AuthorName=kaushal_loya, Content=@Hypnos Hello_2
+federated_social_backend  | 2026/02/13 10:17:06 [172.18.0.1:37462] GET /api/profile/me
+federated_social_server2  | 2026/02/13 10:17:43 [172.18.0.1:51206] POST /api/auth/login
+federated_social_server2  | DEBUG: Login attempt for kaushalloya5@gmail.com, Is2FAEnabled: false
+federated_social_backend  | 2026/02/13 10:17:06 DEBUG: ProfileService.GetProfile for userID=6981def1add070d3cb27692d: followers=2, following=3, posts=9
+federated_social_backend  | 2026/02/13 10:17:06 [172.18.0.1:37462] GET /api/users/6981def1add070d3cb27692d/posts
+federated_social_server2  | 2026/02/13 10:17:43 [172.18.0.1:51206] GET /api/auth/me
+federated_social_server2  | 2026/02/13 10:17:43 [172.18.0.1:49414] POST /api/reports/heartbeat
+federated_social_backend  | 2026/02/13 10:17:06 [172.18.0.1:37490] GET /api/users/blocked
+federated_social_backend  | 2026/02/13 10:17:06 DEBUG enrichPosts: Need to fetch 1 unique authors
+federated_social_server2  | 2026/02/13 10:17:43 [172.18.0.1:49426] GET /api/feed
+federated_social_server2  | 2026/02/13 10:17:43 [172.18.0.1:49440] GET /api/notifications/unread/count
+federated_social_server2  | 2026/02/13 10:17:43 [172.18.0.1:49446] GET /api/messages/unread-count
+federated_social_server2  | 2026/02/13 10:17:44 DEBUG GetFeed: Starting prioritized feed retrieval for user ObjectID("698cdffaccd338ae8c53e103"), limit=50
+federated_social_server2  | 2026/02/13 10:17:44 [172.18.0.1:49446] GET /api/messages/unread-count
+federated_social_backend  | 2026/02/13 10:17:06   Author 1: ObjectID("6981def1add070d3cb27692d")
+federated_social_backend  | 2026/02/13 10:17:06 DEBUG enrichPosts: Successfully fetched 1 users from database
+federated_social_backend  | 2026/02/13 10:17:06   User ObjectID("6981def1add070d3cb27692d"): kaushal_loya (avatar: )
+federated_social_backend  | 2026/02/13 10:17:07 DEBUG enrichPosts: Returning 7 enriched posts (filtered from 7 original posts)
+federated_social_server2  | 2026/02/13 10:17:44 DEBUG GetFeed: User follows 0 users (0 active)
+federated_social_server2  | 2026/02/13 10:17:44 DEBUG GetFeed: User follows nobody, showing all posts
+federated_social_backend  | 2026/02/13 10:17:08 [172.18.0.1:37462] GET /api/users/6981def1add070d3cb27692d/following
+federated_social_backend  | 2026/02/13 10:17:12 [172.18.0.1:37462] GET /api/users/6981def1add070d3cb27692d/following
+federated_social_server2  | 2026/02/13 10:17:44 DEBUG GetFeed: Retrieved 2 posts from all users
+federated_social_server2  | 2026/02/13 10:17:44 DEBUG enrichPosts: Need to fetch 1 unique authors
+federated_social_server2  | 2026/02/13 10:17:44   Author 1: ObjectID("698cdffaccd338ae8c53e103")
+federated_social_server2  | 2026/02/13 10:17:44 DEBUG enrichPosts: Successfully fetched 1 users from database
+federated_social_server2  | 2026/02/13 10:17:44   User ObjectID("698cdffaccd338ae8c53e103"): hyperion (avatar: )
+federated_social_backend  | 2026/02/13 10:17:17 [172.18.0.1:49952] GET /api/users/search
+federated_social_backend  | 2026/02/13 10:17:18 [172.18.0.1:49952] GET /api/users/search
+federated_social_backend  | 2026/02/13 10:17:18 [172.18.0.1:49952] GET /api/users/search
+federated_social_backend  | 2026/02/13 10:17:18 [172.18.0.1:49952] GET /api/users/search
+federated_social_backend  | 2026/02/13 10:17:19 [172.18.0.1:49952] GET /api/users/search
+federated_social_backend  | 2026/02/13 10:17:20 [172.18.0.1:49952] GET /api/profile/hyperion
+federated_social_server2  | 2026/02/13 10:17:44 DEBUG enrichPosts: Returning 2 enriched posts (filtered from 2 original posts)
+federated_social_server2  | 2026/02/13 10:17:44 DEBUG GetFeed: After enrichment, returning 2 posts to frontend
+federated_social_server2  | 2026/02/13 10:17:44 DEBUG GetFeed: UserID=ObjectID("698cdffaccd338ae8c53e103"), Requested=50 posts, Returning=2 posts
+federated_social_server2  | 2026/02/13 10:17:44   Post 1: ID=ObjectID("698d6db8d9e22f5eb0055b76"), AuthorID=ObjectID("698cdffaccd338ae8c53e103"), AuthorName=hyperion, Content=Hello 
+federated_social_server2  | 2026/02/13 10:17:44   Post 2: ID=ObjectID("698ce01eccd338ae8c53e11f"), AuthorID=ObjectID("698cdffaccd338ae8c53e103"), AuthorName=hyperion, Content=Hello
+federated_social_backend  | 2026/02/13 10:17:21 [172.18.0.1:49952] POST /api/federation/users/resolve
+federated_social_backend  | 2026/02/13 10:17:21 ResolveRemoteUser: Mapped localhost:8081 to backend2:8080 for Docker networking
+federated_social_backend  | 2026/02/13 10:17:21 ResolveRemoteUser: Resolving hyperion@backend2:8080
+federated_social_backend  | 2026/02/13 10:17:21 ResolveRemoteUser: Discovering instance backend2:8080
+federated_social_server2  | 2026/02/13 10:17:50 [172.18.0.1:49426] GET /api/profile/me
+federated_social_server2  | 2026/02/13 10:17:50 DEBUG: ProfileService.GetProfile for userID=698cdffaccd338ae8c53e103: followers=0, following=0, posts=2
+federated_social_backend  | 2026/02/13 10:17:21 ResolveRemoteUser: Fetching profile from http://backend2:8080/api/profile/hyperion
+federated_social_backend  | 2026/02/13 10:17:21 ResolveRemoteUser: Got status code 200 from http://backend2:8080/api/profile/hyperion
+federated_social_backend  | 2026/02/13 10:17:21 [172.18.0.1:49952] GET /api/users/blocked
+federated_social_backend  | 2026/02/13 10:17:23 [172.18.0.1:49952] POST /api/users/698efa3267bac580f1cc9303/follow
+federated_social_backend  | 2026/02/13 10:17:23 FollowRemoteUser: localUserID=6981def1add070d3cb27692d, remoteUser=hyperion@backend2:8080
+federated_social_backend  | 2026/02/13 10:17:24 FollowRemoteUser: Adding remote follow record
+federated_social_backend  | 2026/02/13 10:17:24 Queued federation event: type=Follow, target=backend2:8080
+federated_social_server2  | 2026/02/13 10:17:50 [172.18.0.1:49426] GET /api/users/698cdffaccd338ae8c53e103/posts
+federated_social_server2  | 2026/02/13 10:17:51 [172.18.0.1:49446] GET /api/users/blocked
+federated_social_server2  | 2026/02/13 10:17:51 DEBUG enrichPosts: Need to fetch 1 unique authors
+federated_social_server2  | 2026/02/13 10:17:51   Author 1: ObjectID("698cdffaccd338ae8c53e103")
+federated_social_server2  | 2026/02/13 10:17:51 DEBUG enrichPosts: Successfully fetched 1 users from database
+federated_social_server2  | 2026/02/13 10:17:51   User ObjectID("698cdffaccd338ae8c53e103"): hyperion (avatar: )
+federated_social_backend  | 2026/02/13 10:17:24 [172.18.0.1:49952] GET /api/users/blocked
+federated_social_backend  | 2026/02/13 10:17:24 [172.18.0.1:49952] GET /api/profile/hyperion
+federated_social_backend  | 2026/02/13 10:17:24 [172.18.0.1:49952] GET /api/users/698efa3267bac580f1cc9303/posts
+federated_social_backend  | 2026/02/13 10:17:24 [172.18.0.1:57436] GET /api/users/blocked
+federated_social_server2  | 2026/02/13 10:17:51 DEBUG enrichPosts: Returning 2 enriched posts (filtered from 2 original posts)
+federated_social_server2  | 2026/02/13 10:17:52 [172.18.0.1:49426] GET /api/users/698cdffaccd338ae8c53e103/followers
+federated_social_backend  | 2026/02/13 10:17:26 Processing 1 pending federation events
+federated_social_backend  | 2026/02/13 10:17:26 Successfully sent Follow activity to backend2:8080
+federated_social_server2  | 2026/02/13 10:17:54 [172.18.0.1:49426] GET /api/users/698cdffaccd338ae8c53e103/following
+federated_social_server2  | 2026/02/13 10:17:55 [172.18.0.1:49426] GET /api/users/698cdffaccd338ae8c53e103/followers
+federated_social_server2  | 2026/02/13 10:18:01 [172.18.0.1:49426] GET /api/users/search
+federated_social_server2  | 2026/02/13 10:18:01 [172.18.0.1:49426] GET /api/users/search
+federated_social_server2  | 2026/02/13 10:18:01 [172.18.0.1:49426] GET /api/users/search
+federated_social_backend  | 2026/02/13 10:17:26 [172.18.0.4:38052] GET /.well-known/instance-info
+federated_social_backend  | 2026/02/13 10:17:28 [172.18.0.1:49952] GET /api/profile/me
+federated_social_backend  | 2026/02/13 10:17:28 DEBUG: ProfileService.GetProfile for userID=6981def1add070d3cb27692d: followers=2, following=3, posts=9
+federated_social_backend  | 2026/02/13 10:17:28 [172.18.0.1:49952] GET /api/users/6981def1add070d3cb27692d/posts
+federated_social_backend  | 2026/02/13 10:17:28 [172.18.0.1:57436] GET /api/users/blocked
+federated_social_backend  | 2026/02/13 10:17:28 DEBUG enrichPosts: Need to fetch 1 unique authors
+federated_social_server2  | 2026/02/13 10:18:06 [172.18.0.1:49426] GET /api/auth/me
+federated_social_server2  | 2026/02/13 10:18:06 [172.18.0.1:49426] GET /api/users/blocked
+federated_social_backend  | 2026/02/13 10:17:28   Author 1: ObjectID("6981def1add070d3cb27692d")
+federated_social_backend  | 2026/02/13 10:17:29 DEBUG enrichPosts: Successfully fetched 1 users from database
+federated_social_backend  | 2026/02/13 10:17:29   User ObjectID("6981def1add070d3cb27692d"): kaushal_loya (avatar: )
+federated_social_server2  | 2026/02/13 10:18:06 [172.18.0.1:49446] GET /api/auth/me
+federated_social_server2  | 2026/02/13 10:18:06 [172.18.0.1:49440] GET /api/messages/unread-count
+federated_social_backend  | 2026/02/13 10:17:29 DEBUG enrichPosts: Returning 7 enriched posts (filtered from 7 original posts)
+federated_social_backend  | 2026/02/13 10:17:30 [172.18.0.1:49952] GET /api/users/6981def1add070d3cb27692d/following
+federated_social_server2  | 2026/02/13 10:18:06 [172.18.0.1:49446] GET /api/users/blocked
+federated_social_server2  | 2026/02/13 10:18:06 [172.18.0.1:49426] GET /api/messages/unread-count
+federated_social_server2  | 2026/02/13 10:18:37 [172.18.0.1:49446] GET /api/messages/unread-count
+federated_social_backend  | 2026/02/13 10:17:33 [172.18.0.1:49952] GET /api/messages/unread-count
+federated_social_backend  | 2026/02/13 10:18:01 [172.18.0.1:49952] GET /api/users/search
+federated_social_server2  | 2026/02/13 10:19:07 [172.18.0.1:49446] GET /api/messages/unread-count
+federated_social_server2  | 2026/02/13 10:19:37 [172.18.0.1:38524] GET /api/messages/unread-count
+federated_social_server2  | 2026/02/13 10:20:07 [172.18.0.1:38524] GET /api/messages/unread-count
+federated_social_server2  | 2026/02/13 10:20:37 [172.18.0.1:60396] GET /api/messages/unread-count
+federated_social_server2  | 2026/02/13 10:21:07 [172.18.0.1:41788] GET /api/messages/unread-count
+federated_social_server2  | 2026/02/13 10:21:42 [172.18.0.1:41788] GET /api/auth/me
+federated_social_backend  | 2026/02/13 10:18:01 [172.18.0.1:57436] GET /api/users/search
+federated_social_backend  | 2026/02/13 10:18:01 [172.18.0.1:57436] GET /api/users/search
+federated_social_server2  | 2026/02/13 10:21:42 [172.18.0.1:55842] GET /api/messages/unread-count
+federated_social_server2  | 2026/02/13 10:21:42 [172.18.0.1:41788] GET /api/users/blocked
+federated_social_server2  | 2026/02/13 10:21:42 [172.18.0.1:55842] GET /api/auth/me
+federated_social_server2  | 2026/02/13 10:21:42 [172.18.0.1:55846] GET /api/messages/unread-count
+federated_social_server2  | 2026/02/13 10:21:42 [172.18.0.1:55842] GET /api/users/blocked
+federated_social_server2  | 2026/02/13 10:21:42 [172.18.0.1:41788] GET /api/messages/unread-count
+federated_social_server2  | 2026/02/13 10:21:43 [172.18.0.1:41788] GET /api/users/698cdffaccd338ae8c53e103/followers
+federated_social_server2  | 2026/02/13 10:21:43 [172.18.0.1:41788] POST /api/reports/heartbeat
+federated_social_server2  | 2026/02/13 10:21:48 [172.18.0.1:39002] GET /api/auth/me
+federated_social_server2  | 2026/02/13 10:21:48 [172.18.0.1:39002] GET /api/users/blocked
+federated_social_server2  | 2026/02/13 10:21:48 [172.18.0.1:39004] GET /api/auth/me
+federated_social_server2  | 2026/02/13 10:21:48 [172.18.0.1:39012] GET /api/messages/unread-count
+federated_social_server2  | 2026/02/13 10:21:48 [172.18.0.1:39004] GET /api/users/blocked
+federated_social_server2  | 2026/02/13 10:21:48 [172.18.0.1:39002] GET /api/messages/unread-count
+federated_social_server2  | 2026/02/13 10:22:19 [172.18.0.1:37974] GET /api/messages/unread-count
+federated_social_server2  | 2026/02/13 10:22:49 [172.18.0.1:37974] GET /api/messages/unread-count
+federated_social_server2  | 2026/02/13 10:23:19 [172.18.0.1:37974] GET /api/messages/unread-count
+federated_social_server2  | 2026/02/13 10:23:49 [172.18.0.1:37974] GET /api/messages/unread-count

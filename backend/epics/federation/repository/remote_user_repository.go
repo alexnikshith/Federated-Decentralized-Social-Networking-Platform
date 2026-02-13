@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -65,13 +66,48 @@ func (r *RemoteUserRepository) UpsertRemoteUser(ctx context.Context, remoteUser 
 		update,
 		opts,
 	)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Fetch the actual record to populate ID (especially if it was newly upserted)
+	return r.remoteUsers.FindOne(ctx, bson.M{"actor_id": remoteUser.ActorID}).Decode(remoteUser)
 }
 
 // GetRemoteUserByActorID retrieves a remote user by actor ID
 func (r *RemoteUserRepository) GetRemoteUserByActorID(ctx context.Context, actorID string) (*models.RemoteUser, error) {
 	var remoteUser models.RemoteUser
 	err := r.remoteUsers.FindOne(ctx, bson.M{"actor_id": actorID}).Decode(&remoteUser)
+	if err != nil {
+		return nil, err
+	}
+	return &remoteUser, nil
+}
+
+// GetRemoteUserByID retrieves a remote user by local ObjectID
+func (r *RemoteUserRepository) GetRemoteUserByID(ctx context.Context, id primitive.ObjectID) (*models.RemoteUser, error) {
+	var remoteUser models.RemoteUser
+	err := r.remoteUsers.FindOne(ctx, bson.M{"_id": id}).Decode(&remoteUser)
+	if err != nil {
+		return nil, err
+	}
+	return &remoteUser, nil
+}
+
+// GetRemoteUserByUsernameAndInstance retrieves a remote user by username and instance
+func (r *RemoteUserRepository) GetRemoteUserByUsernameAndInstance(ctx context.Context, username, instance string) (*models.RemoteUser, error) {
+	var remoteUser models.RemoteUser
+	err := r.remoteUsers.FindOne(ctx, bson.M{"username": username, "instance": instance}).Decode(&remoteUser)
+	if err != nil {
+		return nil, err
+	}
+	return &remoteUser, nil
+}
+
+// GetRemoteUserByUsername retrieves a remote user by username (might return multiple, returns first)
+func (r *RemoteUserRepository) GetRemoteUserByUsername(ctx context.Context, username string) (*models.RemoteUser, error) {
+	var remoteUser models.RemoteUser
+	err := r.remoteUsers.FindOne(ctx, bson.M{"username": username}).Decode(&remoteUser)
 	if err != nil {
 		return nil, err
 	}
@@ -99,15 +135,23 @@ func (r *RemoteUserRepository) DeleteRemoteUser(ctx context.Context, actorID str
 	return err
 }
 
-// GetRemoteUserByUsernameAndInstance retrieves a remote user by username and instance
-func (r *RemoteUserRepository) GetRemoteUserByUsernameAndInstance(ctx context.Context, username, instance string) (*models.RemoteUser, error) {
-	var remoteUser models.RemoteUser
-	err := r.remoteUsers.FindOne(ctx, bson.M{
-		"username": username,
-		"instance": instance,
-	}).Decode(&remoteUser)
+// GetRemoteUsersByActorIDs retrieves multiple remote users by their Actor IDs
+func (r *RemoteUserRepository) GetRemoteUsersByActorIDs(ctx context.Context, actorIDs []string) (map[string]*models.RemoteUser, error) {
+	cursor, err := r.remoteUsers.Find(ctx, bson.M{"actor_id": bson.M{"$in": actorIDs}})
 	if err != nil {
 		return nil, err
 	}
-	return &remoteUser, nil
+	defer cursor.Close(ctx)
+
+	var users []models.RemoteUser
+	if err := cursor.All(ctx, &users); err != nil {
+		return nil, err
+	}
+
+	userMap := make(map[string]*models.RemoteUser)
+	for i := range users {
+		userMap[users[i].ActorID] = &users[i]
+	}
+
+	return userMap, nil
 }

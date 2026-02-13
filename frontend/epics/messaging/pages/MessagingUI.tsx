@@ -280,13 +280,16 @@ const MessagingUI: React.FC = () => {
         if (!selectedConversation && !isNewChat) return;
 
         let receiverId: string;
+        let receiverCommunityUrl: string | undefined;
         if (selectedConversation) {
             const participants = selectedConversation.participants || [];
             const receiver = participants.find(p => p.id !== currentUser.id);
             if (!receiver) return;
             receiverId = receiver.id;
+            receiverCommunityUrl = receiver.community_url;
         } else if (newChatUser) {
             receiverId = newChatUser.id;
+            receiverCommunityUrl = newChatUser.community_url;
         } else {
             return;
         }
@@ -313,7 +316,8 @@ const MessagingUI: React.FC = () => {
                 content: messageInput.trim(),
                 type: mediaType as any,
                 media_url: mediaUrl,
-                file_name: fileName
+                file_name: fileName,
+                receiver_community_url: receiverCommunityUrl
             });
 
             setMessages(prev => [...(Array.isArray(prev) ? prev : []), newMsg]);
@@ -470,17 +474,25 @@ const MessagingUI: React.FC = () => {
                                                 <AvatarImage src={other.avatar_url} />
                                                 <AvatarFallback>{(other.username || 'U')[0].toUpperCase()}</AvatarFallback>
                                             </Avatar>
-                                            <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-neutral-900" />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex justify-between items-center mb-1">
-                                                <span className={cn(
-                                                    "font-semibold text-sm truncate",
-                                                    (other.is_deleted || other.is_deactivated) && "italic text-muted-foreground"
-                                                )}>
-                                                    {other.is_deactivated ? "Nexus User" : other.username}
+                                            <div className="flex justify-between items-start mb-0.5">
+                                                <div className="flex flex-col min-w-0">
+                                                    <span className={cn(
+                                                        "font-semibold text-sm truncate",
+                                                        (other.is_deleted || other.is_deactivated) && "italic text-muted-foreground"
+                                                    )}>
+                                                        {other.is_deactivated ? "Nexus User" : (other.display_name || other.username)}
+                                                    </span>
+                                                    {other.community_name && (
+                                                        <span className="text-[10px] text-muted-foreground font-medium truncate">
+                                                            from {other.community_name}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <span className="text-[10px] text-muted-foreground whitespace-nowrap mt-1">
+                                                    {conv.last_message && safeFormat(conv.last_message.created_at, 'HH:mm')}
                                                 </span>
-                                                {conv.last_message && safeFormat(conv.last_message.created_at, 'HH:mm')}
                                             </div>
                                             <div className="flex justify-between items-center gap-2">
                                                 <p className={cn(
@@ -534,13 +546,19 @@ const MessagingUI: React.FC = () => {
                                         "font-bold text-sm leading-none",
                                         !isNewChat && (getOtherParticipant(selectedConversation!.participants).is_deleted || getOtherParticipant(selectedConversation!.participants).is_deactivated) && "italic text-muted-foreground"
                                     )}>
-                                        {isNewChat ? newChatUser?.username : (
+                                        {isNewChat ? (newChatUser?.display_name || newChatUser?.username) : (
                                             getOtherParticipant(selectedConversation!.participants).is_deactivated
                                                 ? "Nexus User"
-                                                : getOtherParticipant(selectedConversation!.participants).username
+                                                : (getOtherParticipant(selectedConversation!.participants).display_name || getOtherParticipant(selectedConversation!.participants).username)
                                         )}
                                     </h3>
-                                    <span className="text-[10px] text-green-500 font-medium">Active now</span>
+                                    <div className="flex items-center gap-2 mt-1">
+                                        {(isNewChat ? (newChatUser?.instance || newChatUser?.community_name) : getOtherParticipant(selectedConversation!.participants).community_name) && (
+                                            <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter opacity-70">
+                                                from {isNewChat ? (newChatUser?.instance || newChatUser?.community_name) : getOtherParticipant(selectedConversation!.participants).community_name}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                             <DropdownMenu>
@@ -792,7 +810,11 @@ const MessagingUI: React.FC = () => {
                                             setNewChatUser({
                                                 id: user.id,
                                                 username: user.username,
-                                                avatar_url: user.avatar_url || ''
+                                                display_name: user.display_name,
+                                                avatar_url: user.avatar_url || '',
+                                                instance: (user as any).community_name,
+                                                community_name: (user as any).community_name,
+                                                community_url: (user as any).community_url
                                             });
                                             setSelectedConversation(null);
                                             setMessages([]);

@@ -15,6 +15,7 @@ export interface Post {
     mentioned_usernames?: string[];
     created_at: string;
     updated_at: string;
+    is_remote?: boolean;
 }
 
 // Comment represents a user response to a post
@@ -34,7 +35,7 @@ export interface Comment {
 // Notification alerts the user to interactions
 export interface Notification {
     id: string;
-    type: 'like' | 'comment' | 'follow';
+    type: 'like' | 'comment' | 'follow' | 'mention' | 'message';
     related_entity_id: string;
     related_user_id: string;
     related_user_name: string;
@@ -85,6 +86,7 @@ export interface PublicUser {
     following_count?: number;
     posts_count?: number;
     is_following?: boolean;
+    instance?: string;
 }
 
 export interface PostLiker {

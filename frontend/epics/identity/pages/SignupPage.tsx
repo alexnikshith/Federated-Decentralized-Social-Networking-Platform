@@ -6,6 +6,7 @@ import type { SignupRequest } from '../types';
 import { COMMUNITIES } from '../../../src/config/communities';
 import { Users, Globe, ArrowRight, Check, AlertCircle, Loader2, ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Checkbox } from "@/components/ui/checkbox";
 
 
 // SignupPage handles new user registration
@@ -21,6 +22,7 @@ export const SignupPage: React.FC = () => {
         email: '',
         password: '',
         display_name: '',
+        is_discoverable: true,
     });
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
@@ -310,6 +312,23 @@ export const SignupPage: React.FC = () => {
                                                 placeholder="••••••••"
                                                 className="w-full bg-secondary/50 border border-border rounded-2xl p-4 text-foreground focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-muted-foreground/30"
                                             />
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-start gap-4 p-4 rounded-2xl border border-border/50 bg-secondary/30 mt-2 transition-all hover:bg-secondary/50">
+                                        <Checkbox
+                                            id="is_discoverable"
+                                            checked={formData.is_discoverable || false}
+                                            onCheckedChange={(checked) => setFormData({ ...formData, is_discoverable: checked === true })}
+                                            className="mt-1 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground border-primary/50"
+                                        />
+                                        <div className="space-y-1">
+                                            <label htmlFor="is_discoverable" className="text-xs font-bold text-foreground cursor-pointer uppercase tracking-widest block">
+                                                Global Directory Visibility
+                                            </label>
+                                            <p className="text-[10px] text-muted-foreground leading-relaxed">
+                                                Allow your profile to be listed in the public directory and discoverable by users from other communities.
+                                            </p>
                                         </div>
                                     </div>
 
