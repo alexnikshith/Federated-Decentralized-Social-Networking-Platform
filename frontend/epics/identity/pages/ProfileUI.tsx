@@ -27,7 +27,7 @@ import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
-import { profileApi } from "../api/client";
+import { profileApi, api } from "../api/client";
 import {
   getUserPosts,
   getUserLikedPosts,
@@ -62,6 +62,7 @@ import { format, subDays, isToday, isYesterday, isSameDay } from "date-fns";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { COMMUNITIES, DEFAULT_COMMUNITY } from "@/config/communities";
+import axios from "axios";
 
 interface UserListModalProps {
   isOpen: boolean;
@@ -141,6 +142,7 @@ const ProfileUI = () => {
   const [likedPosts, setLikedPosts] = useState<Post[]>([]);
   const [commentedPosts, setCommentedPosts] = useState<Post[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
+  const [targetCommunityUrl, setTargetCommunityUrl] = useState("");
 
   // Navigation State
   const [activeSubTab, setActiveSubTab] = useState("All");
@@ -151,6 +153,7 @@ const ProfileUI = () => {
   const [searchParams] = useSearchParams();
   const targetPostId = searchParams.get("post");
   const shouldOpenComments = searchParams.get("openComments") === "true";
+  const communityHint = searchParams.get("community");
 
   // Date Filter State
   const [startDate, setStartDate] = useState<Date | undefined>();
@@ -163,28 +166,92 @@ const ProfileUI = () => {
     if (showLoading) setLoading(true);
     setError(null);
     try {
-      let userToDisplay: User;
+      let userToDisplay: User | null = null;
+      let foundUrl = "";
 
       if (isOwnProfile && currentUser) {
         // Fetch fresh data for own profile
         userToDisplay = await profileApi.getMyProfile();
+        foundUrl = ""; // Use local
       } else if (username) {
-        // Fetch other user's profile
-        userToDisplay = await profileApi.getProfile(username);
-      } else {
-        throw new Error("User not found");
+        // 1. Try ACTIVE community first (authenticated)
+        try {
+          userToDisplay = await profileApi.getProfile(username);
+          foundUrl = localStorage.getItem('active_community_url') || "";
+        } catch (err: any) {
+          // If not found on active community, proceed to federated search
+          if (err.response?.status !== 404) {
+            console.error("Error checking active community:", err);
+          }
+        }
+
+        // 2. If still not found, search others (Federated Discovery)
+        if (!userToDisplay) {
+          const communitiesToSearch = [
+            ...(communityHint ? [{ url: communityHint, name: "Hinted Community" }] : []),
+            DEFAULT_COMMUNITY,
+            ...COMMUNITIES.filter(c => c.url !== DEFAULT_COMMUNITY.url && c.url !== localStorage.getItem('active_community_url') && c.url !== communityHint)
+          ];
+
+          for (const community of communitiesToSearch) {
+            try {
+              // We use the authenticated api instance but with an absolute URL
+              // This ensures our token is sent to others too (they might accept it if federated trust exists)
+              // Or at least it's consistent. 
+              const response = await api.get(`${community.url}/api/profile/${username}`);
+              if (response.data) {
+                userToDisplay = response.data;
+                foundUrl = community.url;
+
+                // If we're logged in, resolve this user on our LOCAL server too
+                // This ensures they are cached in our database and we get a local ID for follow actions
+                if (currentUser) {
+                  try {
+                    const cleanDomain = foundUrl.replace(/^https?:\/\//, '');
+                    const resolveResponse = await api.post('/api/federation/users/resolve', {
+                      handle: `${userToDisplay.username}@${cleanDomain}`
+                    });
+                    if (resolveResponse.data && resolveResponse.data.id) {
+                      // Use the local resolved user data (contains our local ObjectID)
+                      userToDisplay = resolveResponse.data;
+                    }
+                  } catch (resolveErr) {
+                    console.error("Local resolve failed for remote user:", resolveErr);
+                  }
+                }
+                break;
+              }
+            } catch (err: any) {
+              if (err.response?.status !== 404) {
+                console.error(`Error fetching profile from ${community.name}:`, err);
+              }
+            }
+          }
+        }
       }
+
+      setTargetCommunityUrl(foundUrl);
+
+      if (!userToDisplay) {
+        throw new Error("User not found in the federation");
+      }
+
+      // Ensure stats are present
+      userToDisplay.followers_count = userToDisplay.followers_count ?? 0;
+      userToDisplay.following_count = userToDisplay.following_count ?? 0;
+      userToDisplay.posts_count = userToDisplay.posts_count ?? 0;
 
       setProfileUser(userToDisplay);
       setIsFollowing(!!userToDisplay.is_following);
 
-      // Fetch posts for this user
-      const postsData = await getUserPosts(userToDisplay.id);
-      setPosts(postsData.posts);
+      // Fetch posts for this user from the CORRECT community
+      const postsUrl = foundUrl || ""; // Empty means local base
+      const postsResponse = await api.get(`${postsUrl}/api/users/${userToDisplay.id}/posts`);
+      setPosts(postsResponse.data.data.posts || []);
 
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to load profile:", err);
-      setError(err.response?.data?.message || "Failed to load profile");
+      setError(err.response?.data?.message || err.message || "Failed to load profile");
     } finally {
       if (showLoading) setLoading(false);
     }
@@ -223,12 +290,13 @@ const ProfileUI = () => {
       if (activeTab === "Activity" && profileUser) {
         setActivityLoading(true);
         try {
+          const baseUrl = targetCommunityUrl || "";
           if (activitySubTab === "Likes") {
-            const posts = await getUserLikedPosts(profileUser.id);
-            setLikedPosts(posts);
+            const response = await axios.get(`${baseUrl}/api/users/${profileUser.id}/likes`);
+            setLikedPosts(response.data.data || []);
           } else if (activitySubTab === "Comments") {
-            const posts = await getUserCommentedPosts(profileUser.id);
-            setCommentedPosts(posts);
+            const response = await axios.get(`${baseUrl}/api/users/${profileUser.id}/comments`);
+            setCommentedPosts(response.data.data || []);
           }
         } catch (err) {
           console.error("Failed to fetch activity data", err);
@@ -248,7 +316,7 @@ const ProfileUI = () => {
       }
     };
     fetchActivityData();
-  }, [activeTab, activitySubTab, activeSubTab, profileUser]);
+  }, [activeTab, activitySubTab, activeSubTab, profileUser, targetCommunityUrl]);
 
   // Check if user is blocked
   useEffect(() => {
@@ -595,10 +663,10 @@ const ProfileUI = () => {
                     <span className="instance-badge bg-secondary/50 text-secondary-foreground flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border border-border/50">
                       <Globe className="w-3 h-3" />
                       {(() => {
-                        const instance = profileUser.instance;
-                        if (instance && instance !== "nexus.social") {
-                          const known = COMMUNITIES.find(c => c.url.includes(instance) || c.name === instance);
-                          return known ? known.name : instance;
+                        const instance = profileUser.instance || targetCommunityUrl;
+                        if (instance) {
+                          const known = COMMUNITIES.find(c => c.url === instance || (instance && c.url.includes(instance)) || c.name === instance);
+                          return known ? known.name : instance.replace(/^https?:\/\//, '');
                         }
                         const savedCommId = localStorage.getItem('active_community_id');
                         const currentComm = COMMUNITIES.find(c => c.id === savedCommId) || DEFAULT_COMMUNITY;

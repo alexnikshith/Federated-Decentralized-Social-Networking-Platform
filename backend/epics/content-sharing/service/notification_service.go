@@ -3,7 +3,9 @@ package service
 import (
 	"context"
 	"federated-social/backend/epics/content-sharing/dto"
+	"federated-social/backend/epics/content-sharing/models"
 	"federated-social/backend/epics/content-sharing/repository"
+	"federated-social/backend/pkg/websocket"
 	"log"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -19,6 +21,29 @@ func NewNotificationService() *NotificationService {
 		notificationRepo: repository.NewNotificationRepository(),
 		searchRepo:       repository.NewSearchRepository(),
 	}
+}
+
+// CreateNotification creates a new notification for a user
+func (s *NotificationService) CreateNotification(ctx context.Context, userID, relatedUserID primitive.ObjectID, notifType string, relatedEntityID primitive.ObjectID, content string, relatedUserName string, relatedUserAvatar string) error {
+	notification := &models.Notification{
+		UserID:            userID,
+		RelatedUserID:     relatedUserID,
+		Type:              notifType,
+		RelatedEntityID:   relatedEntityID,
+		CommentContent:    content,
+		RelatedUserName:   relatedUserName,
+		RelatedUserAvatar: relatedUserAvatar,
+	}
+	if err := s.notificationRepo.CreateNotification(ctx, notification); err != nil {
+		return err
+	}
+
+	// Broadcast via WebSocket if GlobalHub is available
+	if websocket.GlobalHub != nil {
+		websocket.GlobalHub.BroadcastToUser(userID.Hex(), "new_notification", notification)
+	}
+
+	return nil
 }
 
 // GetNotifications retrieves notifications for a user with user information
@@ -61,6 +86,14 @@ func (s *NotificationService) GetNotifications(ctx context.Context, userID primi
 			}
 			userName = user.Username
 			userAvatar = user.AvatarURL
+		} else {
+			// Fallback to persisted name/avatar if local user not found (e.g. federated user)
+			if notif.RelatedUserName != "" {
+				userName = notif.RelatedUserName
+			}
+			if notif.RelatedUserAvatar != "" {
+				userAvatar = notif.RelatedUserAvatar
+			}
 		}
 
 		notificationResponses = append(notificationResponses, dto.NotificationResponse{

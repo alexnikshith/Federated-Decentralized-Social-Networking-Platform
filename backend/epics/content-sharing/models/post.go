@@ -55,6 +55,8 @@ type Notification struct {
 	Type                 string              `json:"type" bson:"type"`                                                         // "like", "comment", "follow", "mention"
 	RelatedEntityID      primitive.ObjectID  `json:"related_entity_id" bson:"related_entity_id"`                               // PostID or CommentID
 	RelatedUserID        primitive.ObjectID  `json:"related_user_id" bson:"related_user_id"`                                   // User who triggered the notification
+	RelatedUserName      string              `json:"related_user_name,omitempty" bson:"related_user_name,omitempty"`           // Optional for federation
+	RelatedUserAvatar    string              `json:"related_user_avatar,omitempty" bson:"related_user_avatar,omitempty"`       // Optional for federation
 	CommentContent       string              `json:"comment_content,omitempty" bson:"comment_content,omitempty"`               // Content of the comment (for comment notifications)
 	ParentCommentID      *primitive.ObjectID `json:"parent_comment_id,omitempty" bson:"parent_comment_id,omitempty"`           // ID of parent comment (for replies)
 	ParentCommentContent string              `json:"parent_comment_content,omitempty" bson:"parent_comment_content,omitempty"` // Content of parent comment

@@ -98,6 +98,11 @@ func main() {
 		log.Printf("Warning: Failed to create verification indexes: %v", err)
 	}
 
+	// Run migrations
+	if err := userRepo.MigrateGlobalDiscovery(ctx); err != nil {
+		log.Printf("Warning: Failed to migrate user discovery settings: %v", err)
+	}
+
 	// Create content-sharing indexes (Posts, Follows, Notifications, Search)
 	postRepo := contentRepo.NewPostRepository()
 	if err := postRepo.CreateIndexes(ctx); err != nil {
@@ -159,6 +164,11 @@ func main() {
 		eventRepo := federationRepo.NewFederationEventRepository()
 		if err := eventRepo.CreateIndexes(ctx); err != nil {
 			log.Printf("Warning: Failed to create federation event indexes: %v", err)
+		}
+
+		relationshipsRepo := federationRepo.NewRemoteRelationshipsRepository()
+		if err := relationshipsRepo.CreateIndexes(ctx); err != nil {
+			log.Printf("Warning: Failed to create remote relationship indexes: %v", err)
 		}
 
 		// Bootstrap federated instances

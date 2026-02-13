@@ -51,7 +51,7 @@ func LoadConfig() {
 		SMTPFrom:     getEnv("SMTP_FROM", "noreply@federated-social.com"),
 
 		// Federation settings
-		InstanceName:      getEnv("INSTANCE_NAME", "default-instance"),
+		InstanceName:      getEnv("INSTANCE_ID", getEnv("INSTANCE_NAME", "Community 1")),
 		InstanceDomain:    getEnv("INSTANCE_DOMAIN", "localhost:8080"),
 		FederationEnabled: getEnvBool("FEDERATION_ENABLED", true),
 	}

@@ -3,6 +3,7 @@ package handlers
 import (
 	"federated-social/backend/epics/content-sharing/service"
 	"federated-social/backend/middleware"
+	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -32,7 +33,12 @@ func (h *FollowHandler) Follow(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.followService.Follow(r.Context(), followerID, followingID); err != nil {
-		respondError(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("Follow error for follower=%s, following=%s: %v", followerID.Hex(), followingID.Hex(), err)
+		status := http.StatusInternalServerError
+		if err.Error() == "user not found" {
+			status = http.StatusNotFound
+		}
+		respondError(w, err.Error(), status)
 		return
 	}
 
