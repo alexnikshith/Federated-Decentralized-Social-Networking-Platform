@@ -205,12 +205,6 @@ func (h *PostHandler) GetPostByID(w http.ResponseWriter, r *http.Request) {
 // GetUserPosts handles GET /api/users/:id/posts
 func (h *PostHandler) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	userID, err := primitive.ObjectIDFromHex(vars["id"])
-	if err != nil {
-		respondError(w, "Invalid user ID", http.StatusBadRequest)
-		return
-	}
-
 	requestingUserID := middleware.GetUserIDFromContext(r.Context())
 
 	limit := int64(50)
@@ -218,6 +212,20 @@ func (h *PostHandler) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 		if parsedLimit, err := strconv.ParseInt(limitStr, 10, 64); err == nil {
 			limit = parsedLimit
 		}
+	}
+
+	// Try ID first
+	userID, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		// Try fetching by username (for federation support mainly)
+		username := vars["id"]
+		feed, err := h.postService.GetUserPostsByUsername(r.Context(), username, requestingUserID, limit)
+		if err != nil {
+			respondError(w, "Invalid user ID or user not found", http.StatusBadRequest)
+			return
+		}
+		respondSuccess(w, "User posts retrieved successfully", feed, http.StatusOK)
+		return
 	}
 
 	feed, err := h.postService.GetUserPosts(r.Context(), userID, requestingUserID, limit)

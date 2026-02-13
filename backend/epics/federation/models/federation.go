@@ -20,15 +20,16 @@ type Instance struct {
 
 // RemoteUser represents a user from a remote federated instance (cached locally)
 type RemoteUser struct {
-	ID          primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	ActorID     string             `json:"actor_id" bson:"actor_id"`         // e.g., "https://server2.com/users/akhil"
-	Username    string             `json:"username" bson:"username"`         // e.g., "akhil"
-	DisplayName string             `json:"display_name" bson:"display_name"` // e.g., "Akhil Kumar"
-	Instance    string             `json:"instance" bson:"instance"`         // e.g., "server2.com"
-	AvatarURL   string             `json:"avatar_url" bson:"avatar_url"`
-	Bio         string             `json:"bio" bson:"bio"`
-	FetchedAt   time.Time          `json:"fetched_at" bson:"fetched_at"` // Last time we fetched this user's data
-	CreatedAt   time.Time          `json:"created_at" bson:"created_at"`
+	ID                primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	ActorID           string             `json:"actor_id" bson:"actor_id"`         // e.g., "https://server2.com/users/akhil"
+	Username          string             `json:"username" bson:"username"`         // e.g., "akhil"
+	DisplayName       string             `json:"display_name" bson:"display_name"` // e.g., "Akhil Kumar"
+	Instance          string             `json:"instance" bson:"instance"`         // e.g., "server2.com"
+	AvatarURL         string             `json:"avatar_url" bson:"avatar_url"`
+	Bio               string             `json:"bio" bson:"bio"`
+	ProfileVisibility string             `json:"profile_visibility" bson:"profile_visibility"` // "public", "private", "followers"
+	FetchedAt         time.Time          `json:"fetched_at" bson:"fetched_at"`                 // Last time we fetched this user's data
+	CreatedAt         time.Time          `json:"created_at" bson:"created_at"`
 }
 
 // RemotePost represents a post from a remote federated instance (cached locally)
@@ -49,21 +50,21 @@ type RemotePost struct {
 
 // RemoteFollow represents a local user following a remote user
 type RemoteFollow struct {
-	ID            primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	LocalUserID   primitive.ObjectID `json:"local_user_id" bson:"local_user_id"`
-	RemoteActorID string             `json:"remote_actor_id" bson:"remote_actor_id"` // Who they follow
-	RemoteUsername string            `json:"remote_username" bson:"remote_username"` // Cached username
-	RemoteInstance string            `json:"remote_instance" bson:"remote_instance"` // The server domain
-	CreatedAt     time.Time          `json:"created_at" bson:"created_at"`
+	ID             primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	LocalUserID    primitive.ObjectID `json:"local_user_id" bson:"local_user_id"`
+	RemoteActorID  string             `json:"remote_actor_id" bson:"remote_actor_id"` // Who they follow
+	RemoteUsername string             `json:"remote_username" bson:"remote_username"` // Cached username
+	RemoteInstance string             `json:"remote_instance" bson:"remote_instance"` // The server domain
+	CreatedAt      time.Time          `json:"created_at" bson:"created_at"`
 }
 
 // RemoteFollower represents a remote user following a local user
 type RemoteFollower struct {
-	ID            primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	LocalUserID   primitive.ObjectID `json:"local_user_id" bson:"local_user_id"`   // Who is being followed
-	RemoteActorID string             `json:"remote_actor_id" bson:"remote_actor_id"` // Who is following
-	RemoteInstance string            `json:"remote_instance" bson:"remote_instance"` // Their server
-	CreatedAt     time.Time          `json:"created_at" bson:"created_at"`
+	ID             primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	LocalUserID    primitive.ObjectID `json:"local_user_id" bson:"local_user_id"`     // Who is being followed
+	RemoteActorID  string             `json:"remote_actor_id" bson:"remote_actor_id"` // Who is following
+	RemoteInstance string             `json:"remote_instance" bson:"remote_instance"` // Their server
+	CreatedAt      time.Time          `json:"created_at" bson:"created_at"`
 }
 
 // FederationEvent represents an outgoing federation event (queued for delivery)

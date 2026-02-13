@@ -54,7 +54,19 @@ func (s *ProfileService) GetProfile(ctx context.Context, userID primitive.Object
 		// If not found locally, try remote user repository
 		remoteUser, remoteErr := s.remoteUserRepo.GetRemoteUserByID(ctx, userID)
 		if remoteErr == nil {
-			return s.RemoteUserToPublicUser(remoteUser), nil
+			publicUser := s.RemoteUserToPublicUser(remoteUser)
+			if requestingUserID != nil {
+				isFollowing, _ := s.followService.IsFollowing(ctx, *requestingUserID, remoteUser.ID)
+				publicUser.IsFollowing = isFollowing
+			}
+
+			// Enforce visibility for remote user
+			if publicUser.ProfileVisibility == "followers" || publicUser.ProfileVisibility == "private" {
+				if !publicUser.IsFollowing {
+					publicUser.CanViewDetails = false
+				}
+			}
+			return publicUser, nil
 		}
 		// If still not found, try by actor ID (which might be a URL or other identifier)
 		remoteUserByActorID, actorIDErr := s.remoteUserRepo.GetRemoteUserByActorID(ctx, userID.Hex())
@@ -258,15 +270,9 @@ func (s *ProfileService) GetProfileByIdOrUsername(ctx context.Context, identifie
 
 	// Try as ObjectID first
 	if userID, idErr := primitive.ObjectIDFromHex(identifier); idErr == nil {
-		user, err = s.userRepo.FindByID(ctx, userID)
-		if err == nil {
-			return s.GetProfile(ctx, user.ID, requestingUserID)
-		}
-
-		// Not found locally? Try remote repository by ID
-		remoteUser, remoteErr := s.remoteUserRepo.GetRemoteUserByID(ctx, userID)
-		if remoteErr == nil {
-			return s.RemoteUserToPublicUser(remoteUser), nil
+		// Use GetProfile which handles both local and remote users by ID
+		if profile, err := s.GetProfile(ctx, userID, requestingUserID); err == nil {
+			return profile, nil
 		}
 	}
 
@@ -279,7 +285,19 @@ func (s *ProfileService) GetProfileByIdOrUsername(ctx context.Context, identifie
 	// Still not found? Try remote user cache by username
 	remoteUser, remoteErr := s.remoteUserRepo.GetRemoteUserByUsername(ctx, identifier)
 	if remoteErr == nil {
-		return s.RemoteUserToPublicUser(remoteUser), nil
+		publicUser := s.RemoteUserToPublicUser(remoteUser)
+		if requestingUserID != nil {
+			isFollowing, _ := s.followService.IsFollowing(ctx, *requestingUserID, remoteUser.ID)
+			publicUser.IsFollowing = isFollowing
+		}
+
+		// Enforce visibility
+		if publicUser.ProfileVisibility == "followers" || publicUser.ProfileVisibility == "private" {
+			if !publicUser.IsFollowing {
+				publicUser.CanViewDetails = false
+			}
+		}
+		return publicUser, nil
 	}
 
 	return nil, errors.New("user not found")
@@ -293,7 +311,8 @@ func (s *ProfileService) RemoteUserToPublicUser(ru *federationModels.RemoteUser)
 		Bio:               ru.Bio,
 		AvatarURL:         ru.AvatarURL,
 		InstanceID:        ru.Instance,
-		ProfileVisibility: "public",
+		ProfileVisibility: ru.ProfileVisibility,
+		CanViewDetails:    true, // Default to true, restricted by logic above if private/followers
 		CreatedAt:         ru.CreatedAt,
 	}
 }

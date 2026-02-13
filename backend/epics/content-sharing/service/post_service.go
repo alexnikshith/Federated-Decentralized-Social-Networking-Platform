@@ -130,7 +130,7 @@ func (s *PostService) GetFeed(ctx context.Context, userID primitive.ObjectID, li
 		blockedMap[id] = true
 	}
 
-	var finalPosts []dto.PostResponse
+	finalPosts := make([]dto.PostResponse, 0)
 
 	if feedType == "home" {
 		// 1. Local Following
@@ -239,7 +239,7 @@ func (s *PostService) enrichRemotePosts(ctx context.Context, posts []fedModels.R
 		log.Printf("Error fetching remote users: %v", err)
 	}
 
-	var responses []dto.PostResponse
+	responses := make([]dto.PostResponse, 0)
 	for _, p := range posts {
 		username := p.Author
 
@@ -318,14 +318,38 @@ func (s *PostService) GetUserPosts(ctx context.Context, userID, requestingUserID
 		return nil, err
 	}
 
-	postResponses, err := s.enrichPosts(ctx, posts, requestingUserID)
-	if err != nil {
-		return nil, err
+	if len(posts) > 0 {
+		postResponses, err := s.enrichPosts(ctx, posts, requestingUserID)
+		if err != nil {
+			return nil, err
+		}
+		return &dto.FeedResponse{
+			Posts: postResponses,
+			Total: len(postResponses),
+		}, nil
+	}
+
+	// If no local posts found, check if this is a remote user and fetch their remote posts
+	if s.federationService != nil {
+		remoteUser, err := s.federationService.GetRemoteUserByID(ctx, userID)
+		if err == nil && remoteUser != nil {
+			remotePosts, err := s.federationService.GetRemotePostsByAuthors(ctx, []string{remoteUser.ActorID}, limit)
+			if err == nil && len(remotePosts) > 0 {
+				postResponses, err := s.enrichRemotePosts(ctx, remotePosts, requestingUserID)
+				if err != nil {
+					return nil, err
+				}
+				return &dto.FeedResponse{
+					Posts: postResponses,
+					Total: len(postResponses),
+				}, nil
+			}
+		}
 	}
 
 	return &dto.FeedResponse{
-		Posts: postResponses,
-		Total: len(postResponses),
+		Posts: []dto.PostResponse{},
+		Total: 0,
 	}, nil
 }
 
@@ -1074,6 +1098,31 @@ func (s *PostService) TrackInteraction(ctx context.Context, postID, userID primi
 		Type:   req.Type,
 	}
 	return s.postRepo.UpsertInteraction(ctx, interaction)
+}
+
+// GetUserPostsByUsername retrieves posts for a specific user by username (for federation)
+func (s *PostService) GetUserPostsByUsername(ctx context.Context, username string, requestingUserID primitive.ObjectID, limit int64) (*dto.FeedResponse, error) {
+	users, err := s.searchRepo.GetUsersByUsernames(ctx, []string{username})
+	if err != nil || len(users) == 0 {
+		return nil, errors.New("user not found")
+	}
+
+	// Exact match check
+	var userID primitive.ObjectID
+	found := false
+	for _, u := range users {
+		if strings.EqualFold(u.Username, username) {
+			userID = u.ID
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return nil, errors.New("user not found")
+	}
+
+	return s.GetUserPosts(ctx, userID, requestingUserID, limit)
 }
 
 // GetAllReports retrieves all reports for admin
