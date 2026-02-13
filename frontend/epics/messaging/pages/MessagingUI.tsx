@@ -75,6 +75,9 @@ const MessagingUI: React.FC = () => {
         id: string | null;
     }>({ isOpen: false, type: 'message', id: null });
 
+    // Track if it's the first load of messages for a conversation to scroll instantly
+    const isInitialLoad = useRef(true);
+
     // Ensure conversations is ALWAYS an array even if state somehow becomes null
     const safeConversations = Array.isArray(conversations) ? conversations : [];
 
@@ -138,14 +141,24 @@ const MessagingUI: React.FC = () => {
     // Load messages when conversation is selected
     useEffect(() => {
         if (selectedConversation?.id) {
+            isInitialLoad.current = true;
             loadMessages(selectedConversation.id);
         }
     }, [selectedConversation?.id]);
 
     // Auto-scroll to bottom on new messages
     useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
+        if (!loadingMessages && messages.length > 0) {
+            if (isInitialLoad.current) {
+                // Initial load: Snap to bottom instantly
+                scrollToBottom('auto');
+                isInitialLoad.current = false;
+            } else {
+                // New messages: Scroll smoothly
+                scrollToBottom('smooth');
+            }
+        }
+    }, [messages, loadingMessages]);
 
     // Keyboard shortcuts (Escape to close chat)
     useEffect(() => {
@@ -349,9 +362,9 @@ const MessagingUI: React.FC = () => {
         }
     };
 
-    const scrollToBottom = () => {
+    const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
         if (messagesEndRef.current) {
-            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+            messagesEndRef.current.scrollIntoView({ behavior });
         }
     };
 
@@ -416,14 +429,14 @@ const MessagingUI: React.FC = () => {
 
     if (loading) {
         return (
-            <div className="h-[calc(100vh-140px)] flex items-center justify-center">
+            <div className="h-[calc(100vh-64px)] flex items-center justify-center">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
         );
     }
 
     return (
-        <div className="flex h-[calc(100vh-140px)] overflow-hidden bg-background border rounded-2xl mx-4 my-2 shadow-sm">
+        <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-background border-t shadow-none">
             {/* Conversation List */}
             <div className={cn(
                 "w-full md:w-80 border-r flex flex-col transition-all duration-300",
