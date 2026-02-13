@@ -94,7 +94,7 @@ export const DashboardPage: React.FC = () => {
                         </div>
 
                         <div className="space-y-4">
-                            {loading && posts.length === 0 && (
+                            {loading && (!posts || posts.length === 0) && (
                                 <div className="feed-loading">
                                     <div className="animate-pulse">Loading your feed...</div>
                                 </div>
@@ -106,7 +106,7 @@ export const DashboardPage: React.FC = () => {
                                 </div>
                             )}
 
-                            {!loading && posts.length === 0 && (
+                            {!loading && (!posts || posts.length === 0) && (
                                 <div className="glass-card rounded-xl empty-state">
                                     <Globe className="empty-state-icon" />
                                     <h3 className="font-display font-semibold mb-2">No posts yet</h3>
@@ -116,7 +116,7 @@ export const DashboardPage: React.FC = () => {
                                 </div>
                             )}
 
-                            {posts
+                            {posts && posts
                                 .map((post, index) => (
                                     <div key={post.id} className="opacity-0 animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
                                         <div className="glass-card rounded-xl overflow-hidden">

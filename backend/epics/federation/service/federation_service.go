@@ -603,11 +603,12 @@ func (s *FederationService) ResolveRemoteUser(ctx context.Context, handle string
 
 	// We utilize a flexible struct to decode common fields
 	var profile struct {
-		ID          string `json:"id"`
-		Username    string `json:"username"`
-		DisplayName string `json:"display_name"`
-		AvatarURL   string `json:"avatar_url"`
-		Bio         string `json:"bio"`
+		ID                string `json:"id"`
+		Username          string `json:"username"`
+		DisplayName       string `json:"display_name"`
+		AvatarURL         string `json:"avatar_url"`
+		Bio               string `json:"bio"`
+		ProfileVisibility string `json:"profile_visibility"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&profile); err != nil {
@@ -631,13 +632,14 @@ func (s *FederationService) ResolveRemoteUser(ctx context.Context, handle string
 
 	// Construct Remote User
 	remoteUser := &models.RemoteUser{
-		ActorID:     fmt.Sprintf("http://%s/users/%s", publicDomain, profile.Username), // Construct Actor ID with PUBLIC domain for consistency
-		Username:    profile.Username,
-		DisplayName: profile.DisplayName,
-		Instance:    domain,
-		AvatarURL:   avatarURL,
-		Bio:         profile.Bio,
-		FetchedAt:   time.Now(),
+		ActorID:           fmt.Sprintf("http://%s/users/%s", publicDomain, profile.Username), // Construct Actor ID with PUBLIC domain for consistency
+		Username:          profile.Username,
+		DisplayName:       profile.DisplayName,
+		Instance:          domain,
+		AvatarURL:         avatarURL,
+		Bio:               profile.Bio,
+		ProfileVisibility: profile.ProfileVisibility,
+		FetchedAt:         time.Now(),
 	}
 
 	// Upsert into our cache
@@ -835,6 +837,11 @@ func (s *FederationService) GetRemotePostsByAuthors(ctx context.Context, actorID
 // GetRemoteUsersByActorIDs retrieves multiple remote users by their Actor IDs
 func (s *FederationService) GetRemoteUsersByActorIDs(ctx context.Context, actorIDs []string) (map[string]*models.RemoteUser, error) {
 	return s.remoteUserRepo.GetRemoteUsersByActorIDs(ctx, actorIDs)
+}
+
+// GetRemoteUserByID retrieves a remote user by their local ObjectID
+func (s *FederationService) GetRemoteUserByID(ctx context.Context, id primitive.ObjectID) (*models.RemoteUser, error) {
+	return s.remoteUserRepo.GetRemoteUserByID(ctx, id)
 }
 
 // backfillRemotePosts fetches and saves initial posts from a newly followed user

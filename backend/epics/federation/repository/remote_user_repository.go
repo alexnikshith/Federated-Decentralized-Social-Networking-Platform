@@ -48,12 +48,13 @@ func (r *RemoteUserRepository) UpsertRemoteUser(ctx context.Context, remoteUser 
 	opts := options.Update().SetUpsert(true)
 	update := bson.M{
 		"$set": bson.M{
-			"username":     remoteUser.Username,
-			"display_name": remoteUser.DisplayName,
-			"instance":     remoteUser.Instance,
-			"avatar_url":   remoteUser.AvatarURL,
-			"bio":          remoteUser.Bio,
-			"fetched_at":   remoteUser.FetchedAt,
+			"username":           remoteUser.Username,
+			"display_name":       remoteUser.DisplayName,
+			"instance":           remoteUser.Instance,
+			"avatar_url":         remoteUser.AvatarURL,
+			"bio":                remoteUser.Bio,
+			"profile_visibility": remoteUser.ProfileVisibility,
+			"fetched_at":         remoteUser.FetchedAt,
 		},
 		"$setOnInsert": bson.M{
 			"created_at": time.Now(),
