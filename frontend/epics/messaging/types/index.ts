@@ -24,7 +24,11 @@ export interface Conversation {
 export interface Participant {
     id: string;
     username: string;
+    display_name?: string;
     avatar_url: string;
+    instance?: string;
+    community_url?: string;
+    community_name?: string;
     is_deleted?: boolean;
     is_deactivated?: boolean;
 }
@@ -36,4 +40,5 @@ export interface SendMessageRequest {
     type: 'text' | 'image' | 'video' | 'file';
     media_url?: string;
     file_name?: string;
+    receiver_community_url?: string;
 }

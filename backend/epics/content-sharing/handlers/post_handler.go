@@ -55,7 +55,12 @@ func (h *PostHandler) GetFeed(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	feed, err := h.postService.GetFeed(r.Context(), userID, limit)
+	feedType := r.URL.Query().Get("type")
+	if feedType == "" {
+		feedType = "home"
+	}
+
+	feed, err := h.postService.GetFeed(r.Context(), userID, limit, feedType)
 	if err != nil {
 		respondError(w, err.Error(), http.StatusInternalServerError)
 		return

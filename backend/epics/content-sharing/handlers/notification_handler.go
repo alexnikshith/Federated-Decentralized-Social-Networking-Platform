@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"encoding/json"
+	"federated-social/backend/epics/content-sharing/dto"
 	"federated-social/backend/epics/content-sharing/service"
 	"federated-social/backend/middleware"
 	"net/http"
@@ -84,4 +86,38 @@ func (h *NotificationHandler) GetUnreadCount(w http.ResponseWriter, r *http.Requ
 	}
 
 	respondSuccess(w, "Unread count retrieved successfully", map[string]int64{"count": count}, http.StatusOK)
+}
+
+// CreateRemoteNotification handles POST /api/notifications/remote
+// This endpoint is used by other communities to create notifications (e.g. for cross-community messages).
+func (h *NotificationHandler) CreateRemoteNotification(w http.ResponseWriter, r *http.Request) {
+	var req dto.CreateRemoteNotificationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	userID, err := primitive.ObjectIDFromHex(req.UserID)
+	if err != nil {
+		respondError(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	relatedUserID, err := primitive.ObjectIDFromHex(req.RelatedUserID)
+	if err != nil {
+		respondError(w, "Invalid related user ID", http.StatusBadRequest)
+		return
+	}
+
+	var relatedEntityID primitive.ObjectID
+	if req.RelatedEntityID != "" {
+		relatedEntityID, _ = primitive.ObjectIDFromHex(req.RelatedEntityID)
+	}
+
+	if err := h.notificationService.CreateNotification(r.Context(), userID, relatedUserID, req.Type, relatedEntityID, req.Content, req.RelatedUserName, req.RelatedUserAvatar); err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondSuccess(w, "Remote notification created", nil, http.StatusCreated)
 }

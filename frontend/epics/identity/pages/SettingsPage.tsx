@@ -38,6 +38,7 @@ export const SettingsPage = () => {
         profile_visibility: "public" as "public" | "followers",
         location: "",
         website: "",
+        is_discoverable: false,
     });
 
     const [passwordData, setPasswordData] = useState({
@@ -63,7 +64,7 @@ export const SettingsPage = () => {
             if (currentUser) {
                 updateUser({ ...currentUser, is_2fa_enabled: checked } as UserType);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
             toast({
                 title: "Error",
@@ -72,6 +73,40 @@ export const SettingsPage = () => {
             });
             // Revert switch state on error (optional, but good UX)
             setIs2FAEnabled(!checked);
+        }
+    };
+
+    const handleToggleDiscovery = async (checked: boolean) => {
+        const message = checked
+            ? "Are you sure you want to enable Global Directory Visibility? Your profile will be listed in the public directory and discoverable by users from ALL connected communities."
+            : "Are you sure you want to disable Global Directory Visibility? Your profile will be removed from the public directory and users from other communities won't be able to find you.";
+
+        if (!window.confirm(message)) {
+            // Revert the visual state if the user cancels (handled by not updating state)
+            return;
+        }
+
+        setFormData({ ...formData, is_discoverable: checked });
+        try {
+            const response = await profileApi.updateProfile({
+                ...formData,
+                is_discoverable: checked
+            });
+            if (response.data) {
+                updateUser(response.data);
+                toast({
+                    title: checked ? "Discovery Enabled" : "Discovery Disabled",
+                    description: checked ? "Your profile is now visible in the global directory." : "Your profile is now hidden from the global directory.",
+                });
+            }
+        } catch (error: any) {
+            console.error(error);
+            setFormData({ ...formData, is_discoverable: !checked }); // Revert on error
+            toast({
+                title: "Error",
+                description: "Failed to update discovery settings",
+                variant: "destructive",
+            });
         }
     };
 
@@ -84,6 +119,7 @@ export const SettingsPage = () => {
                 profile_visibility: (currentUser.profile_visibility || "public") as "public" | "followers",
                 location: currentUser.location || "",
                 website: currentUser.website || "",
+                is_discoverable: currentUser.is_discoverable || false,
             });
             setIs2FAEnabled((currentUser as UserType & { is_2fa_enabled?: boolean }).is_2fa_enabled || false);
         }
@@ -128,6 +164,7 @@ export const SettingsPage = () => {
                 display_name: formData.display_name,
                 bio: formData.bio,
                 profile_visibility: formData.profile_visibility as "public" | "followers",
+                is_discoverable: formData.is_discoverable,
             });
 
             if (response.data) {
@@ -389,6 +426,24 @@ export const SettingsPage = () => {
                                                     </SelectContent>
                                                 </Select>
                                             </div>
+
+                                            <div className="space-y-2 md:col-span-2">
+                                                <div className="p-4 rounded-xl border border-border/50 bg-secondary/10 flex items-start justify-between">
+                                                    <div className="space-y-1">
+                                                        <h4 className="font-bold text-base flex items-center gap-2">
+                                                            <GlobeIcon className="w-4 h-4 text-primary" />
+                                                            Global Directory Visibility
+                                                        </h4>
+                                                        <p className="text-sm text-muted-foreground leading-relaxed">
+                                                            Allow your profile to be listed in the public directory and discoverable by users from other communities.
+                                                        </p>
+                                                    </div>
+                                                    <Switch
+                                                        checked={formData.is_discoverable}
+                                                        onCheckedChange={handleToggleDiscovery}
+                                                    />
+                                                </div>
+                                            </div>
                                         </div>
 
                                         {isEditing && (
@@ -407,6 +462,7 @@ export const SettingsPage = () => {
                                                                 profile_visibility: (currentUser.profile_visibility || "public") as "public" | "followers",
                                                                 location: currentUser.location || "",
                                                                 website: currentUser.website || "",
+                                                                is_discoverable: currentUser.is_discoverable || false,
                                                             });
                                                         }
                                                     }}

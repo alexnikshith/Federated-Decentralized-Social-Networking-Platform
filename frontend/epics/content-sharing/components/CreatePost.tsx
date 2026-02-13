@@ -169,8 +169,8 @@ export const CreatePost: React.FC = () => {
         const textBeforeCursor = content.slice(0, cursor);
         const textAfterCursor = content.slice(cursor);
 
-        // Replace the @query with @username
-        const newTextBeforeCursor = textBeforeCursor.replace(/@(\w*)$/, `@${username} `);
+        // Replace the @query with @username/handle
+        const newTextBeforeCursor = textBeforeCursor.replace(/@([\w.-@]*)$/, `@${username} `);
         const newContent = newTextBeforeCursor + textAfterCursor;
 
         setContent(newContent);
@@ -190,9 +190,9 @@ export const CreatePost: React.FC = () => {
         const cursor = e.target.selectionStart;
         setContent(value);
 
-        // Check for word before cursor for mentions
+        // Check for word before cursor for mentions (support @user@domain)
         const textBeforeCursor = value.slice(0, cursor);
-        const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+        const mentionMatch = textBeforeCursor.match(/@([\w.-@]*)$/);
 
         if (mentionMatch) {
             const query = mentionMatch[1];
@@ -336,17 +336,27 @@ export const CreatePost: React.FC = () => {
                                 ) : filteredSuggestions.length > 0 ? (
                                     filteredSuggestions.map(user => (
                                         <button
-                                            key={user.id}
+                                            key={user.id + user.username}
                                             type="button"
-                                            onClick={() => insertMention(user.username)}
+                                            onClick={() => {
+                                                const handle = user.instance ? `${user.username}@${user.instance}` : user.username;
+                                                insertMention(handle);
+                                            }}
                                             className="w-full flex items-center gap-2 p-2 hover:bg-secondary/80 rounded-lg text-left transition-colors group"
                                         >
                                             <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-xs font-bold border border-border group-hover:border-primary/30 transition-colors">
                                                 {user.avatar_url ? <img src={user.avatar_url} className="w-full h-full rounded-full object-cover" /> : user.username[0]?.toUpperCase()}
                                             </div>
                                             <div className="min-w-0 flex-1">
-                                                <div className="text-sm font-bold truncate text-foreground group-hover:text-primary transition-colors">{user.display_name}</div>
-                                                <div className="text-xs text-muted-foreground truncate">@{user.username}</div>
+                                                <div className="text-sm font-bold truncate text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
+                                                    {user.display_name}
+                                                    {user.is_following && (
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-primary" title="You follow this user" />
+                                                    )}
+                                                </div>
+                                                <div className="text-xs text-muted-foreground truncate">
+                                                    @{user.username}{user.instance && `@${user.instance}`}
+                                                </div>
                                             </div>
                                         </button>
                                     ))

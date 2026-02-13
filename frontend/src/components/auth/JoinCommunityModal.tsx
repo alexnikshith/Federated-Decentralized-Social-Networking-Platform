@@ -13,6 +13,7 @@ import { Globe, ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react";
 import axios from "axios";
 import { toast } from "sonner";
 import { Check } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAuthStore } from "../../../epics/identity/store/authStore";
 import type { User } from "../../../epics/identity/types";
 
@@ -42,6 +43,7 @@ export const JoinCommunityModal = ({
     const [isLoading, setIsLoading] = useState(false);
     const setAuth = useAuthStore((state) => state.setAuth);
     const [otp, setOtp] = useState("");
+    const [isDiscoverable, setIsDiscoverable] = useState(true);
 
     // Username validation states
     const [usernameError, setUsernameError] = useState('');
@@ -119,7 +121,8 @@ export const JoinCommunityModal = ({
                 display_name: displayName,
                 email: activeEmail,
                 password,
-                instance: targetCommunity.url
+                instance: targetCommunity.url,
+                is_discoverable: isDiscoverable
             });
 
             // Handle standard response wrapper
@@ -361,6 +364,25 @@ export const JoinCommunityModal = ({
                                     </button>
                                 </div>
                             </div>
+
+                            {step === 'register' && (
+                                <div className="flex items-start gap-3 pt-2">
+                                    <Checkbox
+                                        id="is_discoverable"
+                                        checked={isDiscoverable}
+                                        onCheckedChange={(checked) => setIsDiscoverable(checked === true)}
+                                        className="mt-1"
+                                    />
+                                    <div className="space-y-1">
+                                        <Label htmlFor="is_discoverable" className="text-sm font-medium leading-none cursor-pointer">
+                                            Global Directory Visibility
+                                        </Label>
+                                        <p className="text-xs text-muted-foreground">
+                                            Allow your profile to be discovered by users from other communities.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
                         </>
                     )}
 

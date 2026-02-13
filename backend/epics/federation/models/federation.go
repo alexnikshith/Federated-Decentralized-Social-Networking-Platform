@@ -47,6 +47,25 @@ type RemotePost struct {
 	UpdatedAt      time.Time          `json:"updated_at" bson:"updated_at"`           // Last update time
 }
 
+// RemoteFollow represents a local user following a remote user
+type RemoteFollow struct {
+	ID            primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	LocalUserID   primitive.ObjectID `json:"local_user_id" bson:"local_user_id"`
+	RemoteActorID string             `json:"remote_actor_id" bson:"remote_actor_id"` // Who they follow
+	RemoteUsername string            `json:"remote_username" bson:"remote_username"` // Cached username
+	RemoteInstance string            `json:"remote_instance" bson:"remote_instance"` // The server domain
+	CreatedAt     time.Time          `json:"created_at" bson:"created_at"`
+}
+
+// RemoteFollower represents a remote user following a local user
+type RemoteFollower struct {
+	ID            primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	LocalUserID   primitive.ObjectID `json:"local_user_id" bson:"local_user_id"`   // Who is being followed
+	RemoteActorID string             `json:"remote_actor_id" bson:"remote_actor_id"` // Who is following
+	RemoteInstance string            `json:"remote_instance" bson:"remote_instance"` // Their server
+	CreatedAt     time.Time          `json:"created_at" bson:"created_at"`
+}
+
 // FederationEvent represents an outgoing federation event (queued for delivery)
 type FederationEvent struct {
 	ID             primitive.ObjectID `json:"id" bson:"_id,omitempty"`

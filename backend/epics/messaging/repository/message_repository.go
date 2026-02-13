@@ -65,11 +65,14 @@ func (r *MessageRepository) GetConversation(ctx context.Context, participants []
 	return &conv, nil
 }
 
-func (r *MessageRepository) CreateConversation(ctx context.Context, participants []primitive.ObjectID) (*models.Conversation, error) {
+func (r *MessageRepository) CreateConversation(ctx context.Context, participants []primitive.ObjectID, instances map[string]string, usernames map[string]string, displayNames map[string]string) (*models.Conversation, error) {
 	conv := &models.Conversation{
-		Participants: participants,
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
+		Participants:            participants,
+		ParticipantInstances:    instances,
+		ParticipantUsernames:    usernames,
+		ParticipantDisplayNames: displayNames,
+		CreatedAt:               time.Now(),
+		UpdatedAt:               time.Now(),
 	}
 	result, err := r.conversations.InsertOne(ctx, conv)
 	if err != nil {

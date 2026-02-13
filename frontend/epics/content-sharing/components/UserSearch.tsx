@@ -6,6 +6,8 @@ import { Search, UserPlus, UserCheck, Globe, SearchX, Loader2 } from 'lucide-rea
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import axios from 'axios';
+import { COMMUNITIES } from '../../../src/config/communities';
 
 export const UserSearch: React.FC<{
     onClose?: () => void;
@@ -26,14 +28,44 @@ export const UserSearch: React.FC<{
 
         setLoading(true);
         try {
-            const users = await api.searchUsers(searchQuery);
-            setResults(users);
+            // Federated Search: Query all known communities
+            const searchPromises = COMMUNITIES.map(async (community) => {
+                try {
+                    const response = await axios.get(`${community.url}/api/users/search?q=${encodeURIComponent(searchQuery)}&limit=10`);
+                    const users: PublicUser[] = response.data.data || [];
+
+                    // Add community context to remote users
+                    return users.map(u => ({
+                        ...u,
+                        community_name: community.name,
+                        community_url: community.url
+                    }));
+                } catch (err) {
+                    console.error(`Search on ${community.name} failed:`, err);
+                    return [];
+                }
+            });
+
+            const allResults = await Promise.all(searchPromises);
+            const flatResults = allResults.flat();
+
+            // Deduplicate by username and id
+            const uniqueResults = flatResults.reduce((acc: PublicUser[], current) => {
+                const x = acc.find(item => item.username === current.username && item.id === current.id);
+                if (!x) {
+                    return acc.concat([current]);
+                } else {
+                    return acc;
+                }
+            }, []);
+
+            setResults(uniqueResults);
         } catch (error) {
             console.error('Search failed:', error);
             toast({
                 variant: "destructive",
                 title: "Search failed",
-                description: "Unable to search users. Please try again.",
+                description: "Unable to perform federated search. Please try again.",
             });
         } finally {
             setLoading(false);
@@ -72,7 +104,11 @@ export const UserSearch: React.FC<{
                                 if (onSelectUser) {
                                     onSelectUser(user);
                                 } else {
-                                    navigate(`/profile/${user.username}`);
+                                    const params = new URLSearchParams();
+                                    if ((user as any).community_url) {
+                                        params.set('community', (user as any).community_url);
+                                    }
+                                    navigate(`/profile/${user.username}${params.toString() ? '?' + params.toString() : ''}`);
                                 }
                                 if (onClose) onClose();
                             }}
@@ -94,8 +130,16 @@ export const UserSearch: React.FC<{
                                         <Globe className="w-2.5 h-2.5 text-accent flex-shrink-0" />
                                     )}
                                 </div>
-                                <div className="text-[10px] text-muted-foreground truncate font-mono">
-                                    @{user.username}
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                    <div className="text-[10px] text-muted-foreground truncate font-mono">
+                                        @{user.username}
+                                    </div>
+                                    {(user as any).community_name && (
+                                        <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-primary/10 text-[8px] font-bold text-primary uppercase tracking-tighter">
+                                            <Globe className="w-2 h-2" />
+                                            {(user as any).community_name}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

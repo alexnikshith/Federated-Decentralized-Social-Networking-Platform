@@ -1,9 +1,9 @@
-import { 
-  Shield, 
-  Users, 
-  Globe, 
-  Lock, 
-  MessageSquare, 
+import {
+  Shield,
+  Users,
+  Globe,
+  Lock,
+  MessageSquare,
   BarChart3,
   Eye,
   Heart
@@ -25,8 +25,8 @@ const features = [
   },
   {
     icon: Globe,
-    title: "Federated Network",
-    description: "Connect with users across different instances while maintaining your local community identity.",
+    title: "Global Discovery",
+    description: "Search and connect with users across every community in the federation through our opt-in Global Directory.",
     color: "success",
   },
   {
@@ -59,14 +59,14 @@ export function FeaturesSection() {
   return (
     <section className="py-24 relative">
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-secondary/30 to-transparent" />
-      
+
       <div className="container mx-auto px-4 lg:px-8 relative z-10">
         <div className="text-center max-w-3xl mx-auto mb-16">
           <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">
             Built on <span className="text-gradient-teal">ethical principles</span>
           </h2>
           <p className="text-lg text-muted-foreground">
-            Every feature is designed with privacy, transparency, and user autonomy in mind. 
+            Every feature is designed with privacy, transparency, and user autonomy in mind.
             Here's what makes Nexus different.
           </p>
         </div>

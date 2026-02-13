@@ -30,6 +30,8 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     // Terms agreement state
+    // Checkbox state for discoverability
+    const [isDiscoverable, setIsDiscoverable] = useState(false);
     const [agreedToTerms, setAgreedToTerms] = useState(false);
     // Loading state for submission
     const [isLoading, setIsLoading] = useState(false);
@@ -74,6 +76,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                 username,
                 email,
                 password,
+                is_discoverable: isDiscoverable,
             });
 
             toast.success("Account created successfully! Please sign in.");
@@ -219,7 +222,24 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                         </div>
                     </div>
 
-                    <div className="pt-2">
+                    <div className="pt-2 space-y-4">
+                        <div className="flex items-start gap-3 p-3 rounded-lg border border-border/50 bg-secondary/10">
+                            <Checkbox
+                                id="is_discoverable"
+                                checked={isDiscoverable}
+                                onCheckedChange={(checked) => setIsDiscoverable(checked === true)}
+                                className="mt-1"
+                            />
+                            <div className="space-y-1">
+                                <label htmlFor="is_discoverable" className="text-sm font-medium text-foreground cursor-pointer">
+                                    Global Directory Visibility
+                                </label>
+                                <p className="text-xs text-muted-foreground leading-relaxed">
+                                    Allow your profile to be listed in the public directory and discoverable by users from other communities.
+                                </p>
+                            </div>
+                        </div>
+
                         <div className="flex items-start gap-3">
                             <Checkbox
                                 id="terms"

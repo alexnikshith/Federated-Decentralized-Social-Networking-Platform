@@ -3,7 +3,11 @@ package service
 import (
 	"context"
 	"errors"
+	"federated-social/backend/config"
 	followRepo "federated-social/backend/epics/content-sharing/repository"
+	followService "federated-social/backend/epics/content-sharing/service"
+	federationModels "federated-social/backend/epics/federation/models"
+	federationRepo "federated-social/backend/epics/federation/repository"
 	"federated-social/backend/epics/identity/dto"
 	"federated-social/backend/epics/identity/models"
 	"federated-social/backend/epics/identity/repository"
@@ -20,8 +24,10 @@ type ProfileService struct {
 	sessionRepo      *repository.SessionRepository
 	verificationRepo *repository.VerificationRepository
 	followRepo       *followRepo.FollowRepository
+	followService    *followService.FollowService
 	postRepo         *followRepo.PostRepository
 	notificationRepo *followRepo.NotificationRepository
+	remoteUserRepo   *federationRepo.RemoteUserRepository
 }
 
 func NewProfileService() *ProfileService {
@@ -31,8 +37,10 @@ func NewProfileService() *ProfileService {
 		sessionRepo:      repository.NewSessionRepository(),
 		verificationRepo: repository.NewVerificationRepository(),
 		followRepo:       followRepo.NewFollowRepository(),
+		followService:    followService.NewFollowService(),
 		postRepo:         followRepo.NewPostRepository(),
 		notificationRepo: followRepo.NewNotificationRepository(),
+		remoteUserRepo:   federationRepo.NewRemoteUserRepository(),
 	}
 }
 
@@ -40,12 +48,23 @@ func NewProfileService() *ProfileService {
 // It fetches necessary user data, checks for account deactivation, and
 // enforces visibility rules based on the relationship (own profile, following, or public).
 func (s *ProfileService) GetProfile(ctx context.Context, userID primitive.ObjectID, requestingUserID *primitive.ObjectID) (*models.PublicUser, error) {
-	// Fetch user from repository
+	// Try local user repository first
 	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
-		return nil, err
+		// If not found locally, try remote user repository
+		remoteUser, remoteErr := s.remoteUserRepo.GetRemoteUserByID(ctx, userID)
+		if remoteErr == nil {
+			return s.RemoteUserToPublicUser(remoteUser), nil
+		}
+		// If still not found, try by actor ID (which might be a URL or other identifier)
+		remoteUserByActorID, actorIDErr := s.remoteUserRepo.GetRemoteUserByActorID(ctx, userID.Hex())
+		if actorIDErr == nil {
+			return s.RemoteUserToPublicUser(remoteUserByActorID), nil
+		}
+		return nil, errors.New("user not found")
 	}
 
+	// Local user found, proceed with visibility checks
 	// Check if account is deactivated - deactivated accounts should not be visible
 	if user.IsDeactivated {
 		return nil, errors.New("account is deactivated")
@@ -53,6 +72,9 @@ func (s *ProfileService) GetProfile(ctx context.Context, userID primitive.Object
 
 	// Convert to PublicUser to strip sensitive fields (e.g., password hash)
 	publicUser := user.ToPublicUser()
+	if publicUser.InstanceID == "" {
+		publicUser.InstanceID = config.AppConfig.InstanceDomain
+	}
 
 	// Populate private fields (like 2FA status) ONLY if viewing own profile
 	if requestingUserID != nil && *requestingUserID == userID {
@@ -61,7 +83,8 @@ func (s *ProfileService) GetProfile(ctx context.Context, userID primitive.Object
 
 	// Check and set follow status if a requesting user is provided
 	if requestingUserID != nil {
-		isFollowing, _ := s.followRepo.IsFollowing(ctx, *requestingUserID, userID)
+		// Use FollowService to check both local and remote follows
+		isFollowing, _ := s.followService.IsFollowing(ctx, *requestingUserID, userID)
 		publicUser.IsFollowing = isFollowing
 	}
 
@@ -79,8 +102,9 @@ func (s *ProfileService) GetProfile(ctx context.Context, userID primitive.Object
 	}
 
 	// Always populate stats regardless of visibility (US requirements)
-	followersCount, _ := s.followRepo.CountFollowers(ctx, userID)
-	followingCount, _ := s.followRepo.CountFollowing(ctx, userID)
+	// Use FollowService to count aggregated local and remote followers/following
+	followersCount, _ := s.followService.CountFollowers(ctx, userID)
+	followingCount, _ := s.followService.CountFollowing(ctx, userID)
 	postsCount, _ := s.postRepo.CountPostsByAuthor(ctx, userID)
 
 	log.Printf("DEBUG: ProfileService.GetProfile for userID=%v: followers=%d, following=%d, posts=%d", userID.Hex(), followersCount, followingCount, postsCount)
@@ -121,6 +145,9 @@ func (s *ProfileService) UpdateProfile(ctx context.Context, userID primitive.Obj
 			return nil, errors.New("invalid profile visibility value")
 		}
 		update["profile_visibility"] = *req.ProfileVisibility
+	}
+	if req.IsDiscoverable != nil {
+		update["is_discoverable"] = *req.IsDiscoverable
 	}
 
 	if len(update) == 0 {
@@ -232,18 +259,43 @@ func (s *ProfileService) GetProfileByIdOrUsername(ctx context.Context, identifie
 	// Try as ObjectID first
 	if userID, idErr := primitive.ObjectIDFromHex(identifier); idErr == nil {
 		user, err = s.userRepo.FindByID(ctx, userID)
+		if err == nil {
+			return s.GetProfile(ctx, user.ID, requestingUserID)
+		}
+
+		// Not found locally? Try remote repository by ID
+		remoteUser, remoteErr := s.remoteUserRepo.GetRemoteUserByID(ctx, userID)
+		if remoteErr == nil {
+			return s.RemoteUserToPublicUser(remoteUser), nil
+		}
 	}
 
 	// If not found or not a valid ObjectID, try as username
-	if user == nil {
-		user, err = s.userRepo.FindByUsername(ctx, identifier)
+	user, err = s.userRepo.FindByUsername(ctx, identifier)
+	if err == nil {
+		return s.GetProfile(ctx, user.ID, requestingUserID)
 	}
 
-	if err != nil {
-		return nil, err
+	// Still not found? Try remote user cache by username
+	remoteUser, remoteErr := s.remoteUserRepo.GetRemoteUserByUsername(ctx, identifier)
+	if remoteErr == nil {
+		return s.RemoteUserToPublicUser(remoteUser), nil
 	}
 
-	return s.GetProfile(ctx, user.ID, requestingUserID)
+	return nil, errors.New("user not found")
+}
+
+func (s *ProfileService) RemoteUserToPublicUser(ru *federationModels.RemoteUser) *models.PublicUser {
+	return &models.PublicUser{
+		ID:                ru.ID,
+		Username:          ru.Username,
+		DisplayName:       ru.DisplayName,
+		Bio:               ru.Bio,
+		AvatarURL:         ru.AvatarURL,
+		InstanceID:        ru.Instance,
+		ProfileVisibility: "public",
+		CreatedAt:         ru.CreatedAt,
+	}
 }
 
 // AddJoinedCommunity adds a community to the user's joined list

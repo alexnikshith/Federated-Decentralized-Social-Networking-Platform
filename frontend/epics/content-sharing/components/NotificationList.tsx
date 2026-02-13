@@ -46,6 +46,8 @@ export const NotificationList: React.FC = () => {
             // ...
             case 'comment':
                 return <MessageSquare className="w-4 h-4 text-primary fill-current" />;
+            case 'message':
+                return <MessageSquare className="w-4 h-4 text-primary" />;
             case 'follow':
                 return <UserPlus className="w-4 h-4 text-accent fill-current" />;
             case 'mention':
@@ -121,6 +123,8 @@ export const NotificationList: React.FC = () => {
                 return <span>{usernameElement} followed you</span>;
             case 'mention':
                 return <span>{usernameElement} mentioned you in their post</span>;
+            case 'message':
+                return <span>{usernameElement} sent you a message</span>;
             default:
                 return 'New interaction';
         }
@@ -154,6 +158,8 @@ export const NotificationList: React.FC = () => {
 
                                     if (notif.type === 'follow') {
                                         navigate(`/profile/${notif.related_user_name}`);
+                                    } else if (notif.type === 'message') {
+                                        navigate('/messages');
                                     } else if (notif.type === 'like' || notif.type === 'mention') {
                                         // Open post in dialog
                                         setSelectedPostId(notif.related_entity_id);
