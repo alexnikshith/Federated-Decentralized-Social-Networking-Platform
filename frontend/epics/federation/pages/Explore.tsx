@@ -28,7 +28,7 @@ const Explore = () => {
     setError("");
     try {
       // Ideally fetch different endpoints for trending/recent
-      const data = await getFeed(50); // Fetch more to allow for filtering
+      const data = await getFeed('public', 50); // Fetch public feed for community exploration
       setPosts(data.posts || []);
     } catch (e) {
       setError("Failed to load community content. Please try again.");
@@ -58,9 +58,6 @@ const Explore = () => {
       const now = Date.now();
       return posts
         .filter(post => {
-          // Hide posts from the user themselves
-          if (user && post.author_id === user.id) return false;
-
           const postTime = new Date(post.created_at).getTime();
           return (now - postTime) < SIX_HOURS_IN_MS;
         })

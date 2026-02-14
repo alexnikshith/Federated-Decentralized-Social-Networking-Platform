@@ -427,23 +427,7 @@ export const SettingsPage = () => {
                                                 </Select>
                                             </div>
 
-                                            <div className="space-y-2 md:col-span-2">
-                                                <div className="p-4 rounded-xl border border-border/50 bg-secondary/10 flex items-start justify-between">
-                                                    <div className="space-y-1">
-                                                        <h4 className="font-bold text-base flex items-center gap-2">
-                                                            <GlobeIcon className="w-4 h-4 text-primary" />
-                                                            Global Directory Visibility
-                                                        </h4>
-                                                        <p className="text-sm text-muted-foreground leading-relaxed">
-                                                            Allow your profile to be listed in the public directory and discoverable by users from other communities.
-                                                        </p>
-                                                    </div>
-                                                    <Switch
-                                                        checked={formData.is_discoverable}
-                                                        onCheckedChange={handleToggleDiscovery}
-                                                    />
-                                                </div>
-                                            </div>
+
                                         </div>
 
                                         {isEditing && (
@@ -682,6 +666,28 @@ export const SettingsPage = () => {
                                 </div>
                             )}
                         </div>
+
+                        {/* Global Directory Visibility - Separate Card */}
+                        {activeTab === "profile" && (
+                            <div className="glass-card rounded-3xl p-8 lg:p-10 mt-6 bg-card/50 backdrop-blur-xl border border-border/50 animate-in fade-in slide-in-from-bottom-4">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="space-y-1">
+                                        <h3 className="font-bold text-lg flex items-center gap-2">
+                                            <GlobeIcon className="w-5 h-5 text-primary" />
+                                            Global Directory Visibility
+                                        </h3>
+                                        <p className="text-muted-foreground text-sm leading-relaxed max-w-2xl">
+                                            Enable this to allow your profile to be listed in the public directory and discoverable by users from other federated communities.
+                                        </p>
+                                    </div>
+                                    <Switch
+                                        checked={formData.is_discoverable}
+                                        onCheckedChange={handleToggleDiscovery}
+                                        className="mt-1"
+                                    />
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

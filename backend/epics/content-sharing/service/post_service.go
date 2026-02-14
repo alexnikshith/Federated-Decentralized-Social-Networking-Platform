@@ -188,8 +188,8 @@ func (s *PostService) GetFeed(ctx context.Context, userID primitive.ObjectID, li
 		}
 
 	} else {
-		// Public (Local) - Show all posts excluding blocked/hidden AND self
-		blockedIDs = append(blockedIDs, userID)
+		// Public (Local) - Show all posts excluding blocked/hidden
+		// blockedIDs = append(blockedIDs, userID) // REMOVED: Allow self posts in explore
 
 		allPosts, err := s.postRepo.GetAllPosts(ctx, blockedIDs, limit)
 		if err != nil {

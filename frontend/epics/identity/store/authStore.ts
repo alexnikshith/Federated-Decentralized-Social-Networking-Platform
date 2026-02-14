@@ -28,7 +28,7 @@ interface AuthState {
     checkAutoLogout: () => boolean;
 
     // Multi-session actions
-    switchAccount: (userId: string, intentToLogin?: boolean) => void;
+    switchAccount: (userId: string, communityId?: string, intentToLogin?: boolean) => void;
     switchCommunity: (communityId: string) => void; // New Action
     removeAccount: (userId: string) => void;
     pauseSession: () => void;
@@ -94,7 +94,7 @@ export const useAuthStore = create<AuthState>()(
                 const state = get();
 
                 const newSessions = state.sessions.map(s =>
-                    s.communityId === currentCommunityId
+                    (s.communityId === currentCommunityId && s.user.id === state.user?.id)
                         ? { ...s, token: null }
                         : s
                 );
@@ -134,7 +134,7 @@ export const useAuthStore = create<AuthState>()(
                 set((state) => {
                     const currentCommunityId = localStorage.getItem('active_community_id') || DEFAULT_COMMUNITY_ID;
                     const newSessions = state.sessions.map(s =>
-                        s.communityId === currentCommunityId
+                        (s.communityId === currentCommunityId && s.user.id === user.id)
                             ? { ...s, user }
                             : s
                     );
@@ -153,7 +153,7 @@ export const useAuthStore = create<AuthState>()(
 
                     const currentCommunityId = localStorage.getItem('active_community_id') || DEFAULT_COMMUNITY_ID;
                     const newSessions = state.sessions.map(s =>
-                        s.communityId === currentCommunityId
+                        (s.communityId === currentCommunityId && s.user.id === state.user?.id)
                             ? { ...s, lastActivity: now }
                             : s
                     );
@@ -177,9 +177,12 @@ export const useAuthStore = create<AuthState>()(
             },
 
             // switchAccount moves a background session to active state
-            switchAccount: (userId: string, intentToLogin: boolean = false) => {
+            switchAccount: (userId: string, communityId?: string, intentToLogin: boolean = false) => {
                 const state = get();
-                const session = state.sessions.find(s => s.user.id === userId);
+                // Find session by User ID AND Community ID if provided, otherwise just User ID
+                const session = state.sessions.find(s =>
+                    s.user.id === userId && (!communityId || s.communityId === communityId)
+                );
 
                 if (session && session.token) {
                     // Update active community context

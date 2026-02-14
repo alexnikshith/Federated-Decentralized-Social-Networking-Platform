@@ -69,7 +69,7 @@ export const DashboardPage: React.FC = () => {
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="section-title mb-0">
                                 <Rss className="w-5 h-5 text-primary" />
-                                {feedType === 'home' ? 'Home Feed' : 'Public Feed'}
+                                {feedType === 'home' ? 'For You' : 'Public Feed'}
                             </h2>
                             <div className="flex bg-muted/50 p-1 rounded-lg">
                                 <button
