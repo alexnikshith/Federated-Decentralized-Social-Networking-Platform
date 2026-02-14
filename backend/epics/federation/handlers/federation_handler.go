@@ -132,13 +132,21 @@ func (h *FederationHandler) ResolveUser(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Convert to PublicUser format for frontend compatibility
+	// Map internal Docker names back to public localhost ports for frontend
+	publicInstance := remoteUser.Instance
+	if remoteUser.Instance == "backend2:8080" {
+		publicInstance = "localhost:8081"
+	} else if remoteUser.Instance == "backend:8080" {
+		publicInstance = "localhost:8080"
+	}
+
 	response := map[string]interface{}{
 		"id":           remoteUser.ID.Hex(),
 		"username":     remoteUser.Username,
 		"display_name": remoteUser.DisplayName,
 		"bio":          remoteUser.Bio,
 		"avatar_url":   remoteUser.AvatarURL,
-		"instance":     remoteUser.Instance,
+		"instance":     publicInstance, // Return public domain, not internal Docker name
 		"created_at":   remoteUser.CreatedAt,
 	}
 
