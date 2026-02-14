@@ -49,12 +49,20 @@ export const UserSearch: React.FC<{
             const allResults = await Promise.all(searchPromises);
             const flatResults = allResults.flat();
 
-            // Deduplicate by username and id
+            // Deduplicate by username, preferring the user's home community over cached remote versions
             const uniqueResults = flatResults.reduce((acc: PublicUser[], current) => {
-                const x = acc.find(item => item.username === current.username && item.id === current.id);
-                if (!x) {
+                const existing = acc.find(item => item.username === current.username);
+                if (!existing) {
                     return acc.concat([current]);
                 } else {
+                    // Prefer the version where user is local (instance is empty, "default", or doesn't have "community-" prefix)
+                    const currentIsLocal = !current.instance || current.instance === 'default' || current.instance === '';
+                    const existingIsLocal = !existing.instance || existing.instance === 'default' || existing.instance === '';
+
+                    if (currentIsLocal && !existingIsLocal) {
+                        // Replace remote version with local version
+                        return acc.map(item => item.username === current.username ? current : item);
+                    }
                     return acc;
                 }
             }, []);

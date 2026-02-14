@@ -552,6 +552,8 @@ func (s *FederationService) ResolveRemoteUser(ctx context.Context, handle string
 		}
 	}
 
+	log.Printf("ResolveRemoteUser: Parsed handle '%s' -> username='%s', domain='%s'", handle, username, domain)
+
 	if username == "" || domain == "" {
 		return nil, fmt.Errorf("invalid handle format, expected user@domain")
 	}
@@ -559,15 +561,17 @@ func (s *FederationService) ResolveRemoteUser(ctx context.Context, handle string
 	// Sanitize domain
 	domain = strings.TrimPrefix(domain, "http://")
 	domain = strings.TrimPrefix(domain, "https://")
+	log.Printf("ResolveRemoteUser: After sanitization, domain='%s'", domain)
 
 	// Map localhost ports to Docker service names for inter-container communication
 	// When running in Docker, localhost:8081 should map to backend2:8080
+	originalDomain := domain
 	if strings.HasPrefix(domain, "localhost:8081") {
 		domain = "backend2:8080"
-		log.Printf("ResolveRemoteUser: Mapped localhost:8081 to backend2:8080 for Docker networking")
+		log.Printf("ResolveRemoteUser: Mapped %s to %s for Docker networking", originalDomain, domain)
 	} else if strings.HasPrefix(domain, "localhost:8080") {
 		domain = "backend:8080"
-		log.Printf("ResolveRemoteUser: Mapped localhost:8080 to backend:8080 for Docker networking")
+		log.Printf("ResolveRemoteUser: Mapped %s to %s for Docker networking", originalDomain, domain)
 	}
 
 	log.Printf("ResolveRemoteUser: Resolving %s@%s", username, domain)
@@ -862,18 +866,63 @@ func (s *FederationService) GetRemoteUserByID(ctx context.Context, id primitive.
 func (s *FederationService) backfillRemotePosts(ctx context.Context, remoteUser *models.RemoteUser) {
 	log.Printf("Backfill: Starting for %s@%s", remoteUser.Username, remoteUser.Instance)
 
-	// Construct URL: http://<domain>/api/users/<username>/posts
-	url := fmt.Sprintf("http://%s/api/users/%s/posts", remoteUser.Instance, remoteUser.Username)
+	// The /api/users/{id}/posts endpoint requires a user ID, but we only have the username
+	// We need to first resolve the user to get their ID on the remote instance
+	// Construct URL to get user info first
+	userInfoURL := fmt.Sprintf("http://%s/api/users/search?q=%s", remoteUser.Instance, remoteUser.Username)
 
-	resp, err := s.httpClient.Get(url)
+	log.Printf("Backfill: Fetching user info from %s", userInfoURL)
+	resp, err := s.httpClient.Get(userInfoURL)
 	if err != nil {
-		log.Printf("Backfill failed: Request error: %v", err)
+		log.Printf("Backfill failed: User search request error: %v", err)
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("Backfill failed: Status %d", resp.StatusCode)
+		log.Printf("Backfill failed: User search status %d", resp.StatusCode)
+		return
+	}
+
+	var searchResponse struct {
+		Users []struct {
+			ID       string `json:"id"`
+			Username string `json:"username"`
+		} `json:"users"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&searchResponse); err != nil {
+		log.Printf("Backfill failed: User search decode error: %v", err)
+		return
+	}
+
+	// Find the exact user
+	var remoteUserID string
+	for _, u := range searchResponse.Users {
+		if u.Username == remoteUser.Username {
+			remoteUserID = u.ID
+			break
+		}
+	}
+
+	if remoteUserID == "" {
+		log.Printf("Backfill failed: Could not find user %s in search results", remoteUser.Username)
+		return
+	}
+
+	// Now fetch their posts using the user ID
+	postsURL := fmt.Sprintf("http://%s/api/users/%s/posts", remoteUser.Instance, remoteUserID)
+	log.Printf("Backfill: Fetching posts from %s", postsURL)
+
+	resp2, err := s.httpClient.Get(postsURL)
+	if err != nil {
+		log.Printf("Backfill failed: Posts request error: %v", err)
+		return
+	}
+	defer resp2.Body.Close()
+
+	if resp2.StatusCode != http.StatusOK {
+		log.Printf("Backfill failed: Posts status %d", resp2.StatusCode)
 		return
 	}
 
@@ -890,7 +939,7 @@ func (s *FederationService) backfillRemotePosts(ctx context.Context, remoteUser 
 		} `json:"data"`
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(&feedResponse); err != nil {
+	if err := json.NewDecoder(resp2.Body).Decode(&feedResponse); err != nil {
 		log.Printf("Backfill failed: Decode error: %v", err)
 		return
 	}
@@ -920,4 +969,6 @@ func (s *FederationService) backfillRemotePosts(ctx context.Context, remoteUser 
 			log.Printf("Backfill: Failed to upsert post %s: %v", p.ID, err)
 		}
 	}
+
+	log.Printf("Backfill: Completed for %s@%s - saved %d posts", remoteUser.Username, remoteUser.Instance, len(feedResponse.Data.Posts))
 }
