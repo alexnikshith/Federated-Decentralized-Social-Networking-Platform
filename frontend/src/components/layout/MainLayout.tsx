@@ -73,30 +73,13 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
     const displaySessions = React.useMemo(() => {
         if (!user) return [];
 
-        // 1. Exclude current user AND any session with same email as current user. 
-        // Use optional chaining to prevent crashes if user or s.user is partially undefined
-        const others = sessions.filter(s =>
-            s.user?.id !== user?.id &&
-            s.user?.email !== user?.email &&
-            s.user?.email // Ensure email exists
-        );
-
-        // 2. Deduplicate by email, prioritizing current community
-        const unique = new Map<string, typeof sessions[0]>();
-
-        others.forEach(s => {
-            const email = s.user.email!; // content verified above
-            const existing = unique.get(email);
-
-            if (!existing) {
-                unique.set(email, s);
-            } else if (s.communityId === activeCommunityId && existing.communityId !== activeCommunityId) {
-                // Replace with current community version if available
-                unique.set(email, s);
-            }
+        // Return all sessions except the current active one
+        // We match based on User ID AND Community ID to ensure we don't hide
+        // the same user in a different community, or different users in the same community.
+        return sessions.filter(s => {
+            const isCurrentSession = s.user?.id === user.id && s.communityId === activeCommunityId;
+            return !isCurrentSession;
         });
-
-        return Array.from(unique.values());
     }, [sessions, user, activeCommunityId]);
 
     // If on landing page or about page, don't show navigation
@@ -119,7 +102,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
     };
 
 
-    // Sidebar Links: Communities, Explore Federation
+    // Sidebar Links: Communities, Reports
     // Settings, Theme, Logout are in bottom section manually
     const sidebarLinks = [
         {
@@ -129,13 +112,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                 <IconUsers className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
             ),
         },
-        {
-            label: "Explore Federation",
-            href: "/explore",
-            icon: (
-                <IconWorld className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
-            ),
-        },
+        // Moved Explore to Dock for better access
         {
             label: "Reports",
             href: "/reports",
@@ -162,7 +139,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
         ),
     };
 
-    // Floating Dock Links: Home, Feed, Search, Profile
+    // Floating Dock Links: Home, Explore, Post, Notifications, Messages, Profile
     const dockLinks = [
         {
             title: "Home",
@@ -172,7 +149,14 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
             href: "/dashboard",
         },
         {
-            title: "Post",
+            title: "Explore",
+            icon: (
+                <IconWorld className="h-full w-full text-neutral-500 dark:text-neutral-300" />
+            ),
+            href: "/explore",
+        },
+        {
+            title: "Create",
             icon: (
                 <IconLayoutList className="h-full w-full text-neutral-500 dark:text-neutral-300" />
             ),
@@ -212,6 +196,13 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
             ),
             href: "/messages",
         },
+        {
+            title: "Profile",
+            icon: (
+                <LucideUser className="h-full w-full text-neutral-500 dark:text-neutral-300" />
+            ),
+            href: user?.username ? `/profile/${user.username}` : "/dashboard",
+        },
     ];
 
     return (
@@ -241,17 +232,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                         </div>
                     </div>
                     <div className="flex flex-col gap-2">
-                        <SidebarLink
-                            link={{
-                                label: "Profile",
-                                href: user?.username ? `/profile/${user.username}` : "/dashboard",
-                                icon: (
-                                    <LucideUser className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
-                                ),
-                            }}
-                            onClick={() => user?.username && navigate(`/profile/${user.username}`)}
-                            className={location.pathname === `/profile/${user?.username}` ? "bg-neutral-200 dark:bg-neutral-700 rounded-md" : ""}
-                        />
+                        {/* Profile Link Removed from Sidebar (Moved to Dock) */}
                         <SidebarLink
                             link={settingsLink}
                             onClick={() => navigate("/settings")}
@@ -324,11 +305,11 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                                                         localStorage.setItem('active_community_url', targetComm.url);
                                                     }
 
-                                                    switchAccount(session.user.id);
+                                                    switchAccount(session.user.id, session.communityId);
                                                     navigate("/dashboard");
                                                 } else {
                                                     // Just go to login for this specific account
-                                                    switchAccount(session.user.id, true);
+                                                    switchAccount(session.user.id, session.communityId, true);
                                                     navigate("/login");
                                                 }
                                             }}

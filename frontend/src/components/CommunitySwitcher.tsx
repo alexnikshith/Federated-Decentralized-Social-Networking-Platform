@@ -79,7 +79,7 @@ export function CommunitySwitcher({
 
             if (matchingSession) {
                 // Direct switch to SAME user on target community
-                useAuthStore.getState().switchAccount(matchingSession.user.id);
+                useAuthStore.getState().switchAccount(matchingSession.user.id, matchingSession.communityId);
                 navigate('/dashboard');
             } else {
                 // Open Login Modal via parent handler
