@@ -44,10 +44,12 @@ func (s *SearchService) mapInstanceToName(url string) string {
 	if url == "" {
 		return ""
 	}
-	if strings.Contains(url, "localhost:8080") || strings.Contains(url, "community-1") {
+	// Map localhost:8080 and Docker internal backend:8080 to community-1
+	if strings.Contains(url, "localhost:8080") || strings.Contains(url, "backend:8080") || strings.Contains(url, "community-1") {
 		return "community-1"
 	}
-	if strings.Contains(url, "localhost:8081") || strings.Contains(url, "community-2") {
+	// Map localhost:8081 and Docker internal backend2:8080 to community-2
+	if strings.Contains(url, "localhost:8081") || strings.Contains(url, "backend2:8080") || strings.Contains(url, "community-2") {
 		return "community-2"
 	}
 	return url
