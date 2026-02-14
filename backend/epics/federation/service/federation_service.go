@@ -740,6 +740,20 @@ func (s *FederationService) UnfollowRemoteUser(ctx context.Context, localUserID 
 	return s.QueueFederationEvent(ctx, envelope, remoteUser.Instance)
 }
 
+// RemoveRemoteFollow removes a remote follow relationship (simplified wrapper for handlers)
+func (s *FederationService) RemoveRemoteFollow(ctx context.Context, localUserID primitive.ObjectID, actorID, username, instance string) error {
+	log.Printf("RemoveRemoteFollow: localUserID=%s, actorID=%s", localUserID.Hex(), actorID)
+
+	// Remove from database
+	if err := s.relationshipsRepo.RemoveRemoteFollow(ctx, localUserID, actorID, username, instance); err != nil {
+		log.Printf("RemoveRemoteFollow: Failed to remove remote follow: %v", err)
+		return fmt.Errorf("failed to remove remote follow: %w", err)
+	}
+
+	log.Printf("RemoveRemoteFollow: Successfully removed follow for %s@%s", username, instance)
+	return nil
+}
+
 func (s *FederationService) GetFollowerInstances(ctx context.Context, userID primitive.ObjectID) ([]string, error) {
 	return s.relationshipsRepo.GetFollowerInstances(ctx, userID)
 }
