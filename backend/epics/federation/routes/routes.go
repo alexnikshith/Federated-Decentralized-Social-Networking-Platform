@@ -26,4 +26,7 @@ func RegisterFederationRoutes(router *mux.Router) {
 
 	// Follow remote user (protected)
 	router.Handle("/api/federation/users/follow", middleware.AuthMiddleware(http.HandlerFunc(handler.FollowRemoteUser))).Methods("POST", "OPTIONS")
+
+	// Unfollow remote user (protected)
+	router.Handle("/api/federation/users/unfollow", middleware.AuthMiddleware(http.HandlerFunc(handler.UnfollowRemoteUser))).Methods("POST", "OPTIONS")
 }

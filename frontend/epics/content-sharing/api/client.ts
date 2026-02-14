@@ -165,6 +165,15 @@ export const getFollowing = async (userId: string): Promise<PublicUser[]> => {
     return response.data.data;
 };
 
+// Federation Follow API - for following users from other communities
+export const followRemoteUser = async (handle: string): Promise<void> => {
+    await api.post('/api/federation/users/follow', { handle });
+};
+
+export const unfollowRemoteUser = async (handle: string): Promise<void> => {
+    await api.post('/api/federation/users/unfollow', { handle });
+};
+
 // Notifications API
 export const getNotifications = async (limit = 50): Promise<Notification[]> => {
     const response = await api.get(`/api/notifications?limit=${limit}`);

@@ -34,6 +34,8 @@ import {
   getUserCommentedPosts,
   followUser,
   unfollowUser,
+  followRemoteUser,
+  unfollowRemoteUser,
   getFollowers,
   getFollowing,
   getSavedPosts
@@ -729,14 +731,34 @@ const ProfileUI = () => {
                         onClick={async () => {
                           if (!profileUser) return;
                           try {
+                            // Detect if this is a remote user
+                            const currentInstanceUrl = localStorage.getItem('active_community_url') || '';
+                            const currentInstanceDomain = currentInstanceUrl.replace(/^https?:\/\//, '');
+                            const profileInstance = (profileUser.instance || targetCommunityUrl || '').replace(/^https?:\/\//, '');
+                            const isRemoteUser = profileInstance !== '' && profileInstance !== currentInstanceDomain;
+
                             if (isFollowing) {
-                              await unfollowUser(profileUser.id);
+                              if (isRemoteUser) {
+                                // Unfollow remote user
+                                const handle = `${profileUser.username}@${profileInstance}`;
+                                await unfollowRemoteUser(handle);
+                              } else {
+                                // Unfollow local user
+                                await unfollowUser(profileUser.id);
+                              }
                               setIsFollowing(false);
                               setProfileUser(prev => prev ? { ...prev, followers_count: (prev.followers_count || 0) - 1 } : null);
                               // Refetch posts and updated profile stats from server for real-time consistency
                               setTimeout(() => loadProfileData(false), 500);
                             } else {
-                              await followUser(profileUser.id);
+                              if (isRemoteUser) {
+                                // Follow remote user
+                                const handle = `${profileUser.username}@${profileInstance}`;
+                                await followRemoteUser(handle);
+                              } else {
+                                // Follow local user
+                                await followUser(profileUser.id);
+                              }
                               setIsFollowing(true);
                               setProfileUser(prev => prev ? { ...prev, followers_count: (prev.followers_count || 0) + 1 } : null);
                               // Refetch posts and updated profile stats from server for real-time consistency
