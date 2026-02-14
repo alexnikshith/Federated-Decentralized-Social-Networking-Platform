@@ -26,6 +26,23 @@ func NewRemoteRelationshipsRepository() *RemoteRelationshipsRepository {
 
 // CreateIndexes creates necessary indexes for remote relationship collections
 func (r *RemoteRelationshipsRepository) CreateIndexes(ctx context.Context) error {
+	// Clean up any legacy/incorrect indexes that may exist in the database (e.g., from old code)
+	// These indexes were from previous implementations and can cause duplicate key errors
+	legacyIndexes := []string{
+		"activity_id_1",
+		"follower_actor_id_1_following_actor_id_1",
+		"origin_instance_1",
+		"status_1",
+	}
+
+	for _, indexName := range legacyIndexes {
+		_, err := r.remoteFollows.Indexes().DropOne(ctx, indexName)
+		if err != nil {
+			// Ignore errors - index might not exist, which is fine
+			// log.Printf("Note: Could not drop legacy index %s (may not exist): %v", indexName, err)
+		}
+	}
+
 	// Remote Follows Indexes
 	followsIndexes := []mongo.IndexModel{
 		{
