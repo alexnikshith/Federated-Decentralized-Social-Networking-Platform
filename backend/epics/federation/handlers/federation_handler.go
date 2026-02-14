@@ -204,3 +204,70 @@ func (h *FederationHandler) FollowRemoteUser(w http.ResponseWriter, r *http.Requ
 		"message": fmt.Sprintf("Follow request sent to %s", body.Handle),
 	})
 }
+
+// UnfollowRemoteUser removes a follow relationship with a remote user
+// POST /api/federation/users/unfollow
+// Protected endpoint
+func (h *FederationHandler) UnfollowRemoteUser(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Handle string `json:"handle"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if body.Handle == "" {
+		http.Error(w, "handle is required", http.StatusBadRequest)
+		return
+	}
+
+	ctx := r.Context()
+	userIDVal := ctx.Value(middleware.UserIDKey)
+	if userIDVal == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	userIDStr, ok := userIDVal.(string)
+	if !ok {
+		http.Error(w, "Invalid user ID in context", http.StatusInternalServerError)
+		return
+	}
+
+	localUserID, err := primitive.ObjectIDFromHex(userIDStr)
+	if err != nil {
+		http.Error(w, "Invalid user ID format", http.StatusBadRequest)
+		return
+	}
+
+	// Parse handle to get username and instance
+	lastAtIndex := -1
+	for i := 0; i < len(body.Handle); i++ {
+		if body.Handle[i] == '@' {
+			lastAtIndex = i
+		}
+	}
+
+	if lastAtIndex == -1 || lastAtIndex == 0 || lastAtIndex == len(body.Handle)-1 {
+		http.Error(w, "Invalid handle format, expected username@instance", http.StatusBadRequest)
+		return
+	}
+
+	username := body.Handle[:lastAtIndex]
+	instance := body.Handle[lastAtIndex+1:]
+
+	// Construct actorID (this should match how we stored it during follow)
+	actorID := fmt.Sprintf("http://%s/users/%s", instance, username)
+
+	if err := h.federationService.RemoveRemoteFollow(ctx, localUserID, actorID, username, instance); err != nil {
+		http.Error(w, fmt.Sprintf("Failed to unfollow user: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":  "success",
+		"message": fmt.Sprintf("Unfollowed %s", body.Handle),
+	})
+}
