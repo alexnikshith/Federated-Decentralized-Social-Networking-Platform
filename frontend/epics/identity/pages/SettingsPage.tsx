@@ -28,6 +28,7 @@ export const SettingsPage = () => {
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState("profile");
     const [isEditing, setIsEditing] = useState(false);
+    const [isPasswordEditing, setIsPasswordEditing] = useState(false);
     const { toast } = useToast();
 
     // Form state
@@ -142,6 +143,54 @@ export const SettingsPage = () => {
         };
         loadActivity();
     }, [activeTab]);
+
+
+
+    // Check for actual changes
+    const hasProfileChanges = isEditing && currentUser && (
+        formData.display_name !== (currentUser.display_name || "") ||
+        formData.bio !== (currentUser.bio || "") ||
+        formData.username !== (currentUser.username || "") ||
+        formData.profile_visibility !== (currentUser.profile_visibility || "public")
+    );
+
+    const hasPasswordChanges = isPasswordEditing && (
+        passwordData.old_password !== "" ||
+        passwordData.new_password !== "" ||
+        passwordData.confirm_password !== ""
+    );
+
+    // Warn about unsaved changes before leaving
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (hasProfileChanges || hasPasswordChanges) {
+                e.preventDefault();
+                e.returnValue = ""; // Standard way to trigger browser confirmation dialog
+            }
+        };
+
+        window.addEventListener("beforeunload", handleBeforeUnload);
+        return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+    }, [hasProfileChanges, hasPasswordChanges]);
+
+    const handleTabChange = (tabId: string) => {
+        if ((hasProfileChanges || hasPasswordChanges) && tabId !== activeTab) {
+            if (window.confirm("You have unsaved changes. Are you sure you want to discard them?")) {
+                setIsEditing(false);
+                setIsPasswordEditing(false);
+                // Reset password data on discard
+                setPasswordData({
+                    old_password: "",
+                    new_password: "",
+                    confirm_password: "",
+                });
+                // Profile data reset is handled by re-entering edit mode or Effect sync
+                setActiveTab(tabId);
+            }
+        } else {
+            setActiveTab(tabId);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -299,7 +348,7 @@ export const SettingsPage = () => {
                             {navItems.map((item) => (
                                 <button
                                     key={item.id}
-                                    onClick={() => !item.disabled && setActiveTab(item.id)}
+                                    onClick={() => !item.disabled && handleTabChange(item.id)}
                                     disabled={item.disabled}
                                     className={cn(
                                         "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium",
@@ -322,144 +371,150 @@ export const SettingsPage = () => {
                         <div className="glass-card rounded-3xl p-8 lg:p-10 animate-in fade-in slide-in-from-bottom-4 bg-card/50 backdrop-blur-xl border border-border/50">
                             {activeTab === "profile" && (
                                 <div className="max-w-2xl">
-                                    <div className="mb-8 pb-6 border-b border-border/50 flex items-center justify-between">
-                                        <div>
-                                            <h2 className="text-2xl font-bold mb-2">Profile Details</h2>
-                                            <p className="text-muted-foreground">This information will be displayed publicly on your profile.</p>
-                                        </div>
-                                        {!isEditing && (
-                                            <Button
-                                                onClick={() => setIsEditing(true)}
-                                                variant="outline"
-                                                className="gap-2"
-                                            >
-                                                <Edit className="w-4 h-4" />
-                                                Edit Profile
-                                            </Button>
-                                        )}
+                                    <div className="mb-8 pb-6 border-b border-border/50">
+                                        <h2 className="text-2xl font-bold mb-2">Profile Details</h2>
+                                        <p className="text-muted-foreground">This information will be displayed publicly on your profile.</p>
                                     </div>
 
-                                    <form onSubmit={handleSubmit} className="space-y-8">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="display_name" className="text-base">Display Name</Label>
-                                                <Input
-                                                    id="display_name"
-                                                    value={formData.display_name}
-                                                    onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
-                                                    placeholder="Your name"
-                                                    disabled={!isEditing}
-                                                    className={cn(
-                                                        "h-11 transition-all duration-200",
-                                                        isEditing
-                                                            ? "bg-background border-primary/20 focus:border-primary shadow-sm"
-                                                            : "bg-gray-100 dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-muted-foreground cursor-not-allowed"
-                                                    )}
-                                                />
-                                                <p className="text-xs text-muted-foreground">The name that will be shown to other users.</p>
-                                            </div>
+                                    <div className="relative group">
+                                        {!isEditing && (
+                                            <div className="absolute inset-0 z-20 flex items-center justify-center transition-all duration-500 animate-in fade-in">
+                                                {/* Soft radial overlay with blur */}
+                                                <div className="absolute inset-0 bg-background/5 backdrop-blur-[9px] [mask-image:radial-gradient(ellipse_at_center,black_60%,transparent_100%)] opacity-100" />
+                                                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.3)_0%,rgba(0,0,0,0)_70%)]" />
 
-                                            <div className="space-y-2">
-                                                <Label htmlFor="username" className="text-base">Username</Label>
-                                                <Input
-                                                    id="username"
-                                                    value={formData.username}
-                                                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                                                    disabled={!isEditing}
-                                                    className={cn(
-                                                        "h-11 transition-all duration-200",
-                                                        isEditing
-                                                            ? "bg-background border-primary/20 focus:border-primary shadow-sm"
-                                                            : "bg-gray-100 dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-muted-foreground cursor-not-allowed"
-                                                    )}
-                                                />
-                                                <p className="text-xs text-muted-foreground">Usernames cannot contain spaces.</p>
-                                            </div>
-
-                                            <div className="space-y-2 md:col-span-2">
-                                                <Label htmlFor="bio" className="text-base">Bio</Label>
-                                                <Textarea
-                                                    id="bio"
-                                                    value={formData.bio}
-                                                    onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                                                    placeholder="Tell us a little about yourself"
-                                                    disabled={!isEditing}
-                                                    className={cn(
-                                                        "min-h-[120px] transition-all duration-200 resize-none",
-                                                        isEditing
-                                                            ? "bg-background border-primary/20 focus:border-primary shadow-sm"
-                                                            : "bg-gray-100 dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-muted-foreground cursor-not-allowed"
-                                                    )}
-                                                />
-                                            </div>
-
-                                            <div className="space-y-2 md:col-span-1">
-                                                <Label htmlFor="visibility" className="text-base">Profile Visibility</Label>
-                                                <Select
-                                                    value={formData.profile_visibility}
-                                                    disabled={!isEditing}
-                                                    onValueChange={(value: "public" | "followers") =>
-                                                        setFormData({ ...formData, profile_visibility: value })
-                                                    }
-                                                >
-                                                    <SelectTrigger className={cn(
-                                                        "h-11 transition-all duration-200",
-                                                        isEditing
-                                                            ? "bg-background border-primary/20"
-                                                            : "bg-gray-100 dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-muted-foreground cursor-not-allowed"
-                                                    )}>
-                                                        <SelectValue placeholder="Select visibility" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="public">
-                                                            <div className="flex items-center gap-2">
-                                                                <GlobeIcon className="w-4 h-4" />
-                                                                <span>Public</span>
-                                                            </div>
-                                                        </SelectItem>
-                                                        <SelectItem value="followers">
-                                                            <div className="flex items-center gap-2">
-                                                                <Lock className="w-4 h-4" />
-                                                                <span>Private</span>
-                                                            </div>
-                                                        </SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-
-
-                                        </div>
-
-                                        {isEditing && (
-                                            <div className="pt-6 border-t border-border/50 flex items-center justify-end gap-4">
                                                 <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    onClick={() => {
-                                                        setIsEditing(false);
-                                                        // Reset form data to current user info
-                                                        if (currentUser) {
-                                                            setFormData({
-                                                                display_name: currentUser.display_name || "",
-                                                                bio: currentUser.bio || "",
-                                                                username: currentUser.username || "",
-                                                                profile_visibility: (currentUser.profile_visibility || "public") as "public" | "followers",
-                                                                location: currentUser.location || "",
-                                                                website: currentUser.website || "",
-                                                                is_discoverable: currentUser.is_discoverable || false,
-                                                            });
-                                                        }
-                                                    }}
+                                                    onClick={() => setIsEditing(true)}
+                                                    className="relative z-30 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 font-medium text-sm px-6 py-2.5 h-auto border border-white/10 bg-primary hover:bg-primary/90 rounded-full"
                                                 >
-                                                    Cancel
-                                                </Button>
-                                                <Button type="submit" disabled={loading} className="min-w-[120px]">
-                                                    {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                                                    Save Changes
+                                                    <Edit className="w-4 h-4 mr-2" />
+                                                    Edit Profile
                                                 </Button>
                                             </div>
                                         )}
-                                    </form>
+
+                                        <form onSubmit={handleSubmit} className={cn("space-y-8 transition-all duration-700 ease-out", !isEditing && "opacity-60 grayscale-[0.2] pointer-events-none select-none blur-[2px]")}>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="display_name" className="text-base">Display Name</Label>
+                                                    <Input
+                                                        id="display_name"
+                                                        value={formData.display_name}
+                                                        onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
+                                                        placeholder="Your name"
+                                                        disabled={!isEditing}
+                                                        className={cn(
+                                                            "h-11 transition-all duration-200",
+                                                            isEditing
+                                                                ? "bg-background border-primary/20 focus:border-primary shadow-sm"
+                                                                : "bg-gray-100 dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-muted-foreground cursor-not-allowed"
+                                                        )}
+                                                    />
+                                                    <p className="text-xs text-muted-foreground">The name that will be shown to other users.</p>
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="username" className="text-base">Username</Label>
+                                                    <Input
+                                                        id="username"
+                                                        value={formData.username}
+                                                        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                                                        disabled={!isEditing}
+                                                        className={cn(
+                                                            "h-11 transition-all duration-200",
+                                                            isEditing
+                                                                ? "bg-background border-primary/20 focus:border-primary shadow-sm"
+                                                                : "bg-gray-100 dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-muted-foreground cursor-not-allowed"
+                                                        )}
+                                                    />
+                                                    <p className="text-xs text-muted-foreground">Usernames cannot contain spaces.</p>
+                                                </div>
+
+                                                <div className="space-y-2 md:col-span-2">
+                                                    <Label htmlFor="bio" className="text-base">Bio</Label>
+                                                    <Textarea
+                                                        id="bio"
+                                                        value={formData.bio}
+                                                        onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                                                        placeholder="Tell us a little about yourself"
+                                                        disabled={!isEditing}
+                                                        className={cn(
+                                                            "min-h-[120px] transition-all duration-200 resize-none",
+                                                            isEditing
+                                                                ? "bg-background border-primary/20 focus:border-primary shadow-sm"
+                                                                : "bg-gray-100 dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-muted-foreground cursor-not-allowed"
+                                                        )}
+                                                    />
+                                                </div>
+
+                                                <div className="space-y-2 md:col-span-1">
+                                                    <Label htmlFor="visibility" className="text-base">Profile Visibility</Label>
+                                                    <Select
+                                                        value={formData.profile_visibility}
+                                                        disabled={!isEditing}
+                                                        onValueChange={(value: "public" | "followers") =>
+                                                            setFormData({ ...formData, profile_visibility: value })
+                                                        }
+                                                    >
+                                                        <SelectTrigger className={cn(
+                                                            "h-11 transition-all duration-200",
+                                                            isEditing
+                                                                ? "bg-background border-primary/20"
+                                                                : "bg-gray-100 dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-muted-foreground cursor-not-allowed"
+                                                        )}>
+                                                            <SelectValue placeholder="Select visibility" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="public">
+                                                                <div className="flex items-center gap-2">
+                                                                    <GlobeIcon className="w-4 h-4" />
+                                                                    <span>Public</span>
+                                                                </div>
+                                                            </SelectItem>
+                                                            <SelectItem value="followers">
+                                                                <div className="flex items-center gap-2">
+                                                                    <Lock className="w-4 h-4" />
+                                                                    <span>Private</span>
+                                                                </div>
+                                                            </SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+
+
+                                            </div>
+
+                                            {isEditing && (
+                                                <div className="pt-6 border-t border-border/50 flex items-center justify-end gap-4 animate-in fade-in slide-in-from-top-2">
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        onClick={() => {
+                                                            setIsEditing(false);
+                                                            // Reset form data to current user info
+                                                            if (currentUser) {
+                                                                setFormData({
+                                                                    display_name: currentUser.display_name || "",
+                                                                    bio: currentUser.bio || "",
+                                                                    username: currentUser.username || "",
+                                                                    profile_visibility: (currentUser.profile_visibility || "public") as "public" | "followers",
+                                                                    location: currentUser.location || "",
+                                                                    website: currentUser.website || "",
+                                                                    is_discoverable: currentUser.is_discoverable || false,
+                                                                });
+                                                            }
+                                                        }}
+                                                    >
+                                                        Cancel
+                                                    </Button>
+                                                    <Button type="submit" disabled={loading} className="min-w-[120px]">
+                                                        {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                                                        Save Changes
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </form>
+                                    </div>
                                 </div>
                             )}
 
@@ -591,54 +646,91 @@ export const SettingsPage = () => {
                                                 Change Password
                                             </h3>
 
-                                            <form onSubmit={handlePasswordSubmit} className="space-y-6">
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="old_password">Current Password</Label>
-                                                    <Input
-                                                        id="old_password"
-                                                        type="password"
-                                                        value={passwordData.old_password}
-                                                        onChange={(e) => setPasswordData({ ...passwordData, old_password: e.target.value })}
-                                                        placeholder="Enter current password"
-                                                        className="h-11 bg-secondary/30"
-                                                        required
-                                                    />
-                                                </div>
+                                            <div className="relative group">
+                                                {!isPasswordEditing && (
+                                                    <div className="absolute inset-0 z-20 flex items-center justify-center transition-all duration-500 animate-in fade-in">
+                                                        {/* Soft radial overlay with blur */}
+                                                        <div className="absolute inset-0 bg-background/5 backdrop-blur-[6px] [mask-image:radial-gradient(ellipse_at_center,black_60%,transparent_100%)] opacity-100" />
+                                                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.3)_0%,rgba(0,0,0,0)_70%)]" />
 
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="new_password">New Password</Label>
-                                                    <Input
-                                                        id="new_password"
-                                                        type="password"
-                                                        value={passwordData.new_password}
-                                                        onChange={(e) => setPasswordData({ ...passwordData, new_password: e.target.value })}
-                                                        placeholder="Enter new password"
-                                                        className="h-11 bg-secondary/30"
-                                                        required
-                                                    />
-                                                    <p className="text-xs text-muted-foreground">Password must be at least 8 characters long.</p>
-                                                </div>
+                                                        <Button
+                                                            onClick={() => setIsPasswordEditing(true)}
+                                                            className="relative z-30 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 font-medium text-sm px-6 py-2.5 h-auto border border-white/10 bg-primary hover:bg-primary/90 rounded-full"
+                                                        >
+                                                            <Lock className="w-4 h-4 mr-2" />
+                                                            Change Password
+                                                        </Button>
+                                                    </div>
+                                                )}
 
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="confirm_password">Confirm New Password</Label>
-                                                    <Input
-                                                        id="confirm_password"
-                                                        type="password"
-                                                        value={passwordData.confirm_password}
-                                                        onChange={(e) => setPasswordData({ ...passwordData, confirm_password: e.target.value })}
-                                                        placeholder="Confirm new password"
-                                                        className="h-11 bg-secondary/30"
-                                                        required
-                                                    />
-                                                </div>
+                                                <form onSubmit={handlePasswordSubmit} className={cn("space-y-6 transition-all duration-700 ease-out", !isPasswordEditing && "opacity-60 grayscale-[0.2] pointer-events-none select-none blur-[2px]")}>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="old_password">Current Password</Label>
+                                                        <Input
+                                                            id="old_password"
+                                                            type="password"
+                                                            value={passwordData.old_password}
+                                                            onChange={(e) => setPasswordData({ ...passwordData, old_password: e.target.value })}
+                                                            placeholder="Enter current password"
+                                                            className="h-11 bg-secondary/30"
+                                                            disabled={!isPasswordEditing}
+                                                            required
+                                                        />
+                                                    </div>
 
-                                                <div className="pt-4 border-t border-border/50 flex justify-end">
-                                                    <Button type="submit" disabled={passwordLoading} className="min-w-[150px]">
-                                                        {passwordLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                                                        Update Password
-                                                    </Button>
-                                                </div>
-                                            </form>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="new_password">New Password</Label>
+                                                        <Input
+                                                            id="new_password"
+                                                            type="password"
+                                                            value={passwordData.new_password}
+                                                            onChange={(e) => setPasswordData({ ...passwordData, new_password: e.target.value })}
+                                                            placeholder="Enter new password"
+                                                            className="h-11 bg-secondary/30"
+                                                            disabled={!isPasswordEditing}
+                                                            required
+                                                        />
+                                                        <p className="text-xs text-muted-foreground">Password must be at least 8 characters long.</p>
+                                                    </div>
+
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="confirm_password">Confirm New Password</Label>
+                                                        <Input
+                                                            id="confirm_password"
+                                                            type="password"
+                                                            value={passwordData.confirm_password}
+                                                            onChange={(e) => setPasswordData({ ...passwordData, confirm_password: e.target.value })}
+                                                            placeholder="Confirm new password"
+                                                            className="h-11 bg-secondary/30"
+                                                            disabled={!isPasswordEditing}
+                                                            required
+                                                        />
+                                                    </div>
+
+                                                    {isPasswordEditing && (
+                                                        <div className="pt-4 border-t border-border/50 flex justify-end gap-3 animate-in fade-in slide-in-from-top-2">
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                onClick={() => {
+                                                                    setIsPasswordEditing(false);
+                                                                    setPasswordData({
+                                                                        old_password: "",
+                                                                        new_password: "",
+                                                                        confirm_password: "",
+                                                                    });
+                                                                }}
+                                                            >
+                                                                Cancel
+                                                            </Button>
+                                                            <Button type="submit" disabled={passwordLoading} className="min-w-[150px]">
+                                                                {passwordLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                                                                Update Password
+                                                            </Button>
+                                                        </div>
+                                                    )}
+                                                </form>
+                                            </div>
                                         </div>
 
                                         <div className="pt-8 border-t border-border/50">
