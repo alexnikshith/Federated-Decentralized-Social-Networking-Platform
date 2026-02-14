@@ -294,11 +294,11 @@ const ProfileUI = () => {
         try {
           const baseUrl = targetCommunityUrl || "";
           if (activitySubTab === "Likes") {
-            const response = await axios.get(`${baseUrl}/api/users/${profileUser.id}/likes`);
-            setLikedPosts(response.data.data || []);
+            const response = await api.get(`${baseUrl}/api/users/${profileUser.id}/likes`);
+            setLikedPosts(response.data.data.posts || []); // Ensure we get the posts array
           } else if (activitySubTab === "Comments") {
-            const response = await axios.get(`${baseUrl}/api/users/${profileUser.id}/comments`);
-            setCommentedPosts(response.data.data || []);
+            const response = await api.get(`${baseUrl}/api/users/${profileUser.id}/comments`);
+            setCommentedPosts(response.data.data.posts || []); // Ensure we get the posts array
           }
         } catch (err) {
           console.error("Failed to fetch activity data", err);
