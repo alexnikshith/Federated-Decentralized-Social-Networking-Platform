@@ -25,14 +25,7 @@ export function HeroSection() {
             No data harvesting. Just meaningful connections.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 mb-16 opacity-0 animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
-            <Link to="/register">
-              <Button variant="hero" size="xl" className="w-full sm:w-auto group min-w-[180px]">
-                Sign Up
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
-          </div>
+
 
           {/* Trust indicators */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 pt-8 border-t border-border/50 w-full max-w-3xl opacity-0 animate-fade-in-up" style={{ animationDelay: "0.5s" }}>

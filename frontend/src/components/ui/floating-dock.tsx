@@ -17,7 +17,7 @@ export const FloatingDock = ({
     desktopClassName,
     mobileClassName,
 }: {
-    items: { title: string; icon: React.ReactNode; href: string, onClick?: () => void }[];
+    items: { title: string; icon: React.ReactNode; href: string, onClick?: () => void, active?: boolean }[];
     desktopClassName?: string;
     mobileClassName?: string;
 }) => {
@@ -33,7 +33,7 @@ const FloatingDockMobile = ({
     items,
     className,
 }: {
-    items: { title: string; icon: React.ReactNode; href: string, onClick?: () => void }[];
+    items: { title: string; icon: React.ReactNode; href: string, onClick?: () => void, active?: boolean }[];
     className?: string;
 }) => {
     const [open, setOpen] = useState(false);
@@ -68,7 +68,10 @@ const FloatingDockMobile = ({
                                             item.onClick?.();
                                             setOpen(false);
                                         }}
-                                        className="h-10 w-10 rounded-full bg-gray-50 dark:bg-neutral-900 flex items-center justify-center"
+                                        className={cn(
+                                            "h-10 w-10 rounded-full flex items-center justify-center",
+                                            item.active ? "bg-orange-500/10 dark:bg-orange-500/20" : "bg-gray-50 dark:bg-neutral-900"
+                                        )}
                                     >
                                         <div className="h-4 w-4">{item.icon}</div>
                                     </button>
@@ -76,7 +79,10 @@ const FloatingDockMobile = ({
                                     <Link
                                         to={item.href}
                                         key={item.title}
-                                        className="h-10 w-10 rounded-full bg-gray-50 dark:bg-neutral-900 flex items-center justify-center"
+                                        className={cn(
+                                            "h-10 w-10 rounded-full flex items-center justify-center",
+                                            item.active ? "bg-orange-500/10 dark:bg-orange-500/20" : "bg-gray-50 dark:bg-neutral-900"
+                                        )}
                                         onClick={() => setOpen(false)}
                                     >
                                         <div className="h-4 w-4">{item.icon}</div>
@@ -101,7 +107,7 @@ const FloatingDockDesktop = ({
     items,
     className,
 }: {
-    items: { title: string; icon: React.ReactNode; href: string, onClick?: () => void }[];
+    items: { title: string; icon: React.ReactNode; href: string, onClick?: () => void, active?: boolean }[];
     className?: string;
 }) => {
     const mouseX = useMotionValue(Infinity);
@@ -110,7 +116,7 @@ const FloatingDockDesktop = ({
             onMouseMove={(e) => mouseX.set(e.pageX)}
             onMouseLeave={() => mouseX.set(Infinity)}
             className={cn(
-                "mx-auto hidden md:flex h-14 gap-4 items-end  rounded-2xl px-4 pb-2",
+                "mx-auto hidden md:flex h-20 gap-8 items-end  rounded-2xl px-4 pb-3",
                 className
             )}
         >
@@ -126,13 +132,15 @@ function IconContainer({
     title,
     icon,
     href,
-    onClick
+    onClick,
+    active
 }: {
     mouseX: MotionValue;
     title: string;
     icon: React.ReactNode;
     href: string;
     onClick?: () => void;
+    active?: boolean;
 }) {
     const ref = useRef<HTMLDivElement>(null);
 
@@ -142,11 +150,13 @@ function IconContainer({
         return val - bounds.x - bounds.width / 2;
     });
 
-    const widthTransform = useTransform(distance, [-150, 0, 150], [40, 80, 40]);
-    const heightTransform = useTransform(distance, [-150, 0, 150], [40, 80, 40]);
+    // Increased base size from 40 to 50, max from 80 to 90
+    const widthTransform = useTransform(distance, [-150, 0, 150], [50, 90, 50]);
+    const heightTransform = useTransform(distance, [-150, 0, 150], [50, 90, 50]);
 
-    const widthTransformIcon = useTransform(distance, [-150, 0, 150], [20, 40, 20]);
-    const heightTransformIcon = useTransform(distance, [-150, 0, 150], [20, 40, 20]);
+    // Increased icon size proportionally
+    const widthTransformIcon = useTransform(distance, [-150, 0, 150], [24, 44, 24]);
+    const heightTransformIcon = useTransform(distance, [-150, 0, 150], [24, 44, 24]);
 
     const width = useSpring(widthTransform, {
         mass: 0.1,
@@ -178,7 +188,10 @@ function IconContainer({
             style={{ width, height }}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
-            className="aspect-square rounded-full bg-gray-200 dark:bg-neutral-800 flex items-center justify-center relative"
+            className={cn(
+                "aspect-square rounded-full flex items-center justify-center relative transition-colors duration-200",
+                active ? "bg-orange-500/10 dark:bg-orange-500/20 shadow-inner" : "bg-gray-200 dark:bg-neutral-800"
+            )}
         >
             <AnimatePresence>
                 {hovered && (
@@ -198,6 +211,11 @@ function IconContainer({
             >
                 {icon}
             </motion.div>
+
+            {/* Active Indicator Dot - macOS style - Enhanced */}
+            {active && (
+                <div className="absolute -bottom-2 w-1.5 h-1.5 rounded-full bg-neutral-800 dark:bg-white shadow-[0_0_4px_rgba(0,0,0,0.3)] dark:shadow-[0_0_4px_rgba(255,255,255,0.5)]" />
+            )}
         </motion.div>
     );
 

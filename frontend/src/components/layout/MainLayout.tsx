@@ -3,18 +3,13 @@ import React, { useState, useEffect } from "react";
 import { Sidebar, SidebarBody, SidebarLink } from "../ui/sidebar";
 import { useMessagingStore } from "../../../epics/messaging/store/messagingStore";
 import {
-    IconHome,
-    IconRss,
     IconSearch,
-    IconUser,
     IconSettings,
     IconMoon,
     IconSun,
-    IconLogout,
     IconUsers,
     IconWorld,
     IconX,
-    IconLayoutList,
     IconChartBar,
     IconBell,
     IconShieldLock
@@ -139,7 +134,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
         ),
     };
 
-    // Floating Dock Links: Home, Explore, Post, Notifications, Messages, Profile
+    // Floating Dock Links: Home, Search, Explore, Create, Notifications, Messages, Profile
     const dockLinks = [
         {
             title: "Home",
@@ -147,20 +142,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                 <Home className="h-full w-full text-neutral-500 dark:text-neutral-300" />
             ),
             href: "/dashboard",
-        },
-        {
-            title: "Explore",
-            icon: (
-                <IconWorld className="h-full w-full text-neutral-500 dark:text-neutral-300" />
-            ),
-            href: "/explore",
-        },
-        {
-            title: "Create",
-            icon: (
-                <IconLayoutList className="h-full w-full text-neutral-500 dark:text-neutral-300" />
-            ),
-            href: "/feed",
+            active: location.pathname === "/dashboard" || location.pathname === "/",
         },
         {
             title: "Search",
@@ -169,6 +151,23 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
             ),
             href: "#",
             onClick: () => setShowSearch(true),
+            active: showSearch,
+        },
+        {
+            title: "Explore",
+            icon: (
+                <IconWorld className="h-full w-full text-neutral-500 dark:text-neutral-300" />
+            ),
+            href: "/explore",
+            active: location.pathname === "/explore",
+        },
+        {
+            title: "Create",
+            icon: (
+                <Plus className="h-full w-full text-neutral-500 dark:text-neutral-300" />
+            ),
+            href: "/feed",
+            active: location.pathname === "/feed",
         },
         {
             title: "Notifications",
@@ -181,6 +180,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                 </div>
             ),
             href: "/notifications",
+            active: location.pathname === "/notifications",
         },
         {
             title: "Messages",
@@ -195,6 +195,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                 </div>
             ),
             href: "/messages",
+            active: location.pathname.startsWith("/messages"),
         },
         {
             title: "Profile",
@@ -202,6 +203,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                 <LucideUser className="h-full w-full text-neutral-500 dark:text-neutral-300" />
             ),
             href: user?.username ? `/profile/${user.username}` : "/dashboard",
+            active: location.pathname.startsWith("/profile"),
         },
     ];
 
@@ -225,7 +227,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                                 <SidebarLink
                                     key={idx}
                                     link={link}
-                                    className={location.pathname === link.href ? "bg-neutral-200 dark:bg-neutral-700 rounded-md" : ""}
+                                    className={location.pathname === link.href ? "bg-orange-500/10 dark:bg-orange-500/20 text-black dark:text-white rounded-md" : ""}
                                     onClick={() => navigate(link.href)}
                                 />
                             ))}
@@ -236,7 +238,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                         <SidebarLink
                             link={settingsLink}
                             onClick={() => navigate("/settings")}
-                            className={location.pathname === "/settings" ? "bg-neutral-200 dark:bg-neutral-700 rounded-md" : ""}
+                            className={location.pathname === "/settings" ? "bg-orange-500/10 dark:bg-orange-500/20 text-black dark:text-white rounded-md" : ""}
                         />
                         <SidebarLink
                             link={{
