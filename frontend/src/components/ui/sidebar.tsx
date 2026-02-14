@@ -186,6 +186,7 @@ export const SidebarLink = ({
       href={link.href}
       className={cn(
         "flex items-center justify-start gap-2 group/sidebar py-2 cursor-pointer",
+        !open && "justify-center",
         className
       )}
       onClick={handleClick}
