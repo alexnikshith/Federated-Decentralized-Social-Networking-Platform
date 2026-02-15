@@ -98,6 +98,24 @@ export const authApi = {
         return response.data;
     },
 
+    // Initiates forgot password flow
+    forgotPassword: async (email: string): Promise<ApiResponse<null>> => {
+        const response = await api.post('/api/auth/forgot-password', { email });
+        return response.data;
+    },
+
+    // Verifies reset code
+    verifyResetCode: async (data: VerifyOTPRequest): Promise<ApiResponse<null>> => {
+        const response = await api.post('/api/auth/verify-reset-code', data);
+        return response.data;
+    },
+
+    // Resets password with OTP
+    resetPassword: async (data: any): Promise<ApiResponse<null>> => {
+        const response = await api.post('/api/auth/reset-password', data);
+        return response.data;
+    },
+
     // Logs out the current user server-side
     logout: async (): Promise<ApiResponse<null>> => {
         const response = await api.post('/api/auth/logout');

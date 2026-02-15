@@ -393,6 +393,125 @@ func (s *AuthService) CheckUsernameExists(ctx context.Context, username string) 
 	return false, nil
 }
 
+
+// ForgotPassword initiates the password reset flow
+func (s *AuthService) ForgotPassword(ctx context.Context, req dto.ForgotPasswordRequest) error {
+	// Normalize email
+	req.Email = strings.ToLower(req.Email)
+
+	// Find user
+	user, err := s.userRepo.FindByEmail(ctx, req.Email)
+	if err != nil {
+		// Do not reveal if user exists, but we can return nil to simulate success
+		return nil
+	}
+
+	// Generate OTP
+	code, err := generateRandomCode(6)
+	if err != nil {
+		return err
+	}
+
+	// Save verification code
+	verificationCode := &models.VerificationCode{
+		UserID:    user.ID,
+		Code:      code,
+		ExpiresAt: time.Now().Add(10 * time.Minute),
+	}
+
+	if err := s.verificationRepo.CreateVerificationCode(ctx, verificationCode); err != nil {
+		return err
+	}
+
+	// Send email
+	if err := s.emailSender.SendPasswordResetEmail(user.Email, code); err != nil {
+		return fmt.Errorf("failed to send password reset email: %v", err)
+	}
+
+	// Log activity
+	s.logActivity(ctx, user.ID, "forgot_password", "Password reset requested", "", "")
+
+	return nil
+}
+
+// VerifyResetCode checks if the reset code is valid without performing the reset
+func (s *AuthService) VerifyResetCode(ctx context.Context, req dto.VerifyOTPRequest) error {
+	// Normalize email
+	req.Email = strings.ToLower(req.Email)
+
+	// Find user
+	user, err := s.userRepo.FindByEmail(ctx, req.Email)
+	if err != nil {
+		return errors.New("invalid request")
+	}
+
+	// Find latest verification code
+	storedCode, err := s.verificationRepo.FindLatestByUserID(ctx, user.ID)
+	if err != nil {
+		return errors.New("invalid or expired verification code")
+	}
+
+	// Check if code matches
+	if storedCode.Code != req.Code {
+		return errors.New("invalid verification code")
+	}
+
+	// Check if expired
+	if time.Now().After(storedCode.ExpiresAt) {
+		return errors.New("verification code expired")
+	}
+
+	return nil
+}
+
+// ResetPassword completes the password reset flow
+func (s *AuthService) ResetPassword(ctx context.Context, req dto.ResetPasswordRequest) error {
+	// Normalize email
+	req.Email = strings.ToLower(req.Email)
+
+	// Find user
+	user, err := s.userRepo.FindByEmail(ctx, req.Email)
+	if err != nil {
+		return errors.New("invalid request")
+	}
+
+	// Find latest verification code
+	storedCode, err := s.verificationRepo.FindLatestByUserID(ctx, user.ID)
+	if err != nil {
+		return errors.New("invalid or expired verification code")
+	}
+
+	// Check if code matches
+	if storedCode.Code != req.Code {
+		return errors.New("invalid verification code")
+	}
+
+	// Check if expired
+	if time.Now().After(storedCode.ExpiresAt) {
+		return errors.New("verification code expired")
+	}
+
+	// Hash new password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	// Update password
+	update := bson.M{"password_hash": string(hashedPassword)}
+	if err := s.userRepo.UpdateUser(ctx, user.ID, update); err != nil {
+		return err
+	}
+
+	// Invalidate all sessions for security
+	s.sessionRepo.InvalidateAllUserSessions(ctx, user.ID)
+
+	// Log activity
+	s.logActivity(ctx, user.ID, "password_reset", "Password reset successfully", "", "")
+
+	return nil
+}
+
 // Helper function to log activity
 func (s *AuthService) logActivity(ctx context.Context, userID primitive.ObjectID, action, details, ipAddress, userAgent string) {
 	log := &models.ActivityLog{

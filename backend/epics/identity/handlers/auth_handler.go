@@ -225,6 +225,54 @@ func (h *AuthHandler) CheckUsername(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]bool{"exists": exists})
 }
 
+// ForgotPassword initiates password reset flow
+func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+	var req dto.ForgotPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.authService.ForgotPassword(r.Context(), req); err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondSuccess(w, "If an account exists with this email, a reset code has been sent", nil, http.StatusOK)
+}
+
+// VerifyResetCode verifies the reset code before allowing password reset
+func (h *AuthHandler) VerifyResetCode(w http.ResponseWriter, r *http.Request) {
+	var req dto.VerifyOTPRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.authService.VerifyResetCode(r.Context(), req); err != nil {
+		respondError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	respondSuccess(w, "Code verified", nil, http.StatusOK)
+}
+
+// ResetPassword completes password reset
+func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	var req dto.ResetPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.authService.ResetPassword(r.Context(), req); err != nil {
+		respondError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	respondSuccess(w, "Password reset successfully", nil, http.StatusOK)
+}
+
 // Helper to extract token from Authorization header
 func extractToken(r *http.Request) string {
 	authHeader := r.Header.Get("Authorization")

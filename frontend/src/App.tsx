@@ -20,6 +20,8 @@ import LoginPage from '../epics/identity/pages/LoginUI';
 import { SignupPage as RegisterPage } from '../epics/identity/pages/SignupPage';
 import ProfileUI from '../epics/identity/pages/ProfileUI';
 import { SettingsPage } from '../epics/identity/pages/SettingsPage';
+import { ForgotPasswordPage } from '../epics/identity/pages/ForgotPasswordPage';
+
 
 // Epic 3: Federation - Import pages
 import Communities from '../epics/federation/pages/Communities';
@@ -176,6 +178,15 @@ const AppContent: React.FC = () => {
                         }
                     />
                     <Route path="/signup" element={<Navigate to="/register" />} />
+                    <Route
+                        path="/forgot-password"
+                        element={
+                            <PublicRoute>
+                                <ForgotPasswordPage />
+                            </PublicRoute>
+                        }
+                    />
+
                     <Route
                         path="/profile"
                         element={
