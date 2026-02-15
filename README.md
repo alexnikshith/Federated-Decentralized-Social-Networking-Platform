@@ -297,6 +297,6 @@ npm run test                # Run tests
 - **Nikshith G**
 - **Akhil R**
 - **Kaushal Loya**
-- **Vishnu Sathvik R**
+- **Vishnu Sathwick R**
 
 **Course:** 23CSE311 – Software Engineering
