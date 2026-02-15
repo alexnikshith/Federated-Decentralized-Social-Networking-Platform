@@ -19,15 +19,15 @@ import (
 )
 
 type ProfileService struct {
-	userRepo         *repository.UserRepository
-	activityRepo     *repository.ActivityRepository
-	sessionRepo      *repository.SessionRepository
-	verificationRepo *repository.VerificationRepository
-	followRepo       *followRepo.FollowRepository
-	followService    *followService.FollowService
-	postRepo         *followRepo.PostRepository
-	notificationRepo *followRepo.NotificationRepository
-	remoteUserRepo   *federationRepo.RemoteUserRepository
+	userRepo         UserRepository
+	activityRepo     ActivityRepository
+	sessionRepo      SessionRepository
+	verificationRepo VerificationRepository
+	followRepo       FollowRepository
+	followService    FollowService
+	postRepo         PostRepository
+	notificationRepo NotificationRepository
+	remoteUserRepo   RemoteUserRepository
 }
 
 func NewProfileService() *ProfileService {

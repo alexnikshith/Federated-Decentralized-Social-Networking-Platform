@@ -1,0 +1,15 @@
+﻿Backend Identity Test Report
+============================
+User Story                | Status    
+--------------------------|------------
+Edit Profile              | Pass      
+Secure Login              | Pass      
+Profile Visibility        | Pass      
+Account Deactivation      | Pass      
+Create Account            | Pass      
+Logout                    | Pass      
+Change Password           | Pass      
+
+Total Passed: 17
+Total Failed: 0
+
