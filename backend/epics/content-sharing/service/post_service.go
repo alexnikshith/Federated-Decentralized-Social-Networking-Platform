@@ -23,8 +23,38 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+type PostRepositoryInterface interface {
+	CreatePost(ctx context.Context, post *models.Post) error
+	UpdatePost(ctx context.Context, post *models.Post) error
+	GetPostByID(ctx context.Context, id primitive.ObjectID) (*models.Post, error)
+	GetPostByIDAdmin(ctx context.Context, id primitive.ObjectID) (*models.Post, error)
+	GetPostsByAuthors(ctx context.Context, ids []primitive.ObjectID, limit int64) ([]models.Post, error)
+	GetAllPosts(ctx context.Context, excludeIDs []primitive.ObjectID, limit int64) ([]models.Post, error)
+	GetHiddenPostIDsByUser(ctx context.Context, userID primitive.ObjectID) ([]primitive.ObjectID, error)
+	GetPostsByAuthor(ctx context.Context, authorID primitive.ObjectID, limit int64) ([]models.Post, error)
+	CreateLike(ctx context.Context, like *models.Like) error
+	DeleteLike(ctx context.Context, postID, userID primitive.ObjectID) error
+	CheckIfLiked(ctx context.Context, postID, userID primitive.ObjectID) (bool, error)
+	CreateComment(ctx context.Context, comment *models.Comment) error
+	GetCommentByID(ctx context.Context, id primitive.ObjectID) (*models.Comment, error)
+	GetCommentsByPostID(ctx context.Context, postID primitive.ObjectID) ([]models.Comment, error)
+	DeleteComment(ctx context.Context, commentID primitive.ObjectID) error
+	DeletePost(ctx context.Context, postID primitive.ObjectID) error
+	CheckIfSaved(ctx context.Context, postID, userID primitive.ObjectID) (bool, error)
+	UpdatePostMentions(ctx context.Context, postID primitive.ObjectID, usernames []string) error
+	GetLikedPostsByUser(ctx context.Context, userID primitive.ObjectID, limit int64) ([]models.Post, error)
+	GetCommentedPostsByUser(ctx context.Context, userID primitive.ObjectID, limit int64) ([]models.Post, error)
+	GetLikesByPostID(ctx context.Context, postID primitive.ObjectID) ([]models.Like, error)
+	SavePost(ctx context.Context, savedPost *models.SavedPost) error
+	UnsavePost(ctx context.Context, userID, postID primitive.ObjectID) error
+	GetSavedPostIDsByUser(ctx context.Context, userID primitive.ObjectID) ([]primitive.ObjectID, error)
+	CreateReport(ctx context.Context, report *models.ReportedPost) error
+	UpsertInteraction(ctx context.Context, interaction *models.PostInteraction) error
+	GetAllReports(ctx context.Context) ([]models.ReportedPost, error)
+}
+
 type PostService struct {
-	postRepo          *repository.PostRepository
+	postRepo          PostRepositoryInterface
 	followRepo        *repository.FollowRepository
 	searchRepo        *repository.SearchRepository
 	notificationRepo  *repository.NotificationRepository
@@ -46,6 +76,26 @@ func NewPostService() *PostService {
 		notificationRepo:  repository.NewNotificationRepository(),
 		reportRepo:        reportRepo.NewReportRepository(),
 		blockService:      safetyService.NewBlockService(safetyRepo.NewBlockRepository()),
+		federationService: fedService,
+	}
+}
+
+func NewPostServiceWithDeps(
+	postRepo PostRepositoryInterface,
+	followRepo *repository.FollowRepository,
+	searchRepo *repository.SearchRepository,
+	notificationRepo *repository.NotificationRepository,
+	reportRepo *reportRepo.ReportRepository,
+	blockService *safetyService.BlockService,
+	fedService *federationService.FederationService,
+) *PostService {
+	return &PostService{
+		postRepo:          postRepo,
+		followRepo:        followRepo,
+		searchRepo:        searchRepo,
+		notificationRepo:  notificationRepo,
+		reportRepo:        reportRepo,
+		blockService:      blockService,
 		federationService: fedService,
 	}
 }
