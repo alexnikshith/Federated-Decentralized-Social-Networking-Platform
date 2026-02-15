@@ -2,22 +2,21 @@ package handlers
 
 import (
 	"encoding/json"
-	"federated-social/backend/epics/reports/models"
 	"federated-social/backend/epics/reports/repository"
+	"federated-social/backend/epics/reports/service"
 	"federated-social/backend/middleware"
 	"net/http"
-	"time"
-
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type ReportHandler struct {
-	Repo *repository.ReportRepository
+	Service service.ReportService
 }
 
 func NewReportHandler() *ReportHandler {
+	repo := repository.NewReportRepository()
+	svc := service.NewReportService(repo)
 	return &ReportHandler{
-		Repo: repository.NewReportRepository(),
+		Service: svc,
 	}
 }
 
@@ -27,7 +26,8 @@ func (h *ReportHandler) Heartbeat(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	userID := middleware.GetUserIDFromContext(ctx)
 
-	if err := h.Repo.IncrementActivity(ctx, userID, time.Now().UTC()); err != nil {
+	// Since middleware returns ObjectID, convert to Hex string for Service
+	if err := h.Service.RecordActivity(ctx, userID.Hex()); err != nil {
 		http.Error(w, "Failed to record activity", http.StatusInternalServerError)
 		return
 	}
@@ -41,49 +41,18 @@ func (h *ReportHandler) GetReport(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	userID := middleware.GetUserIDFromContext(ctx)
 
-	// Parse query params for custom range
-	endDate := time.Now().UTC()
-	startDate := endDate.AddDate(0, 0, -30) // Default to 30 days
-
 	query := r.URL.Query()
-	if startStr := query.Get("start_date"); startStr != "" {
-		// Try parsing as yyyy-MM-dd format first
-		if t, err := time.Parse("2006-01-02", startStr); err == nil {
-			startDate = t.UTC()
-		} else if t, err := time.Parse(time.RFC3339, startStr); err == nil {
-			// Fallback to RFC3339 if yyyy-MM-dd fails
-			startDate = t
-		}
-	}
-	if endStr := query.Get("end_date"); endStr != "" {
-		// Try parsing as yyyy-MM-dd format first
-		if t, err := time.Parse("2006-01-02", endStr); err == nil {
-			// Set to end of day for end date
-			endDate = time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, time.UTC)
-		} else if t, err := time.Parse(time.RFC3339, endStr); err == nil {
-			// Fallback to RFC3339 if yyyy-MM-dd fails
-			endDate = t
-		}
-	}
+	startStr := query.Get("start_date")
+	endStr := query.Get("end_date")
 
-	activities, err := h.Repo.GetActivity(ctx, userID, startDate, endDate)
+	report, err := h.Service.GetUserActivityReport(ctx, userID.Hex(), startStr, endStr)
 	if err != nil {
 		http.Error(w, "Failed to fetch activity", http.StatusInternalServerError)
 		return
 	}
 
-	var totalMinutes int
-	for _, a := range activities {
-		totalMinutes += a.Minutes
-	}
-
-	response := models.ActivityReport{
-		TotalHours: float64(totalMinutes) / 60.0,
-		DailyStats: activities,
-	}
-
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	json.NewEncoder(w).Encode(report)
 }
 
 // SubmitUserReport handles user reporting
@@ -91,51 +60,21 @@ func (h *ReportHandler) SubmitUserReport(w http.ResponseWriter, r *http.Request)
 	ctx := r.Context()
 	reporterID := middleware.GetUserIDFromContext(ctx)
 
-	var req struct {
-		ReportedID  string `json:"reported_id"`
-		Reason      string `json:"reason"`
-		Description string `json:"description"`
-	}
-
+	var req service.SubmitReportRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	reportedObjID, err := primitive.ObjectIDFromHex(req.ReportedID)
-	if err != nil {
-		http.Error(w, "Invalid reported user ID", http.StatusBadRequest)
-		return
-	}
-
-	// Prevent self-reporting
-	if reporterID == reportedObjID {
-		http.Error(w, "You cannot report yourself", http.StatusBadRequest)
-		return
-	}
-
-	report := models.UserReport{
-		ID:          primitive.NewObjectID(),
-		ReporterID:  reporterID,
-		ReportedID:  reportedObjID,
-		Reason:      req.Reason,
-		Description: req.Description,
-		Status:      "pending",
-		CreatedAt:   time.Now(),
-	}
-
-	if err := h.Repo.CreateUserReport(ctx, report); err != nil {
-		http.Error(w, "Failed to submit report", http.StatusInternalServerError)
-		return
-	}
-
-	// Check count and deactivate if necessary
-	count, err := h.Repo.CountReports(ctx, reportedObjID)
-	if err == nil && count > 8 {
-		if err := h.Repo.DeactivateUser(ctx, reportedObjID); err == nil {
-			// In a real app, send email here
-			// log.Printf("Account %s deactivated due to excessive reports", req.ReportedID)
+	if err := h.Service.SubmitUserReport(ctx, reporterID.Hex(), req); err != nil {
+		if err.Error() == "cannot report yourself" {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		} else if err.Error() == "invalid reported user ID" {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		} else {
+			http.Error(w, "Failed to submit report", http.StatusInternalServerError)
 		}
+		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
@@ -146,7 +85,7 @@ func (h *ReportHandler) SubmitUserReport(w http.ResponseWriter, r *http.Request)
 func (h *ReportHandler) GetAdminReports(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	reports, err := h.Repo.GetReports(ctx)
+	reports, err := h.Service.GetAdminReports(ctx)
 	if err != nil {
 		http.Error(w, "Failed to fetch reports", http.StatusInternalServerError)
 		return
@@ -161,55 +100,18 @@ func (h *ReportHandler) GetInteractionReport(w http.ResponseWriter, r *http.Requ
 	ctx := r.Context()
 	userID := middleware.GetUserIDFromContext(ctx)
 
-	// Parse query params for custom range
-	endDate := time.Now().UTC()
-	startDate := endDate.AddDate(0, 0, -30) // Default to 30 days
-
 	query := r.URL.Query()
-	if startStr := query.Get("start_date"); startStr != "" {
-		// Try parsing as yyyy-MM-dd format first
-		if t, err := time.Parse("2006-01-02", startStr); err == nil {
-			startDate = t.UTC()
-		} else if t, err := time.Parse(time.RFC3339, startStr); err == nil {
-			// Fallback to RFC3339 if yyyy-MM-dd fails
-			startDate = t
-		}
-	}
-	if endStr := query.Get("end_date"); endStr != "" {
-		// Try parsing as yyyy-MM-dd format first
-		if t, err := time.Parse("2006-01-02", endStr); err == nil {
-			// Set to end of day for end date
-			endDate = time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, time.UTC)
-		} else if t, err := time.Parse(time.RFC3339, endStr); err == nil {
-			// Fallback to RFC3339 if yyyy-MM-dd fails
-			endDate = t
-		}
-	}
+	startStr := query.Get("start_date")
+	endStr := query.Get("end_date")
 
-	interactions, err := h.Repo.GetInteractionsReceived(ctx, userID, startDate, endDate)
+	report, err := h.Service.GetInteractionReport(ctx, userID.Hex(), startStr, endStr)
 	if err != nil {
 		http.Error(w, "Failed to fetch interactions", http.StatusInternalServerError)
 		return
 	}
 
-	var totalLikes, totalComments, totalFollows, totalPosts int
-	for _, i := range interactions {
-		totalLikes += i.Likes
-		totalComments += i.Comments
-		totalFollows += i.Follows
-		totalPosts += i.Posts
-	}
-
-	response := models.InteractionReport{
-		TotalLikes:    totalLikes,
-		TotalComments: totalComments,
-		TotalFollows:  totalFollows,
-		TotalPosts:    totalPosts,
-		DailyStats:    interactions,
-	}
-
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	json.NewEncoder(w).Encode(report)
 }
 
 // GetInteractionMadeReport retrieves interaction report (likes given, comments posted, follows initiated) for the logged in user
@@ -217,53 +119,16 @@ func (h *ReportHandler) GetInteractionMadeReport(w http.ResponseWriter, r *http.
 	ctx := r.Context()
 	userID := middleware.GetUserIDFromContext(ctx)
 
-	// Parse query params for custom range
-	endDate := time.Now().UTC()
-	startDate := endDate.AddDate(0, 0, -30) // Default to 30 days
-
 	query := r.URL.Query()
-	if startStr := query.Get("start_date"); startStr != "" {
-		// Try parsing as yyyy-MM-dd format first
-		if t, err := time.Parse("2006-01-02", startStr); err == nil {
-			startDate = t.UTC()
-		} else if t, err := time.Parse(time.RFC3339, startStr); err == nil {
-			// Fallback to RFC3339 if yyyy-MM-dd fails
-			startDate = t
-		}
-	}
-	if endStr := query.Get("end_date"); endStr != "" {
-		// Try parsing as yyyy-MM-dd format first
-		if t, err := time.Parse("2006-01-02", endStr); err == nil {
-			// Set to end of day for end date
-			endDate = time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, time.UTC)
-		} else if t, err := time.Parse(time.RFC3339, endStr); err == nil {
-			// Fallback to RFC3339 if yyyy-MM-dd fails
-			endDate = t
-		}
-	}
+	startStr := query.Get("start_date")
+	endStr := query.Get("end_date")
 
-	interactions, err := h.Repo.GetInteractionsMade(ctx, userID, startDate, endDate)
+	report, err := h.Service.GetInteractionMadeReport(ctx, userID.Hex(), startStr, endStr)
 	if err != nil {
 		http.Error(w, "Failed to fetch interactions", http.StatusInternalServerError)
 		return
 	}
 
-	var totalLikes, totalComments, totalFollows, totalPosts int
-	for _, i := range interactions {
-		totalLikes += i.Likes
-		totalComments += i.Comments
-		totalFollows += i.Follows
-		totalPosts += i.Posts
-	}
-
-	response := models.InteractionReport{
-		TotalLikes:    totalLikes,
-		TotalComments: totalComments,
-		TotalFollows:  totalFollows,
-		TotalPosts:    totalPosts,
-		DailyStats:    interactions,
-	}
-
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	json.NewEncoder(w).Encode(report)
 }
