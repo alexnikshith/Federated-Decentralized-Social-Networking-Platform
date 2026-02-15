@@ -18,16 +18,17 @@ import (
 )
 
 type FollowService struct {
-	followRepo        *repository.FollowRepository
-	userRepo          *identityRepo.UserRepository
-	notificationRepo  *repository.NotificationRepository
-	blockService      *safetyService.BlockService
-	federationService *federationService.FederationService
-	remoteUserRepo    *federationRepo.RemoteUserRepository
+	followRepo        FollowRepository
+	userRepo          UserRepository
+	notificationRepo  NotificationRepository
+	blockService      BlockService
+	federationService FederationService
+	remoteUserRepo    RemoteUserRepository
 }
 
+// NewFollowService creates a new FollowService with default (concrete) dependencies
 func NewFollowService() *FollowService {
-	var fedService *federationService.FederationService
+	var fedService FederationService
 	if config.AppConfig.FederationEnabled {
 		fedService = federationService.NewFederationService()
 	}
@@ -39,6 +40,25 @@ func NewFollowService() *FollowService {
 		blockService:      safetyService.NewBlockService(safetyRepo.NewBlockRepository()),
 		federationService: fedService,
 		remoteUserRepo:    federationRepo.NewRemoteUserRepository(),
+	}
+}
+
+// NewFollowServiceWithDeps creates a new FollowService with injected dependencies (for testing)
+func NewFollowServiceWithDeps(
+	followRepo FollowRepository,
+	userRepo UserRepository,
+	notificationRepo NotificationRepository,
+	blockService BlockService,
+	fedService FederationService,
+	remoteUserRepo RemoteUserRepository,
+) *FollowService {
+	return &FollowService{
+		followRepo:        followRepo,
+		userRepo:          userRepo,
+		notificationRepo:  notificationRepo,
+		blockService:      blockService,
+		federationService: fedService,
+		remoteUserRepo:    remoteUserRepo,
 	}
 }
 
