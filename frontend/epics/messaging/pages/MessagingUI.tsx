@@ -699,7 +699,7 @@ const MessagingUI: React.FC = () => {
                                     : "This account doesnt exist anymore"}
                             </div>
                         ) : (
-                            <div className="p-4 border-t bg-card">
+                            <div className="p-4 py-6 border-t bg-card">
                                 {selectedMedia && (
                                     <motion.div
                                         initial={{ opacity: 0, y: 10 }}
@@ -729,8 +729,8 @@ const MessagingUI: React.FC = () => {
                                     </motion.div>
                                 )}
 
-                                <form onSubmit={handleSendMessage} className="flex items-end gap-2">
-                                    <div className="flex items-center gap-1 mb-1">
+                                <form onSubmit={handleSendMessage} className="flex items-center gap-2 max-w-full">
+                                    <div className="flex-shrink-0">
                                         <input
                                             type="file"
                                             ref={fileInputRef}
@@ -741,15 +741,16 @@ const MessagingUI: React.FC = () => {
                                             type="button"
                                             variant="ghost"
                                             size="icon"
-                                            className="rounded-full h-9 w-9 text-muted-foreground disabled:opacity-50"
+                                            className="rounded-full h-10 w-10 text-muted-foreground hover:bg-secondary hover:text-primary transition-all p-0 flex items-center justify-center border-none shadow-none"
                                             disabled={!isNewChat && selectedConversation && (getOtherParticipant(selectedConversation.participants).is_deactivated || getOtherParticipant(selectedConversation.participants).is_deleted)}
                                             onClick={() => fileInputRef.current?.click()}
                                         >
                                             <Paperclip className="w-5 h-5" />
                                         </Button>
                                     </div>
-                                    <div className="flex-1 relative">
+                                    <div className="flex-1 flex items-center bg-secondary/50 rounded-2xl px-4 py-2 min-h-[44px] border border-transparent focus-within:border-primary/30 transition-all">
                                         <TextareaAutosize
+                                            id="messaging-textarea"
                                             value={messageInput}
                                             onChange={(e) => setMessageInput(e.target.value)}
                                             onKeyDown={(e) => {
@@ -759,17 +760,19 @@ const MessagingUI: React.FC = () => {
                                                 }
                                             }}
                                             disabled={!isNewChat && selectedConversation && (getOtherParticipant(selectedConversation.participants).is_deactivated || getOtherParticipant(selectedConversation.participants).is_deleted)}
-                                            placeholder={(!isNewChat && selectedConversation && (getOtherParticipant(selectedConversation.participants).is_deactivated || getOtherParticipant(selectedConversation.participants).is_deleted)) ? "This account has been deactivated" : "Type a message..."}
-                                            className="w-full bg-secondary/50 border-none rounded-2xl py-3 px-4 text-sm resize-none focus:ring-1 focus:ring-primary/30 max-h-32 scrollbar-hide focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                                            placeholder={(!isNewChat && selectedConversation && (getOtherParticipant(selectedConversation.participants).is_deactivated || getOtherParticipant(selectedConversation.participants).is_deleted)) ? "Account deactivated" : "Type a message..."}
+                                            className="w-full !bg-transparent !border-none !p-0 !shadow-none text-sm resize-none focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed leading-relaxed block"
                                         />
                                     </div>
-                                    <Button
-                                        type="submit"
-                                        disabled={(!messageInput.trim() && !selectedMedia) || uploadingMedia || (!isNewChat && selectedConversation && (getOtherParticipant(selectedConversation.participants).is_deactivated || getOtherParticipant(selectedConversation.participants).is_deleted))}
-                                        className="rounded-full h-11 w-11 p-0 flex-shrink-0 bg-primary hover:bg-primary/90 shadow-glow"
-                                    >
-                                        {uploadingMedia ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-                                    </Button>
+                                    <div className="flex-shrink-0">
+                                        <Button
+                                            type="submit"
+                                            disabled={(!messageInput.trim() && !selectedMedia) || uploadingMedia || (!isNewChat && selectedConversation && (getOtherParticipant(selectedConversation.participants).is_deactivated || getOtherParticipant(selectedConversation.participants).is_deleted))}
+                                            className="rounded-full h-10 w-10 p-0 flex items-center justify-center bg-primary hover:bg-primary/90 shadow-glow transition-all border-none"
+                                        >
+                                            {uploadingMedia ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                                        </Button>
+                                    </div>
                                 </form>
                             </div>
                         )}
