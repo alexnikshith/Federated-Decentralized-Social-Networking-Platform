@@ -183,6 +183,14 @@
     @apply text-muted-foreground;
   }
 
+  /* Messaging UI Overrides */
+  #messaging-textarea {
+    background-color: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+
   /* Add appropriate padding to main content areas */
   main {
     padding: 1.5rem;
