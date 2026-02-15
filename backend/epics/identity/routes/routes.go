@@ -22,6 +22,9 @@ func RegisterIdentityRoutes(router *mux.Router) {
 	router.HandleFunc("/api/auth/verify-otp", authHandler.VerifyOTP).Methods("POST", "OPTIONS")
 	router.HandleFunc("/api/auth/check-email", authHandler.CheckEmail).Methods("POST", "OPTIONS")
 	router.HandleFunc("/api/auth/check-username", authHandler.CheckUsername).Methods("POST", "OPTIONS")
+	router.HandleFunc("/api/auth/forgot-password", authHandler.ForgotPassword).Methods("POST", "OPTIONS")
+	router.HandleFunc("/api/auth/verify-reset-code", authHandler.VerifyResetCode).Methods("POST", "OPTIONS")
+	router.HandleFunc("/api/auth/reset-password", authHandler.ResetPassword).Methods("POST", "OPTIONS")
 
 	// Auth routes (protected)
 	// These endpoints require a valid JWT token in the Authorization header
