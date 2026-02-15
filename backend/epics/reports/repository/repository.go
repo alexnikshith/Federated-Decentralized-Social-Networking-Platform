@@ -498,3 +498,13 @@ func (r *ReportRepository) CreateIndexes(ctx context.Context) error {
 	_, err := r.reportsCollection.Indexes().CreateMany(ctx, indexes)
 	return err
 }
+
+// GetFederationStats retrieves federation statistics (placeholder for now)
+func (r *ReportRepository) GetFederationStats(ctx context.Context, startDate, endDate time.Time) (*models.FederationStats, error) {
+	// TODO: Implement actual federation stats aggregation
+	return &models.FederationStats{
+		InboundCount:  0,
+		OutboundCount: 0,
+		Servers:       []string{},
+	}, nil
+}
