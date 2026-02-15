@@ -33,7 +33,7 @@ func (h *FollowHandler) Follow(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.followService.Follow(r.Context(), followerID, followingID); err != nil {
-		log.Printf("Follow error for follower=%s, following=%s: %v", followerID.Hex(), followingID.Hex(), err)
+		log.Printf("Follow Service Error: %v", err)
 		status := http.StatusInternalServerError
 		if err.Error() == "user not found" {
 			status = http.StatusNotFound

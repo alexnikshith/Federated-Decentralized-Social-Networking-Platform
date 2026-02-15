@@ -732,10 +732,21 @@ const ProfileUI = () => {
                           if (!profileUser) return;
                           try {
                             // Detect if this is a remote user
-                            const currentInstanceUrl = localStorage.getItem('active_community_url') || '';
-                            const currentInstanceDomain = currentInstanceUrl.replace(/^https?:\/\//, '');
-                            const profileInstance = (profileUser.instance || targetCommunityUrl || '').replace(/^https?:\/\//, '');
-                            const isRemoteUser = profileInstance !== '' && profileInstance !== currentInstanceDomain;
+                            // Detect if this is a remote user
+                            const currentInstanceUrl = localStorage.getItem('active_community_url') || import.meta.env.VITE_API_URL || 'http://localhost:8080';
+                            const currentInstanceDomain = currentInstanceUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
+                            const profileInstance = (profileUser.instance || targetCommunityUrl || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+                            // Check for local aliases (Docker/Dev environment)
+                            const isLocalAlias = (
+                              (currentInstanceDomain.includes('localhost:8080') && (profileInstance === 'default-instance' || profileInstance === 'default')) ||
+                              (currentInstanceDomain.includes('localhost:8081') && profileInstance === 'community-2')
+                            );
+
+                            // It is remote if profile instance is set AND distinct from current instance AND not a known local alias
+                            const isRemoteUser = profileInstance !== '' &&
+                              profileInstance !== currentInstanceDomain &&
+                              !isLocalAlias;
 
                             if (isFollowing) {
                               if (isRemoteUser) {
