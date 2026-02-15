@@ -1,0 +1,23 @@
+Backend Federation Test Report
+============================
+User Story / Feature                    | Status    
+----------------------------------------|----------
+Discover Instance                       | Pass      
+Discover Instance: AlreadyExists        | Pass      
+Discover Instance: NewInstance FederationDisabled| Pass      
+Discover Instance: NewInstance Success  | Pass      
+Get Instance Info                       | Pass      
+Get Trusted Instances                   | Pass      
+Handle Create Post                      | Pass      
+Handle Create Post: Success             | Pass      
+Handle Follow                           | Pass      
+Handle Follow: Success                  | Pass      
+Receive Activity                        | Pass      
+Resolve User_Error                      | Pass      
+Validate Activity                       | Pass      
+Validate Activity: Missing Object       | Pass      
+Validate Activity: Missing Type         | Pass      
+Validate Activity: Valid                | Pass      
+
+Total Passed: 16
+Total Failed: 0
