@@ -1,0 +1,43 @@
+=== RUN   TestGetInstanceInfo
+--- PASS: TestGetInstanceInfo (0.00s)
+=== RUN   TestReceiveActivity
+2026/02/16 02:49:54 Received federation activity: type=CreatePost, origin=origin, actor=actor
+--- PASS: TestReceiveActivity (0.00s)
+=== RUN   TestGetTrustedInstances
+--- PASS: TestGetTrustedInstances (0.00s)
+=== RUN   TestResolveUser_Error
+2026/02/16 02:49:54 Resolve failed: resolution failed
+--- PASS: TestResolveUser_Error (0.00s)
+PASS
+ok  	federated-social/backend/epics/federation/handlers	0.612s
+?   	federated-social/backend/epics/federation/models	[no test files]
+?   	federated-social/backend/epics/federation/repository	[no test files]
+?   	federated-social/backend/epics/federation/routes	[no test files]
+=== RUN   TestDiscoverInstance
+=== RUN   TestDiscoverInstance/AlreadyExists
+=== RUN   TestDiscoverInstance/NewInstance_Success
+=== RUN   TestDiscoverInstance/NewInstance_FederationDisabled
+--- PASS: TestDiscoverInstance (0.00s)
+    --- PASS: TestDiscoverInstance/AlreadyExists (0.00s)
+    --- PASS: TestDiscoverInstance/NewInstance_Success (0.00s)
+    --- PASS: TestDiscoverInstance/NewInstance_FederationDisabled (0.00s)
+=== RUN   TestValidateActivity
+=== RUN   TestValidateActivity/Valid
+=== RUN   TestValidateActivity/Missing_Type
+=== RUN   TestValidateActivity/Missing_Object
+--- PASS: TestValidateActivity (0.00s)
+    --- PASS: TestValidateActivity/Valid (0.00s)
+    --- PASS: TestValidateActivity/Missing_Type (0.00s)
+    --- PASS: TestValidateActivity/Missing_Object (0.00s)
+=== RUN   TestHandleCreatePost
+=== RUN   TestHandleCreatePost/Success
+2026/02/16 02:49:54 Received CreatePost from other.com: post123
+--- PASS: TestHandleCreatePost (0.00s)
+    --- PASS: TestHandleCreatePost/Success (0.00s)
+=== RUN   TestHandleFollow
+=== RUN   TestHandleFollow/Success
+2026/02/16 02:49:54 Follow accepted: http://other.com/users/bob (remote) -> alice (local)
+--- PASS: TestHandleFollow (0.00s)
+    --- PASS: TestHandleFollow/Success (0.00s)
+PASS
+ok  	federated-social/backend/epics/federation/service	1.067s

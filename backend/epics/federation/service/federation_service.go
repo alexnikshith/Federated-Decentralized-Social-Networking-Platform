@@ -758,6 +758,8 @@ func (s *FederationService) RemoveRemoteFollow(ctx context.Context, localUserID 
 	return nil
 }
 
+// GetFollowerInstances returns a list of unique remote instances that have users following the local user.
+// This is useful for determining where to send updates or notifications.
 func (s *FederationService) GetFollowerInstances(ctx context.Context, userID primitive.ObjectID) ([]string, error) {
 	return s.relationshipsRepo.GetFollowerInstances(ctx, userID)
 }
@@ -823,7 +825,12 @@ func (s *FederationService) SendRemoteNotification(ctx context.Context, targetIn
 	return s.QueueFederationEvent(ctx, envelope, targetInstance)
 }
 
-// HandleNotification handles incoming notification activities
+// HandleNotification handles incoming notification activities from remote instances.
+// Currently, this is a placeholder implementation. In a full production system, this would:
+// 1. Validate the notification payload
+// 2. Identify the target local user (recipient)
+// 3. Create a local notification record
+// 4. Trigger real-time updates via WebSocket
 func (s *FederationService) HandleNotification(ctx context.Context, envelope *models.ActivityEnvelope) error {
 	// We need to resolve which LOCAL user this is for
 	// In a real system, the Actor would be the sender, and the Target would be in the object
@@ -862,7 +869,12 @@ func (s *FederationService) GetRemoteUserByID(ctx context.Context, id primitive.
 	return s.remoteUserRepo.GetRemoteUserByID(ctx, id)
 }
 
-// backfillRemotePosts fetches and saves initial posts from a newly followed user
+// backfillRemotePosts fetches and saves initial posts from a newly followed user.
+// This ensures that when a user follows a remote user, they immediately see some content.
+// The process involves:
+// 1. Resolving the remote user's ID on their home instance (using their username)
+// 2. Fetching their recent posts using that ID
+// 3. Storing these posts locally as RemotePost records
 func (s *FederationService) backfillRemotePosts(ctx context.Context, remoteUser *models.RemoteUser) {
 	log.Printf("Backfill: Starting for %s@%s", remoteUser.Username, remoteUser.Instance)
 
