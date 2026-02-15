@@ -61,6 +61,7 @@ func (m *mockFederationService) RemoveRemoteFollow(ctx context.Context, localUse
 
 // --- Tests ---
 
+// TestGetInstanceInfo verifies that the instance info endpoint returns correct metadata
 func TestGetInstanceInfo(t *testing.T) {
 	// Setup config
 	config.AppConfig = &config.Config{
@@ -96,6 +97,7 @@ func TestGetInstanceInfo(t *testing.T) {
 	}
 }
 
+// TestReceiveActivity verifies that the inbox endpoint accepts valid activities
 func TestReceiveActivity(t *testing.T) {
 	mockService := &mockFederationService{
 		handleIncomingActivityFunc: func(ctx context.Context, envelope *models.ActivityEnvelope) error {
@@ -126,6 +128,7 @@ func TestReceiveActivity(t *testing.T) {
 	}
 }
 
+// TestGetTrustedInstances verifies that the instances endpoint returns trusted instances
 func TestGetTrustedInstances(t *testing.T) {
 	config.AppConfig = &config.Config{
 		InstanceName:   "Test Instance",
@@ -165,6 +168,7 @@ func TestGetTrustedInstances(t *testing.T) {
 	}
 }
 
+// TestResolveUser_Error verifies error handling when user resolution fails
 func TestResolveUser_Error(t *testing.T) {
 	mockService := &mockFederationService{
 		resolveRemoteUserFunc: func(ctx context.Context, handle string) (*models.RemoteUser, error) {
