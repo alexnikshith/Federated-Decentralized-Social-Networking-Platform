@@ -17,6 +17,7 @@ import (
 
 // --- Mocks ---
 
+// mockInstanceRepo simulates the InstanceRepository for testing purposes
 type mockInstanceRepo struct {
 	getInstanceByDomainFunc      func(ctx context.Context, domain string) (*models.Instance, error)
 	upsertInstanceFunc           func(ctx context.Context, instance *models.Instance) error
@@ -152,9 +153,11 @@ func (m *mockUserRepo) FindByID(ctx context.Context, id primitive.ObjectID) (*id
 
 // --- Tests ---
 
+// TestDiscoverInstance verifies the instance discovery logic
 func TestDiscoverInstance(t *testing.T) {
 	ctx := context.Background()
 
+	// Case 1: Instance already exists in the database
 	t.Run("AlreadyExists", func(t *testing.T) {
 		existingInstance := &models.Instance{Domain: "exists.com"}
 
@@ -180,6 +183,7 @@ func TestDiscoverInstance(t *testing.T) {
 		}
 	})
 
+	// Case 2: Instance is new and needs to be discovered via HTTP
 	t.Run("NewInstance_Success", func(t *testing.T) {
 		mockRepo := &mockInstanceRepo{
 			getInstanceByDomainFunc: func(ctx context.Context, domain string) (*models.Instance, error) {
@@ -224,6 +228,7 @@ func TestDiscoverInstance(t *testing.T) {
 		}
 	})
 
+	// Case 3: Instance exists but federation is disabled
 	t.Run("NewInstance_FederationDisabled", func(t *testing.T) {
 		mockRepo := &mockInstanceRepo{
 			getInstanceByDomainFunc: func(ctx context.Context, domain string) (*models.Instance, error) {
@@ -260,9 +265,11 @@ func TestDiscoverInstance(t *testing.T) {
 	})
 }
 
+// TestValidateActivity ensures that activity envelopes are correctly validated
 func TestValidateActivity(t *testing.T) {
 	service := &FederationService{}
 
+	// Table-driven tests for various validation scenarios
 	tests := []struct {
 		name     string
 		envelope *models.ActivityEnvelope
@@ -308,9 +315,11 @@ func TestValidateActivity(t *testing.T) {
 	}
 }
 
+// TestHandleCreatePost verifies the handling of incoming CreatePost activities
 func TestHandleCreatePost(t *testing.T) {
 	ctx := context.Background()
 
+	// Case: Valid CreatePost activity
 	t.Run("Success", func(t *testing.T) {
 		mockRemoteUserRepo := &mockRemoteUserRepo{
 			upsertRemoteUserFunc: func(ctx context.Context, remoteUser *models.RemoteUser) error {
@@ -350,9 +359,11 @@ func TestHandleCreatePost(t *testing.T) {
 	})
 }
 
+// TestHandleFollow verifies the handling of incoming Follow activities
 func TestHandleFollow(t *testing.T) {
 	ctx := context.Background()
 
+	// Case: Valid Follow activity
 	t.Run("Success", func(t *testing.T) {
 		localUser := &identityModels.User{
 			ID:       primitive.NewObjectID(),
