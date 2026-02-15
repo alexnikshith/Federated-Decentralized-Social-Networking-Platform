@@ -22,11 +22,11 @@ import (
 )
 
 type AuthService struct {
-	userRepo         *repository.UserRepository
-	sessionRepo      *repository.SessionRepository
-	activityRepo     *repository.ActivityRepository
-	verificationRepo *repository.VerificationRepository
-	emailSender      *email.EmailSender
+	userRepo         UserRepository
+	sessionRepo      SessionRepository
+	activityRepo     ActivityRepository
+	verificationRepo VerificationRepository
+	emailSender      EmailSender
 }
 
 func NewAuthService() *AuthService {
@@ -392,7 +392,6 @@ func (s *AuthService) CheckUsernameExists(ctx context.Context, username string) 
 	}
 	return false, nil
 }
-
 
 // ForgotPassword initiates the password reset flow
 func (s *AuthService) ForgotPassword(ctx context.Context, req dto.ForgotPasswordRequest) error {

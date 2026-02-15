@@ -1,0 +1,39 @@
+﻿=== RUN   TestAuthService_Signup
+=== RUN   TestAuthService_Signup/Success
+=== RUN   TestAuthService_Signup/Duplicate_Email
+--- PASS: TestAuthService_Signup (0.06s)
+    --- PASS: TestAuthService_Signup/Success (0.06s)
+    --- PASS: TestAuthService_Signup/Duplicate_Email (0.00s)
+=== RUN   TestAuthService_InitiateLogin
+=== RUN   TestAuthService_InitiateLogin/Success_-_No_2FA
+DEBUG: Login attempt for test@example.com, Is2FAEnabled: false
+=== RUN   TestAuthService_InitiateLogin/Invalid_Password
+--- PASS: TestAuthService_InitiateLogin (0.17s)
+    --- PASS: TestAuthService_InitiateLogin/Success_-_No_2FA (0.06s)
+    --- PASS: TestAuthService_InitiateLogin/Invalid_Password (0.06s)
+=== RUN   TestAuthService_Logout
+=== RUN   TestAuthService_Logout/Success
+--- PASS: TestAuthService_Logout (0.00s)
+    --- PASS: TestAuthService_Logout/Success (0.00s)
+=== RUN   TestAuthService_ChangePassword
+=== RUN   TestAuthService_ChangePassword/Success
+--- PASS: TestAuthService_ChangePassword (0.17s)
+    --- PASS: TestAuthService_ChangePassword/Success (0.12s)
+=== RUN   TestProfileService_GetProfile
+=== RUN   TestProfileService_GetProfile/Success_-_Public_Profile
+2026/02/15 23:41:07 DEBUG: ProfileService.GetProfile for userID=69920c3b176a8330d6e673c4: followers=0, following=0, posts=0
+=== RUN   TestProfileService_GetProfile/Success_-_Private_Profile_(Not_Following)
+2026/02/15 23:41:07 DEBUG: ProfileService.GetProfile for userID=69920c3b176a8330d6e673c4: followers=0, following=0, posts=0
+--- PASS: TestProfileService_GetProfile (0.00s)
+    --- PASS: TestProfileService_GetProfile/Success_-_Public_Profile (0.00s)
+    --- PASS: TestProfileService_GetProfile/Success_-_Private_Profile_(Not_Following) (0.00s)
+=== RUN   TestProfileService_UpdateProfile
+=== RUN   TestProfileService_UpdateProfile/Success
+=== RUN   TestProfileService_UpdateProfile/Username_Taken
+--- PASS: TestProfileService_UpdateProfile (0.00s)
+    --- PASS: TestProfileService_UpdateProfile/Success (0.00s)
+    --- PASS: TestProfileService_UpdateProfile/Username_Taken (0.00s)
+=== RUN   TestProfileService_DeactivateAccount
+--- PASS: TestProfileService_DeactivateAccount (0.00s)
+PASS
+ok  	federated-social/backend/epics/identity/service	(cached)
