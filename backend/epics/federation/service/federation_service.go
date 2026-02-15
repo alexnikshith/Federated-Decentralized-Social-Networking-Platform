@@ -21,13 +21,13 @@ import (
 )
 
 type FederationService struct {
-	instanceRepo      *repository.InstanceRepository
-	remoteUserRepo    *repository.RemoteUserRepository
-	remotePostRepo    *repository.RemotePostRepository
-	eventRepo         *repository.FederationEventRepository
-	relationshipsRepo *repository.RemoteRelationshipsRepository
-	userRepo          *identityRepo.UserRepository // Need to alias this import
-	httpClient        *http.Client
+	instanceRepo      InstanceRepositoryInterface
+	remoteUserRepo    RemoteUserRepositoryInterface
+	remotePostRepo    RemotePostRepositoryInterface
+	eventRepo         FederationEventRepositoryInterface
+	relationshipsRepo RemoteRelationshipsRepositoryInterface
+	userRepo          UserRepositoryInterface
+	httpClient        HTTPClientInterface
 }
 
 func NewFederationService() *FederationService {
