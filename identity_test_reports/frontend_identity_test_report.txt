@@ -1,0 +1,16 @@
+﻿Frontend Identity Test Report
+=============================
+Component/Story                | Passed     | Failed    
+-------------------------------|------------|------------
+Total Tests                    | 8          | 0         
+
+Detailed Tests:
+- should initially have null user and token: passed
+- should set auth state on login: passed
+- should clear auth state on logout: passed
+- should switch account correctly: passed
+- renders profile settings by default: passed
+- switches to account settings tab: passed
+- handles profile update submission: passed
+- handles account deactivation: passed
+
