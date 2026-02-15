@@ -54,3 +54,9 @@ type UserReportResponse struct {
 		IsActive    bool   `bson:"is_active" json:"is_active"`
 	} `bson:"user_details" json:"user_details"`
 }
+
+type FederationStats struct {
+	InboundCount  int      `json:"inbound_count"`
+	OutboundCount int      `json:"outbound_count"`
+	Servers       []string `json:"servers"`
+}
