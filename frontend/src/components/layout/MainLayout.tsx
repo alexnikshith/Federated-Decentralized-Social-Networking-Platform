@@ -369,8 +369,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
 
             <div className={cn(
                 "flex-1 min-h-screen transition-all duration-300 relative",
-                // Remove padding for messages to allow it to fill viewport
-                location.pathname !== "/messages" && "pb-32",
+                location.pathname !== "/messages" && "pb-28",
                 // Ensure margin accounts for fixed sidebar width to prevent overlap
                 "md:ml-[60px]",
                 (open || isDropdownOpen) && "md:ml-[240px]"
@@ -430,7 +429,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                 onSuccess={handleJoinSuccess}
                 initialStep="login"
             />
-        </div>
+        </div >
     );
 };
 
