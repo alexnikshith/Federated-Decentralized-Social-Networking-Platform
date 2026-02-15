@@ -2,6 +2,7 @@ package routes
 
 import (
 	"federated-social/backend/epics/federation/handlers"
+	"federated-social/backend/epics/federation/service"
 	"federated-social/backend/middleware"
 	"net/http"
 
@@ -10,7 +11,8 @@ import (
 
 // RegisterFederationRoutes registers all federation-related routes
 func RegisterFederationRoutes(router *mux.Router) {
-	handler := handlers.NewFederationHandler()
+	svc := service.NewFederationService()
+	handler := handlers.NewFederationHandler(svc)
 
 	// Instance discovery (public)
 	router.HandleFunc("/.well-known/instance-info", handler.GetInstanceInfo).Methods("GET", "OPTIONS")

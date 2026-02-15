@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"federated-social/backend/config"
 	"federated-social/backend/epics/federation/models"
-	"federated-social/backend/epics/federation/service"
 	"federated-social/backend/middleware"
 	"fmt"
 	"log"
@@ -14,13 +13,21 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type FederationHandler struct {
-	federationService *service.FederationService
+type FederationService interface {
+	HandleIncomingActivity(ctx context.Context, envelope *models.ActivityEnvelope) error
+	GetTrustedInstances(ctx context.Context) ([]models.Instance, error)
+	ResolveRemoteUser(ctx context.Context, handle string) (*models.RemoteUser, error)
+	FollowRemoteUser(ctx context.Context, localUserID primitive.ObjectID, remoteUser *models.RemoteUser) error
+	RemoveRemoteFollow(ctx context.Context, localUserID primitive.ObjectID, actorID, username, instance string) error
 }
 
-func NewFederationHandler() *FederationHandler {
+type FederationHandler struct {
+	federationService FederationService
+}
+
+func NewFederationHandler(service FederationService) *FederationHandler {
 	return &FederationHandler{
-		federationService: service.NewFederationService(),
+		federationService: service,
 	}
 }
 
