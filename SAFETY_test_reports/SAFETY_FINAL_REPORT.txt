@@ -16,14 +16,9 @@ Frontend Safety Test Report
 ===========================
 Component/Story                | Passed     | Failed    
 -------------------------------|------------|------------
-Total Tests                    | 7          | 0         
+Total Tests                    | 2          | 0         
 
 Detailed Tests:
 - renders block option in profile menu: passed
 - calls blockUser API when block action is triggered: passed
-- renders login form: passed
-- handles successful login (No OTP): passed
-- handles OTP requirement (US4.0.1): passed
-- renders report modal correctly: passed
-- submits report with reason and description: passed
 
