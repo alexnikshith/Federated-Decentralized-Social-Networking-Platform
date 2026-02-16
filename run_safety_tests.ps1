@@ -4,7 +4,7 @@ $backendRoot = "backend"
 $frontendRoot = "frontend"
 $backendTestPath = "./epics/safety/tests"
 $frontendTestPath = "epics/safety/tests"
-$reportDir = "SAFETY_test_reports"
+$reportDir = "safety_test_reports"
 $reportDirAbs = Join-Path (Get-Location) $reportDir
 
 if (-not (Test-Path $reportDirAbs)) {
