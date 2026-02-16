@@ -21,9 +21,9 @@ DEBUG: Login attempt for test@example.com, Is2FAEnabled: false
     --- PASS: TestAuthService_ChangePassword/Success (0.12s)
 === RUN   TestProfileService_GetProfile
 === RUN   TestProfileService_GetProfile/Success_-_Public_Profile
-2026/02/15 23:41:07 DEBUG: ProfileService.GetProfile for userID=69920c3b176a8330d6e673c4: followers=0, following=0, posts=0
+2026/02/16 10:25:56 DEBUG: ProfileService.GetProfile for userID=6992a35c598a0675a1ed2d31: followers=0, following=0, posts=0
 === RUN   TestProfileService_GetProfile/Success_-_Private_Profile_(Not_Following)
-2026/02/15 23:41:07 DEBUG: ProfileService.GetProfile for userID=69920c3b176a8330d6e673c4: followers=0, following=0, posts=0
+2026/02/16 10:25:56 DEBUG: ProfileService.GetProfile for userID=6992a35c598a0675a1ed2d31: followers=0, following=0, posts=0
 --- PASS: TestProfileService_GetProfile (0.00s)
     --- PASS: TestProfileService_GetProfile/Success_-_Public_Profile (0.00s)
     --- PASS: TestProfileService_GetProfile/Success_-_Private_Profile_(Not_Following) (0.00s)
@@ -36,4 +36,4 @@ DEBUG: Login attempt for test@example.com, Is2FAEnabled: false
 === RUN   TestProfileService_DeactivateAccount
 --- PASS: TestProfileService_DeactivateAccount (0.00s)
 PASS
-ok  	federated-social/backend/epics/identity/service	(cached)
+ok  	federated-social/backend/epics/identity/service	1.411s
