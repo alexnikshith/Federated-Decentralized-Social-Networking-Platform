@@ -1,8 +1,8 @@
 ﻿=== RUN   TestAuth_Signup_PasswordHashing
---- PASS: TestAuth_Signup_PasswordHashing (0.11s)
+--- PASS: TestAuth_Signup_PasswordHashing (0.12s)
 === RUN   TestAuth_Login_OTPGeneration
 DEBUG: Login attempt for otp@example.com, Is2FAEnabled: true
---- PASS: TestAuth_Login_OTPGeneration (0.11s)
+--- PASS: TestAuth_Login_OTPGeneration (0.12s)
 === RUN   TestAuth_VerifyOTP
 --- PASS: TestAuth_VerifyOTP (0.00s)
 === RUN   TestBlock_BlockUser
@@ -18,4 +18,4 @@ DEBUG: Login attempt for otp@example.com, Is2FAEnabled: true
 === RUN   TestReport_SubmitReport_SelfReport_Fail
 --- PASS: TestReport_SubmitReport_SelfReport_Fail (0.00s)
 PASS
-ok  	federated-social/backend/epics/safety/tests	(cached)
+ok  	federated-social/backend/epics/safety/tests	1.297s
