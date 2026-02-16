@@ -39,6 +39,23 @@ func NewAuthService() *AuthService {
 	}
 }
 
+// NewAuthServiceWithDependencies allows injecting dependencies for testing
+func NewAuthServiceWithDependencies(
+	userRepo UserRepository,
+	sessionRepo SessionRepository,
+	activityRepo ActivityRepository,
+	verificationRepo VerificationRepository,
+	emailSender EmailSender,
+) *AuthService {
+	return &AuthService{
+		userRepo:         userRepo,
+		sessionRepo:      sessionRepo,
+		activityRepo:     activityRepo,
+		verificationRepo: verificationRepo,
+		emailSender:      emailSender,
+	}
+}
+
 // Signup creates a new user account (US1.1)
 // It validates unique constraints (email, username), hashes the password,
 // and creates the initial user record with default settings.
