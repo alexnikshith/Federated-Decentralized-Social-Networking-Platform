@@ -10,10 +10,10 @@ import (
 )
 
 type BlockService struct {
-	repo *repository.BlockRepository
+	repo repository.BlockRepositoryInterface
 }
 
-func NewBlockService(repo *repository.BlockRepository) *BlockService {
+func NewBlockService(repo repository.BlockRepositoryInterface) *BlockService {
 	return &BlockService{
 		repo: repo,
 	}
