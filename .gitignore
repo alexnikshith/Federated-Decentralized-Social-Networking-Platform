@@ -68,3 +68,13 @@ coverage/
 .vscode/
 .idea/
 *.iml
+
+# Test Results
+Unit_test results/
+
+# Frontend/Vite/Vitest temp files
+frontend/*.json
+!frontend/package.json
+!frontend/tsconfig*.json
+!frontend/components.json
+frontend/vite.config.ts.timestamp-*

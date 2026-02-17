@@ -37,6 +37,7 @@ describe('PostCard Component', () => {
         expect(screen.getByText('testuser')).toBeInTheDocument();
         expect(screen.getByText('5')).toBeInTheDocument(); // Like count
         expect(screen.getByText('2')).toBeInTheDocument(); // Comment count
+        expect(screen.getByText('nexus.social')).toBeInTheDocument(); // Instance origin
     });
 
     it('calls likePost when like button is clicked', async () => {
