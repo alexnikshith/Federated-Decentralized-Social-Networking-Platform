@@ -1,5 +1,6 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+vi.unmock('../store/authStore');
 import { useAuthStore } from '../store/authStore';
 import { act } from '@testing-library/react';
 import type { User } from '../types';

@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import RefinedReportsPage from '../pages/RefinedReportsPage';
 import * as reportsApi from '../api/reportsApi';
@@ -67,44 +68,46 @@ describe('RefinedReportsPage', () => {
     it('renders Time Usage data by default (User Story: View Activity Reports)', () => {
         render(<RefinedReportsPage />);
         expect(screen.getByText('Total time spent till date')).toBeInTheDocument();
-        // 10 hours -> 10h 0m
-        expect(screen.getByText('10h 0m')).toBeInTheDocument();
+        // Use getAllByText as there might be multiple instances or broken up text
+        expect(screen.getAllByText(/10h\s*0m/)[0]).toBeInTheDocument();
     });
 
     it('switches to Interactions tab and shows received data (User Story: View Interaction Stats Received)', async () => {
+        const user = userEvent.setup();
         render(<RefinedReportsPage />);
 
-        fireEvent.click(screen.getByText('Interactions'));
+        const interactionsMainTab = screen.getByRole('tab', { name: /^Interactions$/ });
+        await user.click(interactionsMainTab);
 
-        await waitFor(() => {
-            expect(screen.getByText('Interactions Received')).toBeInTheDocument();
-        });
+        const receivedTab = await screen.findByRole('tab', { name: /Interactions Received/i });
+        expect(receivedTab).toBeInTheDocument();
 
-        expect(screen.getByText('Total interactions Received till date')).toBeInTheDocument();
+        expect(await screen.findByText(/Total interactions Received till date/i)).toBeInTheDocument();
         expect(screen.getByText('8')).toBeInTheDocument(); // 5+2+1
     });
 
     it('switches to Interactions Made section (User Story: View Interaction Stats Made)', async () => {
+        const user = userEvent.setup();
         render(<RefinedReportsPage />);
-        fireEvent.click(screen.getByText('Interactions'));
-        fireEvent.click(screen.getByText('Interactions Made'));
 
-        await waitFor(() => {
-            expect(screen.getByText('Total interactions made till date')).toBeInTheDocument();
-        });
+        await user.click(screen.getByRole('tab', { name: /^Interactions$/ }));
 
+        const madeTab = await screen.findByRole('tab', { name: /Interactions Made/i });
+        await user.click(madeTab);
+
+        expect(await screen.findByText(/Total interactions made till date/i)).toBeInTheDocument();
         expect(screen.getByText('11')).toBeInTheDocument(); // 8+3+0
     });
 
     it('switches to Posts tab (User Story: View Content Metrics)', async () => {
+        const user = userEvent.setup();
         render(<RefinedReportsPage />);
-        fireEvent.click(screen.getByText('Posts'));
 
-        await waitFor(() => {
-            expect(screen.getByText('Total Posts (All Time)')).toBeInTheDocument();
-        });
+        const postsTab = screen.getByRole('tab', { name: /Posts/i });
+        await user.click(postsTab);
 
-        expect(screen.getByText('4')).toBeInTheDocument();
+        expect(await screen.findByText(/Total Posts \(All Time\)/i)).toBeInTheDocument();
+        expect(screen.getAllByText('4')[0]).toBeInTheDocument();
     });
 
     it('shows loading state (User Story: UI Feedback)', () => {

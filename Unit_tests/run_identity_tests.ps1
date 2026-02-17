@@ -1,21 +1,23 @@
 
 # Script to run Identity Epic tests and generate reports
 
-$backendRoot = "backend"
-$frontendRoot = "frontend"
+$backendRoot = Join-Path $PSScriptRoot "..\backend"
+$frontendRoot = Join-Path $PSScriptRoot "..\frontend"
 $backendServiceRelPath = "./epics/identity/service"
 $frontendTestRelPath = "epics/identity/tests"
 $backendReportFile = "backend_identity_test_report.txt"
 $frontendReportFile = "frontend_identity_test_report.txt"
 
+$reportRoot = Join-Path $PSScriptRoot "..\Unit_test results"
 $reportDir = "identity_test_reports"
+$reportDirAbsPath = Join-Path $reportRoot $reportDir
+
 # Create report directory if it doesn't exist
-if (-not (Test-Path $reportDir)) {
-    New-Item -ItemType Directory -Path $reportDir | Out-Null
+if (-not (Test-Path $reportDirAbsPath)) {
+    New-Item -ItemType Directory -Path $reportDirAbsPath -Force | Out-Null
 }
 
-# Absolute paths for reports (to ensure they end up in the report directory)
-$reportDirAbsPath = Join-Path (Get-Location) $reportDir
+# Absolute paths for reports
 $backendReportAbsPath = Join-Path $reportDirAbsPath $backendReportFile
 $frontendReportAbsPath = Join-Path $reportDirAbsPath $frontendReportFile
 $backendFullOutputAbsPath = Join-Path $reportDirAbsPath "backend_full_output.txt"
@@ -58,6 +60,9 @@ foreach ($line in $backendOutput) {
 
     if ($line -match "--- PASS: TestProfileService_DeactivateAccount") { $backendStories["Account Deactivation"] = "Pass"; $backendPass++ }
     elseif ($line -match "--- FAIL: TestProfileService_DeactivateAccount") { $backendStories["Account Deactivation"] = "Fail"; $backendFail++ }
+
+    if ($line -match "--- PASS: TestProfileService_GetActivity") { $backendStories["View User Activity"] = "Pass"; $backendPass++ }
+    elseif ($line -match "--- FAIL: TestProfileService_GetActivity") { $backendStories["View User Activity"] = "Fail"; $backendFail++ }
 }
 
 # Generate Backend Report
@@ -85,41 +90,61 @@ if (Test-Path "frontend_temp_output.json") {
     $jsonContent = Get-Content "frontend_temp_output.json" | ConvertFrom-Json
     $frontendPass = 0
     $frontendFail = 0
-    $frontendStories = @{}
+    $frontendStories = @{
+        "US1.1: Create Account"       = "To be done"
+        "US1.2: Secure Login"         = "To be done"
+        "US1.3: Logout"               = "To be done"
+        "US1.4: Change Password"      = "To be done"
+        "US1.5: Profile Visibility"   = "To be done"
+        "US1.6: Edit Profile"         = "To be done"
+        "US1.7: Account Deactivation" = "To be done"
+        "US1.8: View User Activity"   = "To be done"
+    }
 
-    # Map output to stories (Logic simplified for demo)
-    # Mapping logic:
-    # authStore -> Login/Session Logic
-    # SettingsPage -> Profile/Account UI
-    
     foreach ($result in $jsonContent.testResults) {
+        $name = $result.name
+        $allPassed = $true
         foreach ($assertion in $result.assertionResults) {
-            if ($assertion.status -eq "passed") { $frontendPass++ }
-            else { $frontendFail++ }
-            
-             # Basic mapping based on ancestor titles
-            if ($assertion.ancestorTitles -contains "useAuthStore") {
-                $frontendStories["Auth State Management"] = "Tested" 
-            }
-            if ($assertion.ancestorTitles -contains "SettingsPage") {
-                $frontendStories["Profile Settings UI"] = "Tested"
-            }
+            if ($assertion.status -ne "passed") { $allPassed = $false }
+        }
+        $status = if ($allPassed) { "Pass" } else { "Fail" }
+
+        if ($name -match "authStore") { 
+            $frontendStories["US1.1: Create Account"] = $status
+            $frontendStories["US1.2: Secure Login"] = $status
+            $frontendStories["US1.3: Logout"] = $status
+        }
+        elseif ($name -match "SettingsPage") { 
+            $frontendStories["US1.4: Change Password"] = $status
+            $frontendStories["US1.5: Profile Visibility"] = $status
+            $frontendStories["US1.6: Edit Profile"] = $status
+            $frontendStories["US1.7: Account Deactivation"] = $status
+            $frontendStories["US1.8: View User Activity"] = $status
+        }
+        elseif ($name -match "ProfileUI|Activity") {
+            $frontendStories["US1.5: Profile Visibility"] = $status
+            $frontendStories["US1.8: View User Activity"] = $status
         }
     }
+
+    # Calculate final counts based on mapped stories
+    foreach ($val in $frontendStories.Values) {
+        if ($val -eq "Pass") { $frontendPass++ }
+        elseif ($val -eq "Fail") { $frontendFail++ }
+    }
     
-    # Generate Frontend Report
     $feReport = "Frontend Identity Test Report`n"
     $feReport += "=============================`n"
-    $feReport += "{0,-30} | {1,-10} | {2,-10}`n" -f "Component/Story", "Passed", "Failed"
-    $feReport += "-------------------------------|------------|------------`n"
-    # Simplified reporting since JSON structure varies by version
-    $feReport += "{0,-30} | {1,-10} | {2,-10}`n" -f "Total Tests", $frontendPass, $frontendFail
-    $feReport += "`nDetailed Tests:`n"
-    foreach ($result in $jsonContent.testResults) {
-         foreach ($assertion in $result.assertionResults) {
-            $feReport += "- {0}: {1}`n" -f $assertion.title, $assertion.status
-         }
+    $feReport += "{0,-25} | {1,-10}`n" -f "User Story", "Status"
+    $feReport += "--------------------------|------------`n"
+    
+    $keys = "US1.1: Create Account", "US1.2: Secure Login", "US1.3: Logout", "US1.4: Change Password", "US1.5: Profile Visibility", "US1.6: Edit Profile", "US1.7: Account Deactivation", "US1.8: View User Activity"
+    foreach ($story in $keys) {
+        $feReport += "{0,-28} | {1,-10}`n" -f $story, $frontendStories[$story]
     }
+
+    $feReport += "`nTotal Passed: $frontendPass`n"
+    $feReport += "Total Failed: $frontendFail`n"
 
     $feReport | Out-File $frontendReportAbsPath -Encoding UTF8
     Write-Host "Frontend Report Generated: $reportDir\$frontendReportFile" -ForegroundColor Green
@@ -136,7 +161,7 @@ Pop-Location
 # --- Summary ---
 Write-Host "`n=== Consolidated Summary ===`n" -ForegroundColor White
 Write-Host "Backend Tests: Passed: $backendPass, Failed: $backendFail"
-if ($frontendPass -ne $null) {
+if ($null -ne $frontendPass) {
     Write-Host "Frontend Tests: Passed: $frontendPass, Failed: $frontendFail"
 }
 else {
