@@ -1,21 +1,23 @@
 
 # Script to run Content Sharing Epic tests and generate reports
 
-$backendRoot = "backend"
-$frontendRoot = "frontend"
+$backendRoot = Join-Path $PSScriptRoot "..\backend"
+$frontendRoot = Join-Path $PSScriptRoot "..\frontend"
 $backendServiceRelPath = "./epics/content-sharing/service"
 $frontendTestRelPath = "epics/content-sharing/tests"
 $backendReportFile = "backend_content-sharing_test_report.txt"
 $frontendReportFile = "frontend_content-sharing_test_report.txt"
 
+$reportRoot = Join-Path $PSScriptRoot "..\Unit_test results"
 $reportDir = "content-sharing_test_reports"
+$reportDirAbsPath = Join-Path $reportRoot $reportDir
+
 # Create report directory if it doesn't exist
-if (-not (Test-Path $reportDir)) {
-    New-Item -ItemType Directory -Path $reportDir | Out-Null
+if (-not (Test-Path $reportDirAbsPath)) {
+    New-Item -ItemType Directory -Path $reportDirAbsPath -Force | Out-Null
 }
 
 # Absolute paths for reports
-$reportDirAbsPath = Join-Path (Get-Location) $reportDir
 $backendReportAbsPath = Join-Path $reportDirAbsPath $backendReportFile
 $frontendReportAbsPath = Join-Path $reportDirAbsPath $frontendReportFile
 $backendFullOutputAbsPath = Join-Path $reportDirAbsPath "backend_full_output.txt"
@@ -87,24 +89,66 @@ if (Test-Path "frontend_temp_output.json") {
     $jsonContent = Get-Content "frontend_temp_output.json" | ConvertFrom-Json
     $frontendPass = 0
     $frontendFail = 0
+    $frontendStories = @{
+        "US2.1: Post Creation"      = "To be done"
+        "US2.2: View Posts"         = "To be done"
+        "US2.3: Like Posts"         = "To be done"
+        "US2.4: Comment on Posts"   = "To be done"
+        "US2.5: Delete Own Posts"   = "To be done"
+        "US2.6: Follow Others"      = "To be done"
+        "US2.7: View Notifications" = "To be done"
+        "US2.8: Search Users"       = "To be done"
+    }
+
+    foreach ($result in $jsonContent.testResults) {
+        $name = $result.name
+        $allPassed = $true
+        foreach ($assertion in $result.assertionResults) {
+            if ($assertion.status -ne "passed") { $allPassed = $false }
+        }
+        $status = if ($allPassed) { "Pass" } else { "Fail" }
+
+        if ($name -match "PostCard|Comment") { 
+            $frontendStories["US2.2: View Posts"] = $status
+            $frontendStories["US2.3: Like Posts"] = $status
+            $frontendStories["US2.4: Comment on Posts"] = $status
+            $frontendStories["US2.5: Delete Own Posts"] = $status
+        }
+        elseif ($name -match "Feed|PostList") { 
+            $frontendStories["US2.2: View Posts"] = $status
+            $frontendStories["US2.5: Delete Own Posts"] = $status
+        }
+        elseif ($name -match "CreatePost|Editor") { 
+            $frontendStories["US2.1: Post Creation"] = $status
+        }
+        elseif ($name -match "Notification") {
+            $frontendStories["US2.7: View Notifications"] = $status
+        }
+        elseif ($name -match "Search|UserList") {
+            $frontendStories["US2.8: Search Users"] = $status
+            $frontendStories["US2.6: Follow Others"] = $status
+        }
+    }
+
+    # Calculate final counts based on mapped stories
+    foreach ($val in $frontendStories.Values) {
+        if ($val -eq "Pass") { $frontendPass++ }
+        elseif ($val -eq "Fail") { $frontendFail++ }
+    }
     
     # Generate Frontend Report
     $feReport = "Frontend Content Sharing Test Report`n"
     $feReport += "====================================`n"
-    $feReport += "{0,-40} | {1,-10} | {2,-10}`n" -f "Component/Story", "Passed", "Failed"
-    $feReport += "-----------------------------------------|------------|------------`n"
+    $feReport += "{0,-25} | {1,-10}`n" -f "User Story", "Status"
+    $feReport += "--------------------------|------------`n"
     
-    $detailedTests = "`nDetailed Tests:`n"
-    foreach ($result in $jsonContent.testResults) {
-         foreach ($assertion in $result.assertionResults) {
-            if ($assertion.status -eq "passed") { $frontendPass++ }
-            else { $frontendFail++ }
-            $detailedTests += "- {0}: {1}`n" -f $assertion.title, $assertion.status
-         }
+    $keys = "US2.1: Post Creation", "US2.2: View Posts", "US2.3: Like Posts", "US2.4: Comment on Posts", "US2.5: Delete Own Posts", "US2.6: Follow Others", "US2.7: View Notifications", "US2.8: Search Users"
+    foreach ($story in $keys) {
+        $feReport += "{0,-28} | {1,-10}`n" -f $story, $frontendStories[$story]
     }
-    
-    $feReport += "{0,-40} | {1,-10} | {2,-10}`n" -f "Total Tests", $frontendPass, $frontendFail
-    $feReport += $detailedTests
+
+    $feReport += "`nTotal Passed: $frontendPass`n"
+    $feReport += "Total Failed: $frontendFail`n"
 
     $feReport | Out-File $frontendReportAbsPath -Encoding UTF8
     Write-Host "Frontend Report Generated: $reportDir\$frontendReportFile" -ForegroundColor Green
@@ -121,7 +165,7 @@ Pop-Location
 # --- Summary ---
 Write-Host "`n=== Consolidated Summary ===`n" -ForegroundColor White
 Write-Host "Backend Tests: Passed: $backendPass, Failed: $backendFail"
-if ($frontendPass -ne $null) {
+if ($null -ne $frontendPass) {
     Write-Host "Frontend Tests: Passed: $frontendPass, Failed: $frontendFail"
 }
 else {
