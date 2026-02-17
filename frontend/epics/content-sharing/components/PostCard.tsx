@@ -320,7 +320,12 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
                             <div className="flex items-center gap-1">
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground transition-colors rounded-xl">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-9 w-9 text-muted-foreground hover:text-foreground transition-colors rounded-xl"
+                                            aria-label="More options"
+                                        >
                                             <MoreHorizontal className="w-4 h-4" />
                                         </Button>
                                     </DropdownMenuTrigger>

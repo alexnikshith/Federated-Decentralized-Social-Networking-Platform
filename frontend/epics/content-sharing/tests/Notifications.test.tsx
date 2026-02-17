@@ -1,31 +1,28 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { expect, it, describe, vi, beforeEach } from 'vitest';
-import { NotificationList } from '../../../content-sharing/components/NotificationList';
-import * as apiClient from '../../../content-sharing/api/client';
-import { Notification } from '../../../content-sharing/types';
-
-vi.mock('../../../content-sharing/api/client', () => ({
-    getNotifications: vi.fn(),
-    markNotificationAsRead: vi.fn(),
-}));
+import { NotificationList } from '../components/NotificationList';
+import { mockState, resetMockState } from './mocks';
+import { Notification } from '../types';
+import { MemoryRouter } from 'react-router-dom';
 
 const mockNotifications: Notification[] = [
     {
         id: 'n1',
         type: 'like',
-        sender_id: 's1',
-        sender_username: 'lover',
-        sender_display_name: 'Post Lover',
-        post_id: 'p1',
+        related_entity_id: 'p1',
+        related_user_id: 's1',
+        related_user_name: 'Post Lover',
+        related_user_avatar: '',
         created_at: new Date().toISOString(),
         is_read: false
     },
     {
         id: 'n2',
         type: 'follow',
-        sender_id: 's2',
-        sender_username: 'follower',
-        sender_display_name: 'New Follower',
+        related_entity_id: 's2',
+        related_user_id: 's2',
+        related_user_name: 'New Follower',
+        related_user_avatar: '',
         created_at: new Date().toISOString(),
         is_read: true
     }
@@ -33,13 +30,18 @@ const mockNotifications: Notification[] = [
 
 describe('NotificationList Component', () => {
     beforeEach(() => {
+        resetMockState();
         vi.clearAllMocks();
     });
 
-    it('renders notifications from API', async () => {
-        vi.mocked(apiClient.getNotifications).mockResolvedValue(mockNotifications);
+    it('renders notifications from store', async () => {
+        mockState.content.notifications = mockNotifications;
 
-        render(<NotificationList />);
+        render(
+            <MemoryRouter>
+                <NotificationList />
+            </MemoryRouter>
+        );
 
         await waitFor(() => {
             expect(screen.getByText(/Post Lover/i)).toBeInTheDocument();
@@ -50,12 +52,16 @@ describe('NotificationList Component', () => {
     });
 
     it('shows empty state when no notifications', async () => {
-        vi.mocked(apiClient.getNotifications).mockResolvedValue([]);
+        mockState.content.notifications = [];
 
-        render(<NotificationList />);
+        render(
+            <MemoryRouter>
+                <NotificationList />
+            </MemoryRouter>
+        );
 
         await waitFor(() => {
-            expect(screen.getByText(/no notifications yet/i)).toBeInTheDocument();
+            expect(screen.getByText(/all caught up/i)).toBeInTheDocument();
         });
     });
 });

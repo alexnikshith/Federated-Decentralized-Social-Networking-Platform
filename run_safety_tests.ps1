@@ -2,7 +2,7 @@
 
 $backendRoot = "backend"
 $frontendRoot = "frontend"
-$backendTestPath = "./epics/safety/tests"
+$backendTestPath = "./epics/safety/service"
 $frontendTestPath = "epics/safety/tests"
 $reportDir = "safety_test_reports"
 $reportDirAbs = Join-Path (Get-Location) $reportDir
@@ -46,8 +46,8 @@ foreach ($line in $backendOutput) {
     if ($line -match "--- PASS: TestBlock_UnblockUser") { $backendStories["Unblock User Logic"] = "Pass"; $backendPass++ }
     elseif ($line -match "--- FAIL: TestBlock_UnblockUser") { $backendStories["Unblock User Logic"] = "Fail"; $backendFail++ }
 
-    if ($line -match "--- PASS: TestReport_SubmitReport") { $backendStories["Report User Logic"] = "Pass"; $backendPass++ }
-    elseif ($line -match "--- FAIL: TestReport_SubmitReport") { $backendStories["Report User Logic"] = "Fail"; $backendFail++ }
+    if ($line -match "--- PASS: TestReport_SubmitUserReport") { $backendStories["Report User Logic"] = "Pass"; $backendPass++ }
+    elseif ($line -match "--- FAIL: TestReport_SubmitUserReport") { $backendStories["Report User Logic"] = "Fail"; $backendFail++ }
 }
 
 $backendResults = "Backend Safety Test Report`n"

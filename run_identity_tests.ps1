@@ -58,6 +58,9 @@ foreach ($line in $backendOutput) {
 
     if ($line -match "--- PASS: TestProfileService_DeactivateAccount") { $backendStories["Account Deactivation"] = "Pass"; $backendPass++ }
     elseif ($line -match "--- FAIL: TestProfileService_DeactivateAccount") { $backendStories["Account Deactivation"] = "Fail"; $backendFail++ }
+
+    if ($line -match "--- PASS: TestProfileService_GetActivity") { $backendStories["View User Activity"] = "Pass"; $backendPass++ }
+    elseif ($line -match "--- FAIL: TestProfileService_GetActivity") { $backendStories["View User Activity"] = "Fail"; $backendFail++ }
 }
 
 # Generate Backend Report
