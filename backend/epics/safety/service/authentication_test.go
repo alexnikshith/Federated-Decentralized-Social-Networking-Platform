@@ -1,4 +1,4 @@
-package tests
+package service_test
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"federated-social/backend/config"
+
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -25,7 +26,7 @@ func init() {
 func TestAuth_Signup_PasswordHashing(t *testing.T) {
 	mockUserRepo := &MockUserRepository{}
 	mockActivityRepo := &MockActivityRepository{}
-	
+
 	// Setup generic mocks
 	mockActivityRepo.LogActivityFunc = func(ctx context.Context, log *models.ActivityLog) error { return nil }
 	mockUserRepo.FindByEmailFunc = func(ctx context.Context, email string) (*models.User, error) { return nil, errors.New("not found") }
@@ -65,7 +66,7 @@ func TestAuth_Signup_PasswordHashing(t *testing.T) {
 	if capturedUser.PasswordHash == req.Password {
 		t.Error("Password was stored in plain text!")
 	}
-	
+
 	err = bcrypt.CompareHashAndPassword([]byte(capturedUser.PasswordHash), []byte(req.Password))
 	if err != nil {
 		t.Error("Password hash does not match original password")
@@ -77,10 +78,10 @@ func TestAuth_Login_OTPGeneration(t *testing.T) {
 	mockUserRepo := &MockUserRepository{}
 	mockVerificationRepo := &MockVerificationRepository{}
 	mockEmailSender := &MockEmailSender{}
-	
+
 	password := "password123"
 	hashed, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	
+
 	user := &models.User{
 		ID:           primitive.NewObjectID(),
 		Email:        "otp@example.com",
@@ -92,13 +93,13 @@ func TestAuth_Login_OTPGeneration(t *testing.T) {
 	mockUserRepo.FindByEmailFunc = func(ctx context.Context, email string) (*models.User, error) {
 		return user, nil
 	}
-	
+
 	var capturedCode string
 	mockVerificationRepo.CreateVerificationCodeFunc = func(ctx context.Context, code *models.VerificationCode) error {
 		capturedCode = code.Code
 		return nil
 	}
-	
+
 	mockEmailSender.SendVerificationEmailFunc = func(to, code string) error {
 		if code != capturedCode {
 			return errors.New("code mismatch")

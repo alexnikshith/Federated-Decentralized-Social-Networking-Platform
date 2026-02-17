@@ -1,4 +1,4 @@
-package tests
+package service_test
 
 import (
 	"context"
@@ -22,7 +22,7 @@ func TestReport_SubmitUserReport(t *testing.T) {
 		Reason:      "Harassment",
 		Description: "Abusive comments",
 	}
-	
+
 	var capturedReport reportModels.UserReport
 	mockRepo.CreateUserReportFunc = func(ctx context.Context, report reportModels.UserReport) error {
 		capturedReport = report
