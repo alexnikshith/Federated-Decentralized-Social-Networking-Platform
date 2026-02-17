@@ -114,4 +114,27 @@ describe('SettingsPage', () => {
 
         confirmSpy.mockRestore();
     });
+
+    it('displays activity logs in account tab', async () => {
+        const mockActivities = [
+            { id: '1', user_id: '123', action: 'login', details: 'Successful login', timestamp: new Date().toISOString() },
+            { id: '2', user_id: '123', action: 'profile_update', details: 'Updated display name', timestamp: new Date().toISOString() },
+        ];
+        (profileApi.getActivity as any).mockResolvedValue(mockActivities);
+
+        render(<SettingsPage />);
+
+        // Switch to account tab
+        fireEvent.click(screen.getByText('Account'));
+
+        // Click view activity
+        const viewActivityButton = screen.getByText('View Activity');
+        fireEvent.click(viewActivityButton);
+
+        await waitFor(() => {
+            expect(profileApi.getActivity).toHaveBeenCalled();
+            expect(screen.getByText('Successful login')).toBeInTheDocument();
+            expect(screen.getByText('Updated display name')).toBeInTheDocument();
+        });
+    });
 });

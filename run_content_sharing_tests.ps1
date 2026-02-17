@@ -1,45 +1,133 @@
-$epic = "content-sharing"
-$reportFolder = "${epic}_test_reports"
-New-Item -ItemType Directory -Force -Path $reportFolder
 
-# Frontend Tests
-Write-Host "Running Frontend Tests..." -ForegroundColor Cyan
-cd frontend
-$frontendOutput = npm run test -- --run | Out-String
-cd ..
+# Script to run Content Sharing Epic tests and generate reports
 
-# Backend Tests
-Write-Host "Running Backend Tests..." -ForegroundColor Cyan
-cd backend
-$backendOutput = go test ./epics/identity/tests/content-sharing/... | Out-String
-cd ..
+$backendRoot = "backend"
+$frontendRoot = "frontend"
+$backendServiceRelPath = "./epics/content-sharing/service"
+$frontendTestRelPath = "epics/content-sharing/tests"
+$backendReportFile = "backend_content-sharing_test_report.txt"
+$frontendReportFile = "frontend_content-sharing_test_report.txt"
 
-# Generate Reports
-# For demonstration purposes, we'll parse the output or generate a mock report based on implemented tests
-# In a real environment, you'd use a more sophisticated parser
+$reportDir = "content-sharing_test_reports"
+# Create report directory if it doesn't exist
+if (-not (Test-Path $reportDir)) {
+    New-Item -ItemType Directory -Path $reportDir | Out-Null
+}
 
-$frontendReport = @"
-User Stories Tested                     | Number of Test Cases Passed | Number of Test Cases Failed
-----------------------------------------|---------------------------|----------------------------
-Create Post                             | 6                         | 0
-View Post (PostCard)                    | 4                         | 0
-Like Post                               | 2                         | 0
-Delete Post                             | 2                         | 0
-Search Users                            | 2                         | 0
-Follow User                             | 4                         | 0
-Get Notifications                       | 2                         | 0
-"@
+# Absolute paths for reports
+$reportDirAbsPath = Join-Path (Get-Location) $reportDir
+$backendReportAbsPath = Join-Path $reportDirAbsPath $backendReportFile
+$frontendReportAbsPath = Join-Path $reportDirAbsPath $frontendReportFile
+$backendFullOutputAbsPath = Join-Path $reportDirAbsPath "backend_full_output.txt"
 
-$backendReport = @"
-User Stories Tested                     | Number of Test Cases Passed | Number of Test Cases Failed
-----------------------------------------|---------------------------|----------------------------
-Create Post Service                     | 1                         | 0
-Like Post Service                       | 1                         | 0
-Delete Post Service                     | 2                         | 0
-Search/Follow Service (Logic Only)      | 1                         | 0
-"@
+Write-Host "Starting Content Sharing Epic Tests..." -ForegroundColor Cyan
 
-$frontendReport | Out-File -FilePath "$reportFolder/frontend_report.txt" -Encoding utf8
-$backendReport | Out-File -FilePath "$reportFolder/backend_report.txt" -Encoding utf8
+# --- Backend Tests ---
+Write-Host "`nRunning Backend Tests..." -ForegroundColor Yellow
+Push-Location $backendRoot
+$backendOutput = go test -v $backendServiceRelPath 2>&1
+Pop-Location
 
-Write-Host "Reports generated in $reportFolder" -ForegroundColor Green
+# Save output to analyze
+$backendOutput | Out-File $backendFullOutputAbsPath -Encoding UTF8
+Write-Host "Backend Full Output saved to: $reportDir\backend_full_output.txt" -ForegroundColor Gray
+
+# Parse Backend Output
+$backendPass = 0
+$backendFail = 0
+$backendStories = @{}
+
+foreach ($line in $backendOutput) {
+    if ($line -match "--- PASS: TestPostService_CreatePost") { $backendStories["Create Post"] = "Pass"; $backendPass++ }
+    elseif ($line -match "--- FAIL: TestPostService_CreatePost") { $backendStories["Create Post"] = "Fail"; $backendFail++ }
+
+    if ($line -match "--- PASS: TestPostService_ViewPosts") { $backendStories["View Posts"] = "Pass"; $backendPass++ }
+    elseif ($line -match "--- FAIL: TestPostService_ViewPosts") { $backendStories["View Posts"] = "Fail"; $backendFail++ }
+
+    if ($line -match "--- PASS: TestPostService_LikePost") { $backendStories["Like Posts"] = "Pass"; $backendPass++ }
+    elseif ($line -match "--- FAIL: TestPostService_LikePost") { $backendStories["Like Posts"] = "Fail"; $backendFail++ }
+
+    if ($line -match "--- PASS: TestPostService_CommentOnPost") { $backendStories["Comment on Posts"] = "Pass"; $backendPass++ }
+    elseif ($line -match "--- FAIL: TestPostService_CommentOnPost") { $backendStories["Comment on Posts"] = "Fail"; $backendFail++ }
+
+    if ($line -match "--- PASS: TestPostService_DeleteOwnPost") { $backendStories["Delete Own Posts"] = "Pass"; $backendPass++ }
+    elseif ($line -match "--- FAIL: TestPostService_DeleteOwnPost") { $backendStories["Delete Own Posts"] = "Fail"; $backendFail++ }
+
+    if ($line -match "--- PASS: TestPostService_FollowOthers") { $backendStories["Follow Others"] = "Pass"; $backendPass++ }
+    elseif ($line -match "--- FAIL: TestPostService_FollowOthers") { $backendStories["Follow Others"] = "Fail"; $backendFail++ }
+
+    if ($line -match "--- PASS: TestPostService_ViewNotifications") { $backendStories["View Notifications"] = "Pass"; $backendPass++ }
+    elseif ($line -match "--- FAIL: TestPostService_ViewNotifications") { $backendStories["View Notifications"] = "Fail"; $backendFail++ }
+
+    if ($line -match "--- PASS: TestPostService_SearchUsers") { $backendStories["Search Users"] = "Pass"; $backendPass++ }
+    elseif ($line -match "--- FAIL: TestPostService_SearchUsers") { $backendStories["Search Users"] = "Fail"; $backendFail++ }
+}
+
+# Generate Backend Report
+$reportContent = "Backend Content Sharing Test Report`n"
+$reportContent += "===================================`n"
+$reportContent += "{0,-25} | {1,-10}`n" -f "User Story", "Status"
+$reportContent += "--------------------------|------------`n"
+foreach ($key in $backendStories.Keys) {
+    $reportContent += "{0,-25} | {1,-10}`n" -f $key, $backendStories[$key]
+}
+$reportContent += "`nTotal Passed: $backendPass`n"
+$reportContent += "Total Failed: $backendFail`n"
+$reportContent | Out-File $backendReportAbsPath -Encoding UTF8
+Write-Host "Backend Report Generated: $reportDir\$backendReportFile" -ForegroundColor Green
+
+
+# --- Frontend Tests ---
+Write-Host "`nRunning Frontend Tests..." -ForegroundColor Yellow
+Push-Location $frontendRoot
+# Run vitest and capture output as JSON
+$frontendOutput = cmd /c "npx -y vitest run $frontendTestRelPath --reporter=json --outputFile=frontend_temp_output.json" 2>&1
+# Check if json was created
+if (Test-Path "frontend_temp_output.json") {
+    $jsonContent = Get-Content "frontend_temp_output.json" | ConvertFrom-Json
+    $frontendPass = 0
+    $frontendFail = 0
+    
+    # Generate Frontend Report
+    $feReport = "Frontend Content Sharing Test Report`n"
+    $feReport += "====================================`n"
+    $feReport += "{0,-40} | {1,-10} | {2,-10}`n" -f "Component/Story", "Passed", "Failed"
+    $feReport += "-----------------------------------------|------------|------------`n"
+    
+    $detailedTests = "`nDetailed Tests:`n"
+    foreach ($result in $jsonContent.testResults) {
+         foreach ($assertion in $result.assertionResults) {
+            if ($assertion.status -eq "passed") { $frontendPass++ }
+            else { $frontendFail++ }
+            $detailedTests += "- {0}: {1}`n" -f $assertion.title, $assertion.status
+         }
+    }
+    
+    $feReport += "{0,-40} | {1,-10} | {2,-10}`n" -f "Total Tests", $frontendPass, $frontendFail
+    $feReport += $detailedTests
+
+    $feReport | Out-File $frontendReportAbsPath -Encoding UTF8
+    Write-Host "Frontend Report Generated: $reportDir\$frontendReportFile" -ForegroundColor Green
+    
+    # Cleanup json
+    Remove-Item "frontend_temp_output.json" -ErrorAction SilentlyContinue
+}
+else {
+    Write-Host "Frontend tests failed to generate JSON output. Check console." -ForegroundColor Red
+    $frontendOutput | Out-File "$reportDirAbsPath\frontend_error_log.txt" -Encoding UTF8
+}
+Pop-Location
+
+# --- Summary ---
+Write-Host "`n=== Consolidated Summary ===`n" -ForegroundColor White
+Write-Host "Backend Tests: Passed: $backendPass, Failed: $backendFail"
+if ($frontendPass -ne $null) {
+    Write-Host "Frontend Tests: Passed: $frontendPass, Failed: $frontendFail"
+}
+else {
+    Write-Host "Frontend Tests: Could not execute or parse results."
+}
+Write-Host "`nReports saved to directory: $reportDir"
+Write-Host " - $backendReportFile"
+Write-Host " - $frontendReportFile"
+Write-Host " - backend_full_output.txt"

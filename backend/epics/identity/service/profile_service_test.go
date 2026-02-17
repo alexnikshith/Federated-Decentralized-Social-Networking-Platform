@@ -201,3 +201,26 @@ func TestProfileService_DeactivateAccount(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 }
+
+func TestProfileService_GetActivity(t *testing.T) {
+	userID := primitive.NewObjectID()
+	mockActivityRepo := &MockActivityRepository{}
+
+	mockActivityRepo.GetUserActivityFunc = func(ctx context.Context, id primitive.ObjectID, limit int64) ([]models.ActivityLog, error) {
+		return []models.ActivityLog{
+			{UserID: userID, Action: "test_action", Details: "test_details"},
+		}, nil
+	}
+
+	service := &ProfileService{
+		activityRepo: mockActivityRepo,
+	}
+
+	activities, err := service.GetActivity(context.Background(), userID, 10)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if len(activities) != 1 {
+		t.Errorf("expected 1 activity, got %d", len(activities))
+	}
+}
