@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 45 30% 98%;
+    --foreground: 220 20% 7%;
+    --primary: 38 92% 55%;
+    --primary-foreground: 220 20% 7%;
+    --secondary: 220 15% 94%;
+    --secondary-foreground: 220 20% 15%;
+    --muted: 220 15% 90%;
+    --muted-foreground: 220 10% 40%;
+    --accent: 175 65% 45%;
+    --accent-foreground: 0 0% 100%;
+    --border: 220 15% 88%;
+  }
+
+  .dark {
+    --background: 220 20% 7%;
+    --foreground: 45 20% 95%;
+    --primary: 38 92% 55%;
+    --primary-foreground: 220 20% 7%;
+    --secondary: 220 15% 15%;
+    --secondary-foreground: 45 15% 85%;
+    --muted: 220 15% 18%;
+    --muted-foreground: 220 10% 55%;
+    --accent: 175 65% 45%;
+    --accent-foreground: 220 20% 7%;
+    --border: 220 15% 20%;
+  }
+}
