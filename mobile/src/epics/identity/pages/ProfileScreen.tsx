@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Image, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
+import { View, Text, Image, ScrollView, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../store/authStore';
 import { Button } from '../../../components/ui/Button';
 import { useRouter } from 'expo-router';
@@ -17,7 +18,7 @@ const ProfileScreen = () => {
     };
 
     return (
-        <SafeAreaView className="flex-1 bg-background">
+        <SafeAreaView className="flex-1 bg-background" edges={['left', 'right']}>
             <ScrollView className="flex-1">
                 {/* Header / Cover Area */}
                 <View className="h-32 bg-primary/10" />

@@ -1,31 +1,24 @@
-import { StyleSheet } from 'react-native';
+import React from 'react';
+import { View, Text } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuthStore } from '../../src/epics/identity/store/authStore';
 
-import EditScreenInfo from '@/components/EditScreenInfo';
-import { Text, View } from '@/components/Themed';
+export default function FeedScreen() {
+  const { user } = useAuthStore();
 
-export default function TabOneScreen() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Tab One</Text>
-      <View style={styles.separator} lightColor="#eee" darkColor="rgba(255,255,255,0.1)" />
-      <EditScreenInfo path="app/(tabs)/index.tsx" />
-    </View>
+    <SafeAreaView className="flex-1 bg-background" edges={['top', 'left', 'right']}>
+      <View className="flex-1 items-center justify-center p-6">
+        <View className="bg-primary/10 p-6 rounded-3xl items-center">
+          <Text className="text-2xl font-bold text-foreground mb-2">Welcome to Nexus, {user?.display_name || 'User'}!</Text>
+          <Text className="text-muted-foreground text-center">
+            You have successfully verified your decentralized identity.
+          </Text>
+        </View>
+        <Text className="mt-10 text-muted-foreground italic">
+          Phase 2: Content Sharing (Feed) is coming next...
+        </Text>
+      </View>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  separator: {
-    marginVertical: 30,
-    height: 1,
-    width: '80%',
-  },
-});
