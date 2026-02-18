@@ -36,9 +36,17 @@ const SignupScreen = () => {
                 display_name: displayName || username
             });
 
-            const { token, user } = response.data;
-            await setAuth(user, token);
-            router.replace('/(tabs)');
+            const data = response.data.data || response.data;
+            const token = data.token;
+            const user = data.user || data;
+
+            if (token && user) {
+                await setAuth(user, token);
+                router.replace('/(tabs)');
+            } else {
+                // If no token (current implementation), send to login
+                router.replace('/login');
+            }
         } catch (err: any) {
             console.error('Signup error:', err);
             setError(err.response?.data?.message || 'Signup failed. Please try again.');

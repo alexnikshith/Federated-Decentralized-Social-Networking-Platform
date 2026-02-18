@@ -3,21 +3,21 @@ import { Post, FeedResponse, CreatePostRequest, CreateCommentRequest, Comment } 
 
 export const postApi = {
     // Fetch global/community feed
-    getFeed: async (page = 1, limit = 20) => {
-        const response = await api.get<FeedResponse>(`/posts?page=${page}&limit=${limit}`);
-        return response.data;
+    getFeed: async (page = 1, limit = 20, type = 'home') => {
+        const response = await api.get<any>(`/feed?page=${page}&limit=${limit}&type=${type}`);
+        return response.data.data as FeedResponse;
     },
 
     // Fetch single post
     getPost: async (id: string) => {
-        const response = await api.get<Post>(`/posts/${id}`);
-        return response.data;
+        const response = await api.get<any>(`/posts/${id}`);
+        return response.data.data as Post;
     },
 
     // Create a new post
     createPost: async (data: CreatePostRequest) => {
-        const response = await api.post<Post>('/posts', data);
-        return response.data;
+        const response = await api.post<any>('/posts', data);
+        return response.data.data as Post;
     },
 
     // Delete a post
@@ -26,21 +26,24 @@ export const postApi = {
     },
 
     // Like/Unlike a post
-    toggleLike: async (id: string) => {
-        const response = await api.post(`/posts/${id}/like`);
-        return response.data;
+    toggleLike: async (id: string, isLiked: boolean) => {
+        if (isLiked) {
+            await api.delete(`/posts/${id}/like`);
+        } else {
+            await api.post(`/posts/${id}/like`);
+        }
     },
 
     // Get comments for a post
     getComments: async (postId: string) => {
-        const response = await api.get<Comment[]>(`/posts/${postId}/comments`);
-        return response.data;
+        const response = await api.get<any>(`/posts/${postId}/comments`);
+        return response.data.data as Comment[];
     },
 
     // Add a comment
     addComment: async (postId: string, data: CreateCommentRequest) => {
-        const response = await api.post<Comment>(`/posts/${postId}/comments`, data);
-        return response.data;
+        const response = await api.post<any>(`/posts/${postId}/comments`, data);
+        return response.data.data as Comment;
     },
 
     // Report a post

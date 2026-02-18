@@ -28,7 +28,8 @@ const LoginScreen = () => {
 
         try {
             const response = await api.post('/auth/login', { email, password });
-            const { token, user } = response.data;
+            // Login is currently unwrapped on backend
+            const { token, user } = response.data.data || response.data;
 
             await setAuth(user, token);
             router.replace('/(tabs)');

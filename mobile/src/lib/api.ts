@@ -5,23 +5,26 @@ import { Platform } from 'react-native';
 
 // Helper to get local IP for development
 const getBaseUrl = () => {
-    // If we have a configured environment variable, use it
     if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
-
-    // Otherwise, default to local machine IP for physical devices/emulators
     const debuggerHost = Constants.expoConfig?.hostUri;
     const localhost = debuggerHost?.split(':')[0] || 'localhost';
-
-    // Android emulator uses 10.0.2.2 to access host machine
     if (Platform.OS === 'android' && localhost === 'localhost') {
         return 'http://10.0.2.2:8080/api';
     }
-
     return `http://${localhost}:8080/api`;
 };
 
+export const BASE_URL = getBaseUrl();
+
+export const getImageUrl = (path?: string) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    const host = BASE_URL.replace('/api', '');
+    return `${host}${path.startsWith('/') ? '' : '/'}${path}`;
+};
+
 export const api = axios.create({
-    baseURL: getBaseUrl(),
+    baseURL: BASE_URL,
     headers: {
         'Content-Type': 'application/json',
     },

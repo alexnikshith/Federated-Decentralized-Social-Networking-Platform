@@ -25,6 +25,7 @@ interface AuthState {
     switchAccount: (userId: string, communityId?: string) => Promise<void>;
     removeAccount: (userId: string) => void;
     clearAllSessions: () => Promise<void>;
+    refreshUser: () => Promise<void>;
 }
 
 const TOKEN_KEY = 'nexus_auth_token';
@@ -137,6 +138,19 @@ export const useAuthStore = create<AuthState>()(
                     lastActivity: null,
                     sessions: []
                 });
+            },
+
+            refreshUser: async () => {
+                const { api } = await import('../../../lib/api');
+                try {
+                    const response = await api.get('/profile/me');
+                    const data = response.data.data || response.data;
+                    if (data) {
+                        get().updateUser(data);
+                    }
+                } catch (err) {
+                    console.error('Failed to refresh user:', err);
+                }
             }
         }),
         {

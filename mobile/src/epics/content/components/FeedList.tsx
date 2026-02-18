@@ -4,46 +4,61 @@ import { Post } from '../types';
 import { PostCard } from './PostCard';
 import { postApi } from '../api/postApi';
 
-export const FeedList = () => {
+interface FeedListProps {
+    type?: 'home' | 'public';
+}
+
+const FEED_LIMIT = 50;
+
+// Memoize PostCard for performance
+const MemoizedPostCard = React.memo(PostCard);
+
+export const FeedList: React.FC<FeedListProps> = ({ type = 'home' }) => {
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
 
-    const fetchFeed = useCallback(async (pageNum: number, isRefresh = false) => {
+    const fetchingRef = React.useRef(false);
+
+    const fetchFeed = useCallback(async (isRefresh = false) => {
+        if (fetchingRef.current) return;
+        fetchingRef.current = true;
+
         try {
-            const data = await postApi.getFeed(pageNum);
-            if (isRefresh) {
-                setPosts(data.posts);
-            } else {
-                setPosts(prev => [...prev, ...data.posts]);
-            }
-            setHasMore(data.posts.length > 0);
+            // Since backend pagination is currently disabled, we fetch one large batch
+            const data = await postApi.getFeed(1, FEED_LIMIT, type);
+            const newPosts = data.posts || [];
+
+            setPosts(newPosts);
+
+            // Disable infinite loading since backend ignores page params for now
+            setHasMore(false);
         } catch (error) {
             console.error('Failed to fetch feed:', error);
+            setHasMore(false);
         } finally {
             setLoading(false);
             setRefreshing(false);
+            fetchingRef.current = false;
         }
-    }, []);
+    }, [type]);
 
     useEffect(() => {
-        fetchFeed(1);
-    }, [fetchFeed]);
+        setPosts([]);
+        setLoading(true);
+        setHasMore(true);
+        fetchFeed(true);
+    }, [type, fetchFeed]);
 
     const onRefresh = () => {
         setRefreshing(true);
-        setPage(1);
-        fetchFeed(1, true);
+        setHasMore(true);
+        fetchFeed(true);
     };
 
     const loadMore = () => {
-        if (!loading && hasMore) {
-            const nextPage = page + 1;
-            setPage(nextPage);
-            fetchFeed(nextPage);
-        }
+        // Disabled until backend pagination is restored
     };
 
     if (loading && posts.length === 0) {
@@ -54,11 +69,13 @@ export const FeedList = () => {
         );
     }
 
+    const renderItem = ({ item }: { item: Post }) => <MemoizedPostCard post={item} />;
+
     return (
         <FlatList
             data={posts}
             keyExtractor={(item) => item.id}
-            renderItem={({ item }) => <PostCard post={item} />}
+            renderItem={renderItem}
             refreshControl={
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#F59E0B" />
             }
@@ -73,12 +90,26 @@ export const FeedList = () => {
             }
             ListFooterComponent={
                 hasMore ? (
-                    <View className="py-4">
+                    <View className="py-6">
                         <ActivityIndicator color="#F59E0B" />
+                    </View>
+                ) : posts.length > 0 ? (
+                    <View className="py-12 items-center">
+                        <View className="h-[1px] w-1/4 bg-slate-100 dark:bg-slate-800 mb-4" />
+                        <Text className="text-slate-400 dark:text-slate-500 font-bold text-[13px] uppercase tracking-[2px]">
+                            ✨ All Caught Up!
+                        </Text>
+                        <Text className="text-slate-300 dark:text-slate-600 text-[11px] mt-1 font-medium">
+                            You've seen all the latest posts
+                        </Text>
                     </View>
                 ) : null
             }
             contentContainerStyle={{ paddingVertical: 10 }}
+            removeClippedSubviews={true}
+            initialNumToRender={5}
+            maxToRenderPerBatch={5}
+            windowSize={5}
         />
     );
 };
