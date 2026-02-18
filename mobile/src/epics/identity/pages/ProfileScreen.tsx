@@ -3,12 +3,18 @@ import { View, Text, Image, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../store/authStore';
 import { Button } from '../../../components/ui/Button';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Settings, LogOut, Shield, MapPin, Link as LinkIcon, Calendar } from 'lucide-react-native';
 
 const ProfileScreen = () => {
-    const { user, clearAuth } = useAuthStore();
+    const { user, clearAuth, refreshUser } = useAuthStore();
     const router = useRouter();
+
+    useFocusEffect(
+        React.useCallback(() => {
+            refreshUser();
+        }, [])
+    );
 
     if (!user) return null;
 
@@ -54,18 +60,18 @@ const ProfileScreen = () => {
                     )}
 
                     {/* Stats */}
-                    <View className="flex-row mt-6 space-x-6">
-                        <View className="items-center">
-                            <Text className="font-bold text-foreground text-lg">{user.following_count || 0}</Text>
-                            <Text className="text-muted-foreground text-xs uppercase tracking-wider">Following</Text>
+                    <View className="flex-row mt-6 py-4 border-y border-border/10">
+                        <View className="flex-1 items-center border-r border-border/10">
+                            <Text className="font-bold text-foreground text-xl">{user.following_count || 0}</Text>
+                            <Text className="text-muted-foreground text-[10px] uppercase tracking-tighter">Following</Text>
                         </View>
-                        <View className="items-center">
-                            <Text className="font-bold text-foreground text-lg">{user.followers_count || 0}</Text>
-                            <Text className="text-muted-foreground text-xs uppercase tracking-wider">Followers</Text>
+                        <View className="flex-1 items-center border-r border-border/10">
+                            <Text className="font-bold text-foreground text-xl">{user.followers_count || 0}</Text>
+                            <Text className="text-muted-foreground text-[10px] uppercase tracking-tighter">Followers</Text>
                         </View>
-                        <View className="items-center">
-                            <Text className="font-bold text-foreground text-lg">{user.posts_count || 0}</Text>
-                            <Text className="text-muted-foreground text-xs uppercase tracking-wider">Posts</Text>
+                        <View className="flex-1 items-center">
+                            <Text className="font-bold text-foreground text-xl">{user.posts_count || 0}</Text>
+                            <Text className="text-muted-foreground text-[10px] uppercase tracking-tighter">Posts</Text>
                         </View>
                     </View>
 
