@@ -13,15 +13,24 @@ interface CommentItemProps {
     postId: string;
     onCommentUpdated: () => void;
     isReply?: boolean;
+    onReply?: (commentId: string, username: string) => void;
 }
 
-const CommentItem: React.FC<CommentItemProps> = ({ comment, postId, onCommentUpdated, isReply = false }) => {
+const CommentItem: React.FC<CommentItemProps> = ({ comment, postId, onCommentUpdated, isReply = false, onReply }) => {
     const [isReplyOpen, setIsReplyOpen] = useState(false);
     const [replyContent, setReplyContent] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showReplies, setShowReplies] = useState(false);
     const { user } = useAuthStore();
+
+    const handleReplyClick = () => {
+        if (onReply) {
+            onReply(comment.id, comment.user_name);
+        } else {
+            setIsReplyOpen(!isReplyOpen);
+        }
+    };
 
     const handleReply = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -43,6 +52,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, postId, onCommentUpd
             setIsSubmitting(false);
         }
     };
+
 
     const handleDelete = async () => {
         if (!window.confirm('Are you sure you want to delete this comment?')) return;
@@ -109,7 +119,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, postId, onCommentUpd
                     <div className="flex items-center gap-4 pl-2">
                         <button
                             className="text-[11px] font-bold text-muted-foreground hover:text-primary transition-colors cursor-pointer"
-                            onClick={() => setIsReplyOpen(!isReplyOpen)}
+                            onClick={handleReplyClick}
                         >
                             Reply
                         </button>
@@ -169,6 +179,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, postId, onCommentUpd
                                     postId={postId}
                                     onCommentUpdated={onCommentUpdated}
                                     isReply={true}
+                                    onReply={onReply}
                                 />
                             ))}
                         </div>
@@ -181,9 +192,12 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, postId, onCommentUpd
 
 interface CommentListProps {
     postId: string;
+    hideInput?: boolean;
+    refreshTrigger?: number;
+    onReply?: (commentId: string, username: string) => void;
 }
 
-export const CommentList: React.FC<CommentListProps> = ({ postId }) => {
+export const CommentList: React.FC<CommentListProps> = ({ postId, hideInput = false, refreshTrigger = 0, onReply }) => {
     const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState('');
     const [loading, setLoading] = useState(false);
@@ -192,7 +206,7 @@ export const CommentList: React.FC<CommentListProps> = ({ postId }) => {
 
     useEffect(() => {
         loadComments();
-    }, [postId]);
+    }, [postId, refreshTrigger]);
 
     const loadComments = async () => {
         setLoading(true);
@@ -225,34 +239,36 @@ export const CommentList: React.FC<CommentListProps> = ({ postId }) => {
     return (
         <div className="space-y-4">
             {/* Comment Form */}
-            <div className="flex items-start gap-3">
-                <Avatar className="w-8 h-8 cursor-pointer border border-border/50">
-                    <AvatarImage src={user?.avatar_url} />
-                    <AvatarFallback>{user?.display_name?.[0]?.toUpperCase() || user?.username?.[0]?.toUpperCase() || '?'}</AvatarFallback>
-                </Avatar>
-                <form onSubmit={handleSubmit} className="flex-1 flex gap-2">
-                    <Input
-                        type="text"
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        placeholder="Write a comment..."
-                        maxLength={1000}
-                        disabled={submitting}
-                        className="flex-1 bg-secondary/50 border-transparent focus:border-primary/20 focus:bg-background transition-all h-9 rounded-2xl px-4"
-                    />
-                    {newComment.trim() && (
-                        <Button
-                            type="submit"
+            {!hideInput && (
+                <div className="flex items-start gap-3">
+                    <Avatar className="w-8 h-8 cursor-pointer border border-border/50">
+                        <AvatarImage src={user?.avatar_url} />
+                        <AvatarFallback>{user?.display_name?.[0]?.toUpperCase() || user?.username?.[0]?.toUpperCase() || '?'}</AvatarFallback>
+                    </Avatar>
+                    <form onSubmit={handleSubmit} className="flex-1 flex gap-2">
+                        <Input
+                            type="text"
+                            value={newComment}
+                            onChange={(e) => setNewComment(e.target.value)}
+                            placeholder="Write a comment..."
+                            maxLength={1000}
                             disabled={submitting}
-                            size="icon"
-                            variant="ghost"
-                            className="h-9 w-9 rounded-full text-primary hover:bg-primary/10 transition-colors"
-                        >
-                            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                        </Button>
-                    )}
-                </form>
-            </div>
+                            className="flex-1 bg-secondary/50 border-transparent focus:border-primary/20 focus:bg-background transition-all h-9 rounded-2xl px-4"
+                        />
+                        {newComment.trim() && (
+                            <Button
+                                type="submit"
+                                disabled={submitting}
+                                size="icon"
+                                variant="ghost"
+                                className="h-9 w-9 rounded-full text-primary hover:bg-primary/10 transition-colors"
+                            >
+                                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                            </Button>
+                        )}
+                    </form>
+                </div>
+            )}
 
             {/* Comments List */}
             <div className="space-y-4 pl-11">
@@ -269,6 +285,7 @@ export const CommentList: React.FC<CommentListProps> = ({ postId }) => {
                             comment={comment}
                             postId={postId}
                             onCommentUpdated={loadComments}
+                            onReply={onReply}
                         />
                     ))
                 )}
