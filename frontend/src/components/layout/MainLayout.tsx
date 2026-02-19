@@ -411,7 +411,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                 </AnimatePresence>
 
                 {/* macOS Style Full Width Footer Dock */}
-                <div className="fixed bottom-0 left-0 w-full z-50 bg-neutral-100/80 dark:bg-neutral-900/80 backdrop-blur-2xl border-t border-neutral-200 dark:border-neutral-800 py-1 flex justify-center items-center shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
+                <div className="fixed bottom-0 left-0 w-full z-30 bg-neutral-100/80 dark:bg-neutral-900/80 backdrop-blur-2xl border-t border-neutral-200 dark:border-neutral-800 py-1 flex justify-center items-center shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
                     <FloatingDock
                         items={dockLinks}
                         desktopClassName="bg-transparent border-none shadow-none"
