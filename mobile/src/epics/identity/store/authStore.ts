@@ -18,6 +18,8 @@ interface AuthState {
     lastActivity: number | null;
     sessions: Session[];
 
+    activeInstanceUrl: string | null;
+
     setAuth: (user: User, token: string) => Promise<void>;
     clearAuth: (logoutAll?: boolean) => Promise<void>;
     updateUser: (user: User) => void;
@@ -26,6 +28,7 @@ interface AuthState {
     removeAccount: (userId: string) => void;
     clearAllSessions: () => Promise<void>;
     refreshUser: () => Promise<void>;
+    setActiveInstance: (url: string) => Promise<void>;
 }
 
 const TOKEN_KEY = 'nexus_auth_token';
@@ -38,6 +41,7 @@ export const useAuthStore = create<AuthState>()(
             token: null,
             isAuthenticated: false,
             lastActivity: null,
+            activeInstanceUrl: null,
             sessions: [],
 
             setAuth: async (user, token) => {
@@ -151,7 +155,11 @@ export const useAuthStore = create<AuthState>()(
                 } catch (err) {
                     console.error('Failed to refresh user:', err);
                 }
-            }
+            },
+
+            setActiveInstance: async (url: string) => {
+                set({ activeInstanceUrl: url });
+            },
         }),
         {
             name: 'nexus-auth-storage',
@@ -160,7 +168,8 @@ export const useAuthStore = create<AuthState>()(
                 user: state.user,
                 sessions: state.sessions,
                 isAuthenticated: state.isAuthenticated,
-                lastActivity: state.lastActivity
+                lastActivity: state.lastActivity,
+                activeInstanceUrl: state.activeInstanceUrl,
             })
         }
     )
