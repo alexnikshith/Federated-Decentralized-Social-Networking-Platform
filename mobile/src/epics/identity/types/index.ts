@@ -6,7 +6,7 @@ export interface User {
     display_name: string;
     bio: string;
     avatar_url: string;
-    profile_visibility: 'public' | 'private';
+    profile_visibility: 'public' | 'private' | 'followers';
     is_discoverable?: boolean;
     created_at: string;
     location?: string;
@@ -65,7 +65,7 @@ export interface UpdateProfileRequest {
     display_name?: string;
     bio?: string;
     avatar_url?: string;
-    profile_visibility?: 'public' | 'private';
+    profile_visibility?: 'public' | 'private' | 'followers';
     is_discoverable?: boolean;
 }
 
