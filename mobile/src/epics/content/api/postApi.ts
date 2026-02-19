@@ -14,6 +14,12 @@ export const postApi = {
         return response.data.data as Post;
     },
 
+    // Get user posts
+    getUserPosts: async (userId: string) => {
+        const response = await api.get<any>(`/users/${userId}/posts`);
+        return response.data.data.posts as Post[];
+    },
+
     // Create a new post
     createPost: async (data: CreatePostRequest) => {
         const response = await api.post<any>('/posts', data);

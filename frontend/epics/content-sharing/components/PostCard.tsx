@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import type { Post, PublicUser } from '../types';
 import { useContentStore } from '../store/contentStore';
 import { CommentList } from './CommentList';
+import { CommentsModal } from './CommentsModal';
 import { useAuthStore } from '../../identity/store/authStore';
 import {
     Heart,
@@ -70,6 +71,7 @@ interface PostCardProps {
 export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = false, onLikeToggle, onPostAction }) => {
     // UI State
     const [showComments, setShowComments] = useState(initialShowComments);
+    const [showCommentsModal, setShowCommentsModal] = useState(false);
     const [showLikers, setShowLikers] = useState(false);
     const [likers, setLikers] = useState<PostLiker[]>([]);
     const [isLoadingLikers, setIsLoadingLikers] = useState(false);
@@ -420,9 +422,9 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
                                 size="sm"
                                 className={cn(
                                     "group/comment gap-2.5 px-3 py-1.5 h-auto rounded-full transition-all duration-300",
-                                    showComments ? "text-primary bg-primary/5" : "text-muted-foreground hover:text-primary hover:bg-primary/5"
+                                    (showComments || showCommentsModal) ? "text-primary bg-primary/5" : "text-muted-foreground hover:text-primary hover:bg-primary/5"
                                 )}
-                                onClick={() => setShowComments(!showComments)}
+                                onClick={() => setShowCommentsModal(true)}
                             >
                                 <MessageSquare className="w-4.5 h-4.5" />
                                 <span className="font-bold text-xs">{post.comment_count}</span>
@@ -454,7 +456,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
 
                         </div>
 
-                        {/* Comments Section */}
+                        {/* Comments Section - Only show inline if explicitly requested (old behavior) or expanded card view */}
                         {(showComments || isExpanded) && (
                             <div className="mt-4 pt-5 border-t border-border/20 animate-in fade-in slide-in-from-top-2 duration-300">
                                 <CommentList postId={post.id} />
@@ -464,7 +466,15 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
                 </div>
             </div>
 
+            {/* Comments Modal */}
+            <CommentsModal
+                post={post}
+                open={showCommentsModal}
+                onOpenChange={setShowCommentsModal}
+            />
+
             {/* Share Dialog */}
+
             <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
                 <DialogContent className="sm:max-w-md bg-card border-border/50">
                     <DialogHeader>
