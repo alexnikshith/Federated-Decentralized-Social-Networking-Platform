@@ -1,4 +1,4 @@
-import { View, TextInput, Text, Platform } from 'react-native';
+import { View, TextInput, Text, Platform, KeyboardTypeOptions } from 'react-native';
 import React from 'react';
 
 interface InputProps {
@@ -8,9 +8,10 @@ interface InputProps {
     placeholder?: string;
     secureTextEntry?: boolean;
     error?: string;
-    keyboardType?: 'default' | 'email-address' | 'numeric';
+    keyboardType?: KeyboardTypeOptions;
     autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
     className?: string;
+    maxLength?: number;
 }
 
 export const Input = ({
@@ -22,7 +23,8 @@ export const Input = ({
     error,
     keyboardType = 'default',
     autoCapitalize = 'none',
-    className = ''
+    className = '',
+    maxLength
 }: InputProps) => {
     return (
         <View className={`mb-4 ${className}`}>
@@ -44,6 +46,7 @@ export const Input = ({
                     secureTextEntry={secureTextEntry}
                     keyboardType={keyboardType}
                     autoCapitalize={autoCapitalize}
+                    maxLength={maxLength}
                     className="text-foreground text-base"
                 />
             </View>

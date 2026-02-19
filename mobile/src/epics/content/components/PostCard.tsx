@@ -6,20 +6,17 @@ import * as Haptics from 'expo-haptics';
 import { postApi } from '../api/postApi';
 import { formatDistanceToNow } from 'date-fns';
 import { getImageUrl } from '../../../lib/api';
+import { CommentModal } from './CommentModal';
 
 interface PostCardProps {
     post: Post;
     onPress?: (post: Post) => void;
 }
 
-export const PostCard: React.FC<PostCardProps> = ({ post: initialPost, onPress }) => {
+export const PostCard: React.FC<PostCardProps> = React.memo(({ post: initialPost, onPress }) => {
     const [post, setPost] = useState(initialPost);
     const [isLiking, setIsLiking] = useState(false);
-    const [showComments, setShowComments] = useState(false);
-    const [comments, setComments] = useState<Comment[]>([]);
-    const [loadingComments, setLoadingComments] = useState(false);
-    const [commentText, setCommentText] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showCommentModal, setShowCommentModal] = useState(false);
 
     const handleLike = async () => {
         if (isLiking) return;
@@ -41,40 +38,8 @@ export const PostCard: React.FC<PostCardProps> = ({ post: initialPost, onPress }
         }
     };
 
-    const fetchComments = useCallback(async () => {
-        setLoadingComments(true);
-        try {
-            const data = await postApi.getComments(post.id);
-            setComments(data || []);
-        } catch (err) {
-            console.error('Failed to fetch comments:', err);
-        } finally {
-            setLoadingComments(false);
-        }
-    }, [post.id]);
-
-    const handleToggleComments = () => {
-        if (!showComments && comments.length === 0) {
-            fetchComments();
-        }
-        setShowComments(!showComments);
-    };
-
-    const handlePostComment = async () => {
-        if (!commentText.trim() || isSubmitting) return;
-
-        setIsSubmitting(true);
-        try {
-            const newComment = await postApi.addComment(post.id, { content: commentText.trim() });
-            setComments(prev => [newComment, ...prev]);
-            setPost(prev => ({ ...prev, comment_count: (prev.comment_count || 0) + 1 }));
-            setCommentText('');
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        } catch (err) {
-            Alert.alert("Error", "Failed to post comment. Please try again.");
-        } finally {
-            setIsSubmitting(false);
-        }
+    const handleCommentPress = () => {
+        setShowCommentModal(true);
     };
 
     const handleShare = async () => {
@@ -170,12 +135,12 @@ export const PostCard: React.FC<PostCardProps> = ({ post: initialPost, onPress }
 
                         <TouchableOpacity
                             className="flex-row items-center"
-                            onPress={handleToggleComments}
+                            onPress={handleCommentPress}
                         >
-                            <View className={`p-2 rounded-full ${showComments ? 'bg-amber-50 dark:bg-amber-900/20' : ''}`}>
-                                <MessageCircle size={20} color={showComments ? '#F59E0B' : '#94A3B8'} />
+                            <View className="p-2 rounded-full">
+                                <MessageCircle size={20} color="#94A3B8" />
                             </View>
-                            <Text className={`ml-1 text-sm font-bold ${showComments ? 'text-amber-500' : 'text-slate-400'}`}>
+                            <Text className="ml-1 text-sm font-bold text-slate-400">
                                 {post.comment_count || 0}
                             </Text>
                         </TouchableOpacity>
@@ -190,62 +155,12 @@ export const PostCard: React.FC<PostCardProps> = ({ post: initialPost, onPress }
                 </View>
             </View>
 
-            {/* Inline Comments Section */}
-            {showComments && (
-                <View className="bg-slate-50/50 dark:bg-slate-800/20 border-t border-slate-100 dark:border-slate-800 p-4">
-                    {loadingComments ? (
-                        <ActivityIndicator size="small" color="#F59E0B" className="py-4" />
-                    ) : (
-                        <View>
-                            {comments.length > 0 ? (
-                                comments.slice(0, 3).map((comment) => (
-                                    <View key={comment.id} className="flex-row mb-3">
-                                        <Image
-                                            source={{ uri: getImageUrl(comment.user_avatar) || `https://ui-avatars.com/api/?name=${comment.user_name}&background=F59E0B&color=fff` }}
-                                            className="w-8 h-8 rounded-full border border-slate-200 bg-white"
-                                        />
-                                        <View className="ml-2 flex-1 bg-white dark:bg-slate-800/50 p-2 rounded-2xl rounded-tl-none border border-slate-100 dark:border-slate-700/50">
-                                            <Text className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                                                {comment.user_name}
-                                            </Text>
-                                            <Text className="text-xs text-slate-600 dark:text-slate-400">
-                                                {comment.content}
-                                            </Text>
-                                        </View>
-                                    </View>
-                                ))
-                            ) : (
-                                <Text className="text-xs text-slate-400 text-center py-4 italic">
-                                    No comments yet. Be the first to reply!
-                                </Text>
-                            )}
-
-                            {/* Comment Input */}
-                            <View className="flex-row items-center mt-2 bg-white dark:bg-slate-800 rounded-full px-4 py-2 border border-slate-200 dark:border-slate-700">
-                                <TextInput
-                                    className="flex-1 text-sm text-slate-700 dark:text-slate-200"
-                                    placeholder="Write a comment..."
-                                    placeholderTextColor="#94A3B8"
-                                    value={commentText}
-                                    onChangeText={setCommentText}
-                                    multiline
-                                />
-                                <TouchableOpacity
-                                    onPress={handlePostComment}
-                                    disabled={!commentText.trim() || isSubmitting}
-                                    className={`p-2 rounded-full ${commentText.trim() ? 'bg-amber-500' : 'bg-slate-100 dark:bg-slate-700'}`}
-                                >
-                                    {isSubmitting ? (
-                                        <ActivityIndicator size="small" color="white" />
-                                    ) : (
-                                        <Send size={16} color={commentText.trim() ? 'white' : '#94A3B8'} />
-                                    )}
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    )}
-                </View>
-            )}
+            <CommentModal
+                visible={showCommentModal}
+                post={post}
+                onClose={() => setShowCommentModal(false)}
+                onCommentAdded={() => setPost(prev => ({ ...prev, comment_count: (prev.comment_count || 0) + 1 }))}
+            />
         </View>
     );
-};
+});
