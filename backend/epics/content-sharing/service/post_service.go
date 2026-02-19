@@ -19,6 +19,7 @@ import (
 	"time"
 
 	fedModels "federated-social/backend/epics/federation/models"
+	recService "federated-social/backend/epics/recommendations/service"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -61,6 +62,7 @@ type PostService struct {
 	reportRepo        *reportRepo.ReportRepository
 	blockService      *safetyService.BlockService
 	federationService *federationService.FederationService
+	recService        *recService.RecommenderService
 }
 
 func NewPostService() *PostService {
@@ -69,14 +71,17 @@ func NewPostService() *PostService {
 		fedService = federationService.NewFederationService()
 	}
 
+	postRepo := repository.NewPostRepository()
+
 	return &PostService{
-		postRepo:          repository.NewPostRepository(),
+		postRepo:          postRepo,
 		followRepo:        repository.NewFollowRepository(),
 		searchRepo:        repository.NewSearchRepository(),
 		notificationRepo:  repository.NewNotificationRepository(),
 		reportRepo:        reportRepo.NewReportRepository(),
 		blockService:      safetyService.NewBlockService(safetyRepo.NewBlockRepository()),
 		federationService: fedService,
+		recService:        recService.NewRecommenderService(postRepo),
 	}
 }
 
@@ -97,6 +102,7 @@ func NewPostServiceWithDeps(
 		reportRepo:        reportRepo,
 		blockService:      blockService,
 		federationService: fedService,
+		recService:        recService.NewRecommenderService(postRepo),
 	}
 }
 
@@ -257,6 +263,15 @@ func (s *PostService) GetFeed(ctx context.Context, userID primitive.ObjectID, li
 		for _, p := range allPosts {
 			if !hiddenPostMap[p.ID] {
 				filteredPosts = append(filteredPosts, p)
+			}
+		}
+
+		// Apply recommendations if user is logged in
+		if !userID.IsZero() {
+			interests, err := s.recService.GetUserInterests(ctx, userID)
+			if err == nil && len(interests) > 0 {
+				log.Printf("DEBUG GetFeed: Prioritizing posts based on interests for user %v", userID)
+				filteredPosts = s.recService.PrioritizePosts(filteredPosts, interests)
 			}
 		}
 

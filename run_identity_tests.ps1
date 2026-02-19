@@ -97,7 +97,7 @@ if (Test-Path "frontend_temp_output.json") {
             if ($assertion.status -eq "passed") { $frontendPass++ }
             else { $frontendFail++ }
             
-             # Basic mapping based on ancestor titles
+            # Basic mapping based on ancestor titles
             if ($assertion.ancestorTitles -contains "useAuthStore") {
                 $frontendStories["Auth State Management"] = "Tested" 
             }
@@ -116,9 +116,9 @@ if (Test-Path "frontend_temp_output.json") {
     $feReport += "{0,-30} | {1,-10} | {2,-10}`n" -f "Total Tests", $frontendPass, $frontendFail
     $feReport += "`nDetailed Tests:`n"
     foreach ($result in $jsonContent.testResults) {
-         foreach ($assertion in $result.assertionResults) {
+        foreach ($assertion in $result.assertionResults) {
             $feReport += "- {0}: {1}`n" -f $assertion.title, $assertion.status
-         }
+        }
     }
 
     $feReport | Out-File $frontendReportAbsPath -Encoding UTF8
