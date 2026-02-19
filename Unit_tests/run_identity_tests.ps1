@@ -105,6 +105,18 @@ if (Test-Path "frontend_temp_output.json") {
         $name = $result.name
         $allPassed = $true
         foreach ($assertion in $result.assertionResults) {
+<<<<<<< HEAD:run_identity_tests.ps1
+            if ($assertion.status -eq "passed") { $frontendPass++ }
+            else { $frontendFail++ }
+            
+            # Basic mapping based on ancestor titles
+            if ($assertion.ancestorTitles -contains "useAuthStore") {
+                $frontendStories["Auth State Management"] = "Tested" 
+            }
+            if ($assertion.ancestorTitles -contains "SettingsPage") {
+                $frontendStories["Profile Settings UI"] = "Tested"
+            }
+=======
             if ($assertion.status -ne "passed") { $allPassed = $false }
         }
         $status = if ($allPassed) { "Pass" } else { "Fail" }
@@ -124,6 +136,7 @@ if (Test-Path "frontend_temp_output.json") {
         elseif ($name -match "ProfileUI|Activity") {
             $frontendStories["US1.5: Profile Visibility"] = $status
             $frontendStories["US1.8: View User Activity"] = $status
+>>>>>>> 6cd71218495ac2368ce9ad9423fbc4ac7c245a20:Unit_tests/run_identity_tests.ps1
         }
     }
 
@@ -135,12 +148,24 @@ if (Test-Path "frontend_temp_output.json") {
     
     $feReport = "Frontend Identity Test Report`n"
     $feReport += "=============================`n"
+<<<<<<< HEAD:run_identity_tests.ps1
+    $feReport += "{0,-30} | {1,-10} | {2,-10}`n" -f "Component/Story", "Passed", "Failed"
+    $feReport += "-------------------------------|------------|------------`n"
+    # Simplified reporting since JSON structure varies by version
+    $feReport += "{0,-30} | {1,-10} | {2,-10}`n" -f "Total Tests", $frontendPass, $frontendFail
+    $feReport += "`nDetailed Tests:`n"
+    foreach ($result in $jsonContent.testResults) {
+        foreach ($assertion in $result.assertionResults) {
+            $feReport += "- {0}: {1}`n" -f $assertion.title, $assertion.status
+        }
+=======
     $feReport += "{0,-25} | {1,-10}`n" -f "User Story", "Status"
     $feReport += "--------------------------|------------`n"
     
     $keys = "US1.1: Create Account", "US1.2: Secure Login", "US1.3: Logout", "US1.4: Change Password", "US1.5: Profile Visibility", "US1.6: Edit Profile", "US1.7: Account Deactivation", "US1.8: View User Activity"
     foreach ($story in $keys) {
         $feReport += "{0,-28} | {1,-10}`n" -f $story, $frontendStories[$story]
+>>>>>>> 6cd71218495ac2368ce9ad9423fbc4ac7c245a20:Unit_tests/run_identity_tests.ps1
     }
 
     $feReport += "`nTotal Passed: $frontendPass`n"

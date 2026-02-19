@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { TrendingUp, Clock, Loader2, AlertCircle } from "lucide-react";
+import { TrendingUp, Clock, Loader2, AlertCircle, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { COMMUNITIES, DEFAULT_COMMUNITY } from "../../../src/config/communities";
@@ -9,12 +9,13 @@ import type { Post } from "../../content-sharing/types";
 import { useAuthStore } from "../../identity/store/authStore";
 
 const tabs = [
+  { id: "for-you", name: "For You", icon: Sparkles },
   { id: "trending", name: "Trending", icon: TrendingUp },
   { id: "recent", name: "Recent", icon: Clock },
 ];
 
 const Explore = () => {
-  const [activeTab, setActiveTab] = useState("trending");
+  const [activeTab, setActiveTab] = useState("for-you");
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -62,6 +63,11 @@ const Explore = () => {
           return (now - postTime) < SIX_HOURS_IN_MS;
         })
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }
+
+    if (activeTab === "for-you") {
+      // Backend already sorts by recommendation for 'public' feed when logged in
+      return posts;
     }
 
     return posts;
