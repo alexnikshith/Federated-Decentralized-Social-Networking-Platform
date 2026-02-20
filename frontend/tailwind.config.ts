@@ -21,12 +21,12 @@ export default {
 		extend: {
 			fontFamily: {
 				sans: [
-					'DM Sans',
+					'Plus Jakarta Sans',
 					'system-ui',
 					'sans-serif'
 				],
 				display: [
-					'Syne',
+					'Outfit',
 					'system-ui',
 					'sans-serif'
 				]

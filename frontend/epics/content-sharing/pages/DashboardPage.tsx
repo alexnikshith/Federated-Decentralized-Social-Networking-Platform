@@ -56,7 +56,7 @@ export const DashboardPage: React.FC = () => {
             <main className="dashboard-content">
                 <header className="welcome-header stagger-1 flex flex-col md:flex-row md:items-end justify-between gap-4">
                     <div>
-                        <h1 className="text-gradient-gold">
+                        <h1 className="text-4xl md:text-5xl font-display font-bold text-gradient-gold mb-2">
                             Welcome, {user?.display_name || user?.username}!
                         </h1>
                     </div>
