@@ -302,18 +302,16 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
                                 <div>
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <Link to={`/profile/${post.author_name}`} className="font-display font-bold text-foreground text-lg tracking-tight leading-tight hover:underline">
-                                            {post.author_name}
+                                            {post.author_display_name || post.author_name}
                                         </Link>
                                         <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-accent/10 border border-accent/20">
                                             <span className="text-[10px] font-bold text-accent uppercase tracking-widest whitespace-nowrap">
-                                                {post.author_instance || 'nexus.social'}
+                                                {post.author_instance || 'Nexus Social'}
                                             </span>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 mt-0.5">
                                         <span className="text-xs text-muted-foreground font-medium">{timeAgo}</span>
-                                        <span className="w-1 h-1 rounded-full bg-border" />
-                                        <span className="text-[10px] font-bold text-success bg-success/10 px-2 py-0.5 rounded-full border border-success/20 uppercase tracking-widest">Public</span>
                                     </div>
                                 </div>
                             </div>

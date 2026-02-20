@@ -12,6 +12,7 @@ type PostResponse struct {
 	ID                 primitive.ObjectID `json:"id"`
 	AuthorID           primitive.ObjectID `json:"author_id"`
 	AuthorName         string             `json:"author_name"`
+	AuthorDisplayName  string             `json:"author_display_name"`
 	AuthorAvatar       string             `json:"author_avatar"`
 	Content            string             `json:"content"`
 	MediaURL           string             `json:"media_url,omitempty"`

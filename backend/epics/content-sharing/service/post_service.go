@@ -322,11 +322,12 @@ func (s *PostService) enrichRemotePosts(ctx context.Context, posts []fedModels.R
 		// Currently RemotePost has minimal fields.
 
 		resp := dto.PostResponse{
-			ID:           p.ID,
-			Content:      p.Content,
-			AuthorID:     primitive.NilObjectID, // No local author ID
-			AuthorName:   username,
-			AuthorAvatar: avatarURL,
+			ID:                p.ID,
+			Content:           p.Content,
+			AuthorID:          primitive.NilObjectID, // No local author ID
+			AuthorName:        username,
+			AuthorDisplayName: username,
+			AuthorAvatar:      avatarURL,
 			// We don't have displayName in DTO yet? Check responses.go
 			// DTO has AuthorName. Usually DisplayName is not in DTO?
 			// Client usually uses AuthorName as username or display name?
@@ -972,6 +973,7 @@ func (s *PostService) enrichPosts(ctx context.Context, posts []models.Post, curr
 			ID:                 post.ID,
 			AuthorID:           post.AuthorID,
 			AuthorName:         author.Username,
+			AuthorDisplayName:  author.DisplayName,
 			AuthorAvatar:       author.AvatarURL,
 			Content:            post.Content,
 			MediaURL:           post.MediaURL,
