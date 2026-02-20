@@ -20,6 +20,12 @@ func RegisterContentSharingRoutes(router *mux.Router) {
 	followHandler := handlers.NewFollowHandler()
 	notificationHandler := handlers.NewNotificationHandler()
 	searchHandler := handlers.NewSearchHandler()
+	storyHandler := handlers.NewStoryHandler()
+
+	// Story routes
+	router.Handle("/api/stories", middleware.AuthMiddleware(http.HandlerFunc(storyHandler.CreateStory))).Methods("POST", "OPTIONS")
+	router.Handle("/api/stories", middleware.OptionalAuth(http.HandlerFunc(storyHandler.GetActiveStories))).Methods("GET", "OPTIONS")
+	router.Handle("/api/stories/{id}", middleware.AuthMiddleware(http.HandlerFunc(storyHandler.DeleteStory))).Methods("DELETE", "OPTIONS")
 
 	// Post routes
 	// All require authentication to ensure user accountability

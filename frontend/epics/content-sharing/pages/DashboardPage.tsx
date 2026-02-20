@@ -5,6 +5,8 @@ import { useContentStore } from '../store/contentStore';
 import { PostCard } from '../components/PostCard';
 import { UserSearch } from '../components/UserSearch';
 import { NotificationList } from '../components/NotificationList';
+import { StoriesRow } from '../components/StoriesRow';
+import { RightSidebar } from '../components/RightSidebar';
 import { Button } from '@/components/ui/button';
 import {
     Rss,
@@ -54,18 +56,15 @@ export const DashboardPage: React.FC = () => {
     return (
         <div className="dashboard-container">
             <main className="dashboard-content">
-                <header className="welcome-header stagger-1 flex flex-col md:flex-row md:items-end justify-between gap-4">
-                    <div>
-                        <h1 className="text-gradient-gold">
-                            Welcome, {user?.display_name || user?.username}!
-                        </h1>
-                    </div>
 
-                </header>
 
-                <div className="dashboard-grid">
+                <div className="grid grid-cols-1 xl:grid-cols-[1fr_300px] gap-6 max-w-7xl mx-auto">
                     {/* Main Feed Section */}
-                    <div className="feed-section stagger-2">
+                    <div className="feed-section stagger-2 min-w-0">
+
+                        {/* New Top Content Layout */}
+                        <StoriesRow />
+
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="section-title mb-0">
                                 <Rss className="w-5 h-5 text-primary" />
@@ -126,6 +125,9 @@ export const DashboardPage: React.FC = () => {
                                 ))}
                         </div>
                     </div>
+
+                    {/* Right Sidebar */}
+                    <RightSidebar />
 
                     {/* Overlay */}
                     {sidebarType && (
