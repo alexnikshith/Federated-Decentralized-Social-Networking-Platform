@@ -146,6 +146,13 @@ const ProfileScreen = () => {
                         onPress={() => router.push('/edit-profile')}
                         className="flex-1"
                     />
+                    <Button
+                        title="Logout"
+                        variant="destructive"
+                        onPress={handleLogout}
+                        icon={<LogOut size={20} color="white" />}
+                        className="flex-1"
+                    />
                 </View>
             </View>
 
