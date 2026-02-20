@@ -36,17 +36,18 @@ func NewFederatedFeedService() *FederatedFeedService {
 
 // FeedPost represents a unified feed post (local or remote)
 type FeedPost struct {
-	ID             string    `json:"id"`
-	Author         string    `json:"author"` // username or username@instance
-	AuthorAvatar   string    `json:"author_avatar"`
-	Content        string    `json:"content"`
-	LikeCount      int       `json:"like_count"`
-	CommentCount   int       `json:"comment_count"`
-	IsRemote       bool      `json:"is_remote"`
-	OriginInstance string    `json:"origin_instance,omitempty"`
-	IsLiked        bool      `json:"is_liked"`
-	IsSaved        bool      `json:"is_saved"`
-	CreatedAt      time.Time `json:"created_at"`
+	ID                string    `json:"id"`
+	Author            string    `json:"author"` // username or username@instance
+	AuthorDisplayName string    `json:"author_display_name"`
+	AuthorAvatar      string    `json:"author_avatar"`
+	Content           string    `json:"content"`
+	LikeCount         int       `json:"like_count"`
+	CommentCount      int       `json:"comment_count"`
+	IsRemote          bool      `json:"is_remote"`
+	OriginInstance    string    `json:"origin_instance,omitempty"`
+	IsLiked           bool      `json:"is_liked"`
+	IsSaved           bool      `json:"is_saved"`
+	CreatedAt         time.Time `json:"created_at"`
 }
 
 // GetFederatedFeed retrieves a combined feed of local and remote posts
@@ -83,9 +84,14 @@ func (s *FederatedFeedService) GetFederatedFeed(ctx context.Context, userID prim
 	for _, post := range localPosts {
 		author, _ := s.userRepo.FindByID(ctx, post.AuthorID)
 		authorName := "unknown"
+		authorDisplayName := authorName
 		authorAvatar := ""
 		if author != nil {
 			authorName = author.Username
+			authorDisplayName = author.DisplayName
+			if authorDisplayName == "" {
+				authorDisplayName = author.Username
+			}
 			authorAvatar = author.AvatarURL
 		}
 
@@ -93,17 +99,18 @@ func (s *FederatedFeedService) GetFederatedFeed(ctx context.Context, userID prim
 		isSaved, _ := s.postRepo.CheckIfSaved(ctx, post.ID, userID)
 
 		unifiedFeed = append(unifiedFeed, FeedPost{
-			ID:             post.ID.Hex(),
-			Author:         authorName,
-			AuthorAvatar:   authorAvatar,
-			Content:        post.Content,
-			LikeCount:      post.LikeCount,
-			CommentCount:   post.CommentCount,
-			IsRemote:       false,
-			OriginInstance: config.AppConfig.InstanceName,
-			IsLiked:        isLiked,
-			IsSaved:        isSaved,
-			CreatedAt:      post.CreatedAt,
+			ID:                post.ID.Hex(),
+			Author:            authorName,
+			AuthorDisplayName: authorDisplayName,
+			AuthorAvatar:      authorAvatar,
+			Content:           post.Content,
+			LikeCount:         post.LikeCount,
+			CommentCount:      post.CommentCount,
+			IsRemote:          false,
+			OriginInstance:    config.AppConfig.InstanceName,
+			IsLiked:           isLiked,
+			IsSaved:           isSaved,
+			CreatedAt:         post.CreatedAt,
 		})
 	}
 
@@ -117,17 +124,18 @@ func (s *FederatedFeedService) GetFederatedFeed(ctx context.Context, userID prim
 		}
 
 		unifiedFeed = append(unifiedFeed, FeedPost{
-			ID:             post.RemotePostID,
-			Author:         username,
-			AuthorAvatar:   "", // Remote avatars not cached yet
-			Content:        post.Content,
-			LikeCount:      post.LikeCount,
-			CommentCount:   post.CommentCount,
-			IsRemote:       true,
-			OriginInstance: post.OriginInstance,
-			IsLiked:        false, // Remote posts can't be liked locally (for now)
-			IsSaved:        false,
-			CreatedAt:      post.CreatedAt,
+			ID:                post.RemotePostID,
+			Author:            username,
+			AuthorDisplayName: username,
+			AuthorAvatar:      "", // Remote avatars not cached yet
+			Content:           post.Content,
+			LikeCount:         post.LikeCount,
+			CommentCount:      post.CommentCount,
+			IsRemote:          true,
+			OriginInstance:    post.OriginInstance,
+			IsLiked:           false, // Remote posts can't be liked locally (for now)
+			IsSaved:           false,
+			CreatedAt:         post.CreatedAt,
 		})
 	}
 
@@ -157,16 +165,17 @@ func (s *FederatedFeedService) GetFederatedFeed(ctx context.Context, userID prim
 		}
 
 		postResponses = append(postResponses, contentDTO.PostResponse{
-			ID:           postID,
-			AuthorName:   authorDisplay,
-			AuthorAvatar: feedPost.AuthorAvatar,
-			Content:      feedPost.Content,
-			LikeCount:    feedPost.LikeCount,
-			CommentCount: feedPost.CommentCount,
-			IsLiked:      feedPost.IsLiked,
-			IsSaved:      feedPost.IsSaved,
-			CreatedAt:    feedPost.CreatedAt,
-			UpdatedAt:    feedPost.CreatedAt,
+			ID:                postID,
+			AuthorName:        authorDisplay,
+			AuthorDisplayName: feedPost.AuthorDisplayName,
+			AuthorAvatar:      feedPost.AuthorAvatar,
+			Content:           feedPost.Content,
+			LikeCount:         feedPost.LikeCount,
+			CommentCount:      feedPost.CommentCount,
+			IsLiked:           feedPost.IsLiked,
+			IsSaved:           feedPost.IsSaved,
+			CreatedAt:         feedPost.CreatedAt,
+			UpdatedAt:         feedPost.CreatedAt,
 		})
 	}
 
@@ -189,9 +198,14 @@ func (s *FederatedFeedService) getLocalFeedOnly(ctx context.Context, userID prim
 	for _, post := range localPosts {
 		author, _ := s.userRepo.FindByID(ctx, post.AuthorID)
 		authorName := "unknown"
+		authorDisplayName := "unknown"
 		authorAvatar := ""
 		if author != nil {
 			authorName = author.Username
+			authorDisplayName = author.DisplayName
+			if authorDisplayName == "" {
+				authorDisplayName = authorName
+			}
 			authorAvatar = author.AvatarURL
 		}
 
@@ -199,16 +213,17 @@ func (s *FederatedFeedService) getLocalFeedOnly(ctx context.Context, userID prim
 		isSaved, _ := s.postRepo.CheckIfSaved(ctx, post.ID, userID)
 
 		postResponses = append(postResponses, contentDTO.PostResponse{
-			ID:           post.ID,
-			AuthorName:   authorName,
-			AuthorAvatar: authorAvatar,
-			Content:      post.Content,
-			LikeCount:    post.LikeCount,
-			CommentCount: post.CommentCount,
-			IsLiked:      isLiked,
-			IsSaved:      isSaved,
-			CreatedAt:    post.CreatedAt,
-			UpdatedAt:    post.UpdatedAt,
+			ID:                post.ID,
+			AuthorName:        authorName,
+			AuthorDisplayName: authorDisplayName,
+			AuthorAvatar:      authorAvatar,
+			Content:           post.Content,
+			LikeCount:         post.LikeCount,
+			CommentCount:      post.CommentCount,
+			IsLiked:           isLiked,
+			IsSaved:           isSaved,
+			CreatedAt:         post.CreatedAt,
+			UpdatedAt:         post.UpdatedAt,
 		})
 	}
 
