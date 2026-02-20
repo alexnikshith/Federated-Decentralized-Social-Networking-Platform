@@ -440,12 +440,15 @@ const MessagingUI: React.FC = () => {
             {/* Background mesh glow to give glass elements depth */}
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/10 via-background to-background pointer-events-none" />
 
-            {/* Conversation List */}
+            {/* Conversation List Sidebar */}
             <div className={cn(
-                "w-full md:w-80 border-r border-white/5 flex flex-col transition-all duration-300 relative z-10 bg-card/60 backdrop-blur-3xl",
+                "w-full md:w-[340px] border-r border-white/5 flex flex-col transition-all duration-300 relative z-10 glass-card bg-background/20 backdrop-blur-3xl shadow-[4px_0_24px_-10px_rgba(0,0,0,0.5)]",
                 (selectedConversation || isNewChat) && "hidden md:flex"
             )}>
-                <div className="p-4 border-b border-white/5 flex justify-between items-center bg-transparent">
+                {/* Subtle Sidebar Inner Gradient */}
+                <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent pointer-events-none" />
+
+                <div className="p-5 border-b border-white/5 flex justify-between items-center bg-transparent relative z-20">
                     <h2 className="text-xl font-bold font-display text-transparent bg-clip-text bg-gradient-to-r from-foreground to-foreground/70">Messages</h2>
                     <Button
                         variant="ghost"
@@ -472,7 +475,10 @@ const MessagingUI: React.FC = () => {
                             <Button className="rounded-full shadow-glow bg-primary hover:bg-primary/90 text-primary-foreground font-bold" onClick={() => setShowSearch(true)}>Start a chat</Button>
                         </div>
                     ) : (
-                        <div className="py-2">
+                        <div className="py-6 px-2 relative space-y-6">
+                            {/* The Stream Line */}
+                            <div className="absolute left-[38px] top-6 bottom-6 w-px bg-gradient-to-b from-transparent via-white/10 to-transparent z-0" />
+
                             {safeConversations.map((conv) => {
                                 if (!conv) return null;
                                 const other = getOtherParticipant(conv.participants);
@@ -485,48 +491,69 @@ const MessagingUI: React.FC = () => {
                                             setIsNewChat(false);
                                             setNewChatUser(null);
                                         }}
-                                        className={cn(
-                                            "flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-l-4",
-                                            isSelected
-                                                ? "bg-primary/5 border-primary"
-                                                : "border-transparent hover:bg-secondary/50"
-                                        )}
+                                        className="relative flex items-start gap-4 px-2 group cursor-pointer z-10"
                                     >
-                                        <div className="relative">
-                                            <Avatar className="w-12 h-12 border border-border/50">
+                                        {/* Avatar on the stream */}
+                                        <div className={cn(
+                                            "relative z-10 flex-shrink-0 transition-transform duration-300",
+                                            isSelected ? "scale-110" : "group-hover:scale-105"
+                                        )}>
+                                            {isSelected && (
+                                                <div className="absolute inset-0 bg-primary/40 blur-xl rounded-full z-0" />
+                                            )}
+                                            <Avatar className={cn(
+                                                "w-10 h-10 border-2 relative z-10",
+                                                isSelected ? "border-primary shadow-[0_0_15px_rgba(var(--primary-rgb),0.5)]" : "border-background ring-1 ring-white/10"
+                                            )}>
                                                 <AvatarImage src={other.avatar_url} />
-                                                <AvatarFallback>{(other.username || 'U')[0].toUpperCase()}</AvatarFallback>
+                                                <AvatarFallback className="bg-secondary/80 backdrop-blur-md">{(other.username || 'U')[0].toUpperCase()}</AvatarFallback>
                                             </Avatar>
                                         </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex justify-between items-start mb-0.5">
+
+                                        {/* Conversation Details */}
+                                        <div className={cn(
+                                            "flex-1 min-w-0 pb-4 relative",
+                                            "border-l-2 pl-4 transition-all duration-300",
+                                            isSelected ? "border-primary/50" : "border-white/5 group-hover:border-white/20"
+                                        )}>
+                                            {/* Ambient glow matching chat UI */}
+                                            {isSelected && (
+                                                <div className="absolute top-1/2 -left-4 -translate-y-1/2 w-[120%] h-[150%] bg-gradient-to-r from-primary/10 via-primary/5 to-transparent blur-2xl -z-10 mix-blend-screen pointer-events-none rounded-r-3xl" />
+                                            )}
+
+                                            <div className="flex justify-between items-start mb-1">
                                                 <div className="flex flex-col min-w-0">
                                                     <span className={cn(
-                                                        "font-semibold text-sm truncate",
+                                                        "font-bold text-[14px] truncate transition-colors",
+                                                        isSelected ? "text-primary" : "text-foreground/90 group-hover:text-foreground",
                                                         (other.is_deleted || other.is_deactivated) && "italic text-muted-foreground"
                                                     )}>
                                                         {other.is_deactivated ? "Nexus User" : (other.display_name || other.username)}
                                                     </span>
                                                     {other.community_name && (
-                                                        <span className="text-[10px] text-muted-foreground font-medium truncate">
+                                                        <span className="text-[9px] text-muted-foreground font-bold tracking-widest uppercase truncate opacity-70">
                                                             from {other.community_name}
                                                         </span>
                                                     )}
                                                 </div>
-                                                <span className="text-[10px] text-muted-foreground whitespace-nowrap mt-1">
+                                                <span className={cn(
+                                                    "text-[10px] font-bold tracking-widest uppercase whitespace-nowrap mt-1",
+                                                    isSelected ? "text-primary/70" : "text-muted-foreground/40 text-foreground"
+                                                )}>
                                                     {conv.last_message && safeFormat(conv.last_message.created_at, 'HH:mm')}
                                                 </span>
                                             </div>
-                                            <div className="flex justify-between items-center gap-2">
+
+                                            <div className="flex justify-between items-start gap-3 mt-1.5">
                                                 <p className={cn(
-                                                    "text-xs truncate flex-1",
-                                                    conv.unread_count && conv.unread_count > 0 ? "font-bold text-foreground" : "text-muted-foreground"
+                                                    "text-[13px] leading-snug truncate flex-1 transition-colors mix-blend-normal",
+                                                    isSelected ? "text-foreground" : (conv.unread_count && conv.unread_count > 0 ? "font-semibold text-foreground" : "text-muted-foreground/70")
                                                 )}>
                                                     {conv.last_message?.content || "Start messaging..."}
                                                 </p>
                                                 {conv.unread_count !== undefined && conv.unread_count > 0 && (
-                                                    <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center flex items-center justify-center h-[18px]">
-                                                        {conv.unread_count}
+                                                    <span className="bg-primary/20 text-primary border border-primary/30 shadow-[0_0_10px_rgba(var(--primary-rgb),0.3)] text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center justify-center">
+                                                        {conv.unread_count} new
                                                     </span>
                                                 )}
                                             </div>
@@ -609,7 +636,7 @@ const MessagingUI: React.FC = () => {
                                     <Loader2 className="w-5 h-5 animate-spin" />
                                 </div>
                             ) : (
-                                <div className="space-y-4 pb-4">
+                                <div className="space-y-2 pb-8 relative w-full max-w-3xl mx-auto px-4 lg:px-12 before:absolute before:inset-y-0 before:left-1/2 before:-translate-x-1/2 before:w-px before:bg-gradient-to-b before:from-transparent before:via-white/5 before:to-transparent">
                                     {(messages || []).map((msg, idx) => {
                                         if (!msg) return null;
                                         const isMine = msg.sender_id === currentUser?.id;
@@ -622,58 +649,62 @@ const MessagingUI: React.FC = () => {
                                             <React.Fragment key={msg.id || idx}>
                                                 {/* Date Separator */}
                                                 {showDateSeparator && (
-                                                    <div className="flex items-center justify-center my-6">
-                                                        <div className="px-3 py-1 bg-secondary/50 rounded-full text-xs font-medium text-muted-foreground">
+                                                    <div className="flex items-center justify-center my-10 relative z-10">
+                                                        <div className="px-5 py-1.5 bg-background/60 backdrop-blur-xl rounded-full text-[10px] font-display font-medium tracking-[0.2em] text-muted-foreground uppercase border border-white/5 shadow-inner">
                                                             {getMessageDateLabel(msg.created_at)}
                                                         </div>
                                                     </div>
                                                 )}
 
                                                 <motion.div
-                                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                    transition={{ duration: 0.2 }}
+                                                    initial={{ opacity: 0, y: 15, filter: 'blur(8px)' }}
+                                                    animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                                                    transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
                                                     className={cn(
-                                                        "flex flex-col group relative",
-                                                        isMine ? "items-end" : "items-start",
-                                                        sameSenderAsPrev ? "mt-1" : "mt-4"
+                                                        "flex group relative w-full items-start gap-6",
+                                                        sameSenderAsPrev ? "mt-1" : "mt-8",
+                                                        isMine ? "flex-row-reverse" : "flex-row"
                                                     )}
                                                 >
-                                                    <div className="flex items-center gap-2 max-w-[80%]">
+                                                    {/* Subtle Avatar for non-mine if not same sender - drifting in the current */}
+                                                    {!isMine && !sameSenderAsPrev ? (
+                                                        <Avatar className="w-8 h-8 shrink-0 mt-1 ring-1 ring-primary/20 bg-background/50 shadow-[0_0_15px_rgba(var(--primary-rgb),0.2)]">
+                                                            <AvatarImage src={getOtherParticipant(selectedConversation!.participants).avatar_url} />
+                                                            <AvatarFallback className="text-xs">{getOtherParticipant(selectedConversation!.participants).username[0]?.toUpperCase()}</AvatarFallback>
+                                                        </Avatar>
+                                                    ) : !isMine && sameSenderAsPrev ? (
+                                                        <div className="w-8 shrink-0" />
+                                                    ) : null}
+
+                                                    {/* The Current (Text block) */}
+                                                    <div className={cn(
+                                                        "flex-1 min-w-0 relative max-w-[85%]",
+                                                        isMine ? "flex flex-col items-end text-right" : "flex flex-col items-start text-left"
+                                                    )}>
+                                                        {/* Ambient Background Glow for "Mine" - flows behind text */}
                                                         {isMine && (
-                                                            <DropdownMenu>
-                                                                <DropdownMenuTrigger asChild>
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                                    >
-                                                                        <MoreVertical className="w-3 h-3" />
-                                                                    </Button>
-                                                                </DropdownMenuTrigger>
-                                                                <DropdownMenuContent align="end">
-                                                                    <DropdownMenuItem
-                                                                        className="text-destructive cursor-pointer"
-                                                                        onClick={() => msg.id && setDeleteDialog({ isOpen: true, type: 'message', id: msg.id })}
-                                                                    >
-                                                                        <Trash2 className="w-3 h-3 mr-2" />
-                                                                        Delete
-                                                                    </DropdownMenuItem>
-                                                                </DropdownMenuContent>
-                                                            </DropdownMenu>
+                                                            <div className="absolute top-1/2 -right-4 -translate-y-1/2 w-[120%] h-[150%] bg-gradient-to-l from-primary/10 via-primary/5 to-transparent blur-2xl -z-10 mix-blend-screen pointer-events-none rounded-full" />
                                                         )}
+
+                                                        {/* Ambient Background Glow for "Theirs" */}
+                                                        {!isMine && (
+                                                            <div className="absolute top-1/2 -left-4 -translate-y-1/2 w-[120%] h-[150%] bg-gradient-to-r from-accent/10 via-accent/5 to-transparent blur-2xl -z-10 mix-blend-screen pointer-events-none rounded-full" />
+                                                        )}
+
                                                         <div className={cn(
-                                                            "px-4 py-2.5 rounded-3xl text-sm shadow-sm transition-all",
+                                                            "relative z-10 text-[15px] leading-relaxed tracking-wide group-hover:text-foreground transition-colors mix-blend-normal",
                                                             isMine
-                                                                ? "bg-primary text-primary-foreground shadow-[var(--shadow-glow)] rounded-br-sm border border-primary/20"
-                                                                : "bg-card/60 backdrop-blur-2xl border border-white/10 text-foreground rounded-bl-sm hover:bg-card/80"
+                                                                ? "text-foreground/90 pr-4 border-r-2 border-primary/20"
+                                                                : "text-foreground/80 pl-4 border-l-2 border-accent/20"
                                                         )}>
+                                                            {/* Media Rendering */}
                                                             {msg.type === 'image' && msg.media_url && (
-                                                                <div className="mb-2 rounded-lg overflow-hidden border border-white/20">
+                                                                <div className={cn("mb-3 rounded-2xl overflow-hidden border border-white/10 shadow-2xl relative group/img cursor-pointer", isMine ? "ml-auto" : "mr-auto")} onClick={() => window.open(msg.media_url?.startsWith('http') ? msg.media_url : `${import.meta.env.VITE_API_URL}${msg.media_url}`)}>
+                                                                    <div className="absolute inset-0 bg-primary/20 mix-blend-overlay opacity-0 group-hover/img:opacity-100 transition-opacity pointer-events-none" />
                                                                     <img
                                                                         src={msg.media_url.startsWith('http') ? msg.media_url : `${import.meta.env.VITE_API_URL}${msg.media_url}`}
                                                                         alt="attachment"
-                                                                        className="max-w-full h-auto max-h-60 object-cover"
+                                                                        className="max-w-[280px] w-full h-auto max-h-80 object-cover"
                                                                         onError={(e) => (e.currentTarget.src = "/placeholder-image.png")}
                                                                     />
                                                                 </div>
@@ -683,23 +714,45 @@ const MessagingUI: React.FC = () => {
                                                                     href={msg.media_url?.startsWith('http') ? msg.media_url : `${import.meta.env.VITE_API_URL}${msg.media_url}`}
                                                                     target="_blank"
                                                                     rel="noopener noreferrer"
-                                                                    className="flex items-center gap-2 p-2 bg-black/10 rounded-lg mb-2 hover:bg-black/20 transition-colors"
+                                                                    className={cn("inline-flex items-center gap-3 px-4 py-3 bg-secondary/20 backdrop-blur-md rounded-2xl mb-3 hover:bg-secondary/40 transition-all border border-white/5", isMine ? "ml-auto" : "mr-auto")}
                                                                 >
-                                                                    <FileText className="w-5 h-5" />
-                                                                    <span className="text-xs truncate max-w-[150px]">{msg.file_name || 'Download file'}</span>
+                                                                    <div className="p-2 bg-primary/10 rounded-xl">
+                                                                        <FileText className="w-4 h-4 text-primary" />
+                                                                    </div>
+                                                                    <span className="text-sm font-medium truncate max-w-[200px]">{msg.file_name || 'Download file'}</span>
                                                                 </a>
                                                             )}
-                                                            {msg.content}
+
+                                                            <p className={cn("break-words", isMine ? "text-foreground/90 font-medium" : "text-foreground/80")}>
+                                                                {msg.content}
+                                                            </p>
+
+                                                            {/* Flow Details & Actions */}
+                                                            <div className={cn(
+                                                                "flex items-center gap-3 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300",
+                                                                isMine ? "justify-end pr-1" : "justify-start pl-1"
+                                                            )}>
+                                                                {isMine && (
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-5 w-5 hover:bg-destructive/10 hover:text-destructive rounded-full"
+                                                                        onClick={() => msg.id && setDeleteDialog({ isOpen: true, type: 'message', id: msg.id })}
+                                                                    >
+                                                                        <Trash2 className="w-3 h-3" />
+                                                                    </Button>
+                                                                )}
+                                                                <span className="text-[9px] text-muted-foreground/40 font-bold tracking-widest uppercase">
+                                                                    {safeFormat(msg.created_at, 'h:mm a')}
+                                                                </span>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                    <span className="text-[10px] text-muted-foreground mt-1 px-1 font-medium opacity-60">
-                                                        {safeFormat(msg.created_at, 'h:mm a')}
-                                                    </span>
                                                 </motion.div>
                                             </React.Fragment>
                                         );
                                     })}
-                                    <div ref={messagesEndRef} />
+                                    <div ref={messagesEndRef} className="h-6" />
                                 </div>
                             )}
                         </ScrollArea>
