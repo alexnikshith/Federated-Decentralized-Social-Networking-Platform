@@ -88,7 +88,7 @@ const MessagingUI: React.FC = () => {
         // WebSocket Connection Setup
         if (!token) return;
 
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+        const apiUrl = localStorage.getItem('active_community_url') || import.meta.env.VITE_API_URL || 'http://localhost:8080';
         const wsProtocol = apiUrl.startsWith('https') ? 'wss' : 'ws';
         const wsUrl = `${apiUrl.replace(/^http[s]?:\/\//, '')}/ws?token=${token}`;
         const socketUrl = `${wsProtocol}://${wsUrl}`;
@@ -436,14 +436,17 @@ const MessagingUI: React.FC = () => {
     }
 
     return (
-        <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-background border-t shadow-none">
+        <div className="flex h-[calc(100vh-64px)] overflow-hidden relative border-t border-white/5 bg-background">
+            {/* Background mesh glow to give glass elements depth */}
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/10 via-background to-background pointer-events-none" />
+
             {/* Conversation List */}
             <div className={cn(
-                "w-full md:w-80 border-r flex flex-col transition-all duration-300",
+                "w-full md:w-80 border-r border-white/5 flex flex-col transition-all duration-300 relative z-10 bg-card/60 backdrop-blur-3xl",
                 (selectedConversation || isNewChat) && "hidden md:flex"
             )}>
-                <div className="p-4 border-b flex justify-between items-center bg-card">
-                    <h2 className="text-xl font-bold font-display">Messages</h2>
+                <div className="p-4 border-b border-white/5 flex justify-between items-center bg-transparent">
+                    <h2 className="text-xl font-bold font-display text-transparent bg-clip-text bg-gradient-to-r from-foreground to-foreground/70">Messages</h2>
                     <Button
                         variant="ghost"
                         size="icon"
@@ -456,10 +459,17 @@ const MessagingUI: React.FC = () => {
 
                 <ScrollArea className="flex-1">
                     {safeConversations.length === 0 ? (
-                        <div className="p-10 text-center opacity-50 flex flex-col items-center">
-                            <Smile className="w-12 h-12 mb-4 text-muted-foreground" />
-                            <p className="text-sm font-medium">No messages yet</p>
-                            <Button variant="link" onClick={() => setShowSearch(true)}>Start a conversation</Button>
+                        <div className="p-10 text-center flex flex-col items-center">
+                            <motion.div
+                                initial={{ scale: 0.8, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                className="w-16 h-16 bg-gradient-to-tr from-primary/20 to-primary/5 rounded-full flex items-center justify-center mb-4 shadow-glow"
+                            >
+                                <MessageSquare className="w-8 h-8 text-primary" />
+                            </motion.div>
+                            <p className="text-sm font-bold text-foreground mb-1">No messages yet</p>
+                            <p className="text-xs text-muted-foreground mb-4">Connect with your community.</p>
+                            <Button className="rounded-full shadow-glow bg-primary hover:bg-primary/90 text-primary-foreground font-bold" onClick={() => setShowSearch(true)}>Start a chat</Button>
                         </div>
                     ) : (
                         <div className="py-2">
@@ -531,13 +541,13 @@ const MessagingUI: React.FC = () => {
 
             {/* Chat Window */}
             <div className={cn(
-                "flex-1 flex flex-col bg-card/30 backdrop-blur-sm relative",
+                "flex-1 flex flex-col relative z-20 bg-transparent shadow-2xl",
                 (!selectedConversation && !isNewChat) && "hidden md:flex justify-center items-center text-muted-foreground p-12"
             )}>
                 {(selectedConversation || isNewChat) ? (
                     <>
                         {/* Chat Header */}
-                        <div className="p-4 border-b flex items-center justify-between bg-card">
+                        <div className="p-4 border-b border-white/5 flex items-center justify-between bg-card/40 backdrop-blur-xl sticky top-0 z-30 shadow-sm">
                             <div className="flex items-center gap-3">
                                 <Button
                                     variant="ghost"
@@ -619,7 +629,10 @@ const MessagingUI: React.FC = () => {
                                                     </div>
                                                 )}
 
-                                                <div
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                    transition={{ duration: 0.2 }}
                                                     className={cn(
                                                         "flex flex-col group relative",
                                                         isMine ? "items-end" : "items-start",
@@ -650,10 +663,10 @@ const MessagingUI: React.FC = () => {
                                                             </DropdownMenu>
                                                         )}
                                                         <div className={cn(
-                                                            "px-4 py-2.5 rounded-2xl text-sm shadow-sm",
+                                                            "px-4 py-2.5 rounded-3xl text-sm shadow-sm transition-all",
                                                             isMine
-                                                                ? "bg-primary text-primary-foreground rounded-tr-none"
-                                                                : "bg-secondary text-secondary-foreground rounded-tl-none"
+                                                                ? "bg-primary text-primary-foreground shadow-[var(--shadow-glow)] rounded-br-sm border border-primary/20"
+                                                                : "bg-card/60 backdrop-blur-2xl border border-white/10 text-foreground rounded-bl-sm hover:bg-card/80"
                                                         )}>
                                                             {msg.type === 'image' && msg.media_url && (
                                                                 <div className="mb-2 rounded-lg overflow-hidden border border-white/20">
@@ -679,10 +692,10 @@ const MessagingUI: React.FC = () => {
                                                             {msg.content}
                                                         </div>
                                                     </div>
-                                                    <span className="text-[10px] text-muted-foreground mt-1 px-1">
+                                                    <span className="text-[10px] text-muted-foreground mt-1 px-1 font-medium opacity-60">
                                                         {safeFormat(msg.created_at, 'h:mm a')}
                                                     </span>
-                                                </div>
+                                                </motion.div>
                                             </React.Fragment>
                                         );
                                     })}
@@ -693,18 +706,18 @@ const MessagingUI: React.FC = () => {
 
                         {/* Input Area */}
                         {!isNewChat && (getOtherParticipant(selectedConversation!.participants).is_deleted || getOtherParticipant(selectedConversation!.participants).is_deactivated) ? (
-                            <div className="p-4 border-t bg-card text-center text-muted-foreground text-sm py-6 bg-secondary/20">
+                            <div className="p-4 border-none bg-transparent text-center text-muted-foreground text-sm py-6">
                                 {getOtherParticipant(selectedConversation!.participants).is_deactivated
                                     ? "This account is deactivated"
                                     : "This account doesnt exist anymore"}
                             </div>
                         ) : (
-                            <div className="p-4 py-6 border-t bg-card">
+                            <div className="p-4 pb-8 bg-gradient-to-t from-background via-background/80 to-transparent w-full flex-shrink-0 relative z-40">
                                 {selectedMedia && (
                                     <motion.div
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        className="mb-3 flex items-center gap-3 p-2 bg-secondary/30 rounded-xl border border-border"
+                                        className="mb-4 flex items-center gap-3 p-3 bg-secondary/80 backdrop-blur-2xl rounded-2xl border border-border shadow-2xl max-w-2xl mx-auto w-full"
                                     >
                                         {selectedMedia.type === 'image' ? (
                                             <img src={selectedMedia.preview} className="w-12 h-12 rounded-lg object-cover" />
@@ -721,7 +734,7 @@ const MessagingUI: React.FC = () => {
                                             type="button"
                                             variant="ghost"
                                             size="icon"
-                                            className="h-7 w-7 rounded-full"
+                                            className="h-7 w-7 rounded-full bg-black/20 hover:bg-black/40 text-white"
                                             onClick={() => setSelectedMedia(null)}
                                         >
                                             <Smile className="w-4 h-4 rotate-45" />
@@ -729,7 +742,7 @@ const MessagingUI: React.FC = () => {
                                     </motion.div>
                                 )}
 
-                                <form onSubmit={handleSendMessage} className="flex items-center gap-2 max-w-full">
+                                <form onSubmit={handleSendMessage} className="flex items-center gap-2 max-w-3xl mx-auto w-full bg-card/80 backdrop-blur-2xl border border-white/10 rounded-full pl-2 pr-1.5 py-1.5 shadow-[0_0_40px_-10px_rgba(0,0,0,0.5)] transition-all focus-within:ring-2 focus-within:ring-primary/30 focus-within:shadow-[var(--shadow-glow)] focus-within:bg-card/95 focus-within:border-primary/50 relative">
                                     <div className="flex-shrink-0">
                                         <input
                                             type="file"
@@ -741,14 +754,14 @@ const MessagingUI: React.FC = () => {
                                             type="button"
                                             variant="ghost"
                                             size="icon"
-                                            className="rounded-full h-10 w-10 text-muted-foreground hover:bg-secondary hover:text-primary transition-all p-0 flex items-center justify-center border-none shadow-none"
+                                            className="rounded-full h-10 w-10 text-muted-foreground hover:bg-secondary hover:text-foreground transition-all p-0 flex items-center justify-center border-none shadow-none"
                                             disabled={!isNewChat && selectedConversation && (getOtherParticipant(selectedConversation.participants).is_deactivated || getOtherParticipant(selectedConversation.participants).is_deleted)}
                                             onClick={() => fileInputRef.current?.click()}
                                         >
                                             <Paperclip className="w-5 h-5" />
                                         </Button>
                                     </div>
-                                    <div className="flex-1 flex items-center bg-secondary/50 rounded-2xl px-4 py-2 min-h-[44px] border border-transparent focus-within:border-primary/30 transition-all">
+                                    <div className="flex-1 flex items-center min-h-[40px]">
                                         <TextareaAutosize
                                             id="messaging-textarea"
                                             value={messageInput}
@@ -760,17 +773,23 @@ const MessagingUI: React.FC = () => {
                                                 }
                                             }}
                                             disabled={!isNewChat && selectedConversation && (getOtherParticipant(selectedConversation.participants).is_deactivated || getOtherParticipant(selectedConversation.participants).is_deleted)}
-                                            placeholder={(!isNewChat && selectedConversation && (getOtherParticipant(selectedConversation.participants).is_deactivated || getOtherParticipant(selectedConversation.participants).is_deleted)) ? "Account deactivated" : "Type a message..."}
-                                            className="w-full !bg-transparent !border-none !p-0 !shadow-none text-sm resize-none focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed leading-relaxed block"
+                                            placeholder={(!isNewChat && selectedConversation && (getOtherParticipant(selectedConversation.participants).is_deactivated || getOtherParticipant(selectedConversation.participants).is_deleted)) ? "Account deactivated" : "Message..."}
+                                            className="w-full bg-transparent border-none p-0 !shadow-none text-sm resize-none focus:outline-none focus:ring-0 disabled:opacity-50 disabled:cursor-not-allowed leading-relaxed block overflow-hidden placeholder:text-muted-foreground/70"
+                                            maxRows={5}
                                         />
                                     </div>
                                     <div className="flex-shrink-0">
                                         <Button
                                             type="submit"
                                             disabled={(!messageInput.trim() && !selectedMedia) || uploadingMedia || (!isNewChat && selectedConversation && (getOtherParticipant(selectedConversation.participants).is_deactivated || getOtherParticipant(selectedConversation.participants).is_deleted))}
-                                            className="rounded-full h-10 w-10 p-0 flex items-center justify-center bg-primary hover:bg-primary/90 shadow-glow transition-all border-none"
+                                            className={cn(
+                                                "rounded-full h-10 w-10 p-0 flex items-center justify-center transition-all border-none transform",
+                                                messageInput.trim() || selectedMedia
+                                                    ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow scale-100"
+                                                    : "bg-secondary text-muted-foreground scale-95 opacity-50"
+                                            )}
                                         >
-                                            {uploadingMedia ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                                            {uploadingMedia ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className={cn("w-4 h-4", (messageInput.trim() || selectedMedia) ? "translate-x-0.5" : "")} />}
                                         </Button>
                                     </div>
                                 </form>
@@ -778,13 +797,19 @@ const MessagingUI: React.FC = () => {
                         )}
                     </>
                 ) : (
-                    <div className="text-center">
-                        <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <MessageSquare className="w-10 h-10 text-primary" />
-                        </div>
-                        <h2 className="text-2xl font-bold text-foreground mb-2">Your Messages</h2>
-                        <p className="max-w-xs mx-auto">Send private photos and messages to a friend or group.</p>
-                        <Button className="mt-6 rounded-full px-8 font-bold" onClick={() => setShowSearch(true)}>Send Message</Button>
+                    <div className="flex flex-col items-center justify-center h-full text-center">
+                        <motion.div
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="w-24 h-24 bg-gradient-to-tr from-primary/20 to-primary/5 rounded-full flex items-center justify-center mx-auto mb-6 shadow-glow border border-primary/20"
+                        >
+                            <MessageSquare className="w-12 h-12 text-primary" />
+                        </motion.div>
+                        <h2 className="text-3xl font-bold font-display text-foreground mb-3">Your Messages</h2>
+                        <p className="max-w-sm mx-auto text-muted-foreground px-4">Send private photos and messages to a friend or group instantly.</p>
+                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                            <Button className="mt-8 rounded-full px-8 font-bold shadow-glow text-md py-6" onClick={() => setShowSearch(true)}>Send Message</Button>
+                        </motion.div>
                     </div>
                 )}
             </div>
@@ -868,16 +893,33 @@ const MessagingUI: React.FC = () => {
     );
 };
 
+interface TextareaAutosizeProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+    maxRows?: number;
+}
+
 // Simple auto-resizing textarea component
-const TextareaAutosize = (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => {
+const TextareaAutosize = ({ maxRows, ...props }: TextareaAutosizeProps) => {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     useEffect(() => {
         if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
             textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+
+            if (maxRows) {
+                // Approximate line height for text-sm with leading-relaxed
+                const lineHeight = 24;
+                const maxHeight = (maxRows * lineHeight) + 16; // Adding some padding allowance
+
+                if (textareaRef.current.scrollHeight > maxHeight) {
+                    textareaRef.current.style.height = `${maxHeight}px`;
+                    textareaRef.current.style.overflowY = 'auto';
+                } else {
+                    textareaRef.current.style.overflowY = 'hidden';
+                }
+            }
         }
-    }, [props.value]);
+    }, [props.value, maxRows]);
 
     return (
         <textarea
