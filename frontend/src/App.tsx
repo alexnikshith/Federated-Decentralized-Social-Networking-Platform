@@ -4,6 +4,17 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useSettingsStore } from '../epics/identity/store/settingsStore';
 import { ThemeProvider } from './components/theme-provider';
 import { MainLayout } from './components/layout/MainLayout';
 import { useAutoLogout } from './hooks/useAutoLogout';
@@ -106,6 +117,20 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
 const AppContent: React.FC = () => {
     const { isAuthenticated, user, token, setAuth, clearAuth, clearAllSessions, sessions, removeAccount } = useAuthStore();
+    const { updateDailyUsage, dailyUsageMinutes, timeLimitMinutes, isLimitIgnoredToday, ignoreLimit, setTimeLimit } = useSettingsStore();
+
+    // Track daily usage
+    useEffect(() => {
+        const interval = setInterval(() => {
+            updateDailyUsage(1);
+        }, 60000); // Check every minute
+        return () => clearInterval(interval);
+    }, []);
+
+    const showTimeLimitAlert =
+        timeLimitMinutes !== null &&
+        Number(dailyUsageMinutes) >= Number(timeLimitMinutes) &&
+        !isLimitIgnoredToday;
 
     // Session Sync: Ensure user data and token are fresh
     // This runs on mount/auth-change to validate the stored token against the backend
@@ -155,6 +180,22 @@ const AppContent: React.FC = () => {
 
     return (
         <div className="h-full">
+            {/* Time Limit Alert */}
+            <AlertDialog open={!!showTimeLimitAlert}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Time Limit Reached</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            You have reached your daily limit of {timeLimitMinutes} minutes.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => ignoreLimit()}>Ignore</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => setTimeLimit((timeLimitMinutes || 0) + 10)}>Extend 10 mins</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
             <BrowserRouter>
                 <Routes>
                     {/* Public Routes */}
