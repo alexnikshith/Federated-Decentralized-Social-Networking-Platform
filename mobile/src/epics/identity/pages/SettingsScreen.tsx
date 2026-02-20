@@ -13,15 +13,18 @@ import {
     AlertTriangle,
     Activity as ActivityIcon,
     ChevronRight,
-    LogOut
+    LogOut,
+    Clock
 } from 'lucide-react-native';
 import { ActivityLog } from '../types';
+import { useSettingsStore } from '../store/settingsStore';
 
 const SettingsScreen = () => {
     const { user, clearAuth, updateUser } = useAuthStore();
     const router = useRouter();
     const [is2FAEnabled, setIs2FAEnabled] = useState(user?.is_2fa_enabled || false);
     const [loading, setLoading] = useState(false);
+    const { timeLimitMinutes, setTimeLimit } = useSettingsStore();
 
     const handleToggle2FA = async (enabled: boolean) => {
         try {
@@ -101,12 +104,44 @@ const SettingsScreen = () => {
                         </View>
                     </View>
 
+                    {/* Time Management Section */}
+                    <Text className="text-sm font-bold text-muted-foreground mb-4 uppercase tracking-wider ml-1">Time Management</Text>
+                    <View className="bg-secondary/30 rounded-3xl overflow-hidden mb-8 p-5">
+                        <View className="flex-row items-center mb-4">
+                            <View className="bg-primary/10 p-2 rounded-lg mr-4">
+                                <Clock size={20} color="#F59E0B" />
+                            </View>
+                            <View>
+                                <Text className="text-foreground font-bold text-base">Daily Time Limit</Text>
+                                <Text className="text-xs text-muted-foreground">Alert when daily usage exceeds limit</Text>
+                            </View>
+                        </View>
+
+                        <View className="flex-row flex-wrap gap-2">
+                            {[15, 30, 45, 60, 120].map((mins) => (
+                                <TouchableOpacity
+                                    key={mins}
+                                    onPress={() => setTimeLimit(timeLimitMinutes === mins ? null : mins)}
+                                    className={`px-4 py-2 rounded-full border ${timeLimitMinutes === mins
+                                        ? 'bg-primary border-primary'
+                                        : 'bg-transparent border-border'
+                                        }`}
+                                >
+                                    <Text className={`${timeLimitMinutes === mins ? 'text-white font-bold' : 'text-foreground'
+                                        }`}>
+                                        {mins >= 60 ? `${mins / 60} ${mins === 60 ? 'hour' : 'hours'}` : `${mins} mins`}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
+
                     {/* Account Management Section */}
                     <Text className="text-sm font-bold text-muted-foreground mb-4 uppercase tracking-wider ml-1">Account</Text>
 
                     <View className="bg-secondary/30 rounded-3xl overflow-hidden mb-8">
                         <TouchableOpacity
-                            className="flex-row items-center justify-between p-5 border-b border-border/10"
+                            className="flex-row items-center justify-between p-5"
                             onPress={() => router.push('/activity')}
                         >
                             <View className="flex-row items-center">
@@ -114,19 +149,6 @@ const SettingsScreen = () => {
                                     <ActivityIcon size={20} color="#F59E0B" />
                                 </View>
                                 <Text className="text-foreground font-bold text-base">Security Activity</Text>
-                            </View>
-                            <ChevronRight size={20} color="#94A3B8" />
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            className="flex-row items-center justify-between p-5 border-b border-border/10"
-                            onPress={() => router.push('/account-management')}
-                        >
-                            <View className="flex-row items-center">
-                                <View className="bg-primary/10 p-2 rounded-lg mr-4">
-                                    <Bell size={20} color="#F59E0B" />
-                                </View>
-                                <Text className="text-foreground font-bold text-base">Account Management</Text>
                             </View>
                             <ChevronRight size={20} color="#94A3B8" />
                         </TouchableOpacity>

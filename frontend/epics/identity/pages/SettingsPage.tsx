@@ -13,10 +13,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Loader2, User, Settings, Shield, Bell, Lock, AlertTriangle, Edit } from "lucide-react";
+import { Loader2, User, Settings, Shield, Bell, Lock, AlertTriangle, Edit, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { User as UserType, ActivityLog } from "../types";
 import { useToast } from "@/hooks/use-toast";
+import { useSettingsStore } from "../store/settingsStore";
+import { useReportsApi } from "../../reports/api/reportsApi";
 
 // SettingsPage manages user account preferences
 // It includes tabs for:
@@ -30,6 +32,38 @@ export const SettingsPage = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [isPasswordEditing, setIsPasswordEditing] = useState(false);
     const { toast } = useToast();
+    const { timeLimitMinutes, setTimeLimit, dailyUsageMinutes, setDailyUsage } = useSettingsStore();
+    const { useActivityReport } = useReportsApi();
+
+    // Fetch today's activity report to sync usage (use local date to match Reports page)
+    const getLocalDate = () => {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    // Use local date for querying reports
+    const today = getLocalDate();
+    const { data: activityReport } = useActivityReport(today, today);
+
+    useEffect(() => {
+        // Sync local usage with server report whenever we view the tab or data updates
+        if (activeTab === "time_management" && activityReport) {
+            // Priority 1: Check daily stats for exact match
+            const todayStats = activityReport.daily_stats?.find(d => d.date === today);
+
+            if (todayStats) {
+                setDailyUsage(todayStats.minutes);
+            }
+            // Priority 2: Use total_hours if available (more reliable fallback for today)
+            else if (activityReport.total_hours !== undefined) {
+                const totalMinutes = Math.round(activityReport.total_hours * 60);
+                setDailyUsage(totalMinutes);
+            }
+        }
+    }, [activeTab, activityReport, setDailyUsage, today]);
 
     // Form state
     const [formData, setFormData] = useState({
@@ -325,7 +359,7 @@ export const SettingsPage = () => {
     const navItems = [
         { id: "profile", label: "Profile", icon: User },
         { id: "account", label: "Account", icon: Settings },
-        { id: "notifications", label: "Notifications", icon: Bell, disabled: true },
+        { id: "time_management", label: "Time Management", icon: Clock, disabled: false },
         { id: "privacy", label: "Privacy & Security", icon: Shield, disabled: false },
     ];
 
@@ -752,6 +786,56 @@ export const SettingsPage = () => {
                                                         onCheckedChange={handleToggle2FA}
                                                     />
                                                 </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === "time_management" && (
+                                <div className="max-w-2xl">
+                                    <div className="mb-8 pb-6 border-b border-border/50">
+                                        <h2 className="text-2xl font-bold mb-2">Time Management</h2>
+                                        <p className="text-muted-foreground">Set daily usage limits to manage your screen time.</p>
+                                    </div>
+
+                                    <div className="space-y-6">
+                                        <div className="p-6 rounded-2xl border border-border/50 bg-secondary/10">
+                                            <div className="flex items-start gap-4 mb-6">
+                                                <div className="p-2 bg-primary/10 rounded-full shrink-0">
+                                                    <Clock className="w-6 h-6 text-primary" />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <h3 className="font-bold text-lg">Daily Time Limit</h3>
+                                                    <p className="text-sm text-muted-foreground">We'll alert you when you reach this limit.</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                                {[15, 30, 45, 60, 120].map((mins) => (
+                                                    <Button
+                                                        key={mins}
+                                                        variant={timeLimitMinutes === mins ? "default" : "outline"}
+                                                        onClick={() => setTimeLimit(timeLimitMinutes === mins ? null : mins)}
+                                                        className={cn(
+                                                            "h-12 text-sm font-medium transition-all relative overflow-hidden",
+                                                            timeLimitMinutes === mins
+                                                                ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-md ring-2 ring-primary ring-offset-2 ring-offset-background"
+                                                                : "hover:border-primary/50 hover:bg-secondary/50 text-muted-foreground"
+                                                        )}
+                                                    >
+                                                        {mins >= 60 ? `${mins / 60} ${mins === 60 ? 'hour' : 'hours'}` : `${mins} mins`}
+                                                        {timeLimitMinutes === mins && (
+                                                            <div className="absolute inset-0 bg-white/10 pointer-events-none" />
+                                                        )}
+                                                    </Button>
+                                                ))}
+                                            </div>
+
+                                            <div className="mt-6 pt-6 border-t border-border/20">
+                                                <p className="text-sm text-center text-muted-foreground">
+                                                    Current usage today: <span className="font-bold text-foreground text-lg ml-1">{dailyUsageMinutes} mins</span>
+                                                </p>
                                             </div>
                                         </div>
                                     </div>
