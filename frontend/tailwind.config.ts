@@ -21,12 +21,12 @@ export default {
 		extend: {
 			fontFamily: {
 				sans: [
-					'Plus Jakarta Sans',
+					'Inter',
 					'system-ui',
 					'sans-serif'
 				],
 				display: [
-					'Outfit',
+					'Poppins',
 					'system-ui',
 					'sans-serif'
 				]

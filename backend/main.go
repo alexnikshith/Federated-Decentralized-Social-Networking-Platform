@@ -109,6 +109,11 @@ func main() {
 		log.Printf("Warning: Failed to create post indexes: %v", err)
 	}
 
+	storyRepo := contentRepo.NewStoryRepository()
+	if err := storyRepo.CreateIndexes(ctx); err != nil {
+		log.Printf("Warning: Failed to create story indexes: %v", err)
+	}
+
 	followRepo := contentRepo.NewFollowRepository()
 	if err := followRepo.CreateIndexes(ctx); err != nil {
 		log.Printf("Warning: Failed to create follow indexes: %v", err)
