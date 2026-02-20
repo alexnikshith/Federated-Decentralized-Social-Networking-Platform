@@ -42,14 +42,17 @@ api.interceptors.response.use(
             const activeUrl = localStorage.getItem('active_community_url') || import.meta.env.VITE_API_URL || 'http://localhost:8080';
             const requestUrl = error.config?.url || '';
 
-            // Only clear auth if the 401 is from our own server
-            // and NOT from login/verify endpoints (avoid loops)
-            const isLocalRequest = requestUrl.startsWith('/') || requestUrl.startsWith(activeUrl);
+            // Ensure we are only throwing away our session if the 401 came from the instance that issued the token!
+            // If the user's token fails on their HOME instance, we clear auth.
+            // If they sent their token to a federated/remote instance and it fails, we simply ignore it instead of wiping their local session.
+            const homeUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+            const isHomeRequest = requestUrl.startsWith('/') ? (activeUrl === homeUrl) : requestUrl.startsWith(homeUrl);
+
             const isAuthEndpoint = requestUrl.includes('/auth/login') ||
                 requestUrl.includes('/auth/verify-otp') ||
                 requestUrl.includes('/auth/google');
 
-            if (isLocalRequest && !isAuthEndpoint) {
+            if (isHomeRequest && !isAuthEndpoint) {
                 // Token expired or invalid on OUR server
                 const store = useAuthStore.getState();
                 store.clearAuth();
