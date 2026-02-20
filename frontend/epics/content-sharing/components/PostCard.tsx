@@ -274,10 +274,10 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
             >
                 <div
                     className={cn(
-                        "bg-card rounded-xl",
+                        "bg-card rounded-xl transition-all duration-300",
                         isExpanded
                             ? "w-full max-w-4xl mx-auto shadow-2xl border border-border/50 min-h-[50vh]"
-                            : ""
+                            : "hover:-translate-y-1 hover:shadow-glow-accent hover:border-primary/20"
                     )}
                 >
                     <div className="p-6">
@@ -304,8 +304,8 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
                                         <Link to={`/profile/${post.author_name}`} className="font-display font-bold text-foreground text-lg tracking-tight leading-tight hover:underline">
                                             {post.author_name}
                                         </Link>
-                                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-secondary/80 border border-border/50">
-                                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
+                                        <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-accent/10 border border-accent/20">
+                                            <span className="text-[10px] font-bold text-accent uppercase tracking-widest whitespace-nowrap">
                                                 {post.author_instance || 'nexus.social'}
                                             </span>
                                         </div>
@@ -313,7 +313,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
                                     <div className="flex items-center gap-2 mt-0.5">
                                         <span className="text-xs text-muted-foreground font-medium">{timeAgo}</span>
                                         <span className="w-1 h-1 rounded-full bg-border" />
-                                        <span className="text-[10px] text-muted-foreground/60 uppercase tracking-tighter">Public</span>
+                                        <span className="text-[10px] font-bold text-success bg-success/10 px-2 py-0.5 rounded-full border border-success/20 uppercase tracking-widest">Public</span>
                                     </div>
                                 </div>
                             </div>
