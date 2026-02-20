@@ -91,7 +91,7 @@ const Explore = () => {
           <div className="max-w-2xl mx-auto">
             {/* Header */}
             <div className="mb-8">
-              <h1 className="font-display text-3xl font-bold mb-2">
+              <h1 className="font-display text-4xl md:text-5xl font-bold mb-3">
                 Explore in <span className="text-gradient-teal">{community.name}</span>
               </h1>
               <p className="text-muted-foreground">
