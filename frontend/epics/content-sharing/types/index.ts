@@ -3,6 +3,7 @@ export interface Post {
     id: string;
     author_id: string;
     author_name: string;
+    author_display_name?: string;
     author_avatar: string;
     author_instance: string;
     content: string;

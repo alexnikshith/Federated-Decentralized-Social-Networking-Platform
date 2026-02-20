@@ -21,12 +21,12 @@ export default {
 		extend: {
 			fontFamily: {
 				sans: [
-					'Inter',
+					'Syne',
 					'system-ui',
 					'sans-serif'
 				],
 				display: [
-					'Poppins',
+					'Syne',
 					'system-ui',
 					'sans-serif'
 				]
