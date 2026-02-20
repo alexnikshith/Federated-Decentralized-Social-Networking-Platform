@@ -47,13 +47,46 @@ export default function RootLayout() {
 }
 
 import { useAuthStore } from '../src/epics/identity/store/authStore';
+import { useSettingsStore } from '../src/epics/identity/store/settingsStore';
 import { useRouter, useSegments } from 'expo-router';
+import { Alert } from 'react-native';
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const { isAuthenticated } = useAuthStore();
+  const { updateDailyUsage, dailyUsageMinutes, timeLimitMinutes, isLimitIgnoredToday, ignoreLimit, setTimeLimit } = useSettingsStore();
   const segments = useSegments();
   const router = useRouter();
+
+  // Track daily usage
+  useEffect(() => {
+    const interval = setInterval(() => {
+      updateDailyUsage(1);
+    }, 60000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Check time limit
+  useEffect(() => {
+    if (timeLimitMinutes && dailyUsageMinutes >= timeLimitMinutes && !isLimitIgnoredToday) {
+      Alert.alert(
+        "Time Limit Reached",
+        `You have reached your daily limit of ${timeLimitMinutes} minutes.`,
+        [
+          {
+            text: "Ignore",
+            onPress: () => ignoreLimit(),
+            style: "cancel"
+          },
+          {
+            text: "Extend 10 mins",
+            onPress: () => setTimeLimit(timeLimitMinutes + 10)
+          }
+        ]
+      );
+    }
+  }, [dailyUsageMinutes, timeLimitMinutes, isLimitIgnoredToday]);
 
   useEffect(() => {
     const inAuthGroup = segments[0] === 'login' || segments[0] === 'signup';
