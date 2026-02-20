@@ -23,17 +23,7 @@
     color: hsl(var(--muted-foreground));
 }
 
-.dashboard-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 2rem;
-}
 
-@media (max-width: 1024px) {
-    .dashboard-grid {
-        grid-template-columns: 1fr;
-    }
-}
 
 .feed-section {
     display: flex;
