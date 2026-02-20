@@ -47,11 +47,20 @@ const Explore = () => {
     if (activeTab === "trending") {
       if (posts.length === 0) return [];
 
-      const interactions = posts.map(p => p.like_count + p.comment_count);
+      const getInteractions = (p: Post) => p.like_count + p.comment_count;
+
+      const interactions = posts.map(getInteractions);
       const totalCombinedInteraction = interactions.reduce((sum, count) => sum + count, 0);
       const averageInteraction = totalCombinedInteraction / posts.length;
 
-      return posts.filter(post => (post.like_count + post.comment_count) > averageInteraction);
+      // Filter: Must be above average AND have at least 2 interactions (likes+comments)
+      // This prevents 1-like posts from trending if the average is very low (e.g. 0.02)
+      return posts
+        .filter(post => {
+          const count = getInteractions(post);
+          return count > averageInteraction && count > 1;
+        })
+        .sort((a, b) => getInteractions(b) - getInteractions(a));
     }
 
     if (activeTab === "recent") {
