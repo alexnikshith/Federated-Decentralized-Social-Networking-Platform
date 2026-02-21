@@ -1,9 +1,0 @@
-﻿User Stories Tested                     | Number of Test Cases Passed | Number of Test Cases Failed
-----------------------------------------|---------------------------|----------------------------
-Create Post                             | 6                         | 0
-View Post (PostCard)                    | 4                         | 0
-Like Post                               | 2                         | 0
-Delete Post                             | 2                         | 0
-Search Users                            | 2                         | 0
-Follow User                             | 4                         | 0
-Get Notifications                       | 2                         | 0
