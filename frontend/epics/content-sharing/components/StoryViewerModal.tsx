@@ -13,18 +13,31 @@ interface StoryViewerModalProps {
 export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({ open, onClose, initialStoryIndex }) => {
     const { stories, deleteStory } = useStoryStore();
     const { user } = useAuthStore();
-    const [currentIndex, setCurrentIndex] = useState(initialStoryIndex);
+
+    // Filter stories to only include those by the author we clicked on
+    const authorStories = stories.filter(
+        s => s.author_id === stories[initialStoryIndex]?.author_id
+    ) || [];
+
+    const [currentIndex, setCurrentIndex] = useState(0); // Index within authorStories
     const [isDeleting, setIsDeleting] = useState(false);
 
+    // Fix: the effect shouldn't just reset on open if there are active deletions mutating the array length mid-session.
     useEffect(() => {
         if (open) {
-            setCurrentIndex(initialStoryIndex);
+            setCurrentIndex(0);
         }
-    }, [open, initialStoryIndex]);
+    }, [open]);
 
-    if (!open || stories.length === 0) return null;
+    if (!open || authorStories.length === 0) return null;
 
-    const currentStory = stories[currentIndex];
+    // Safety check: ensure currentIndex is within bounds of authorStories. 
+    // During a deletion, authorStories shrinks by 1 and currentIndex might momentarily point out of bounds.
+    const safeIndex = currentIndex >= authorStories.length ? Math.max(0, authorStories.length - 1) : currentIndex;
+    const currentStory = authorStories[safeIndex];
+
+    if (!currentStory) return null; // Additional safety net during re-renders
+
     const isOwner = user?.id === currentStory.author_id;
 
     const goToPrev = () => {
@@ -33,7 +46,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({ open, onClos
     };
 
     const goToNext = () => {
-        if (currentIndex < stories.length - 1) setCurrentIndex(currentIndex + 1);
+        if (currentIndex < authorStories.length - 1) setCurrentIndex(currentIndex + 1);
         else onClose();
     };
 
@@ -41,9 +54,9 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({ open, onClos
         setIsDeleting(true);
         try {
             await deleteStory(currentStory.id);
-            if (stories.length === 1) {
+            if (authorStories.length === 1) {
                 onClose();
-            } else if (currentIndex === stories.length - 1) {
+            } else if (currentIndex === authorStories.length - 1) {
                 setCurrentIndex(currentIndex - 1);
             }
         } finally {
@@ -90,9 +103,9 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({ open, onClos
 
                 {/* Progress Indicators */}
                 <div className="absolute top-4 left-0 w-full px-4 flex gap-1 z-20">
-                    {stories.map((_, idx) => (
+                    {authorStories.map((_, idx) => (
                         <div key={idx} className="h-1 flex-1 bg-white/20 rounded-full overflow-hidden">
-                            <div className={`h-full bg-white transition-all duration-300 ${idx === currentIndex ? 'w-full' : idx < currentIndex ? 'w-full' : 'w-0'}`} />
+                            <div className={`h-full bg-white transition-all duration-300 ${idx === safeIndex ? 'w-full' : idx < safeIndex ? 'w-full' : 'w-0'}`} />
                         </div>
                     ))}
                 </div>
@@ -100,16 +113,16 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({ open, onClos
                 {/* Author Info Overlay */}
                 <div className="absolute top-8 left-0 w-full px-4 flex items-center justify-between z-20">
                     <div className="flex items-center gap-3">
-                        {currentStory.author_avatar ? (
-                            <img src={currentStory.author_avatar} alt={currentStory.author_name} className="w-10 h-10 rounded-full border-2 border-white/50 object-cover" />
-                        ) : (
-                            <div className="w-10 h-10 rounded-full bg-primary/80 border-2 border-white/50 flex items-center justify-center text-white font-bold">
-                                {currentStory.author_name?.[0]?.toUpperCase()}
-                            </div>
-                        )}
+                        <div className="relative w-10 h-10 rounded-full bg-primary/80 border-2 border-white/50 overflow-hidden flex items-center justify-center text-white font-bold">
+                            {currentStory.author_avatar ? (
+                                <img src={currentStory.author_avatar.startsWith('http') ? currentStory.author_avatar : `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}${currentStory.author_avatar}`} alt={currentStory.author_name} className="w-full h-full object-cover" />
+                            ) : (
+                                currentStory.author_name?.[0]?.toUpperCase()
+                            )}
+                        </div>
                         <div>
                             <p className="text-white font-bold text-sm text-shadow-sm">{currentStory.author_name}</p>
-                            <p className="text-white/70 text-xs">{(new Date(currentStory.created_at)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                            <p className="text-white/70 text-xs text-shadow-sm">{(new Date(currentStory.created_at)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                         </div>
                     </div>
 
