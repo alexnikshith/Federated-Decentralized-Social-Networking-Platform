@@ -11,7 +11,16 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { UserCog, Ban, CheckCircle, Trash2 } from 'lucide-react';
+import { UserCog, Ban, CheckCircle, Trash2, Search, ArrowUpDown } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -46,14 +55,41 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, loading, onToggl
     const [selectedUser, setSelectedUser] = React.useState<User | null>(null);
     const [isModalOpen, setIsModalOpen] = React.useState(false);
 
+    // Search and Sort State
+    const [searchQuery, setSearchQuery] = React.useState('');
+    const [sortOrder, setSortOrder] = React.useState<'alphabetical' | 'newest' | 'oldest'>('alphabetical');
+
     const handleOpenSettings = (user: User) => {
         setSelectedUser(user);
         setIsModalOpen(true);
     };
 
-    // Separate current user from the rest
-    const selfUser = users.find(u => u.id === currentUser?.id);
-    const otherUsers = users.filter(u => u.id !== currentUser?.id);
+    // Filter and Sort users
+    let filteredUsers = [...users];
+
+    if (searchQuery.trim()) {
+        const lowerQuery = searchQuery.toLowerCase();
+        filteredUsers = filteredUsers.filter(u =>
+            u.username.toLowerCase().includes(lowerQuery) ||
+            (u.display_name && u.display_name.toLowerCase().includes(lowerQuery)) ||
+            (u.email && u.email.toLowerCase().includes(lowerQuery))
+        );
+    }
+
+    const sortedUsers = filteredUsers.sort((a, b) => {
+        if (sortOrder === 'alphabetical') {
+            const nameA = (a.display_name || a.username).toLowerCase();
+            const nameB = (b.display_name || b.username).toLowerCase();
+            return nameA.localeCompare(nameB);
+        } else {
+            const dateA = new Date(a.created_at || 0).getTime();
+            const dateB = new Date(b.created_at || 0).getTime();
+            return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
+        }
+    });
+
+    const admins = sortedUsers.filter(u => u.role === 'admin');
+    const standardUsers = sortedUsers.filter(u => u.role !== 'admin');
 
     const renderUserRow = (user: User, isSelf: boolean = false) => (
         <TableRow key={user.id} className={cn(
@@ -80,6 +116,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, loading, onToggl
                 </div>
             </TableCell>
             <TableCell className="text-sm">{user.email || 'N/A'}</TableCell>
+            <TableCell className="text-sm">
+                {user.created_at ? new Date(user.created_at as string).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A'}
+            </TableCell>
             <TableCell>
                 <Badge variant={user.role === 'admin' ? 'default' : 'secondary'} className="capitalize">
                     {user.role || 'user'}
@@ -190,55 +229,96 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, loading, onToggl
         </TableRow>
     );
 
+    const renderTableContent = (userList: User[], listTypeLabel: string) => (
+        <div className="rounded-xl border border-border/40 bg-card/30 backdrop-blur-md overflow-hidden">
+            <Table>
+                <TableHeader className="bg-muted/50">
+                    <TableRow>
+                        <TableHead className="w-[250px]">User</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Joined Date</TableHead>
+                        <TableHead>Role</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {loading ? (
+                        Array.from({ length: 5 }).map((_, i) => (
+                            <TableRow key={i}>
+                                <TableCell colSpan={6} className="h-16 animate-pulse bg-muted/20" />
+                            </TableRow>
+                        ))
+                    ) : userList.length > 0 ? (
+                        userList.map(user => renderUserRow(user, user.id === currentUser?.id))
+                    ) : (
+                        <TableRow>
+                            <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                                {searchQuery ? `No ${listTypeLabel.toLowerCase()} found for "${searchQuery}"` : `No ${listTypeLabel.toLowerCase()} found.`}
+                            </TableCell>
+                        </TableRow>
+                    )}
+                </TableBody>
+            </Table>
+        </div>
+    );
+
     return (
         <div className="flex flex-col gap-6">
-            <div className="rounded-xl border border-border/40 bg-card/30 backdrop-blur-md overflow-hidden">
-                <Table>
-                    <TableHeader className="bg-muted/50">
-                        <TableRow>
-                            <TableHead className="w-[250px]">User</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Role</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {loading ? (
-                            Array.from({ length: 5 }).map((_, i) => (
-                                <TableRow key={i}>
-                                    <TableCell colSpan={5} className="h-16 animate-pulse bg-muted/20" />
-                                </TableRow>
-                            ))
-                        ) : (
-                            <>
-                                {/* Personal Account Section Header */}
-                                {selfUser && (
-                                    <>
-                                        {renderUserRow(selfUser, true)}
-                                        {otherUsers.length > 0 && (
-                                            <TableRow className="bg-muted/10 hover:bg-muted/10">
-                                                <TableCell colSpan={5} className="py-2 px-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                                                    Platform Users
-                                                </TableCell>
-                                            </TableRow>
-                                        )}
-                                    </>
-                                )}
+            {/* Search and Filter Controls */}
+            <div className="flex flex-col sm:flex-row gap-4 items-end sm:items-center justify-between">
+                <div className="relative w-full sm:w-72 bg-card/30 backdrop-blur-sm border border-border/40 rounded-md flex items-center">
+                    <Search className="absolute left-3 text-muted-foreground w-4 h-4 pointer-events-none" />
+                    <Input
+                        placeholder="Search users by name, username or email..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-9 bg-transparent border-0 focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0 h-10 w-full"
+                    />
+                </div>
 
-                                {otherUsers.map(user => renderUserRow(user, false))}
-                            </>
-                        )}
-                    </TableBody>
-                </Table>
-
-                <ManageUserModal
-                    user={selectedUser}
-                    open={isModalOpen}
-                    onClose={() => setIsModalOpen(false)}
-                    onUpdate={onRefresh}
-                />
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <Select value={sortOrder} onValueChange={(val: any) => setSortOrder(val)}>
+                        <SelectTrigger className="w-full sm:w-[180px] bg-card/30 backdrop-blur-sm border-border/40">
+                            <div className="flex items-center gap-2">
+                                <ArrowUpDown className="h-4 w-4 opacity-70" />
+                                <span>Sort by</span>
+                            </div>
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="alphabetical">Alphabetical (A-Z)</SelectItem>
+                            <SelectItem value="newest">Newest Joined</SelectItem>
+                            <SelectItem value="oldest">Oldest Joined</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
+
+            <Tabs defaultValue="users" className="w-full mt-2">
+                <TabsList className="bg-muted/30 backdrop-blur-sm border border-border/40">
+                    <TabsTrigger value="users" className="gap-2">
+                        Users <Badge variant="secondary" className="px-1.5 py-0 h-4 text-[10px] bg-background/50">{standardUsers.length}</Badge>
+                    </TabsTrigger>
+                    <TabsTrigger value="admins" className="gap-2">
+                        Admins <Badge variant="secondary" className="px-1.5 py-0 h-4 text-[10px] bg-background/50">{admins.length}</Badge>
+                    </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="users" className="mt-4">
+                    {renderTableContent(standardUsers, "Users")}
+                </TabsContent>
+
+                <TabsContent value="admins" className="mt-4">
+                    {renderTableContent(admins, "Admins")}
+                </TabsContent>
+            </Tabs>
+
+            <ManageUserModal
+                user={selectedUser}
+                open={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onUpdate={onRefresh}
+            />
         </div>
     );
 };
