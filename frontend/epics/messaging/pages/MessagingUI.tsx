@@ -75,6 +75,10 @@ const MessagingUI: React.FC = () => {
         id: string | null;
     }>({ isOpen: false, type: 'message', id: null });
 
+    // Resizable sidebar state
+    const [sidebarWidth, setSidebarWidth] = useState(340);
+    const [isDragging, setIsDragging] = useState(false);
+
     // Track if it's the first load of messages for a conversation to scroll instantly
     const isInitialLoad = useRef(true);
 
@@ -172,6 +176,35 @@ const MessagingUI: React.FC = () => {
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
+
+    // Sidebar resize handlers
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isDragging) return;
+            let newWidth = e.clientX;
+            if (newWidth < 250) newWidth = 250;
+            if (newWidth > window.innerWidth - 350) newWidth = window.innerWidth - 350;
+            setSidebarWidth(newWidth);
+        };
+
+        const handleMouseUp = () => {
+            setIsDragging(false);
+        };
+
+        if (isDragging) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            document.body.style.userSelect = 'none'; // Prevent text selection while dragging
+        } else {
+            document.body.style.userSelect = '';
+        }
+
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            document.body.style.userSelect = '';
+        };
+    }, [isDragging]);
 
     const handleDeleteMessage = async (messageId: string) => {
         try {
@@ -441,10 +474,23 @@ const MessagingUI: React.FC = () => {
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/10 via-background to-background pointer-events-none" />
 
             {/* Conversation List Sidebar */}
-            <div className={cn(
-                "w-full md:w-[340px] border-r border-white/5 flex flex-col transition-all duration-300 relative z-10 glass-card bg-background/20 backdrop-blur-3xl shadow-[4px_0_24px_-10px_rgba(0,0,0,0.5)]",
-                (selectedConversation || isNewChat) && "hidden md:flex"
-            )}>
+            <div
+                className={cn(
+                    "w-full md:w-[var(--sidebar-width)] border-r border-black/5 dark:border-white/5 flex flex-col relative z-40 glass-card bg-background/20 backdrop-blur-3xl shadow-[4px_0_24px_-10px_rgba(0,0,0,0.5)] flex-shrink-0",
+                    !isDragging && "transition-all duration-300",
+                    (selectedConversation || isNewChat) && "hidden md:flex"
+                )}
+                style={{ '--sidebar-width': `${sidebarWidth}px` } as React.CSSProperties}
+            >
+                {/* Drag Handle */}
+                <div
+                    className="hidden md:block absolute right-[-3px] top-0 bottom-0 w-[6px] cursor-col-resize z-50 hover:bg-primary/50 active:bg-primary transition-colors"
+                    onMouseDown={(e) => {
+                        e.preventDefault();
+                        setIsDragging(true);
+                    }}
+                />
+
                 {/* Subtle Sidebar Inner Gradient */}
                 <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent pointer-events-none" />
 
@@ -477,7 +523,7 @@ const MessagingUI: React.FC = () => {
                     ) : (
                         <div className="py-6 px-2 relative space-y-6">
                             {/* The Stream Line */}
-                            <div className="absolute left-[38px] top-6 bottom-6 w-px bg-gradient-to-b from-transparent via-white/10 to-transparent z-0" />
+                            <div className="absolute left-[38px] top-6 bottom-6 w-px bg-gradient-to-b from-transparent via-black/10 dark:via-white/10 to-transparent z-0" />
 
                             {safeConversations.map((conv) => {
                                 if (!conv) return null;
@@ -636,7 +682,7 @@ const MessagingUI: React.FC = () => {
                                     <Loader2 className="w-5 h-5 animate-spin" />
                                 </div>
                             ) : (
-                                <div className="space-y-2 pb-8 relative w-full max-w-3xl mx-auto px-4 lg:px-12 before:absolute before:inset-y-0 before:left-1/2 before:-translate-x-1/2 before:w-px before:bg-gradient-to-b before:from-transparent before:via-white/5 before:to-transparent">
+                                <div className="space-y-2 pb-8 relative w-full max-w-5xl mx-auto px-4 lg:px-6 before:absolute before:inset-y-0 before:left-1/2 before:-translate-x-1/2 before:w-px before:bg-gradient-to-b before:from-transparent before:via-black/5 dark:before:via-white/5 before:to-transparent">
                                     {(messages || []).map((msg, idx) => {
                                         if (!msg) return null;
                                         const isMine = msg.sender_id === currentUser?.id;
