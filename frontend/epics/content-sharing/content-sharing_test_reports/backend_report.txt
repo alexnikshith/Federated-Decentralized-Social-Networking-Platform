@@ -1,6 +1,0 @@
-﻿User Stories Tested                     | Number of Test Cases Passed | Number of Test Cases Failed
-----------------------------------------|---------------------------|----------------------------
-Create Post Service                     | 1                         | 0
-Like Post Service                       | 1                         | 0
-Delete Post Service                     | 2                         | 0
-Search/Follow Service (Logic Only)      | 1                         | 0
