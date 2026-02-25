@@ -3,11 +3,13 @@ import { TrendingUp, Users, UserPlus } from 'lucide-react';
 import { searchUsers, followUser } from '../api/client';
 import type { PublicUser } from '../types';
 import { showToast } from '@/lib/toast';
+import { useAuthStore } from '../../identity/store/authStore';
 
 export const RightSidebar: React.FC = () => {
     const [suggestedUsers, setSuggestedUsers] = useState<PublicUser[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [followingSet, setFollowingSet] = useState<Set<string>>(new Set());
+    const { user: currentUser } = useAuthStore();
 
     useEffect(() => {
         const fetchSuggestions = async () => {
@@ -21,8 +23,8 @@ export const RightSidebar: React.FC = () => {
                 // Shuffle the array to show different people when refreshed
                 const shuffled = users.sort(() => 0.5 - Math.random());
 
-                // Filter out users that we are already following
-                setSuggestedUsers(shuffled.filter(u => !u.is_following).slice(0, 4));
+                // Filter out users that we are already following and ourself
+                setSuggestedUsers(shuffled.filter(u => !u.is_following && u.id !== currentUser?.id).slice(0, 4));
             } catch (error) {
                 console.error("Failed to fetch suggested users", error);
             } finally {
@@ -130,7 +132,7 @@ export const RightSidebar: React.FC = () => {
                                 setIsLoading(true);
                                 const users = await searchUsers('', 30);
                                 const shuffled = users.sort(() => 0.5 - Math.random());
-                                setSuggestedUsers(shuffled.filter(u => !u.is_following).slice(0, 4));
+                                setSuggestedUsers(shuffled.filter(u => !u.is_following && u.id !== currentUser?.id).slice(0, 4));
                             } catch (error) {
                                 console.error("Failed to fetch suggested users", error);
                             } finally {

@@ -14,7 +14,6 @@ export interface UserStatusUpdate {
     reason?: string;
 }
 
-// Simplified post view for admin moderation
 export interface AdminPost {
     id: string;
     author_id: string;
@@ -22,4 +21,14 @@ export interface AdminPost {
     like_count: number;
     comment_count: number;
     created_at: string;
+}
+
+export interface DailyTraffic {
+    date: string;
+    users: number;
+    posts: number;
+}
+
+export interface TrafficReport {
+    daily_stats: DailyTraffic[];
 }

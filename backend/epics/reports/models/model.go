@@ -60,3 +60,13 @@ type FederationStats struct {
 	OutboundCount int      `json:"outbound_count"`
 	Servers       []string `json:"servers"`
 }
+
+type DailyTraffic struct {
+	Date  time.Time `json:"date"`
+	Users int       `json:"users"`
+	Posts int       `json:"posts"`
+}
+
+type TrafficReport struct {
+	DailyStats []DailyTraffic `json:"daily_stats"`
+}
