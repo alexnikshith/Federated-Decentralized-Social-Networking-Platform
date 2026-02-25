@@ -131,6 +131,11 @@ func (s *reportService) GetInteractionMadeReport(ctx context.Context, userIDStr 
 	return aggregateInteractions(interactions), nil
 }
 
+func (s *reportService) GetTrafficReport(ctx context.Context, startStr, endStr string) (*models.TrafficReport, error) {
+	startDate, endDate := parseDateRange(startStr, endStr)
+	return s.repo.GetTrafficReport(ctx, startDate, endDate)
+}
+
 // Helper functions (private)
 
 func parseDateRange(startStr, endStr string) (time.Time, time.Time) {

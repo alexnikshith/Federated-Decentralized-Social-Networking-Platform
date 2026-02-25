@@ -27,6 +27,32 @@ interface ChartData {
     fullDate?: string;
 }
 
+const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+        const value = payload[0].value;
+        const h = Math.floor(value / 60);
+        const m = value % 60;
+        return (
+            <div className="bg-popover border border-border p-3 rounded-lg shadow-lg">
+                <p className="text-muted-foreground text-[11px] mb-1 font-medium">{payload[0].payload.fullDate}</p>
+                <div className="flex items-center gap-1.5 mt-1">
+                    <div className="flex flex-col items-center">
+                        <span className="text-popover-foreground font-bold text-base leading-none">{h.toString().padStart(2, '0')}</span>
+                        <span className="text-[9px] text-muted-foreground/60 font-medium mt-1">hh</span>
+                    </div>
+                    <span className="text-sm font-bold leading-none text-muted-foreground/30 pb-3">:</span>
+                    <div className="flex flex-col items-center">
+                        <span className="text-popover-foreground font-bold text-base leading-none">{m.toString().padStart(2, '0')}</span>
+                        <span className="text-[9px] text-muted-foreground/60 font-medium mt-1">mm</span>
+                    </div>
+                </div>
+                <p className="text-[10px] text-primary mt-2 uppercase tracking-wider font-bold">Time Spent</p>
+            </div>
+        );
+    }
+    return null;
+};
+
 const TimeUsageChart: React.FC<TimeUsageChartProps> = ({
     data,
     view,
@@ -120,10 +146,26 @@ const TimeUsageChart: React.FC<TimeUsageChartProps> = ({
                     </CardDescription>
                     {periodTotal !== undefined && (
                         <div className="mt-2">
-                            <span className="text-2xl font-bold">
-                                {Math.floor(periodTotal)}h {Math.round((periodTotal % 1) * 60)}m
-                            </span>
-                            <span className="text-sm text-muted-foreground ml-2">
+                            <div className="flex items-center gap-1.5">
+                                {(() => {
+                                    const h = Math.floor(periodTotal).toString().padStart(2, '0');
+                                    const m = Math.round((periodTotal % 1) * 60).toString().padStart(2, '0');
+                                    return (
+                                        <>
+                                            <div className="flex flex-col items-center">
+                                                <span className="text-2xl font-bold leading-none">{h}</span>
+                                                <span className="text-[10px] text-muted-foreground/60 font-medium mt-1">hh</span>
+                                            </div>
+                                            <span className="text-xl font-bold leading-none text-muted-foreground/40 pb-4">:</span>
+                                            <div className="flex flex-col items-center">
+                                                <span className="text-2xl font-bold leading-none">{m}</span>
+                                                <span className="text-[10px] text-muted-foreground/60 font-medium mt-1">mm</span>
+                                            </div>
+                                        </>
+                                    );
+                                })()}
+                            </div>
+                            <span className="text-sm text-muted-foreground mt-2 block">
                                 total this {view === 'weekly' ? 'week' : 'month'}
                             </span>
                         </div>
@@ -172,38 +214,16 @@ const TimeUsageChart: React.FC<TimeUsageChartProps> = ({
                                     ticks={ticks}
                                     domain={[0, finalMax]}
                                     tickFormatter={(value: number) => {
-                                        const hours = value / 60;
-                                        return `${Number(hours.toFixed(1))}h`;
+                                        const h = Math.floor(value / 60);
+                                        const m = value % 60;
+                                        return `${h}:${m.toString().padStart(2, '0')}`;
                                     }}
                                 />
                                 <Tooltip
                                     cursor={{
                                         fill: 'hsl(var(--muted) / 0.4)',
                                     }}
-                                    contentStyle={{
-                                        borderRadius: '8px',
-                                        border: '1px solid hsl(var(--border))',
-                                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                                        backgroundColor: 'hsl(var(--popover))',
-                                        color: 'hsl(var(--popover-foreground))',
-                                        padding: '12px'
-                                    }}
-                                    labelStyle={{
-                                        color: 'hsl(var(--muted-foreground))',
-                                        marginBottom: '4px'
-                                    }}
-                                    itemStyle={{
-                                        color: 'hsl(var(--popover-foreground))',
-                                        fontWeight: 500
-                                    }}
-                                    // Custom label to show full date instead of just "Mon" or "1"
-                                    labelFormatter={(label, payload) => {
-                                        if (payload && payload.length > 0) {
-                                            return payload[0].payload.fullDate;
-                                        }
-                                        return label;
-                                    }}
-                                    formatter={(value: number) => [`${Math.floor(value / 60)}h ${value % 60}m`, 'Time Spent']}
+                                    content={<CustomTooltip />}
                                 />
                                 <Bar
                                     dataKey="minutes"

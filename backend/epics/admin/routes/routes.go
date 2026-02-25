@@ -20,6 +20,7 @@ func RegisterAdminRoutes(router *mux.Router) {
 
 	// Dashboard Stats
 	adminSubrouter.HandleFunc("/stats", h.GetStats).Methods("GET", "OPTIONS")
+	adminSubrouter.HandleFunc("/traffic", h.GetTraffic).Methods("GET", "OPTIONS")
 
 	// User Management
 	adminSubrouter.HandleFunc("/users", h.ListUsers).Methods("GET", "OPTIONS")
