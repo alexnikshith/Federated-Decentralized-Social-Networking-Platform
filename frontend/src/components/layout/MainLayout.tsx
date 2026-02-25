@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { Sidebar, SidebarBody, SidebarLink } from "../ui/sidebar";
+import { Sidebar, SidebarBody, SidebarLink, SidebarLinkGroup, Links } from "../ui/sidebar";
 import { useMessagingStore } from "../../../epics/messaging/store/messagingStore";
 import {
     IconSearch,
@@ -63,6 +63,16 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
         }
     }, [user, refreshUnreadCount]);
 
+    // Expose navigation handler for SidebarLinkGroup sublinks
+    useEffect(() => {
+        (window as any).navigationHandler = (href: string) => {
+            navigate(href);
+        };
+        return () => {
+            delete (window as any).navigationHandler;
+        };
+    }, [navigate]);
+
     const activeCommunityId = localStorage.getItem('active_community_id');
 
     const displaySessions = React.useMemo(() => {
@@ -99,7 +109,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
 
     // Sidebar Links: Communities, Reports
     // Settings, Theme, Logout are in bottom section manually
-    const sidebarLinks = [
+    const sidebarLinks: Links[] = [
         {
             label: "Communities",
             href: "/communities",
@@ -114,6 +124,11 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
             icon: (
                 <IconChartBar className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
             ),
+            subLinks: [
+                { label: "Time Usage", href: "/reports?tab=time-usage" },
+                { label: "Interactions", href: "/reports?tab=interactions" },
+                { label: "Posts", href: "/reports?tab=posts" },
+            ]
         },
         ...(user?.role === "admin" ? [
             {
@@ -122,6 +137,11 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                 icon: (
                     <IconShieldLock className="h-5 w-5 shrink-0 text-primary" />
                 ),
+                subLinks: [
+                    { label: "Stats Overview", href: "/admin?tab=overview" },
+                    { label: "User Management", href: "/admin?tab=users" },
+                    { label: "Moderation", href: "/admin?tab=moderation" },
+                ]
             },
         ] : []),
     ];
@@ -211,11 +231,13 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
         <div className="flex w-full min-h-screen bg-background">
             <Sidebar open={open || isDropdownOpen} setOpen={setOpen}>
                 <SidebarBody className="justify-between gap-10">
-                    <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto">
-                        {(open || isDropdownOpen) ? <Logo /> : <LogoIcon />}
+                    <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto w-full">
+                        <div className={cn("py-4", (open || isDropdownOpen) ? "px-6" : "px-0 flex justify-center")}>
+                            {(open || isDropdownOpen) ? <Logo /> : <LogoIcon />}
+                        </div>
 
                         {/* Community Switcher */}
-                        <div className={cn("mt-4 px-2", (!open && !isDropdownOpen) && "px-0 flex justify-center")}>
+                        <div className={cn("mt-4 px-4", (!open && !isDropdownOpen) && "px-0 flex justify-center")}>
                             <CommunitySwitcher
                                 collapsed={!open && !isDropdownOpen}
                                 onOpenJoinModal={handleOpenJoinModal}
@@ -223,17 +245,29 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                         </div>
 
                         <div className="mt-8 flex flex-col gap-2">
-                            {sidebarLinks.map((link, idx) => (
-                                <SidebarLink
-                                    key={idx}
-                                    link={link}
-                                    className={location.pathname === link.href ? "bg-orange-500/10 dark:bg-orange-500/20 text-black dark:text-white rounded-md" : ""}
-                                    onClick={() => navigate(link.href)}
-                                />
-                            ))}
+                            {sidebarLinks.map((link, idx) => {
+                                if (link.subLinks) {
+                                    return (
+                                        <SidebarLinkGroup
+                                            key={idx}
+                                            link={link}
+                                            isActive={location.pathname === link.href}
+                                            onMainClick={() => navigate(link.href)}
+                                        />
+                                    );
+                                }
+                                return (
+                                    <SidebarLink
+                                        key={idx}
+                                        link={link}
+                                        className={location.pathname === link.href ? "bg-orange-500/10 dark:bg-orange-500/20 text-black dark:text-white rounded-md" : ""}
+                                        onClick={() => navigate(link.href)}
+                                    />
+                                );
+                            })}
                         </div>
                     </div>
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-2 px-2 pb-4">
                         {/* Profile Link Removed from Sidebar (Moved to Dock) */}
                         <SidebarLink
                             link={settingsLink}
@@ -259,7 +293,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                         <DropdownMenu onOpenChange={setIsDropdownOpen}>
                             <DropdownMenuTrigger asChild>
                                 <button
-                                    className="flex items-center justify-start gap-2 group/sidebar py-2 cursor-pointer w-full text-left outline-none hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md transition-colors px-1"
+                                    className="flex items-center justify-start gap-2 group/sidebar py-2 cursor-pointer w-full text-left outline-none hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md transition-colors px-4"
                                     onMouseEnter={() => setOpen(true)}
                                 >
                                     <Avatar className="h-6 w-6 shrink-0">

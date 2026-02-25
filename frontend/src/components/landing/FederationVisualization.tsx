@@ -56,7 +56,7 @@ export function FederationVisualization() {
             <stop offset="0%" stopColor="hsl(38, 92%, 55%)" stopOpacity="0.6" />
             <stop offset="100%" stopColor="hsl(38, 92%, 55%)" stopOpacity="0" />
           </radialGradient>
-          
+
           {/* Gradient for connections */}
           <linearGradient id="connectionGradient" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="hsl(38, 92%, 55%)" stopOpacity="0.6" />
@@ -65,10 +65,10 @@ export function FederationVisualization() {
 
           {/* Filter for glow effect */}
           <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="1" result="coloredBlur"/>
+            <feGaussianBlur stdDeviation="1" result="coloredBlur" />
             <feMerge>
-              <feMergeNode in="coloredBlur"/>
-              <feMergeNode in="SourceGraphic"/>
+              <feMergeNode in="coloredBlur" />
+              <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
         </defs>
@@ -131,7 +131,7 @@ export function FederationVisualization() {
                   className="node-pulse"
                 />
               )}
-              
+
               {/* Main node circle */}
               <circle
                 cx={node.x}
@@ -144,7 +144,7 @@ export function FederationVisualization() {
                   animationDelay: `${i * 0.2}s`,
                 }}
               />
-              
+
               {/* Node label - only show for local */}
               {node.type === "local" && (
                 <text
@@ -153,7 +153,7 @@ export function FederationVisualization() {
                   textAnchor="middle"
                   fontSize="3"
                   fill="hsl(45, 20%, 95%)"
-                  fontFamily="DM Sans"
+                  fontFamily="Syne"
                   fontWeight="500"
                 >
                   {node.label}

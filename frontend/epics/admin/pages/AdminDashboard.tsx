@@ -13,10 +13,15 @@ import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useQueryClient } from '@tanstack/react-query';
 
+import { useSearchParams } from 'react-router-dom';
+
 // AdminDashboard provides a comprehensive view for platform administrators
 // Features: User Management, Content Moderation (Reports), Statistics
 const AdminDashboard: React.FC = () => {
     // Top-level state
+    const [searchParams, setSearchParams] = useSearchParams();
+    const activeTab = searchParams.get('tab') || 'users';
+
     const [stats, setStats] = useState<AdminStats | null>(null);
     const [users, setUsers] = useState<User[]>([]);
     const [reports, setReports] = useState<any[]>([]);
@@ -141,7 +146,7 @@ const AdminDashboard: React.FC = () => {
             <div className="space-y-6">
                 <StatsDashboard stats={stats} loading={loading} />
 
-                <Tabs defaultValue="users" className="w-full space-y-6">
+                <Tabs value={activeTab} onValueChange={(v) => setSearchParams({ tab: v })} className="w-full space-y-6">
                     <div className="flex justify-between items-center">
                         <TabsList className="bg-muted/30 backdrop-blur-sm border border-border/40">
                             <TabsTrigger value="overview" className="gap-2">
