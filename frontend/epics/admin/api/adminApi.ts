@@ -1,5 +1,5 @@
 import { api } from '../../identity/api/client';
-import { AdminStats, UserStatusUpdate, AdminPost } from '../types';
+import { AdminStats, UserStatusUpdate, AdminPost, TrafficReport } from '../types';
 import { User } from '../../identity/types';
 
 export const adminApi = {
@@ -41,5 +41,12 @@ export const adminApi = {
 
     resolveReport: async (reportId: string): Promise<void> => {
         await api.delete(`/api/admin/reports/resolve?id=${reportId}`);
+    },
+
+    getTraffic: async (start_date?: string, end_date?: string): Promise<TrafficReport> => {
+        const response = await api.get('/api/admin/traffic', {
+            params: { start_date, end_date }
+        });
+        return response.data;
     },
 };

@@ -499,6 +499,88 @@ func (r *ReportRepository) CreateIndexes(ctx context.Context) error {
 	return err
 }
 
+// GetTrafficReport aggregates platform-wide traffic stats (activity, new users, new posts)
+func (r *ReportRepository) GetTrafficReport(ctx context.Context, startDate, endDate time.Time) (*models.TrafficReport, error) {
+	// Normalize dates to midnight
+	normalizedStart := time.Date(startDate.Year(), startDate.Month(), startDate.Day(), 0, 0, 0, 0, time.UTC)
+	normalizedEnd := time.Date(endDate.Year(), endDate.Month(), endDate.Day(), 23, 59, 59, 999999999, time.UTC)
+
+	dailyMap := make(map[string]*models.DailyTraffic)
+
+	// 2. New Users (Count by created_at)
+	userPipeline := []bson.M{
+		{"$match": bson.M{"created_at": bson.M{"$gte": normalizedStart, "$lte": normalizedEnd}}},
+		{"$group": bson.M{
+			"_id": bson.M{
+				"$dateToString": bson.M{"format": "%Y-%m-%d", "date": "$created_at"},
+			},
+			"count": bson.M{"$sum": 1},
+		}},
+	}
+	userCursor, _ := r.usersCollection.Aggregate(ctx, userPipeline)
+	if userCursor != nil {
+		defer userCursor.Close(ctx)
+		for userCursor.Next(ctx) {
+			var result struct {
+				DateStr string `bson:"_id"`
+				Count   int    `bson:"count"`
+			}
+			if err := userCursor.Decode(&result); err == nil {
+				if dailyMap[result.DateStr] == nil {
+					t, _ := time.Parse("2006-01-02", result.DateStr)
+					dailyMap[result.DateStr] = &models.DailyTraffic{Date: t}
+				}
+				dailyMap[result.DateStr].Users = result.Count
+			}
+		}
+	}
+
+	// 3. New Posts (Count by created_at)
+	postPipeline := []bson.M{
+		{"$match": bson.M{"created_at": bson.M{"$gte": normalizedStart, "$lte": normalizedEnd}}},
+		{"$group": bson.M{
+			"_id": bson.M{
+				"$dateToString": bson.M{"format": "%Y-%m-%d", "date": "$created_at"},
+			},
+			"count": bson.M{"$sum": 1},
+		}},
+	}
+	postCursor, _ := r.postsCollection.Aggregate(ctx, postPipeline)
+	if postCursor != nil {
+		defer postCursor.Close(ctx)
+		for postCursor.Next(ctx) {
+			var result struct {
+				DateStr string `bson:"_id"`
+				Count   int    `bson:"count"`
+			}
+			if err := postCursor.Decode(&result); err == nil {
+				if dailyMap[result.DateStr] == nil {
+					t, _ := time.Parse("2006-01-02", result.DateStr)
+					dailyMap[result.DateStr] = &models.DailyTraffic{Date: t}
+				}
+				dailyMap[result.DateStr].Posts = result.Count
+			}
+		}
+	}
+
+	// Convert map to slice
+	var traffic []models.DailyTraffic
+	for _, t := range dailyMap {
+		traffic = append(traffic, *t)
+	}
+
+	// Sort by date manually (simple selection sort for small slices)
+	for i := 0; i < len(traffic); i++ {
+		for j := i + 1; j < len(traffic); j++ {
+			if traffic[i].Date.After(traffic[j].Date) {
+				traffic[i], traffic[j] = traffic[j], traffic[i]
+			}
+		}
+	}
+
+	return &models.TrafficReport{DailyStats: traffic}, nil
+}
+
 // GetFederationStats retrieves federation statistics (placeholder for now)
 func (r *ReportRepository) GetFederationStats(ctx context.Context, startDate, endDate time.Time) (*models.FederationStats, error) {
 	// TODO: Implement actual federation stats aggregation

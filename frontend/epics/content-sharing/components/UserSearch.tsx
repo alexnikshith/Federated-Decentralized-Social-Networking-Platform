@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import axios from 'axios';
 import { COMMUNITIES } from '../../../src/config/communities';
+import { useAuthStore } from '../../identity/store/authStore';
 
 export const UserSearch: React.FC<{
     onClose?: () => void;
@@ -18,6 +19,7 @@ export const UserSearch: React.FC<{
     const [results, setResults] = useState<PublicUser[]>([]);
     const [loading, setLoading] = useState(false);
     const { toast } = useToast();
+    const { user: currentUser } = useAuthStore();
 
     const handleSearch = async (searchQuery: string) => {
         setQuery(searchQuery);
@@ -67,7 +69,7 @@ export const UserSearch: React.FC<{
                 }
             }, []);
 
-            setResults(uniqueResults);
+            setResults(uniqueResults.filter(u => u.id !== currentUser?.id));
         } catch (error) {
             console.error('Search failed:', error);
             toast({

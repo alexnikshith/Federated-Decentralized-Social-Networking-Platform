@@ -4,6 +4,8 @@ import { AdminStats } from '../types';
 import { User } from '../../identity/types';
 import StatsDashboard from '../components/StatsDashboard';
 import UserManagement from '../components/UserManagement';
+import TrafficChart from '../components/TrafficChart';
+import { DailyTraffic } from '../types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { RefreshCcw, ShieldAlert, LayoutDashboard, Users, FileText, Flag } from 'lucide-react';
@@ -20,11 +22,12 @@ import { useSearchParams } from 'react-router-dom';
 const AdminDashboard: React.FC = () => {
     // Top-level state
     const [searchParams, setSearchParams] = useSearchParams();
-    const activeTab = searchParams.get('tab') || 'users';
+    const activeTab = searchParams.get('tab') || 'overview';
 
     const [stats, setStats] = useState<AdminStats | null>(null);
     const [users, setUsers] = useState<User[]>([]);
     const [reports, setReports] = useState<any[]>([]);
+    const [traffic, setTraffic] = useState<DailyTraffic[]>([]);
     const [loading, setLoading] = useState(true);
 
     // Hooks
@@ -41,14 +44,16 @@ const AdminDashboard: React.FC = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [statsData, usersData, reportsData] = await Promise.all([
+            const [statsData, usersData, reportsData, trafficData] = await Promise.all([
                 adminApi.getStats(),
                 adminApi.listUsers(),
                 adminApi.listReports(),
+                adminApi.getTraffic(),
             ]);
             setStats(statsData);
             setUsers(usersData);
             setReports(reportsData);
+            setTraffic(trafficData.daily_stats || []);
         } catch (error) {
             console.error('Failed to fetch admin data:', error);
             toast.error('Failed to load dashboard data');
@@ -127,13 +132,19 @@ const AdminDashboard: React.FC = () => {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border/40 pb-6">
                 <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                        <ShieldAlert className="h-6 w-6 text-primary" />
+                        {activeTab === 'overview' && <LayoutDashboard className="h-6 w-6 text-primary" />}
+                        {activeTab === 'users' && <Users className="h-6 w-6 text-primary" />}
+                        {activeTab === 'moderation' && <ShieldAlert className="h-6 w-6 text-primary" />}
                         <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-orange-500 bg-clip-text text-transparent">
-                            Admin Control Center
+                            {activeTab === 'overview' && 'Stats Overview'}
+                            {activeTab === 'users' && 'User Management'}
+                            {activeTab === 'moderation' && 'Moderation'}
                         </h1>
                     </div>
                     <p className="text-muted-foreground flex items-center gap-2">
-                        Manage platform users, content, and daily activity.
+                        {activeTab === 'overview' && 'Monitor platform growth and daily traffic metrics.'}
+                        {activeTab === 'users' && 'Manage platform users, roles, and permissions.'}
+                        {activeTab === 'moderation' && 'Review reported content and handle policy violations.'}
                     </p>
                 </div>
                 <Button onClick={fetchData} variant="outline" className="gap-2 backdrop-blur-sm bg-background/50">
@@ -144,34 +155,13 @@ const AdminDashboard: React.FC = () => {
 
             {/* Main Content */}
             <div className="space-y-6">
-                <StatsDashboard stats={stats} loading={loading} />
-
                 <Tabs value={activeTab} onValueChange={(v) => setSearchParams({ tab: v })} className="w-full space-y-6">
-                    <div className="flex justify-between items-center">
-                        <TabsList className="bg-muted/30 backdrop-blur-sm border border-border/40">
-                            <TabsTrigger value="overview" className="gap-2">
-                                <LayoutDashboard className="h-4 w-4" />
-                                Overview
-                            </TabsTrigger>
-                            <TabsTrigger value="users" className="gap-2">
-                                <Users className="h-4 w-4" />
-                                User Management
-                            </TabsTrigger>
-                            <TabsTrigger value="moderation" className="gap-2">
-                                <ShieldAlert className="h-4 w-4" />
-                                Moderation
-                            </TabsTrigger>
-                        </TabsList>
-                    </div>
 
                     <TabsContent value="overview" className="mt-0">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-6">
-                            {/* System Status placeholder or charts could go here */}
-                            <div className="col-span-4 bg-card/20 border border-border/40 rounded-xl h-[300px] flex items-center justify-center">
-                                <p className="text-muted-foreground">Traffic Analysis (Chart Placeholder)</p>
-                            </div>
-                            <div className="col-span-3 bg-card/20 border border-border/40 rounded-xl h-[300px] flex items-center justify-center">
-                                <p className="text-muted-foreground">Active Instances (Map Placeholder)</p>
+                        <div className="space-y-6">
+                            <StatsDashboard stats={stats} loading={loading} />
+                            <div className="grid grid-cols-1 gap-6">
+                                <TrafficChart data={traffic} loading={loading} />
                             </div>
                         </div>
                     </TabsContent>
@@ -179,6 +169,7 @@ const AdminDashboard: React.FC = () => {
                     <TabsContent value="users" className="mt-0">
                         <UserManagement
                             users={users}
+                            stats={stats}
                             loading={loading}
                             onToggleStatus={(id, status) => handleToggleStatus(id, status)} // Simple toggle for user table, or update to use dialog too? Keeping simple for now as requested for reports tab mainly.
                             onDeleteUser={handleDeleteUser}
@@ -340,7 +331,7 @@ const AdminDashboard: React.FC = () => {
                     </div>
                 </DialogContent>
             </Dialog>
-        </div>
+        </div >
     );
 };
 

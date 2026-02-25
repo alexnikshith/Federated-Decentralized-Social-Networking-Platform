@@ -21,6 +21,7 @@ type ReportRepository interface {
 	GetReportedUserIDs(ctx context.Context, reporterID primitive.ObjectID) ([]primitive.ObjectID, error)
 	IsUserReported(ctx context.Context, reporterID, reportedID primitive.ObjectID) (bool, error)
 	GetFederationStats(ctx context.Context, startDate, endDate time.Time) (*models.FederationStats, error)
+	GetTrafficReport(ctx context.Context, startDate, endDate time.Time) (*models.TrafficReport, error)
 	CreateIndexes(ctx context.Context) error
 }
 
@@ -33,6 +34,7 @@ type ReportService interface {
 	GetFederationReports(ctx context.Context, startStr, endStr string) (*models.FederationStats, error)
 	GetInteractionReport(ctx context.Context, userID string, startStr, endStr string) (*models.InteractionReport, error)
 	GetInteractionMadeReport(ctx context.Context, userID string, startStr, endStr string) (*models.InteractionReport, error)
+	GetTrafficReport(ctx context.Context, startStr, endStr string) (*models.TrafficReport, error)
 }
 
 type SubmitReportRequest struct {
