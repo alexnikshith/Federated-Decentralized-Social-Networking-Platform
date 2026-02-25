@@ -1,5 +1,6 @@
 import React from 'react';
 import { User } from '../../identity/types';
+import { AdminStats } from '../types';
 import {
     Table,
     TableBody,
@@ -44,13 +45,14 @@ import { cn } from '@/lib/utils';
 
 interface UserManagementProps {
     users: User[];
+    stats: AdminStats | null;
     loading: boolean;
     onToggleStatus: (userId: string, currentStatus: boolean) => void;
     onDeleteUser: (userId: string) => void;
     onRefresh: () => void;
 }
 
-const UserManagement: React.FC<UserManagementProps> = ({ users, loading, onToggleStatus, onDeleteUser, onRefresh }) => {
+const UserManagement: React.FC<UserManagementProps> = ({ users, stats, loading, onToggleStatus, onDeleteUser, onRefresh }) => {
     const { user: currentUser } = useAuthStore();
     const [selectedUser, setSelectedUser] = React.useState<User | null>(null);
     const [isModalOpen, setIsModalOpen] = React.useState(false);
@@ -265,6 +267,21 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, loading, onToggl
 
     return (
         <div className="flex flex-col gap-6">
+            {/* Integrated Statistics Section */}
+            {!loading && (
+                <div className="flex flex-wrap gap-4">
+                    <div className="p-4 rounded-xl bg-card/20 border border-border/40 backdrop-blur-sm flex items-center gap-4 min-w-[200px]">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                            <UserCog className="h-5 w-5 text-primary" />
+                        </div>
+                        <div className="space-y-0.5">
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Members</p>
+                            <h4 className="text-xl font-bold">{stats?.total_users || 0}</h4>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Search and Filter Controls */}
             <div className="flex flex-col sm:flex-row gap-4 items-end sm:items-center justify-between">
                 <div className="relative w-full sm:w-72 bg-card/30 backdrop-blur-sm border border-border/40 rounded-md flex items-center">

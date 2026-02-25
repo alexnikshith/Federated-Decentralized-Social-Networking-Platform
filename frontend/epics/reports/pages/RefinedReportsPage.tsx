@@ -10,7 +10,7 @@ import {
     addMonths,
     subMonths
 } from 'date-fns';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, BarChart3, FileLineChart } from 'lucide-react';
 
 import { useReportsApi } from '../api/reportsApi';
 import TimeUsageChart from '../components/TimeUsageChart';
@@ -19,10 +19,17 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
+import { useNavigate, useSearchParams } from 'react-router-dom';
+
 export const RefinedReportsPage: React.FC = () => {
     const { useActivityReport, useInteractionReport, useInteractionMadeReport } = useReportsApi();
+    const [searchParams, setSearchParams] = useSearchParams();
 
-    const [activeTab, setActiveTab] = useState<'time-usage' | 'interactions' | 'posts'>('time-usage');
+    const activeTab = (searchParams.get('tab') as 'time-usage' | 'interactions' | 'posts') || 'time-usage';
+    const setActiveTab = (tab: string) => {
+        setSearchParams({ tab });
+    };
+
     const [interactionSection, setInteractionSection] = useState<'received' | 'made'>('received');
     const [currentDate, setCurrentDate] = useState(new Date());
     const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
@@ -129,39 +136,24 @@ export const RefinedReportsPage: React.FC = () => {
     return (
         <div className="container mx-auto p-6 space-y-6">
 
-            {/* 1. Full-width Title Header */}
             <div>
-                <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
+                <div className="flex items-center gap-2">
+                    {activeTab === 'time-usage' && <Clock className="h-6 w-6 text-primary" />}
+                    {activeTab === 'interactions' && <BarChart3 className="h-6 w-6 text-primary" />}
+                    {activeTab === 'posts' && <FileLineChart className="h-6 w-6 text-primary" />}
+                    <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-orange-500 bg-clip-text text-transparent">
+                        {activeTab === 'time-usage' && 'Time Usage'}
+                        {activeTab === 'interactions' && 'Interactions'}
+                        {activeTab === 'posts' && 'Posts'}
+                    </h1>
+                </div>
                 <p className="text-muted-foreground">
-                    Monitor your activity and usage patterns over time.
+                    {activeTab === 'time-usage' && 'Monitor your daily usage and plateform engagement patterns.'}
+                    {activeTab === 'interactions' && 'Track how users are interacting with your content.'}
+                    {activeTab === 'posts' && 'Analyze your posting frequency and impact across the network.'}
                 </p>
             </div>
 
-            {/* 2. Full-width Tabs Navigation */}
-            <div className="w-full border-b">
-                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'time-usage' | 'interactions' | 'posts')} className="w-full">
-                    <TabsList className="w-full justify-start h-12 bg-transparent border-b-0 rounded-none p-0">
-                        <TabsTrigger
-                            value="time-usage"
-                            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6"
-                        >
-                            Time Usage
-                        </TabsTrigger>
-                        <TabsTrigger
-                            value="interactions"
-                            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6"
-                        >
-                            Interactions
-                        </TabsTrigger>
-                        <TabsTrigger
-                            value="posts"
-                            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6"
-                        >
-                            Posts
-                        </TabsTrigger>
-                    </TabsList>
-                </Tabs>
-            </div>
 
 
             {/* Time Usage Tab Content */}
@@ -192,10 +184,26 @@ export const RefinedReportsPage: React.FC = () => {
                                         <CardTitle className="text-sm font-medium">Total time spent till date</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <div className="text-2xl font-bold">
-                                            {Math.floor(allTimeActivityReport?.total_hours || 0)}h {Math.round(((allTimeActivityReport?.total_hours || 0) % 1) * 60)}m
+                                        <div className="flex items-center gap-1.5">
+                                            {(() => {
+                                                const h = Math.floor(allTimeActivityReport?.total_hours || 0).toString().padStart(2, '0');
+                                                const m = Math.round(((allTimeActivityReport?.total_hours || 0) % 1) * 60).toString().padStart(2, '0');
+                                                return (
+                                                    <>
+                                                        <div className="flex flex-col items-center">
+                                                            <span className="text-2xl font-bold leading-none">{h}</span>
+                                                            <span className="text-[10px] text-muted-foreground/60 font-medium mt-1">hh</span>
+                                                        </div>
+                                                        <span className="text-xl font-bold leading-none text-muted-foreground/40 pb-4">:</span>
+                                                        <div className="flex flex-col items-center">
+                                                            <span className="text-2xl font-bold leading-none">{m}</span>
+                                                            <span className="text-[10px] text-muted-foreground/60 font-medium mt-1">mm</span>
+                                                        </div>
+                                                    </>
+                                                );
+                                            })()}
                                         </div>
-                                        <p className="text-xs text-muted-foreground">
+                                        <p className="text-xs text-muted-foreground mt-2">
                                             Total lifetime activity
                                         </p>
                                     </CardContent>
@@ -207,14 +215,28 @@ export const RefinedReportsPage: React.FC = () => {
                                         <CardTitle className="text-sm font-medium">Time spent today</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <div className="text-2xl font-bold">
+                                        <div className="flex items-center gap-1.5">
                                             {(() => {
                                                 // Calculate minutes from total_hours for today's report
                                                 const totalMinutes = Math.round((todayActivityReport?.total_hours || 0) * 60);
-                                                return `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`;
+                                                const h = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
+                                                const m = (totalMinutes % 60).toString().padStart(2, '0');
+                                                return (
+                                                    <>
+                                                        <div className="flex flex-col items-center">
+                                                            <span className="text-2xl font-bold leading-none">{h}</span>
+                                                            <span className="text-[10px] text-muted-foreground/60 font-medium mt-1">hh</span>
+                                                        </div>
+                                                        <span className="text-xl font-bold leading-none text-muted-foreground/40 pb-4">:</span>
+                                                        <div className="flex flex-col items-center">
+                                                            <span className="text-2xl font-bold leading-none">{m}</span>
+                                                            <span className="text-[10px] text-muted-foreground/60 font-medium mt-1">mm</span>
+                                                        </div>
+                                                    </>
+                                                );
                                             })()}
                                         </div>
-                                        <p className="text-xs text-muted-foreground">
+                                        <p className="text-xs text-muted-foreground mt-2">
                                             Activity for {format(new Date(), 'MMM d, yyyy')}
                                         </p>
                                     </CardContent>

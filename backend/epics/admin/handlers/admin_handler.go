@@ -9,6 +9,9 @@ import (
 	"log"
 	"net/http"
 
+	reportRepo "federated-social/backend/epics/reports/repository"
+	reportService "federated-social/backend/epics/reports/service"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -21,6 +24,7 @@ type AdminHandler struct {
 	followRepo       *contentRepo.FollowRepository
 	notificationRepo *contentRepo.NotificationRepository
 	postService      *service.PostService
+	reportService    reportService.ReportService
 	emailSender      *email.EmailSender
 }
 
@@ -33,6 +37,7 @@ func NewAdminHandler() *AdminHandler {
 		followRepo:       contentRepo.NewFollowRepository(),
 		notificationRepo: contentRepo.NewNotificationRepository(),
 		postService:      service.NewPostService(),
+		reportService:    reportService.NewReportService(reportRepo.NewReportRepository()),
 		emailSender:      email.NewEmailSender(),
 	}
 }
@@ -58,6 +63,23 @@ func (h *AdminHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(stats)
+}
+
+func (h *AdminHandler) GetTraffic(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	query := r.URL.Query()
+	startStr := query.Get("start_date")
+	endStr := query.Get("end_date")
+
+	report, err := h.reportService.GetTrafficReport(ctx, startStr, endStr)
+	if err != nil {
+		http.Error(w, "Failed to fetch traffic stats", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(report)
 }
 
 func (h *AdminHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
@@ -227,7 +249,7 @@ func (h *AdminHandler) ResolveReport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	oid, _ := primitive.ObjectIDFromHex(reportID)
-	
+
 	// 1. Get the report to find PostID
 	report, err := h.postRepo.GetReportByID(r.Context(), oid)
 	if err != nil {
