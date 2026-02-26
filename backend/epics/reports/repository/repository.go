@@ -563,6 +563,35 @@ func (r *ReportRepository) GetTrafficReport(ctx context.Context, startDate, endD
 		}
 	}
 
+	// 4. Deleted Users (Count by deleted_at)
+	deletedUsersCollection := database.GetCollection("deleted_users")
+	deletedPipeline := []bson.M{
+		{"$match": bson.M{"deleted_at": bson.M{"$gte": normalizedStart, "$lte": normalizedEnd}}},
+		{"$group": bson.M{
+			"_id": bson.M{
+				"$dateToString": bson.M{"format": "%Y-%m-%d", "date": "$deleted_at"},
+			},
+			"count": bson.M{"$sum": 1},
+		}},
+	}
+	deletedCursor, _ := deletedUsersCollection.Aggregate(ctx, deletedPipeline)
+	if deletedCursor != nil {
+		defer deletedCursor.Close(ctx)
+		for deletedCursor.Next(ctx) {
+			var result struct {
+				DateStr string `bson:"_id"`
+				Count   int    `bson:"count"`
+			}
+			if err := deletedCursor.Decode(&result); err == nil {
+				if dailyMap[result.DateStr] == nil {
+					t, _ := time.Parse("2006-01-02", result.DateStr)
+					dailyMap[result.DateStr] = &models.DailyTraffic{Date: t}
+				}
+				dailyMap[result.DateStr].DeletedUsers = result.Count
+			}
+		}
+	}
+
 	// Convert map to slice
 	var traffic []models.DailyTraffic
 	for _, t := range dailyMap {
