@@ -25,6 +25,7 @@ const TrafficChart: React.FC<TrafficChartProps> = ({ data, loading }) => {
 
     const formattedData = data.map(d => ({
         ...d,
+        deleted_users: d.deleted_users ? -d.deleted_users : 0,
         formattedDate: format(parseISO(d.date), 'MMM d'),
         fullDate: format(parseISO(d.date), 'MMMM d, yyyy'),
     }));
@@ -48,17 +49,25 @@ const TrafficChart: React.FC<TrafficChartProps> = ({ data, loading }) => {
     const CustomTooltip = ({ active, payload }: any) => {
         if (active && payload && payload.length) {
             const date = payload[0].payload.fullDate;
-            const value = payload[0].value;
             return (
                 <div className="bg-popover border border-border p-3 rounded-lg shadow-lg">
                     <p className="text-muted-foreground text-[11px] mb-1 font-medium">{date}</p>
-                    <div className="flex flex-col">
-                        <span className="text-popover-foreground font-bold text-lg leading-none">
-                            {value}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground/60 font-medium mt-1 uppercase tracking-wider">
-                            {getMetricLabel(activeMetric)}
-                        </span>
+                    <div className="flex flex-col gap-2">
+                        {payload.map((entry: any, index: number) => {
+                            // Don't show deleted users if it's 0 to keep tooltip clean
+                            if (entry.dataKey === 'deleted_users' && entry.value === 0) return null;
+
+                            return (
+                                <div key={index} className="flex flex-col">
+                                    <span className="text-popover-foreground font-bold text-lg leading-none" style={{ color: entry.stroke || entry.color }}>
+                                        {Math.abs(entry.value)}
+                                    </span>
+                                    <span className="text-[10px] text-muted-foreground/60 font-medium mt-1 uppercase tracking-wider">
+                                        {entry.dataKey === 'deleted_users' ? 'Deleted Users' : getMetricLabel(activeMetric)}
+                                    </span>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             );
@@ -103,6 +112,12 @@ const TrafficChart: React.FC<TrafficChartProps> = ({ data, loading }) => {
                                     <stop offset="5%" stopColor={getMetricColor(activeMetric)} stopOpacity={0.3} />
                                     <stop offset="95%" stopColor={getMetricColor(activeMetric)} stopOpacity={0} />
                                 </linearGradient>
+                                {activeMetric === 'users' && (
+                                    <linearGradient id="colorMetricDeleted" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0} />
+                                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0.3} />
+                                    </linearGradient>
+                                )}
                             </defs>
                             <CartesianGrid vertical={false} strokeDasharray="3 3" strokeOpacity={0.1} />
                             <XAxis
@@ -129,6 +144,17 @@ const TrafficChart: React.FC<TrafficChartProps> = ({ data, loading }) => {
                                 fill="url(#colorMetric)"
                                 animationDuration={1000}
                             />
+                            {activeMetric === 'users' && (
+                                <Area
+                                    type="monotone"
+                                    dataKey="deleted_users"
+                                    stroke="#ef4444"
+                                    strokeWidth={2}
+                                    fillOpacity={1}
+                                    fill="url(#colorMetricDeleted)"
+                                    animationDuration={1000}
+                                />
+                            )}
                         </AreaChart>
                     </ResponsiveContainer>
                 </div>

@@ -73,8 +73,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, stats, loading, 
         const lowerQuery = searchQuery.toLowerCase();
         filteredUsers = filteredUsers.filter(u =>
             u.username.toLowerCase().includes(lowerQuery) ||
-            (u.display_name && u.display_name.toLowerCase().includes(lowerQuery)) ||
-            (u.email && u.email.toLowerCase().includes(lowerQuery))
+            (u.display_name && u.display_name.toLowerCase().includes(lowerQuery))
         );
     }
 
@@ -117,7 +116,6 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, stats, loading, 
                     </div>
                 </div>
             </TableCell>
-            <TableCell className="text-sm">{user.email || 'N/A'}</TableCell>
             <TableCell className="text-sm">
                 {user.created_at ? new Date(user.created_at as string).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A'}
             </TableCell>
@@ -237,7 +235,6 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, stats, loading, 
                 <TableHeader className="bg-muted/50">
                     <TableRow>
                         <TableHead className="w-[250px]">User</TableHead>
-                        <TableHead>Email</TableHead>
                         <TableHead>Joined Date</TableHead>
                         <TableHead>Role</TableHead>
                         <TableHead>Status</TableHead>
@@ -248,14 +245,14 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, stats, loading, 
                     {loading ? (
                         Array.from({ length: 5 }).map((_, i) => (
                             <TableRow key={i}>
-                                <TableCell colSpan={6} className="h-16 animate-pulse bg-muted/20" />
+                                <TableCell colSpan={5} className="h-16 animate-pulse bg-muted/20" />
                             </TableRow>
                         ))
                     ) : userList.length > 0 ? (
                         userList.map(user => renderUserRow(user, user.id === currentUser?.id))
                     ) : (
                         <TableRow>
-                            <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                            <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                                 {searchQuery ? `No ${listTypeLabel.toLowerCase()} found for "${searchQuery}"` : `No ${listTypeLabel.toLowerCase()} found.`}
                             </TableCell>
                         </TableRow>
@@ -283,23 +280,23 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, stats, loading, 
             )}
 
             {/* Search and Filter Controls */}
-            <div className="flex flex-col sm:flex-row gap-4 items-end sm:items-center justify-between">
-                <div className="relative w-full sm:w-72 bg-card/30 backdrop-blur-sm border border-border/40 rounded-md flex items-center">
+            <div className="flex flex-col sm:flex-row gap-4 items-center justify-between w-full">
+                <div className="relative flex-1 bg-card/30 backdrop-blur-sm border border-border/40 rounded-md flex items-center">
                     <Search className="absolute left-3 text-muted-foreground w-4 h-4 pointer-events-none" />
                     <Input
-                        placeholder="Search users by name, username or email..."
+                        placeholder="Search users by name or username..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="pl-9 bg-transparent border-0 focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0 h-10 w-full"
                     />
                 </div>
 
-                <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
                     <Select value={sortOrder} onValueChange={(val: any) => setSortOrder(val)}>
-                        <SelectTrigger className="w-full sm:w-[180px] bg-card/30 backdrop-blur-sm border-border/40">
+                        <SelectTrigger className="w-full sm:w-[220px] bg-card/30 backdrop-blur-sm border-border/40">
                             <div className="flex items-center gap-2">
                                 <ArrowUpDown className="h-4 w-4 opacity-70" />
-                                <span>Sort by</span>
+                                <SelectValue placeholder="Sort by" />
                             </div>
                         </SelectTrigger>
                         <SelectContent>
@@ -311,24 +308,30 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, stats, loading, 
                 </div>
             </div>
 
-            <Tabs defaultValue="users" className="w-full mt-2">
-                <TabsList className="bg-muted/30 backdrop-blur-sm border border-border/40">
-                    <TabsTrigger value="users" className="gap-2">
-                        Users <Badge variant="secondary" className="px-1.5 py-0 h-4 text-[10px] bg-background/50">{standardUsers.length}</Badge>
-                    </TabsTrigger>
-                    <TabsTrigger value="admins" className="gap-2">
-                        Admins <Badge variant="secondary" className="px-1.5 py-0 h-4 text-[10px] bg-background/50">{admins.length}</Badge>
-                    </TabsTrigger>
-                </TabsList>
+            {searchQuery.trim() ? (
+                <div className="mt-2 text-sm text-muted-foreground w-full">
+                    {renderTableContent(sortedUsers, "Users")}
+                </div>
+            ) : (
+                <Tabs defaultValue="users" className="w-full mt-2">
+                    <TabsList className="bg-muted/30 backdrop-blur-sm border border-border/40">
+                        <TabsTrigger value="users" className="gap-2">
+                            Users <Badge variant="secondary" className="px-1.5 py-0 h-4 text-[10px] bg-background/50">{standardUsers.length}</Badge>
+                        </TabsTrigger>
+                        <TabsTrigger value="admins" className="gap-2">
+                            Admins <Badge variant="secondary" className="px-1.5 py-0 h-4 text-[10px] bg-background/50">{admins.length}</Badge>
+                        </TabsTrigger>
+                    </TabsList>
 
-                <TabsContent value="users" className="mt-4">
-                    {renderTableContent(standardUsers, "Users")}
-                </TabsContent>
+                    <TabsContent value="users" className="mt-4">
+                        {renderTableContent(standardUsers, "Users")}
+                    </TabsContent>
 
-                <TabsContent value="admins" className="mt-4">
-                    {renderTableContent(admins, "Admins")}
-                </TabsContent>
-            </Tabs>
+                    <TabsContent value="admins" className="mt-4">
+                        {renderTableContent(admins, "Admins")}
+                    </TabsContent>
+                </Tabs>
+            )}
 
             <ManageUserModal
                 user={selectedUser}
