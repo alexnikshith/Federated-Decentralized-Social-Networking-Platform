@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { authApi } from "../../../epics/identity/api/client";
 import { useAuthStore } from "../../../epics/identity/store/authStore";
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Globe, ArrowRight, Eye, EyeOff, Shield, Check, Users, ArrowLeft } from "lucide-react";
+import { Globe, ArrowRight, Eye, EyeOff, Shield, Check, Users, ArrowLeft, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { COMMUNITIES, DEFAULT_COMMUNITY } from "../../config/communities";
 
@@ -26,6 +26,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
     const [selectedInstanceId, setSelectedInstanceId] = useState(DEFAULT_COMMUNITY.id);
     const [customInstance] = useState("");
     // Form field states
+    const [displayName, setDisplayName] = useState("");
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -35,6 +36,11 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
     const [agreedToTerms, setAgreedToTerms] = useState(false);
     // Loading state for submission
     const [isLoading, setIsLoading] = useState(false);
+
+    // Username validation states
+    const [usernameError, setUsernameError] = useState('');
+    const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+    const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
 
     const handleCommunitySelect = (community: typeof COMMUNITIES[0]) => {
         setSelectedInstanceId(community.id);
@@ -61,9 +67,51 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
         }
     };
 
+    // Real-time username check with debounce
+    useEffect(() => {
+        if (!username) {
+            setUsernameError('');
+            setUsernameAvailable(null);
+            return;
+        }
+
+        if (username.includes(' ')) {
+            setUsernameError('Username cannot contain spaces');
+            setUsernameAvailable(null);
+            return;
+        }
+
+        if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+            setUsernameError('Only letters, numbers and underscores allowed');
+            setUsernameAvailable(null);
+            return;
+        }
+
+        setUsernameError('');
+        const timer = setTimeout(async () => {
+            setIsCheckingUsername(true);
+            try {
+                const taken = await authApi.checkUsername(username);
+                setUsernameAvailable(!taken);
+                if (taken) {
+                    setUsernameError('This username is already taken');
+                }
+            } catch (err) {
+                console.error('Failed to check username', err);
+            } finally {
+                setIsCheckingUsername(false);
+            }
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [username]);
+
     // Handle form submission
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (usernameError || usernameAvailable === false) return;
+
         setIsLoading(true);
 
         try {
@@ -73,6 +121,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
             }
 
             await authApi.signup({
+                display_name: displayName,
                 username,
                 email,
                 password,
@@ -96,7 +145,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
     const currentInstanceUrl = selectedComm?.url || "";
 
     return (
-        <div className="w-full h-full flex flex-col justify-center">
+        <div className="w-full min-h-full flex flex-col justify-center py-8">
             {/* Back navigation button (optional) */}
             {!hideBackNav && (
                 <div className="absolute top-4 left-4 md:top-8 md:left-8 z-[10]">
@@ -166,21 +215,47 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                         <Label className="text-base font-medium">Account Details</Label>
 
                         <div className="space-y-2">
-                            <Label htmlFor="username">Username</Label>
-                            <div className="flex items-center gap-2">
-                                <span className="text-muted-foreground text-lg">@</span>
+                            <Label htmlFor="display_name">Display Name</Label>
+                            <Input
+                                id="display_name"
+                                type="text"
+                                placeholder="John Doe"
+                                value={displayName}
+                                onChange={(e) => setDisplayName(e.target.value)}
+                                className="h-11 bg-secondary border-border"
+                                required
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <Label htmlFor="username">Username</Label>
+                                {isCheckingUsername && <Loader2 className="w-3 h-3 text-primary animate-spin" />}
+                            </div>
+                            <div className="flex items-center gap-2 relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-lg z-10">@</span>
                                 <Input
                                     id="username"
                                     type="text"
                                     placeholder="your_username"
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value.toLowerCase())}
-                                    className="h-11 bg-secondary border-border flex-1"
+                                    className={cn(
+                                        "h-11 pl-8 pr-10 bg-secondary flex-1 transition-all",
+                                        usernameError ? "border-destructive focus-visible:ring-destructive" : "border-border"
+                                    )}
+                                    required
                                 />
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                    {usernameAvailable === true && !usernameError && <Check className="w-4 h-4 text-emerald-500" />}
+                                </div>
                             </div>
+                            {usernameError && (
+                                <p className="text-[10px] font-bold text-destructive animate-in fade-in slide-in-from-top-1 ml-1">{usernameError}</p>
+                            )}
                             {currentInstanceUrl && username && (
-                                <p className="text-xs text-muted-foreground">
-                                    Your full handle: <span className="text-primary font-medium">@{username}@{currentInstanceUrl.replace('http://', '')}</span>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Your full handle: <span className="text-primary font-medium">@{username}@{currentInstanceUrl.replace(/^https?:\/\//, '')}</span>
                                 </p>
                             )}
                         </div>
@@ -194,6 +269,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="h-11 bg-secondary border-border"
+                                required
                             />
                         </div>
 
@@ -207,6 +283,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     className="h-11 bg-secondary border-border pr-10"
+                                    required
                                 />
                                 <button
                                     type="button"
@@ -246,6 +323,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                                 checked={agreedToTerms}
                                 onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
                                 className="mt-1"
+                                required
                             />
                             <label htmlFor="terms" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
                                 I agree to the <Link to="/terms" className="text-primary hover:underline">Terms of Service</Link> and <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
@@ -257,9 +335,14 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                         type="submit"
                         variant="hero"
                         className="w-full h-11 text-base mt-2"
-                        disabled={!selectedInstanceId || !username || !email || !password || !agreedToTerms || isLoading}
+                        disabled={!selectedInstanceId || !username || !email || !password || !agreedToTerms || isLoading || !!usernameError || usernameAvailable === false}
                     >
-                        {isLoading ? "Creating Account..." : (
+                        {isLoading ? (
+                            <>
+                                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                Creating Account...
+                            </>
+                        ) : (
                             <>
                                 Create Account
                                 <ArrowRight className="w-4 h-4 ml-2" />
