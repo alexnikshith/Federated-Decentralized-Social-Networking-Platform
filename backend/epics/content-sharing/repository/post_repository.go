@@ -598,9 +598,16 @@ func (r *PostRepository) DeleteCommentsByUser(ctx context.Context, userID primit
 	return err
 }
 
-// CountPostsByAuthor returns the number of posts by a specific user
+// CountPostsByAuthor returns the number of active posts by a specific user
 func (r *PostRepository) CountPostsByAuthor(ctx context.Context, userID primitive.ObjectID) (int64, error) {
-	return r.posts.CountDocuments(ctx, bson.M{"author_id": userID})
+	filter := bson.M{
+		"author_id": userID,
+		"$or": []bson.M{
+			{"status": "active"},
+			{"status": bson.M{"$exists": false}},
+		},
+	}
+	return r.posts.CountDocuments(ctx, filter)
 }
 
 // CountAll returns the total number of posts
