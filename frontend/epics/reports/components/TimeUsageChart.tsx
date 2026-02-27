@@ -140,10 +140,6 @@ const TimeUsageChart: React.FC<TimeUsageChartProps> = ({
             <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0 pb-8">
                 <div>
                     <CardTitle>Activity Overview</CardTitle>
-                    <CardDescription>
-                        {view === 'weekly' && 'Daily usage for the selected week'}
-                        {view === 'monthly' && 'Daily usage for the selected month'}
-                    </CardDescription>
                     {periodTotal !== undefined && (
                         <div className="mt-2">
                             <div className="flex items-center gap-1.5">

@@ -17,13 +17,18 @@ import {
     X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
+import { TransitionState } from '../../../epics/identity/store/authStore';
 import './Dashboard.css';
 
 export const DashboardPage: React.FC = () => {
-    const { user } = useAuthStore();
+    const { user, transitionState } = useAuthStore();
     const { posts, loading, error, fetchFeed, fetchUnreadCount, unreadCount, feedType, setFeedType } = useContentStore();
     const [sidebarType, setSidebarType] = useState<'notifications' | 'search' | null>(null);
     const [searchParams, setSearchParams] = useSearchParams();
+
+    // The dashboard should only render its cards *after* the cinematic 3D DOM_HANDOFF has reached COMPLETE or IDLE
+    const isReady = transitionState === TransitionState.COMPLETE || transitionState === TransitionState.IDLE;
 
     useEffect(() => {
         if (searchParams.get('search') === 'true') {
@@ -63,9 +68,20 @@ export const DashboardPage: React.FC = () => {
                     <div className="feed-section stagger-2 min-w-0">
 
                         {/* New Top Content Layout */}
-                        <StoriesRow />
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: isReady ? 1 : 0, y: isReady ? 0 : 20 }}
+                            transition={{ duration: 0.8, delay: 0.1, ease: 'easeOut' }}
+                        >
+                            <StoriesRow />
+                        </motion.div>
 
-                        <div className="flex items-center justify-between mb-4">
+                        <motion.div
+                            className="flex items-center justify-between mb-4"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: isReady ? 1 : 0, y: isReady ? 0 : 20 }}
+                            transition={{ duration: 0.8, delay: 0.3, ease: 'easeOut' }}
+                        >
                             <h2 className="section-title mb-0">
                                 <Rss className="w-5 h-5 text-primary" />
                                 {feedType === 'home' ? 'For You' : 'Public Feed'}
@@ -90,9 +106,14 @@ export const DashboardPage: React.FC = () => {
                                     Public
                                 </button>
                             </div>
-                        </div>
+                        </motion.div>
 
-                        <div className="space-y-4">
+                        <motion.div
+                            className="space-y-4"
+                            initial={{ opacity: 0, scale: 0.98 }}
+                            animate={{ opacity: isReady ? 1 : 0, scale: isReady ? 1 : 0.98 }}
+                            transition={{ duration: 0.8, delay: 0.5, ease: 'easeOut' }}
+                        >
                             {loading && (!posts || posts.length === 0) && (
                                 <div className="feed-loading">
                                     <div className="animate-pulse">Loading your feed...</div>
@@ -123,11 +144,17 @@ export const DashboardPage: React.FC = () => {
                                         </div>
                                     </div>
                                 ))}
-                        </div>
+                        </motion.div>
                     </div>
 
                     {/* Right Sidebar */}
-                    <RightSidebar />
+                    <motion.div
+                        initial={{ opacity: 0, x: 50 }}
+                        animate={{ opacity: isReady ? 1 : 0, x: isReady ? 0 : 50 }}
+                        transition={{ duration: 0.8, delay: 0.7, ease: 'easeOut' }}
+                    >
+                        <RightSidebar />
+                    </motion.div>
 
                     {/* Overlay */}
                     {sidebarType && (

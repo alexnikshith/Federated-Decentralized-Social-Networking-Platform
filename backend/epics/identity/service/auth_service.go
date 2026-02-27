@@ -86,6 +86,11 @@ func (s *AuthService) Signup(ctx context.Context, req dto.SignupRequest) (*model
 		return nil, err
 	}
 
+	avatarURL := req.AvatarURL
+	if avatarURL == "" {
+		avatarURL = "/avatars/avatar_1.png"
+	}
+
 	// Create user
 	user := &models.User{
 		Username:          req.Username,
@@ -98,6 +103,7 @@ func (s *AuthService) Signup(ctx context.Context, req dto.SignupRequest) (*model
 		IsActive:          true,
 		Role:              "user",
 		IsDiscoverable:    req.IsDiscoverable,
+		AvatarURL:         avatarURL,
 	}
 
 	if err := s.userRepo.CreateUser(ctx, user); err != nil {

@@ -113,10 +113,23 @@ export const authApi = {
         return response.data;
     },
 
-    // Resets password with OTP
+    // Resets password using verification code
     resetPassword: async (data: any): Promise<ApiResponse<null>> => {
         const response = await api.post('/api/auth/reset-password', data);
         return response.data;
+    },
+
+    // Uploads a custom avatar image
+    uploadAvatar: async (file: File): Promise<{ url: string }> => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await api.post('/api/auth/upload-avatar', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        // The backend returns { success: true, message: "...", data: { url: "..." } }
+        return response.data.data;
     },
 
     // Logs out the current user server-side

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { authApi } from "../../../epics/identity/api/client";
 import { useAuthStore } from "../../../epics/identity/store/authStore";
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Globe, ArrowRight, Eye, EyeOff, Shield, Check, Users, ArrowLeft } from "lucide-react";
+import { Globe, ArrowRight, Eye, EyeOff, Shield, Check, Users, ArrowLeft, Loader2, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { COMMUNITIES, DEFAULT_COMMUNITY } from "../../config/communities";
 
@@ -26,15 +26,26 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
     const [selectedInstanceId, setSelectedInstanceId] = useState(DEFAULT_COMMUNITY.id);
     const [customInstance] = useState("");
     // Form field states
+    const [displayName, setDisplayName] = useState("");
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [selectedAvatar, setSelectedAvatar] = useState("/avatars/avatar_1.png");
     // Terms agreement state
     // Checkbox state for discoverability
     const [isDiscoverable, setIsDiscoverable] = useState(false);
     const [agreedToTerms, setAgreedToTerms] = useState(false);
     // Loading state for submission
     const [isLoading, setIsLoading] = useState(false);
+
+    // Avatar upload state
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+    // Username validation states
+    const [usernameError, setUsernameError] = useState('');
+    const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+    const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
 
     const handleCommunitySelect = (community: typeof COMMUNITIES[0]) => {
         setSelectedInstanceId(community.id);
@@ -61,9 +72,82 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
         }
     };
 
+    // Real-time username check with debounce
+    useEffect(() => {
+        if (!username) {
+            setUsernameError('');
+            setUsernameAvailable(null);
+            return;
+        }
+
+        if (username.includes(' ')) {
+            setUsernameError('Username cannot contain spaces');
+            setUsernameAvailable(null);
+            return;
+        }
+
+        if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+            setUsernameError('Only letters, numbers and underscores allowed');
+            setUsernameAvailable(null);
+            return;
+        }
+
+        setUsernameError('');
+        const timer = setTimeout(async () => {
+            setIsCheckingUsername(true);
+            try {
+                const taken = await authApi.checkUsername(username);
+                setUsernameAvailable(!taken);
+                if (taken) {
+                    setUsernameError('This username is already taken');
+                }
+            } catch (err) {
+                console.error('Failed to check username', err);
+            } finally {
+                setIsCheckingUsername(false);
+            }
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [username]);
+
+    // Handle custom avatar upload
+    const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            toast.error('Please select an image file');
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('Image must be less than 5MB');
+            return;
+        }
+
+        setUploadingAvatar(true);
+
+        try {
+            const { url } = await authApi.uploadAvatar(file);
+            setSelectedAvatar(url);
+            toast.success('Avatar uploaded successfully');
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || 'Failed to upload avatar');
+        } finally {
+            setUploadingAvatar(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        }
+    };
+
     // Handle form submission
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (usernameError || usernameAvailable === false) return;
+
         setIsLoading(true);
 
         try {
@@ -73,10 +157,12 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
             }
 
             await authApi.signup({
+                display_name: displayName,
                 username,
                 email,
                 password,
                 is_discoverable: isDiscoverable,
+                avatar_url: selectedAvatar,
             });
 
             toast.success("Account created successfully! Please sign in.");
@@ -96,7 +182,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
     const currentInstanceUrl = selectedComm?.url || "";
 
     return (
-        <div className="w-full h-full flex flex-col justify-center">
+        <div className="w-full min-h-full flex flex-col justify-center py-8">
             {/* Back navigation button (optional) */}
             {!hideBackNav && (
                 <div className="absolute top-4 left-4 md:top-8 md:left-8 z-[10]">
@@ -166,21 +252,47 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                         <Label className="text-base font-medium">Account Details</Label>
 
                         <div className="space-y-2">
-                            <Label htmlFor="username">Username</Label>
-                            <div className="flex items-center gap-2">
-                                <span className="text-muted-foreground text-lg">@</span>
+                            <Label htmlFor="display_name">Display Name</Label>
+                            <Input
+                                id="display_name"
+                                type="text"
+                                placeholder="John Doe"
+                                value={displayName}
+                                onChange={(e) => setDisplayName(e.target.value)}
+                                className="h-11 bg-secondary border-border"
+                                required
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <Label htmlFor="username">Username</Label>
+                                {isCheckingUsername && <Loader2 className="w-3 h-3 text-primary animate-spin" />}
+                            </div>
+                            <div className="flex items-center gap-2 relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-lg z-10">@</span>
                                 <Input
                                     id="username"
                                     type="text"
                                     placeholder="your_username"
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value.toLowerCase())}
-                                    className="h-11 bg-secondary border-border flex-1"
+                                    className={cn(
+                                        "h-11 pl-8 pr-10 bg-secondary flex-1 transition-all",
+                                        usernameError ? "border-destructive focus-visible:ring-destructive" : "border-border"
+                                    )}
+                                    required
                                 />
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                    {usernameAvailable === true && !usernameError && <Check className="w-4 h-4 text-emerald-500" />}
+                                </div>
                             </div>
+                            {usernameError && (
+                                <p className="text-[10px] font-bold text-destructive animate-in fade-in slide-in-from-top-1 ml-1">{usernameError}</p>
+                            )}
                             {currentInstanceUrl && username && (
-                                <p className="text-xs text-muted-foreground">
-                                    Your full handle: <span className="text-primary font-medium">@{username}@{currentInstanceUrl.replace('http://', '')}</span>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Your full handle: <span className="text-primary font-medium">@{username}@{currentInstanceUrl.replace(/^https?:\/\//, '')}</span>
                                 </p>
                             )}
                         </div>
@@ -194,6 +306,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="h-11 bg-secondary border-border"
+                                required
                             />
                         </div>
 
@@ -207,6 +320,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     className="h-11 bg-secondary border-border pr-10"
+                                    required
                                 />
                                 <button
                                     type="button"
@@ -219,6 +333,71 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                             <p className="text-xs text-muted-foreground">
                                 Minimum 8 characters with at least one number and symbol
                             </p>
+                        </div>
+                    </div>
+
+                    <div className="pt-2 space-y-4">
+                        <Label className="text-base font-medium">Choose Your Avatar</Label>
+                        <div className="grid grid-cols-4 gap-3 bg-secondary/10 p-4 rounded-xl border border-border/50">
+                            {selectedAvatar && !selectedAvatar.startsWith('/avatars/') && (
+                                <button
+                                    type="button"
+                                    className="aspect-square rounded-xl overflow-hidden transition-all duration-300 border-2 relative group border-primary scale-110 shadow-lg shadow-primary/30 z-10"
+                                >
+                                    <img src={selectedAvatar} alt="Custom Avatar" className="w-full h-full object-cover" />
+                                    <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                                        <Check className="w-5 h-5 text-white drop-shadow-md" />
+                                    </div>
+                                </button>
+                            )}
+                            {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
+                                <button
+                                    key={num}
+                                    type="button"
+                                    onClick={() => setSelectedAvatar(`/avatars/avatar_${num}.png`)}
+                                    className={cn(
+                                        "aspect-square rounded-xl overflow-hidden transition-all duration-300 border-2 relative group",
+                                        selectedAvatar === `/avatars/avatar_${num}.png`
+                                            ? "border-primary scale-110 shadow-lg shadow-primary/30 z-10"
+                                            : "border-transparent hover:border-primary/50 hover:scale-105"
+                                    )}
+                                >
+                                    <img
+                                        src={`/avatars/avatar_${num}.png`}
+                                        alt={`Avatar option ${num}`}
+                                        className="w-full h-full object-cover"
+                                    />
+                                    {selectedAvatar === `/avatars/avatar_${num}.png` && (
+                                        <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                                            <Check className="w-5 h-5 text-white drop-shadow-md" />
+                                        </div>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Custom Upload Button */}
+                        <div className="w-full mt-2">
+                            <input
+                                type="file"
+                                className="hidden"
+                                ref={fileInputRef}
+                                accept="image/*"
+                                onChange={handleAvatarUpload}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={uploadingAvatar}
+                                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 border-dashed border-primary/30 text-primary hover:bg-primary/5 hover:border-primary/50 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {uploadingAvatar ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <Upload className="w-4 h-4" />
+                                )}
+                                {uploadingAvatar ? 'Uploading...' : 'Upload Custom Image'}
+                            </button>
                         </div>
                     </div>
 
@@ -246,6 +425,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                                 checked={agreedToTerms}
                                 onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
                                 className="mt-1"
+                                required
                             />
                             <label htmlFor="terms" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
                                 I agree to the <Link to="/terms" className="text-primary hover:underline">Terms of Service</Link> and <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
@@ -257,9 +437,14 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                         type="submit"
                         variant="hero"
                         className="w-full h-11 text-base mt-2"
-                        disabled={!selectedInstanceId || !username || !email || !password || !agreedToTerms || isLoading}
+                        disabled={!selectedInstanceId || !username || !email || !password || !agreedToTerms || isLoading || !!usernameError || usernameAvailable === false}
                     >
-                        {isLoading ? "Creating Account..." : (
+                        {isLoading ? (
+                            <>
+                                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                Creating Account...
+                            </>
+                        ) : (
                             <>
                                 Create Account
                                 <ArrowRight className="w-4 h-4 ml-2" />
