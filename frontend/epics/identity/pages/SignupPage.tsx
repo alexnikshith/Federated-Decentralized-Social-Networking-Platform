@@ -162,9 +162,17 @@ export const SignupPage: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="min-h-screen bg-background flex flex-col relative w-full items-center justify-center p-4">
+            {/* Global Cosmos Background */}
+            <div
+                className="fixed inset-0 w-full h-full bg-[url('/cosmos-bg.png')] bg-cover bg-center bg-no-repeat opacity-40 mix-blend-screen pointer-events-none"
+                style={{ filter: "contrast(1.2) brightness(0.8)", zIndex: 0 }}
+            />
+            {/* Global darkening overlay to ensure text readability */}
+            <div className="fixed inset-0 bg-background/60 pointer-events-none" style={{ zIndex: 0 }} />
+
             <div className={cn(
-                "relative w-full transition-all duration-700 ease-in-out flex flex-col md:flex-row gap-8 items-stretch",
+                "relative z-10 w-full transition-all duration-700 ease-in-out flex flex-col md:flex-row gap-8 items-stretch",
                 step === 1 ? "max-w-xl" : "max-w-5xl"
             )}>
                 {/* Left Side - Info / Selection */}
