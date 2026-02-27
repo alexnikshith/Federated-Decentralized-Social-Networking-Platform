@@ -14,7 +14,7 @@ export const SignupPage: React.FC = () => {
     const navigate = useNavigate();
     const setAuth = useAuthStore((state) => state.setAuth);
 
-    const [step, setStep] = useState<1 | 2>(1);
+    const [step, setStep] = useState<1 | 2 | 3>(1);
     const [selectedCommunityId, setSelectedCommunityId] = useState<string>(COMMUNITIES[0].id);
 
     const [formData, setFormData] = useState<SignupRequest>({
@@ -23,6 +23,7 @@ export const SignupPage: React.FC = () => {
         password: '',
         display_name: '',
         is_discoverable: true,
+        avatar_url: '/avatars/avatar_1.png',
     });
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
@@ -100,6 +101,12 @@ export const SignupPage: React.FC = () => {
 
         if (formData.password.length < 8) {
             setError('Password must be at least 8 characters long');
+            return;
+        }
+
+        // Move to step 3 instead of submitting
+        if (step === 2) {
+            setStep(3);
             return;
         }
 
@@ -337,21 +344,24 @@ export const SignupPage: React.FC = () => {
                                     </p>
 
                                     <button
-                                        type="submit"
+                                        type="button"
+                                        onClick={() => {
+                                            if (usernameError || usernameAvailable === false) return;
+                                            if (formData.password !== confirmPassword) {
+                                                setError('Passwords do not match');
+                                                return;
+                                            }
+                                            if (formData.password.length < 8) {
+                                                setError('Password must be at least 8 characters long');
+                                                return;
+                                            }
+                                            setStep(3);
+                                        }}
                                         disabled={loading || !!usernameError || usernameAvailable === false}
                                         className="w-full mt-auto bg-primary hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground font-bold py-4 rounded-2xl transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-3 active:scale-[0.98]"
                                     >
-                                        {loading ? (
-                                            <>
-                                                <Loader2 className="w-5 h-5 animate-spin" />
-                                                Joining the federation...
-                                            </>
-                                        ) : (
-                                            <>
-                                                Create Account
-                                                <ArrowRight className="w-5 h-5" />
-                                            </>
-                                        )}
+                                        Continue to Avatar Selection
+                                        <ArrowRight className="w-5 h-5" />
                                     </button>
                                 </form>
 
@@ -360,6 +370,83 @@ export const SignupPage: React.FC = () => {
                                         Already have an account? <Link to="/login" className="text-primary font-bold hover:underline">Sign in</Link>
                                     </p>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {step === 3 && (
+                    <div className="flex-1 animate-in fade-in slide-in-from-right-8 duration-700 ease-out">
+                        <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative overflow-hidden h-full flex flex-col justify-between">
+                            <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/20 rounded-full blur-3xl" />
+                            <div className="absolute -bottom-24 -left-24 w-32 h-32 bg-primary/10 rounded-full blur-3xl" />
+
+                            <div className="relative z-10 flex flex-col h-full">
+                                <div className="mb-6">
+                                    <button
+                                        onClick={() => setStep(2)}
+                                        className="text-xs font-bold text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 mb-4 uppercase tracking-widest"
+                                    >
+                                        <ChevronLeft className="w-3 h-3" /> Back to Account Details
+                                    </button>
+                                    <h2 className="text-2xl font-bold text-foreground">Choose Your Avatar</h2>
+                                    <p className="text-sm text-muted-foreground">Select an identity for your new account.</p>
+                                </div>
+
+                                <div className="flex-1 flex flex-col items-center justify-center gap-8 py-8">
+                                    <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-primary/20 shadow-xl shadow-primary/10 relative group">
+                                        <img
+                                            src={formData.avatar_url}
+                                            alt="Selected Avatar"
+                                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-4 gap-4 w-full max-w-sm">
+                                        {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
+                                            <button
+                                                key={num}
+                                                type="button"
+                                                onClick={() => setFormData({ ...formData, avatar_url: `/avatars/avatar_${num}.png` })}
+                                                className={cn(
+                                                    "aspect-square rounded-2xl overflow-hidden transition-all duration-300 border-2 relative group",
+                                                    formData.avatar_url === `/avatars/avatar_${num}.png`
+                                                        ? "border-primary scale-110 shadow-lg shadow-primary/30 z-10"
+                                                        : "border-transparent hover:border-primary/50 hover:scale-105"
+                                                )}
+                                            >
+                                                <img
+                                                    src={`/avatars/avatar_${num}.png`}
+                                                    alt={`Avatar option ${num}`}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                                {typeof formData.avatar_url === 'string' && formData.avatar_url.includes(`avatar_${num}.png`) && (
+                                                    <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                                                        <Check className="w-6 h-6 text-white drop-shadow-md" />
+                                                    </div>
+                                                )}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={handleSubmit}
+                                    disabled={loading}
+                                    className="w-full bg-primary hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground font-bold py-4 rounded-2xl transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-3 active:scale-[0.98] mt-auto"
+                                >
+                                    {loading ? (
+                                        <>
+                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                            Joining the federation...
+                                        </>
+                                    ) : (
+                                        <>
+                                            Complete Registration
+                                            <Check className="w-5 h-5" />
+                                        </>
+                                    )}
+                                </button>
                             </div>
                         </div>
                     </div>
