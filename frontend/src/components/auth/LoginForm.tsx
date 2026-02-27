@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Globe, ArrowRight, Eye, EyeOff, Shield, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
+import "./SpaceDevice.css";
 import {
     Select,
     SelectContent,
@@ -155,145 +156,164 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister, hideBackNav = false, 
                     initial={{ opacity: 1, x: 0 }}
                     animate={isLoginExiting ? { opacity: 0, x: 200 } : { opacity: 1, x: 0 }}
                     transition={{ duration: 0.8, ease: "anticipate" }}
+                    className="relative w-full max-w-[650px] mx-auto z-10"
                 >
-                    <form onSubmit={handleSubmit} className="glass-card rounded-2xl p-8 space-y-6 shadow-xl border border-border relative">
-                        {error && (
-                            <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
-                                {error}
-                            </div>
-                        )}
+                    <div className="device-wrapper">
+                        {/* Hardware Details */}
+                        <div className="antenna" />
 
-                        {step === 1 ? (
-                            <>
-                                <div className="space-y-2">
-                                    <Label htmlFor="instance">Instance</Label>
-                                    <Select value={instance} onValueChange={setInstance}>
-                                        <SelectTrigger className="h-11 bg-secondary border-border">
-                                            <div className="flex items-center gap-2">
-                                                <Globe className="w-4 h-4 text-muted-foreground" />
-                                                <SelectValue placeholder="Select community" />
+                        <div className="device-frame">
+                            <div className="corner tl" />
+                            <div className="corner tr" />
+                            <div className="corner bl" />
+                            <div className="corner br" />
+
+                            <div className="side-module left" />
+                            <div className="side-module right" />
+
+                            {/* Inner Screen Panel */}
+                            <div className="screen relative bg-black/80 backdrop-blur-md shadow-[inset_0_0_40px_rgba(0,0,0,0.8)] border border-white/5 overflow-y-auto custom-scrollbar">
+                                <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6 min-h-full flex flex-col justify-center">
+                                    {error && (
+                                        <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm shrink-0">
+                                            {error}
+                                        </div>
+                                    )}
+
+                                    {step === 1 ? (
+                                        <>
+                                            <div className="space-y-2 shrink-0">
+                                                <Label htmlFor="instance">Instance</Label>
+                                                <Select value={instance} onValueChange={setInstance}>
+                                                    <SelectTrigger className="h-11 bg-secondary border-border">
+                                                        <div className="flex items-center gap-2">
+                                                            <Globe className="w-4 h-4 text-muted-foreground" />
+                                                            <SelectValue placeholder="Select community" />
+                                                        </div>
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {COMMUNITIES.map((community) => (
+                                                            <SelectItem key={community.id} value={community.url}>
+                                                                <div className="flex flex-col text-left">
+                                                                    <span className="font-medium">{community.name}</span>
+                                                                </div>
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Select the community instance your account belongs to
+                                                </p>
                                             </div>
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {COMMUNITIES.map((community) => (
-                                                <SelectItem key={community.id} value={community.url}>
-                                                    <div className="flex flex-col text-left">
-                                                        <span className="font-medium">{community.name}</span>
-                                                    </div>
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <p className="text-xs text-muted-foreground">
-                                        Select the community instance your account belongs to
-                                    </p>
-                                </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="email">Email</Label>
-                                    <Input
-                                        id="email"
-                                        type="email"
-                                        placeholder="you@example.com"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        className="h-11 bg-secondary border-border"
-                                        required
-                                    />
-                                </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="email">Email</Label>
+                                                <Input
+                                                    id="email"
+                                                    type="email"
+                                                    placeholder="you@example.com"
+                                                    value={email}
+                                                    onChange={(e) => setEmail(e.target.value)}
+                                                    className="h-11 bg-secondary border-border"
+                                                    required
+                                                />
+                                            </div>
 
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <Label htmlFor="password">Password</Label>
-                                        <Link to="/forgot-password" className="text-sm text-primary hover:underline">
-                                            Forgot password?
-                                        </Link>
-                                    </div>
-                                    <div className="relative">
-                                        <Input
-                                            id="password"
-                                            type={showPassword ? "text" : "password"}
-                                            placeholder="••••••••"
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            className="h-11 bg-secondary border-border pr-10"
-                                            required
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                                        >
-                                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                        </button>
-                                    </div>
-                                </div>
-                            </>
-                        ) : (
-                            <div className="space-y-4">
-                                <Label htmlFor="otp">Verification Code</Label>
-                                <Input
-                                    id="otp"
-                                    type="text"
-                                    placeholder="Enter 6-digit code"
-                                    value={otp}
-                                    onChange={(e) => setOtp(e.target.value)}
-                                    className="h-14 bg-secondary border-border text-center text-2xl tracking-[0.5em] font-mono"
-                                    maxLength={6}
-                                    required
-                                    autoFocus
-                                />
-                                <div className="text-center">
-                                    <Button
-                                        type="button"
-                                        variant="link"
-                                        className="text-sm text-muted-foreground"
-                                        onClick={() => setStep(1)}
-                                    >
-                                        Use a different email
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <Label htmlFor="password">Password</Label>
+                                                    <Link to="/forgot-password" className="text-sm text-primary hover:underline">
+                                                        Forgot password?
+                                                    </Link>
+                                                </div>
+                                                <div className="relative">
+                                                    <Input
+                                                        id="password"
+                                                        type={showPassword ? "text" : "password"}
+                                                        placeholder="••••••••"
+                                                        value={password}
+                                                        onChange={(e) => setPassword(e.target.value)}
+                                                        className="h-11 bg-secondary border-border pr-10"
+                                                        required
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowPassword(!showPassword)}
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                                    >
+                                                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            <Label htmlFor="otp">Verification Code</Label>
+                                            <Input
+                                                id="otp"
+                                                type="text"
+                                                placeholder="Enter 6-digit code"
+                                                value={otp}
+                                                onChange={(e) => setOtp(e.target.value)}
+                                                className="h-14 bg-secondary border-border text-center text-2xl tracking-[0.5em] font-mono"
+                                                maxLength={6}
+                                                required
+                                                autoFocus
+                                            />
+                                            <div className="text-center">
+                                                <Button
+                                                    type="button"
+                                                    variant="link"
+                                                    className="text-sm text-muted-foreground"
+                                                    onClick={() => setStep(1)}
+                                                >
+                                                    Use a different email
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <Button type="submit" variant="hero" className="w-full h-11 text-base" disabled={isLoading}>
+                                        {isLoading ? "Processing..." : (
+                                            <>
+                                                {step === 1 ? "Sign In" : "Verify Code"}
+                                                <ArrowRight className="w-4 h-4 ml-2" />
+                                            </>
+                                        )}
                                     </Button>
-                                </div>
+
+                                    {step === 1 && (
+                                        <>
+                                            <div className="relative py-2">
+                                                <div className="absolute inset-0 flex items-center">
+                                                    <div className="w-full border-t border-border"></div>
+                                                </div>
+                                                <div className="relative flex justify-center text-xs uppercase">
+                                                    <span className="bg-card px-2 text-muted-foreground">New to Nexus?</span>
+                                                </div>
+                                            </div>
+
+                                            {onSwitchToRegister ? (
+                                                <Button
+                                                    variant="outline"
+                                                    className="w-full h-11"
+                                                    onClick={(e) => { e.preventDefault(); onSwitchToRegister(); }}
+                                                >
+                                                    Create an Account
+                                                </Button>
+                                            ) : (
+                                                <Link to="/register">
+                                                    <Button variant="outline" className="w-full h-11">
+                                                        Create an Account
+                                                    </Button>
+                                                </Link>
+                                            )}
+                                        </>
+                                    )}
+                                </form>
                             </div>
-                        )}
-
-                        <Button type="submit" variant="hero" className="w-full h-11 text-base" disabled={isLoading}>
-                            {isLoading ? "Processing..." : (
-                                <>
-                                    {step === 1 ? "Sign In" : "Verify Code"}
-                                    <ArrowRight className="w-4 h-4 ml-2" />
-                                </>
-                            )}
-                        </Button>
-
-                        {step === 1 && (
-                            <>
-                                <div className="relative py-2">
-                                    <div className="absolute inset-0 flex items-center">
-                                        <div className="w-full border-t border-border"></div>
-                                    </div>
-                                    <div className="relative flex justify-center text-xs uppercase">
-                                        <span className="bg-card px-2 text-muted-foreground">New to Nexus?</span>
-                                    </div>
-                                </div>
-
-                                {onSwitchToRegister ? (
-                                    <Button
-                                        variant="outline"
-                                        className="w-full h-11"
-                                        onClick={(e) => { e.preventDefault(); onSwitchToRegister(); }}
-                                    >
-                                        Create an Account
-                                    </Button>
-                                ) : (
-                                    <Link to="/register">
-                                        <Button variant="outline" className="w-full h-11">
-                                            Create an Account
-                                        </Button>
-                                    </Link>
-                                )}
-                            </>
-                        )}
-                    </form>
+                        </div>
+                    </div>
                 </motion.div>
             </div>
         </div>

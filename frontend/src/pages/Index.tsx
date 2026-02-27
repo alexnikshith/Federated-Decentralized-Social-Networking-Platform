@@ -19,7 +19,7 @@ const Index = () => {
     <div className="min-h-screen flex flex-col relative bg-background">
       {/* Global Cosmos Background */}
       <div
-        className="fixed inset-0 w-full h-full bg-[url('/cosmos-bg.png')] bg-cover bg-center bg-no-repeat opacity-40 mix-blend-screen pointer-events-none"
+        className="fixed inset-0 w-full h-full bg-[url('/cosmos-bg.png')] bg-cover bg-center bg-no-repeat opacity-60 mix-blend-screen pointer-events-none"
         style={{ filter: "contrast(1.2) brightness(0.8)", zIndex: 0 }}
       />
       {/* Global darkening overlay to ensure text readability */}
