@@ -52,6 +52,7 @@ export interface SignupRequest {
     display_name?: string;
     instance?: string;
     is_discoverable?: boolean;
+    avatar_url?: string;
 }
 
 export interface LoginResponse {

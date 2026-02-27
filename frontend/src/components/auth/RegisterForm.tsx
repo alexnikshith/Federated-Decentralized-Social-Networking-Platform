@@ -30,6 +30,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [selectedAvatar, setSelectedAvatar] = useState("/avatars/avatar_1.png");
     // Terms agreement state
     // Checkbox state for discoverability
     const [isDiscoverable, setIsDiscoverable] = useState(false);
@@ -126,6 +127,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                 email,
                 password,
                 is_discoverable: isDiscoverable,
+                avatar_url: selectedAvatar,
             });
 
             toast.success("Account created successfully! Please sign in.");
@@ -296,6 +298,36 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                             <p className="text-xs text-muted-foreground">
                                 Minimum 8 characters with at least one number and symbol
                             </p>
+                        </div>
+                    </div>
+
+                    <div className="pt-2 space-y-4">
+                        <Label className="text-base font-medium">Choose Your Avatar</Label>
+                        <div className="grid grid-cols-4 gap-3 bg-secondary/10 p-4 rounded-xl border border-border/50">
+                            {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
+                                <button
+                                    key={num}
+                                    type="button"
+                                    onClick={() => setSelectedAvatar(`/avatars/avatar_${num}.png`)}
+                                    className={cn(
+                                        "aspect-square rounded-xl overflow-hidden transition-all duration-300 border-2 relative group",
+                                        selectedAvatar === `/avatars/avatar_${num}.png`
+                                            ? "border-primary scale-110 shadow-lg shadow-primary/30 z-10"
+                                            : "border-transparent hover:border-primary/50 hover:scale-105"
+                                    )}
+                                >
+                                    <img
+                                        src={`/avatars/avatar_${num}.png`}
+                                        alt={`Avatar option ${num}`}
+                                        className="w-full h-full object-cover"
+                                    />
+                                    {selectedAvatar === `/avatars/avatar_${num}.png` && (
+                                        <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                                            <Check className="w-5 h-5 text-white drop-shadow-md" />
+                                        </div>
+                                    )}
+                                </button>
+                            ))}
                         </div>
                     </div>
 
