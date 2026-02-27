@@ -62,9 +62,10 @@ type FederationStats struct {
 }
 
 type DailyTraffic struct {
-	Date  time.Time `json:"date"`
-	Users int       `json:"users"`
-	Posts int       `json:"posts"`
+	Date         time.Time `json:"date"`
+	Users        int       `json:"users"`
+	DeletedUsers int       `json:"deleted_users"`
+	Posts        int       `json:"posts"`
 }
 
 type TrafficReport struct {

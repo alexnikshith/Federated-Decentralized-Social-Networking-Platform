@@ -5,10 +5,12 @@ import { Link } from "react-router-dom";
 
 export function HeroSection() {
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden">
-      {/* Background effects */}
-      <div className="absolute inset-0 grid-pattern opacity-30" />
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      {/* We removed the explicit bg image here because it is now applied globally in Index.tsx */}
+      {/* We add a subtle gradient to keep the hero feeling grounded, but not fully solid */}
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/20 to-background/50 z-0 pointer-events-none" />
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-[100px] z-0" />
+      <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-accent/20 rounded-full blur-[100px] z-0" />
       <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-accent/10 rounded-full blur-3xl" />
 
       <div className="container mx-auto px-4 lg:px-8 pt-32 pb-20 relative z-10">

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuthStore } from "../store/authStore";
 import { profileApi, authApi } from "../api/client";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Loader2, User, Settings, Shield, Bell, Lock, AlertTriangle, Edit, Clock } from "lucide-react";
+import { Loader2, User, Settings, Shield, Bell, Lock, AlertTriangle, Edit, Clock, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { User as UserType, ActivityLog } from "../types";
 import { useToast } from "@/hooks/use-toast";
@@ -74,6 +74,7 @@ export const SettingsPage = () => {
         location: "",
         website: "",
         is_discoverable: false,
+        avatar_url: "",
     });
 
     const [passwordData, setPasswordData] = useState({
@@ -84,6 +85,10 @@ export const SettingsPage = () => {
 
     const [passwordLoading, setPasswordLoading] = useState(false);
     const [is2FAEnabled, setIs2FAEnabled] = useState(false);
+
+    // Avatar upload state
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
     const handleToggle2FA = async (checked: boolean) => {
         try {
@@ -155,6 +160,7 @@ export const SettingsPage = () => {
                 location: currentUser.location || "",
                 website: currentUser.website || "",
                 is_discoverable: currentUser.is_discoverable || false,
+                avatar_url: currentUser.avatar_url || "",
             });
             setIs2FAEnabled((currentUser as UserType & { is_2fa_enabled?: boolean }).is_2fa_enabled || false);
         }
@@ -185,7 +191,8 @@ export const SettingsPage = () => {
         formData.display_name !== (currentUser.display_name || "") ||
         formData.bio !== (currentUser.bio || "") ||
         formData.username !== (currentUser.username || "") ||
-        formData.profile_visibility !== (currentUser.profile_visibility || "public")
+        formData.profile_visibility !== (currentUser.profile_visibility || "public") ||
+        formData.avatar_url !== (currentUser.avatar_url || "")
     );
 
     const hasPasswordChanges = isPasswordEditing && (
@@ -226,6 +233,52 @@ export const SettingsPage = () => {
         }
     };
 
+    // Handle custom avatar upload
+    const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            toast({
+                title: "Invalid file type",
+                description: "Please select an image file",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            toast({
+                title: "File too large",
+                description: "Image must be less than 5MB",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        setUploadingAvatar(true);
+
+        try {
+            const { url } = await authApi.uploadAvatar(file);
+            setFormData(prev => ({ ...prev, avatar_url: url }));
+            toast({
+                title: "Avatar uploaded",
+                description: "Your custom avatar is ready to be saved",
+            });
+        } catch (err: any) {
+            toast({
+                title: "Upload failed",
+                description: err.response?.data?.message || 'Failed to upload avatar',
+                variant: "destructive",
+            });
+        } finally {
+            setUploadingAvatar(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!currentUser) return;
@@ -248,6 +301,7 @@ export const SettingsPage = () => {
                 bio: formData.bio,
                 profile_visibility: formData.profile_visibility as "public" | "followers",
                 is_discoverable: formData.is_discoverable,
+                avatar_url: formData.avatar_url,
             });
 
             if (response.data) {
@@ -428,6 +482,76 @@ export const SettingsPage = () => {
                                         )}
 
                                         <form onSubmit={handleSubmit} className={cn("space-y-8 transition-all duration-700 ease-out", !isEditing && "opacity-60 grayscale-[0.2] pointer-events-none select-none blur-[2px]")}>
+                                            <div className="space-y-4">
+                                                <Label className="text-base text-center block">Current Avatar</Label>
+                                                <div className="flex justify-center">
+                                                    <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-primary/20">
+                                                        <img
+                                                            src={formData.avatar_url || "/avatars/avatar_1.png"}
+                                                            alt="Profile Avatar"
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {isEditing && (
+                                                    <div className="mt-6">
+                                                        <Label className="text-sm text-center block text-muted-foreground mb-4">Choose a New Avatar</Label>
+                                                        <div className="grid grid-cols-4 gap-4 justify-items-center">
+                                                            {formData.avatar_url && !formData.avatar_url.startsWith('/avatars/') && (
+                                                                <button
+                                                                    type="button"
+                                                                    className="w-16 h-16 rounded-full overflow-hidden transition-all duration-200 border-2 border-primary scale-110 shadow-lg shadow-primary/30"
+                                                                >
+                                                                    <img src={formData.avatar_url} alt="Custom Avatar" className="w-full h-full object-cover" />
+                                                                </button>
+                                                            )}
+                                                            {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
+                                                                <button
+                                                                    key={num}
+                                                                    type="button"
+                                                                    onClick={() => setFormData({ ...formData, avatar_url: `/avatars/avatar_${num}.png` })}
+                                                                    className={cn(
+                                                                        "w-16 h-16 rounded-full overflow-hidden transition-all duration-200 border-2",
+                                                                        formData.avatar_url === `/avatars/avatar_${num}.png`
+                                                                            ? "border-primary scale-110 shadow-lg shadow-primary/30"
+                                                                            : "border-transparent hover:border-primary/50 hover:scale-105"
+                                                                    )}
+                                                                >
+                                                                    <img src={`/avatars/avatar_${num}.png`} alt={`Avatar option ${num}`} className="w-full h-full object-cover" />
+                                                                </button>
+                                                            ))}
+                                                        </div>
+
+                                                        {/* Custom Upload Button */}
+                                                        <div className="mt-6 flex justify-center">
+                                                            <input
+                                                                type="file"
+                                                                className="hidden"
+                                                                ref={fileInputRef}
+                                                                accept="image/*"
+                                                                onChange={handleAvatarUpload}
+                                                            />
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => fileInputRef.current?.click()}
+                                                                disabled={uploadingAvatar}
+                                                                className="flex items-center gap-2 border-primary/30 text-primary hover:bg-primary/5 hover:text-primary transition-colors"
+                                                            >
+                                                                {uploadingAvatar ? (
+                                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                                ) : (
+                                                                    <Upload className="w-4 h-4" />
+                                                                )}
+                                                                {uploadingAvatar ? 'Uploading...' : 'Upload Custom Image'}
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div className="space-y-2">
                                                     <Label htmlFor="display_name" className="text-base">Display Name</Label>
@@ -535,6 +659,7 @@ export const SettingsPage = () => {
                                                                     location: currentUser.location || "",
                                                                     website: currentUser.website || "",
                                                                     is_discoverable: currentUser.is_discoverable || false,
+                                                                    avatar_url: currentUser.avatar_url || "",
                                                                 });
                                                             }
                                                         }}

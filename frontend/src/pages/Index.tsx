@@ -16,14 +16,25 @@ const Index = () => {
   }, [clearAllSessions]);
 
   return (
-    <div className="min-h-screen">
-      <Header />
-      <main>
-        <HeroSection />
-        <FeaturesSection />
-        <EpicsSection />
-      </main>
-      <Footer />
+    <div className="min-h-screen flex flex-col relative bg-background">
+      {/* Global Cosmos Background */}
+      <div
+        className="fixed inset-0 w-full h-full bg-[url('/cosmos-bg.png')] bg-cover bg-center bg-no-repeat opacity-40 mix-blend-screen pointer-events-none"
+        style={{ filter: "contrast(1.2) brightness(0.8)", zIndex: 0 }}
+      />
+      {/* Global darkening overlay to ensure text readability */}
+      <div className="fixed inset-0 bg-background/60 pointer-events-none" style={{ zIndex: 0 }} />
+
+      {/* Foreground Content */}
+      <div className="relative z-10 flex-1 flex flex-col">
+        <Header />
+        <main className="flex-1">
+          <HeroSection />
+          <FeaturesSection />
+          <EpicsSection />
+        </main>
+        <Footer />
+      </div>
     </div>
   );
 };

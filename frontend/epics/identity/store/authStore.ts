@@ -3,6 +3,17 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type { User } from '../types';
 import { COMMUNITIES } from '../../../src/config/communities';
 
+export enum TransitionState {
+    IDLE = 'IDLE',
+    PRE_WARP_NEBULA = 'PRE_WARP_NEBULA',
+    WORMHOLE_TRAVEL = 'WORMHOLE_TRAVEL',
+    WHITE_FLASH = 'WHITE_FLASH',
+    PLANET_APPROACH = 'PLANET_APPROACH',
+    ATMOSPHERIC_ENTRY = 'ATMOSPHERIC_ENTRY',
+    DOM_HANDOFF = 'DOM_HANDOFF',
+    COMPLETE = 'COMPLETE'
+}
+
 interface Session {
     user: User;
     token: string | null; // null if signed out
@@ -15,6 +26,9 @@ interface AuthState {
     user: User | null;
     token: string | null;
     isAuthenticated: boolean;
+    isLoginExiting: boolean; // True when the login form is sliding out before wormhole
+    isTransitioning: boolean; // True when the cinematic login is playing
+    transitionState: TransitionState; // FSM State for orchestrating the transition
     lastActivity: number | null;
 
     // Multi-session state
@@ -33,6 +47,10 @@ interface AuthState {
     removeAccount: (userId: string) => void;
     pauseSession: () => void;
     clearAllSessions: () => void;
+    setLoginExiting: (status: boolean) => void;
+    setTransitioning: (status: boolean) => void;
+    setTransitionState: (state: TransitionState) => void;
+    startNebulaTransition: () => void;
 }
 
 const AUTO_LOGOUT_TIME = 30 * 60 * 1000; // 30 minutes
@@ -49,8 +67,24 @@ export const useAuthStore = create<AuthState>()(
             user: null,
             token: null,
             isAuthenticated: false,
+            isLoginExiting: false,
+            isTransitioning: false,
+            transitionState: TransitionState.IDLE,
             lastActivity: null,
             sessions: [],
+
+            // setTransitionState advances the cinematic FSM
+            setTransitionState: (newState) => {
+                set(() => ({ transitionState: newState }));
+            },
+
+            setLoginExiting: (status) => {
+                set(() => ({ isLoginExiting: status }));
+            },
+
+            startNebulaTransition: () => {
+                set(() => ({ isTransitioning: true, transitionState: TransitionState.PRE_WARP_NEBULA }));
+            },
 
             // setAuth logs in a user and updates the session registry
             setAuth: (user, token) => {
@@ -75,6 +109,9 @@ export const useAuthStore = create<AuthState>()(
                         user,
                         token,
                         isAuthenticated: true,
+                        isLoginExiting: false, // Reset the pre-transition state
+                        isTransitioning: true, // Trigger cinematic transition on successful login
+                        transitionState: TransitionState.WORMHOLE_TRAVEL, // Start FSM via actual Warp
                         lastActivity: now,
                         sessions: newSessions
                     };
@@ -103,6 +140,7 @@ export const useAuthStore = create<AuthState>()(
                     user: null,
                     token: null,
                     isAuthenticated: false,
+                    isTransitioning: false,
                     lastActivity: null,
                     sessions: newSessions
                 });
@@ -115,6 +153,7 @@ export const useAuthStore = create<AuthState>()(
                     user: null,
                     token: null,
                     isAuthenticated: false,
+                    isTransitioning: false,
                     lastActivity: null,
                     sessions: []
                 });
@@ -126,6 +165,7 @@ export const useAuthStore = create<AuthState>()(
                     user: null,
                     token: null,
                     isAuthenticated: false,
+                    isTransitioning: false,
                     lastActivity: null
                 });
             },
@@ -196,6 +236,7 @@ export const useAuthStore = create<AuthState>()(
                         user: session.user,
                         token: session.token,
                         isAuthenticated: true,
+                        isTransitioning: true, // Trigger cinematic transition on account switch too
                         lastActivity: Date.now()
                     });
                 } else if (intentToLogin) {
@@ -208,9 +249,9 @@ export const useAuthStore = create<AuthState>()(
                             localStorage.setItem('active_community_url', comm.url);
                         }
                     }
-                    set({ user: null, token: null, isAuthenticated: false });
+                    set({ user: null, token: null, isAuthenticated: false, isTransitioning: false });
                 } else {
-                    set({ user: null, token: null, isAuthenticated: false });
+                    set({ user: null, token: null, isAuthenticated: false, isTransitioning: false });
                 }
             },
 
@@ -227,6 +268,7 @@ export const useAuthStore = create<AuthState>()(
                         user: session.user,
                         token: session.token,
                         isAuthenticated: true,
+                        isTransitioning: true, // Trigger cinematic transition on community switch
                         lastActivity: Date.now()
                     });
                 } else {
@@ -235,6 +277,7 @@ export const useAuthStore = create<AuthState>()(
                         user: null,
                         token: null,
                         isAuthenticated: false,
+                        isTransitioning: false,
                         lastActivity: null
                     });
                 }
@@ -244,6 +287,10 @@ export const useAuthStore = create<AuthState>()(
                 set((state) => ({
                     sessions: state.sessions.filter(s => s.user.id !== userId)
                 }));
+            },
+
+            setTransitioning: (status: boolean) => {
+                set({ isTransitioning: status });
             }
         }),
         {
@@ -266,6 +313,7 @@ export const useAuthStore = create<AuthState>()(
                 user: state.user,
                 token: state.token,
                 isAuthenticated: state.isAuthenticated,
+                isTransitioning: false, // Don't persist transitioning state
                 lastActivity: state.lastActivity,
                 sessions: state.sessions,
             }),

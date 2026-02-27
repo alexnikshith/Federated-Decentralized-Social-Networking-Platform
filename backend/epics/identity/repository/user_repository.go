@@ -157,6 +157,13 @@ func (r *UserRepository) DeactivateUser(ctx context.Context, userID primitive.Ob
 
 // DeleteUser permanently deletes a user
 func (r *UserRepository) DeleteUser(ctx context.Context, userID primitive.ObjectID) error {
+	// Log the deletion so it can be used for traffic stats
+	deletedUsersColl := database.GetCollection("deleted_users")
+	deletedUsersColl.InsertOne(ctx, bson.M{
+		"user_id":    userID,
+		"deleted_at": time.Now(),
+	})
+
 	_, err := r.collection.DeleteOne(ctx, bson.M{"_id": userID})
 	return err
 }

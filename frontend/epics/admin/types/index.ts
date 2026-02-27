@@ -26,6 +26,7 @@ export interface AdminPost {
 export interface DailyTraffic {
     date: string;
     users: number;
+    deleted_users?: number;
     posts: number;
 }
 

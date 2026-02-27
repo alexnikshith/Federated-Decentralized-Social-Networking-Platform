@@ -7,6 +7,7 @@ type SignupRequest struct {
 	Password       string `json:"password"`
 	DisplayName    string `json:"display_name"`
 	IsDiscoverable bool   `json:"is_discoverable"`
+	AvatarURL      string `json:"avatar_url,omitempty"`
 }
 
 // LoginRequest represents the login request payload
