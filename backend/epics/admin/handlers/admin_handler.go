@@ -8,6 +8,7 @@ import (
 	"federated-social/backend/pkg/email"
 	"log"
 	"net/http"
+	"strings"
 
 	reportRepo "federated-social/backend/epics/reports/repository"
 	reportService "federated-social/backend/epics/reports/service"
@@ -88,6 +89,20 @@ func (h *AdminHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	// Mask the emails
+	for i := range users {
+		parts := strings.Split(users[i].Email, "@")
+		if len(parts) == 2 {
+			local := parts[0]
+			domain := parts[1]
+			if len(local) > 3 {
+				users[i].Email = local[:3] + "************@" + domain
+			} else {
+				users[i].Email = local + "************@" + domain
+			}
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
