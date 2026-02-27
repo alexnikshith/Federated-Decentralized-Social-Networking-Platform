@@ -79,7 +79,10 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister, hideBackNav = false, 
                 if (response.token) {
                     setAuth(response.user, response.token);
                     toast.success("Welcome back!");
-                    onSuccess ? onSuccess() : navigate("/dashboard");
+                    onSuccess && onSuccess();
+                    // We DO NOT navigate here. `authStore.isTransitioning` is true now.
+                    // The App routing layer will hold us on /login (hidden behind transition)
+                    // Once transition finishes, PublicRoute will naturally auto-redirect.
                     return;
                 }
                 setStep(2);

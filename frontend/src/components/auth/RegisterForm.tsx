@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { authApi } from "../../../epics/identity/api/client";
 import { useAuthStore } from "../../../epics/identity/store/authStore";
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Globe, ArrowRight, Eye, EyeOff, Shield, Check, Users, ArrowLeft, Loader2 } from "lucide-react";
+import { Globe, ArrowRight, Eye, EyeOff, Shield, Check, Users, ArrowLeft, Loader2, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { COMMUNITIES, DEFAULT_COMMUNITY } from "../../config/communities";
 
@@ -37,6 +37,10 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
     const [agreedToTerms, setAgreedToTerms] = useState(false);
     // Loading state for submission
     const [isLoading, setIsLoading] = useState(false);
+
+    // Avatar upload state
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
     // Username validation states
     const [usernameError, setUsernameError] = useState('');
@@ -106,6 +110,37 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
 
         return () => clearTimeout(timer);
     }, [username]);
+
+    // Handle custom avatar upload
+    const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            toast.error('Please select an image file');
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('Image must be less than 5MB');
+            return;
+        }
+
+        setUploadingAvatar(true);
+
+        try {
+            const { url } = await authApi.uploadAvatar(file);
+            setSelectedAvatar(url);
+            toast.success('Avatar uploaded successfully');
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || 'Failed to upload avatar');
+        } finally {
+            setUploadingAvatar(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        }
+    };
 
     // Handle form submission
     const handleSubmit = async (e: React.FormEvent) => {
@@ -304,6 +339,17 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                     <div className="pt-2 space-y-4">
                         <Label className="text-base font-medium">Choose Your Avatar</Label>
                         <div className="grid grid-cols-4 gap-3 bg-secondary/10 p-4 rounded-xl border border-border/50">
+                            {selectedAvatar && !selectedAvatar.startsWith('/avatars/') && (
+                                <button
+                                    type="button"
+                                    className="aspect-square rounded-xl overflow-hidden transition-all duration-300 border-2 relative group border-primary scale-110 shadow-lg shadow-primary/30 z-10"
+                                >
+                                    <img src={selectedAvatar} alt="Custom Avatar" className="w-full h-full object-cover" />
+                                    <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                                        <Check className="w-5 h-5 text-white drop-shadow-md" />
+                                    </div>
+                                </button>
+                            )}
                             {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
                                 <button
                                     key={num}
@@ -328,6 +374,30 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
                                     )}
                                 </button>
                             ))}
+                        </div>
+
+                        {/* Custom Upload Button */}
+                        <div className="w-full mt-2">
+                            <input
+                                type="file"
+                                className="hidden"
+                                ref={fileInputRef}
+                                accept="image/*"
+                                onChange={handleAvatarUpload}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={uploadingAvatar}
+                                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 border-dashed border-primary/30 text-primary hover:bg-primary/5 hover:border-primary/50 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {uploadingAvatar ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <Upload className="w-4 h-4" />
+                                )}
+                                {uploadingAvatar ? 'Uploading...' : 'Upload Custom Image'}
+                            </button>
                         </div>
                     </div>
 

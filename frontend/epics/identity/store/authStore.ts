@@ -15,6 +15,7 @@ interface AuthState {
     user: User | null;
     token: string | null;
     isAuthenticated: boolean;
+    isTransitioning: boolean; // True when the cinematic login is playing
     lastActivity: number | null;
 
     // Multi-session state
@@ -33,6 +34,7 @@ interface AuthState {
     removeAccount: (userId: string) => void;
     pauseSession: () => void;
     clearAllSessions: () => void;
+    setTransitioning: (status: boolean) => void;
 }
 
 const AUTO_LOGOUT_TIME = 30 * 60 * 1000; // 30 minutes
@@ -49,6 +51,7 @@ export const useAuthStore = create<AuthState>()(
             user: null,
             token: null,
             isAuthenticated: false,
+            isTransitioning: false,
             lastActivity: null,
             sessions: [],
 
@@ -75,6 +78,7 @@ export const useAuthStore = create<AuthState>()(
                         user,
                         token,
                         isAuthenticated: true,
+                        isTransitioning: true, // Trigger cinematic transition on successful login
                         lastActivity: now,
                         sessions: newSessions
                     };
@@ -103,6 +107,7 @@ export const useAuthStore = create<AuthState>()(
                     user: null,
                     token: null,
                     isAuthenticated: false,
+                    isTransitioning: false,
                     lastActivity: null,
                     sessions: newSessions
                 });
@@ -115,6 +120,7 @@ export const useAuthStore = create<AuthState>()(
                     user: null,
                     token: null,
                     isAuthenticated: false,
+                    isTransitioning: false,
                     lastActivity: null,
                     sessions: []
                 });
@@ -126,6 +132,7 @@ export const useAuthStore = create<AuthState>()(
                     user: null,
                     token: null,
                     isAuthenticated: false,
+                    isTransitioning: false,
                     lastActivity: null
                 });
             },
@@ -196,6 +203,7 @@ export const useAuthStore = create<AuthState>()(
                         user: session.user,
                         token: session.token,
                         isAuthenticated: true,
+                        isTransitioning: true, // Trigger cinematic transition on account switch too
                         lastActivity: Date.now()
                     });
                 } else if (intentToLogin) {
@@ -208,9 +216,9 @@ export const useAuthStore = create<AuthState>()(
                             localStorage.setItem('active_community_url', comm.url);
                         }
                     }
-                    set({ user: null, token: null, isAuthenticated: false });
+                    set({ user: null, token: null, isAuthenticated: false, isTransitioning: false });
                 } else {
-                    set({ user: null, token: null, isAuthenticated: false });
+                    set({ user: null, token: null, isAuthenticated: false, isTransitioning: false });
                 }
             },
 
@@ -227,6 +235,7 @@ export const useAuthStore = create<AuthState>()(
                         user: session.user,
                         token: session.token,
                         isAuthenticated: true,
+                        isTransitioning: true, // Trigger cinematic transition on community switch
                         lastActivity: Date.now()
                     });
                 } else {
@@ -235,6 +244,7 @@ export const useAuthStore = create<AuthState>()(
                         user: null,
                         token: null,
                         isAuthenticated: false,
+                        isTransitioning: false,
                         lastActivity: null
                     });
                 }
@@ -244,6 +254,10 @@ export const useAuthStore = create<AuthState>()(
                 set((state) => ({
                     sessions: state.sessions.filter(s => s.user.id !== userId)
                 }));
+            },
+
+            setTransitioning: (status: boolean) => {
+                set({ isTransitioning: status });
             }
         }),
         {
@@ -266,6 +280,7 @@ export const useAuthStore = create<AuthState>()(
                 user: state.user,
                 token: state.token,
                 isAuthenticated: state.isAuthenticated,
+                isTransitioning: false, // Don't persist transitioning state
                 lastActivity: state.lastActivity,
                 sessions: state.sessions,
             }),

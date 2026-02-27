@@ -14,6 +14,7 @@ import (
 func RegisterIdentityRoutes(router *mux.Router) {
 	authHandler := handlers.NewAuthHandler()
 	profileHandler := handlers.NewProfileHandler()
+	avatarHandler := handlers.NewAvatarHandler()
 
 	// Public routes (no authentication required)
 	// These endpoints are open to all users, including guests
@@ -25,6 +26,7 @@ func RegisterIdentityRoutes(router *mux.Router) {
 	router.HandleFunc("/api/auth/forgot-password", authHandler.ForgotPassword).Methods("POST", "OPTIONS")
 	router.HandleFunc("/api/auth/verify-reset-code", authHandler.VerifyResetCode).Methods("POST", "OPTIONS")
 	router.HandleFunc("/api/auth/reset-password", authHandler.ResetPassword).Methods("POST", "OPTIONS")
+	router.HandleFunc("/api/auth/upload-avatar", avatarHandler.UploadAvatar).Methods("POST", "OPTIONS")
 
 	// Auth routes (protected)
 	// These endpoints require a valid JWT token in the Authorization header
