@@ -50,6 +50,7 @@ import AdminDashboard from '../epics/admin/pages/AdminDashboard';
 import Index from './pages/Index';
 import NotFound from './pages/NotFound';
 import { NotificationsPage } from './pages/NotificationsPage';
+import { CinematicLoginTransition } from './components/transitions/CinematicLoginTransition';
 
 
 
@@ -62,18 +63,26 @@ const AutoLogoutWrapper: React.FC<{ children: React.ReactNode }> = ({ children }
     return <>{children}</>;
 };
 
-// Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
     const token = useAuthStore((state) => state.token);
+    const isTransitioning = useAuthStore((state) => state.isTransitioning);
 
     if (!isAuthenticated || !token) {
         return <Navigate to="/login" replace />;
     }
 
+    // Wrap the content in a div that handles transition fading
     return (
         <MainLayout>
-            <AutoLogoutWrapper>{children}</AutoLogoutWrapper>
+            <AutoLogoutWrapper>
+                <div
+                    className="transition-opacity duration-1000"
+                    style={{ opacity: isTransitioning ? 0 : 1 }}
+                >
+                    {children}
+                </div>
+            </AutoLogoutWrapper>
         </MainLayout>
     );
 };
@@ -98,14 +107,19 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 };
 
 const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { isAuthenticated, token } = useAuthStore();
+    const { isAuthenticated, token, isTransitioning } = useAuthStore();
 
-    // Only redirect to dashboard if we HAVE a valid token (active session)
-    if (isAuthenticated && token) {
+    // Only redirect to dashboard if we HAVE a valid token (active session) AND we are not transitioning
+    if (isAuthenticated && token && !isTransitioning) {
         return <Navigate to="/dashboard" replace />;
     }
 
-    return <>{children}</>;
+    // Keep the element mounted but hidden if transitioning to allow the animation overlay to play over it
+    return (
+        <div style={{ opacity: isTransitioning ? 0 : 1 }} className="transition-opacity duration-500 w-full h-full">
+            {children}
+        </div>
+    );
 };
 
 // Main App Component
@@ -330,6 +344,7 @@ const App: React.FC = () => (
             <TooltipProvider>
                 <Toaster />
                 <Sonner />
+                <CinematicLoginTransition />
                 <AppContent />
             </TooltipProvider>
         </QueryClientProvider>

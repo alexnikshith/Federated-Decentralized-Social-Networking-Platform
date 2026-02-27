@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authApi } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import type { SignupRequest } from '../types';
 import { COMMUNITIES } from '../../../src/config/communities';
-import { Users, Globe, ArrowRight, Check, AlertCircle, Loader2, ChevronLeft } from 'lucide-react';
+import { Users, Globe, ArrowRight, Check, AlertCircle, Loader2, ChevronLeft, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -28,6 +28,10 @@ export const SignupPage: React.FC = () => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+
+    // Avatar upload state
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
     // Username validation states
     const [usernameError, setUsernameError] = useState('');
@@ -87,6 +91,37 @@ export const SignupPage: React.FC = () => {
 
         return () => clearTimeout(timer);
     }, [formData.username]);
+
+    // Handle custom avatar upload
+    const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            setError('Please select an image file');
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            setError('Image must be less than 5MB');
+            return;
+        }
+
+        setUploadingAvatar(true);
+        setError('');
+
+        try {
+            const { url } = await authApi.uploadAvatar(file);
+            setFormData(prev => ({ ...prev, avatar_url: url }));
+        } catch (err: any) {
+            setError(err.response?.data?.message || 'Failed to upload avatar');
+        } finally {
+            setUploadingAvatar(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -403,6 +438,17 @@ export const SignupPage: React.FC = () => {
                                     </div>
 
                                     <div className="grid grid-cols-4 gap-4 w-full max-w-sm">
+                                        {formData.avatar_url && !formData.avatar_url.startsWith('/avatars/') && (
+                                            <button
+                                                type="button"
+                                                className="aspect-square rounded-2xl overflow-hidden transition-all duration-300 border-2 relative group border-primary scale-110 shadow-lg shadow-primary/30 z-10"
+                                            >
+                                                <img src={formData.avatar_url} alt="Custom Avatar" className="w-full h-full object-cover" />
+                                                <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                                                    <Check className="w-5 h-5 text-white drop-shadow-md" />
+                                                </div>
+                                            </button>
+                                        )}
                                         {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
                                             <button
                                                 key={num}
@@ -427,6 +473,30 @@ export const SignupPage: React.FC = () => {
                                                 )}
                                             </button>
                                         ))}
+                                    </div>
+
+                                    {/* Custom Upload Button */}
+                                    <div className="w-full max-w-sm mt-2">
+                                        <input
+                                            type="file"
+                                            className="hidden"
+                                            ref={fileInputRef}
+                                            accept="image/*"
+                                            onChange={handleAvatarUpload}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => fileInputRef.current?.click()}
+                                            disabled={uploadingAvatar}
+                                            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 border-dashed border-primary/30 text-primary hover:bg-primary/5 hover:border-primary/50 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {uploadingAvatar ? (
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                            ) : (
+                                                <Upload className="w-4 h-4" />
+                                            )}
+                                            {uploadingAvatar ? 'Uploading...' : 'Upload Custom Image'}
+                                        </button>
                                     </div>
                                 </div>
 
