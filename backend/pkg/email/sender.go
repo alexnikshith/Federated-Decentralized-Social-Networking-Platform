@@ -21,61 +21,74 @@ func NewEmailSender() *EmailSender {
 	}
 }
 
-// resendPayload represents the JSON payload to send to Resend API
-type resendPayload struct {
-	From    string   `json:"from"`
-	To      []string `json:"to"`
-	Subject string   `json:"subject"`
-	Html    string   `json:"html"`
+// brevoSender represents the sender object in Brevo API
+type brevoSender struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
 }
 
-// sendViaResend is a helper method to handle the HTTP request to the Resend API
-func (s *EmailSender) sendViaResend(toEmail, subject, htmlBody string, customFrom string) error {
-	apikey := s.config.ResendAPIKey
+// brevoRecipient represents a recipient in Brevo API
+type brevoRecipient struct {
+	Email string `json:"email"`
+}
+
+// brevoPayload represents the JSON payload to send to Brevo API
+type brevoPayload struct {
+	Sender      brevoSender      `json:"sender"`
+	To          []brevoRecipient `json:"to"`
+	Subject     string           `json:"subject"`
+	HtmlContent string           `json:"htmlContent"`
+}
+
+// sendViaBrevo is a helper method to handle the HTTP request to the Brevo API
+func (s *EmailSender) sendViaBrevo(toEmail, subject, htmlBody string, customFrom string) error {
+	apikey := s.config.BrevoAPIKey
 	if apikey == "" {
-		return fmt.Errorf("RESEND_API_KEY is not configured")
+		return fmt.Errorf("BREVO_API_KEY is not configured")
 	}
 
-	fromStr := fmt.Sprintf("Nexus Security <%s>", s.config.SMTPFrom)
+	fromName := "Nexus Security"
+	fromEmail := s.config.SMTPFrom
 	if customFrom != "" {
-		fromStr = fmt.Sprintf("Nexus Security <%s>", customFrom)
+		fromEmail = customFrom
 	}
 
-	payload := resendPayload{
-		From:    fromStr,
-		To:      []string{toEmail},
-		Subject: subject,
-		Html:    htmlBody,
+	payload := brevoPayload{
+		Sender:      brevoSender{Name: fromName, Email: fromEmail},
+		To:          []brevoRecipient{{Email: toEmail}},
+		Subject:     subject,
+		HtmlContent: htmlBody,
 	}
 
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
-		return fmt.Errorf("failed to marshal resend payload: %v", err)
+		return fmt.Errorf("failed to marshal brevo payload: %v", err)
 	}
 
-	req, err := http.NewRequest("POST", "https://api.resend.com/emails", bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("POST", "https://api.brevo.com/v3/smtp/email", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %v", err)
 	}
 
-	req.Header.Set("Authorization", "Bearer "+apikey)
+	req.Header.Set("api-key", apikey)
+	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Printf("Failed to send email to %s via Resend API: %v", toEmail, err)
+		log.Printf("Failed to send email to %s via Brevo API: %v", toEmail, err)
 		return fmt.Errorf("failed to send email via HTTP: %v", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 300 {
 		bodyBytes, _ := io.ReadAll(resp.Body)
-		log.Printf("Resend API returned error status %d: %s", resp.StatusCode, string(bodyBytes))
-		return fmt.Errorf("resend API error: %s", string(bodyBytes))
+		log.Printf("Brevo API returned error status %d: %s", resp.StatusCode, string(bodyBytes))
+		return fmt.Errorf("brevo API error: %s", string(bodyBytes))
 	}
 
-	log.Printf("Email sent successfully to %s via Resend", toEmail)
+	log.Printf("Email sent successfully to %s via Brevo", toEmail)
 	return nil
 }
 
@@ -127,7 +140,7 @@ func (s *EmailSender) SendVerificationEmail(toEmail, code string) error {
 </html>
 `, code)
 
-	return s.sendViaResend(toEmail, subject, body, "")
+	return s.sendViaBrevo(toEmail, subject, body, "")
 }
 
 func (s *EmailSender) SendAdminRoleNotification(toEmail, username, newRole string) error {
@@ -173,7 +186,7 @@ func (s *EmailSender) SendAdminRoleNotification(toEmail, username, newRole strin
 </html>
 `, username, newRole)
 
-	return s.sendViaResend(toEmail, subject, body, "")
+	return s.sendViaBrevo(toEmail, subject, body, "")
 }
 func (s *EmailSender) SendAccountDeactivationNotification(toEmail, username, reason string) error {
 	subject := "Account Deactivation Notice"
@@ -221,7 +234,7 @@ func (s *EmailSender) SendAccountDeactivationNotification(toEmail, username, rea
 </html>
 `, username, reason)
 
-	return s.sendViaResend(toEmail, subject, body, "")
+	return s.sendViaBrevo(toEmail, subject, body, "")
 }
 
 // SendPasswordResetEmail sends a password reset code to the user's email.
@@ -269,5 +282,5 @@ func (s *EmailSender) SendPasswordResetEmail(toEmail, code string) error {
 </html>
 `, code)
 
-	return s.sendViaResend(toEmail, subject, body, "")
+	return s.sendViaBrevo(toEmail, subject, body, "")
 }
