@@ -20,6 +20,7 @@ type MockReportRepository struct {
 	GetReportedUserIDsFunc      func(ctx context.Context, reporterID primitive.ObjectID) ([]primitive.ObjectID, error)
 	IsUserReportedFunc          func(ctx context.Context, reporterID, reportedID primitive.ObjectID) (bool, error)
 	GetFederationStatsFunc      func(ctx context.Context, startDate, endDate time.Time) (*models.FederationStats, error)
+	GetTrafficReportFunc        func(ctx context.Context, startDate, endDate time.Time) (*models.TrafficReport, error)
 	CreateIndexesFunc           func(ctx context.Context) error
 }
 
@@ -96,6 +97,13 @@ func (m *MockReportRepository) IsUserReported(ctx context.Context, reporterID, r
 func (m *MockReportRepository) GetFederationStats(ctx context.Context, startDate, endDate time.Time) (*models.FederationStats, error) {
 	if m.GetFederationStatsFunc != nil {
 		return m.GetFederationStatsFunc(ctx, startDate, endDate)
+	}
+	return nil, nil
+}
+
+func (m *MockReportRepository) GetTrafficReport(ctx context.Context, startDate, endDate time.Time) (*models.TrafficReport, error) {
+	if m.GetTrafficReportFunc != nil {
+		return m.GetTrafficReportFunc(ctx, startDate, endDate)
 	}
 	return nil, nil
 }
