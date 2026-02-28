@@ -2,6 +2,10 @@ package repository
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"federated-social/backend/database"
 	"federated-social/backend/epics/identity/models"
@@ -310,4 +314,65 @@ func (r *UserRepository) MigrateGlobalDiscovery(ctx context.Context) error {
 		log.Printf("Migration: Enabled global discovery for %d users", result.ModifiedCount)
 	}
 	return nil
+}
+
+// EnsureKeyPair generates an RSA-2048 keypair for the user if one doesn't exist yet.
+// It is idempotent — a second call returns the existing user unchanged.
+// The private key is stored PEM-encoded and NEVER exposed in JSON.
+func (r *UserRepository) EnsureKeyPair(ctx context.Context, userID primitive.ObjectID) (*models.User, error) {
+	user, err := r.FindByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Already has keys — nothing to do
+	if user.PublicKeyPem != "" && user.PrivateKeyPem != "" {
+		return user, nil
+	}
+
+	// Generate RSA-2048 keypair
+	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate RSA keypair: %w", err)
+	}
+
+	// PEM-encode private key
+	privPEM := string(pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(privKey),
+	}))
+
+	// PEM-encode public key (PKIX/SubjectPublicKeyInfo — what ActivityPub expects)
+	pubDER, err := x509.MarshalPKIXPublicKey(&privKey.PublicKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal public key: %w", err)
+	}
+	pubPEM := string(pem.EncodeToMemory(&pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: pubDER,
+	}))
+
+	// Persist to DB
+	if err := r.UpdateKeyPair(ctx, userID, pubPEM, privPEM); err != nil {
+		return nil, fmt.Errorf("failed to save keypair: %w", err)
+	}
+
+	user.PublicKeyPem = pubPEM
+	user.PrivateKeyPem = privPEM
+	log.Printf("ActivityPub: Generated RSA keypair for user %s", user.Username)
+	return user, nil
+}
+
+// UpdateKeyPair stores PEM-encoded public and private keys for a user.
+func (r *UserRepository) UpdateKeyPair(ctx context.Context, userID primitive.ObjectID, publicPem, privatePem string) error {
+	_, err := r.collection.UpdateOne(
+		ctx,
+		bson.M{"_id": userID},
+		bson.M{"$set": bson.M{
+			"public_key_pem":  publicPem,
+			"private_key_pem": privatePem,
+			"updated_at":      time.Now(),
+		}},
+	)
+	return err
 }

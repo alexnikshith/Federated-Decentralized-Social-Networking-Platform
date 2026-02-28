@@ -52,6 +52,7 @@ type RemoteRelationshipsRepositoryInterface interface {
 type UserRepositoryInterface interface {
 	FindByUsername(ctx context.Context, username string) (*identityModels.User, error)
 	FindByID(ctx context.Context, id primitive.ObjectID) (*identityModels.User, error)
+	EnsureKeyPair(ctx context.Context, userID primitive.ObjectID) (*identityModels.User, error)
 }
 
 // HTTPClientInterface defines methods for making HTTP requests

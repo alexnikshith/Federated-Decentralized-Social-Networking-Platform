@@ -150,6 +150,9 @@ func (m *mockUserRepo) FindByUsername(ctx context.Context, username string) (*id
 func (m *mockUserRepo) FindByID(ctx context.Context, id primitive.ObjectID) (*identityModels.User, error) {
 	return nil, nil
 }
+func (m *mockUserRepo) EnsureKeyPair(ctx context.Context, id primitive.ObjectID) (*identityModels.User, error) {
+	return nil, nil
+}
 
 // --- Tests ---
 
