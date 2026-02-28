@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"federated-social/backend/config"
 	"federated-social/backend/database"
 	"fmt"
 	"io"
@@ -68,8 +69,8 @@ func (h *AvatarHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 
 	fileID := uploadStream.FileID.(primitive.ObjectID).Hex()
 
-	// We reuse the public media route for avatars
-	url := fmt.Sprintf("/api/messages/media/%s", fileID)
+	// We reuse the public media route for avatars, and provide the absolute URL
+	url := fmt.Sprintf("%s/api/messages/media/%s", config.AppConfig.BaseURL(), fileID)
 
 	data := map[string]string{
 		"url": url,

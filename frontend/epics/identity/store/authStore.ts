@@ -36,6 +36,7 @@ interface AuthState {
 
     // Actions
     setAuth: (user: User, token: string) => void;
+    setAuthSilent: (user: User, token: string) => void;
     clearAuth: (logoutAll?: boolean) => void;
     updateUser: (user: User) => void;
     updateActivity: () => void;
@@ -86,14 +87,12 @@ export const useAuthStore = create<AuthState>()(
                 set(() => ({ isTransitioning: true, transitionState: TransitionState.PRE_WARP_NEBULA }));
             },
 
-            // setAuth logs in a user and updates the session registry
+            // setAuth logs in a user and triggers cinematic transition
             setAuth: (user, token) => {
                 const now = Date.now();
-                // Capture the context in which this auth happened
                 const currentCommunityId = localStorage.getItem('active_community_id') || DEFAULT_COMMUNITY_ID;
 
                 set((state) => {
-                    // Update or add session for this COMMUNITY + USER combination
                     const existingIndex = state.sessions.findIndex(s =>
                         s.communityId === currentCommunityId && s.user.id === user.id
                     );
@@ -109,11 +108,39 @@ export const useAuthStore = create<AuthState>()(
                         user,
                         token,
                         isAuthenticated: true,
-                        isLoginExiting: false, // Reset the pre-transition state
-                        isTransitioning: true, // Trigger cinematic transition on successful login
-                        transitionState: TransitionState.WORMHOLE_TRAVEL, // Start FSM via actual Warp
+                        isLoginExiting: false,
+                        isTransitioning: true, // Trigger cinematic transition on explicit login
+                        transitionState: TransitionState.WORMHOLE_TRAVEL,
                         lastActivity: now,
                         sessions: newSessions
+                    };
+                });
+            },
+
+            // setAuthSilent updates session data without triggering cinematic animations (used for background syncs like tab focus)
+            setAuthSilent: (user, token) => {
+                const now = Date.now();
+                const currentCommunityId = localStorage.getItem('active_community_id') || DEFAULT_COMMUNITY_ID;
+
+                set((state) => {
+                    const existingIndex = state.sessions.findIndex(s =>
+                        s.communityId === currentCommunityId && s.user.id === user.id
+                    );
+                    const newSessions = [...state.sessions];
+
+                    if (existingIndex >= 0) {
+                        newSessions[existingIndex] = { user, token, lastActivity: now, communityId: currentCommunityId };
+                    } else {
+                        newSessions.push({ user, token, lastActivity: now, communityId: currentCommunityId });
+                    }
+
+                    return {
+                        user,
+                        token,
+                        isAuthenticated: true,
+                        lastActivity: now,
+                        sessions: newSessions
+                        // We intentionally do NOT touch isTransitioning or transitionState here
                     };
                 });
             },
@@ -313,10 +340,15 @@ export const useAuthStore = create<AuthState>()(
                 user: state.user,
                 token: state.token,
                 isAuthenticated: state.isAuthenticated,
-                isTransitioning: false, // Don't persist transitioning state
                 lastActivity: state.lastActivity,
                 sessions: state.sessions,
             }),
+            onRehydrateStorage: () => (state) => {
+                if (state) {
+                    state.isTransitioning = false;
+                    state.transitionState = TransitionState.IDLE;
+                }
+            },
         }
     )
 );
