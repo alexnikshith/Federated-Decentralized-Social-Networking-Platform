@@ -134,10 +134,10 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, stats, loading, 
                 {!isSelf ? (
                     <TooltipProvider>
                         <div className="flex justify-end gap-1">
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    {user.is_active ? (
-                                        <AlertDialog>
+                            {user.is_active ? (
+                                <AlertDialog>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
                                             <AlertDialogTrigger asChild>
                                                 <Button
                                                     variant="ghost"
@@ -147,25 +147,32 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, stats, loading, 
                                                     <Ban className="h-4 w-4" />
                                                 </Button>
                                             </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>Ban User @{user.username}?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        This will prevent the user from logging in and interacting with the platform. You can re-enable their account at any time.
-                                                    </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction
-                                                        onClick={() => onToggleStatus(user.id, true)}
-                                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                                    >
-                                                        Deactivate Account
-                                                    </AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
-                                    ) : (
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Ban User</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Ban User @{user.username}?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This will prevent the user from logging in and interacting with the platform. You can re-enable their account at any time.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction
+                                                onClick={() => onToggleStatus(user.id, true)}
+                                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                            >
+                                                Deactivate Account
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            ) : (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
                                         <Button
                                             variant="ghost"
                                             size="icon"
@@ -174,12 +181,12 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, stats, loading, 
                                         >
                                             <CheckCircle className="h-4 w-4" />
                                         </Button>
-                                    )}
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>{user.is_active ? 'Ban User' : 'Enable User'}</p>
-                                </TooltipContent>
-                            </Tooltip>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Enable User</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            )}
 
                             <Tooltip>
                                 <TooltipTrigger asChild>

@@ -130,7 +130,7 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 // 4. Auto-logout and activity tracking wrappers
 
 const AppContent: React.FC = () => {
-    const { isAuthenticated, user, token, setAuth, clearAuth, clearAllSessions, sessions, removeAccount } = useAuthStore();
+    const { isAuthenticated, user, token, setAuth, setAuthSilent, clearAuth, clearAllSessions, sessions, removeAccount } = useAuthStore();
     const { updateDailyUsage, dailyUsageMinutes, timeLimitMinutes, isLimitIgnoredToday, ignoreLimit, setTimeLimit } = useSettingsStore();
 
     // Track daily usage
@@ -153,7 +153,8 @@ const AppContent: React.FC = () => {
             if (isAuthenticated && token) {
                 try {
                     const { user: freshUser, token: freshToken } = await authApi.syncSession();
-                    setAuth(freshUser, freshToken);
+                    // Use setAuthSilent to prevent triggering the Cinematic Transition on tab focus
+                    setAuthSilent(freshUser, freshToken);
                 } catch (error) {
                     console.error("Session sync failed:", error);
                     // If it's a 401, the interceptor will handle logout
