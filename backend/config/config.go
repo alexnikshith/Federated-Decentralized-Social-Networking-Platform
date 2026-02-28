@@ -14,11 +14,8 @@ type Config struct {
 	MongoURI     string
 	DatabaseName string
 	JWTSecret    string
-	SMTPHost     string
-	SMTPPort     string
-	SMTPUser     string
-	SMTPPassword string
 	SMTPFrom     string
+	BrevoAPIKey  string
 
 	// Federation settings
 	InstanceName       string
@@ -46,11 +43,8 @@ func LoadConfig() {
 		MongoURI:     getEnv("MONGO_URI", "mongodb://localhost:27017"),
 		DatabaseName: getEnv("DB_NAME", "federated_social"),
 		JWTSecret:    getEnv("JWT_SECRET", "your-secret-key-change-in-production"),
-		SMTPHost:     getEnv("SMTP_HOST", "smtp.gmail.com"),
-		SMTPPort:     getEnv("SMTP_PORT", "587"),
-		SMTPUser:     getEnv("SMTP_USER", ""),
-		SMTPPassword: getEnv("SMTP_PASSWORD", ""),
-		SMTPFrom:     getEnv("SMTP_FROM", "noreply@federated-social.com"),
+		SMTPFrom:     getEnv("SMTP_FROM", "kaushalloya5@gmail.com"),
+		BrevoAPIKey:  getEnv("BREVO_API_KEY", ""),
 
 		// Federation settings
 		InstanceName:       getEnv("INSTANCE_ID", getEnv("INSTANCE_NAME", "Community 1")),
