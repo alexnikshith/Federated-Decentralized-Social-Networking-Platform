@@ -12,7 +12,7 @@ type User struct {
 	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	Username     string             `json:"username" bson:"username"` // Unique identifier for the user
 	Email        string             `json:"email" bson:"email"`       // Unique email address
-	PasswordHash string             `json:"-" bson:"password_hash"`   // Bcrypt hash of the password, never exposed in JSON
+	PasswordHash string             `json:"-" bson:"password_hash"`   // Bcrypt hash of t`he password, never exposed in JSON
 	DisplayName  string             `json:"display_name" bson:"display_name"`
 	Bio          string             `json:"bio" bson:"bio"`
 	AvatarURL    string             `json:"avatar_url" bson:"avatar_url"`
@@ -34,6 +34,10 @@ type User struct {
 	// Instance info for federation
 	InstanceID        string   `json:"instance_id" bson:"instance_id"`
 	JoinedCommunities []string `json:"joined_communities" bson:"joined_communities"`
+
+	// ActivityPub RSA keypair — never exposed in JSON, stored in DB only
+	PublicKeyPem  string `json:"-" bson:"public_key_pem,omitempty"`
+	PrivateKeyPem string `json:"-" bson:"private_key_pem,omitempty"`
 }
 
 // ActivityLog represents user activity tracking

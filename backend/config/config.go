@@ -3,6 +3,7 @@ package config
 import (
 	"log"
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -20,9 +21,10 @@ type Config struct {
 	SMTPFrom     string
 
 	// Federation settings
-	InstanceName      string
-	InstanceDomain    string
-	FederationEnabled bool
+	InstanceName       string
+	InstanceDomain     string
+	FederationEnabled  bool
+	ActivityPubEnabled bool
 }
 
 // AppConfig represents the global configuration instance
@@ -51,13 +53,14 @@ func LoadConfig() {
 		SMTPFrom:     getEnv("SMTP_FROM", "noreply@federated-social.com"),
 
 		// Federation settings
-		InstanceName:      getEnv("INSTANCE_ID", getEnv("INSTANCE_NAME", "Community 1")),
-		InstanceDomain:    getEnv("INSTANCE_DOMAIN", "localhost:8080"),
-		FederationEnabled: getEnvBool("FEDERATION_ENABLED", true),
+		InstanceName:       getEnv("INSTANCE_ID", getEnv("INSTANCE_NAME", "Community 1")),
+		InstanceDomain:     getEnv("INSTANCE_DOMAIN", "localhost:8080"),
+		FederationEnabled:  getEnvBool("FEDERATION_ENABLED", true),
+		ActivityPubEnabled: getEnvBool("ACTIVITYPUB_ENABLED", true),
 	}
 
-	log.Printf("Config loaded: Port=%s, DB=%s, Instance=%s, Federation=%v",
-		AppConfig.Port, AppConfig.DatabaseName, AppConfig.InstanceName, AppConfig.FederationEnabled)
+	log.Printf("Config loaded: Port=%s, DB=%s, Instance=%s, Federation=%v, ActivityPub=%v",
+		AppConfig.Port, AppConfig.DatabaseName, AppConfig.InstanceName, AppConfig.FederationEnabled, AppConfig.ActivityPubEnabled)
 }
 
 func getEnv(key, defaultValue string) string {
@@ -72,4 +75,17 @@ func getEnvBool(key string, defaultValue bool) bool {
 		return value == "true" || value == "1" || value == "yes"
 	}
 	return defaultValue
+}
+
+// BaseURL returns the base URL for this instance used to build ActivityPub IDs.
+// Uses http:// for localhost/development, https:// for production domains.
+func (c *Config) BaseURL() string {
+	domain := c.InstanceDomain
+	if domain == "" {
+		domain = "localhost:8080"
+	}
+	if strings.HasPrefix(domain, "localhost") || strings.HasPrefix(domain, "127.0.0.1") {
+		return "http://" + domain
+	}
+	return "https://" + domain
 }
