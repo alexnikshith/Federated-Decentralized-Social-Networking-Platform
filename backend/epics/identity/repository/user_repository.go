@@ -5,8 +5,10 @@ import (
 	"errors"
 	"federated-social/backend/database"
 	"federated-social/backend/epics/identity/models"
+	"federated-social/backend/epics/safety/encryption"
 	"log"
 	"regexp"
+	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -36,7 +38,17 @@ func (r *UserRepository) CreateUser(ctx context.Context, user *models.User) erro
 		user.JoinedCommunities = []string{}
 	}
 
+	// Encrypt the email before storing
+	encryptedEmail, err := encryption.Encrypt(strings.ToLower(user.Email))
+	if err != nil {
+		return err
+	}
+	originalEmail := user.Email
+	user.Email = encryptedEmail
+
 	result, err := r.collection.InsertOne(ctx, user)
+	user.Email = originalEmail // Restore plaintext for the application
+
 	if err != nil {
 		return err
 	}
@@ -49,17 +61,24 @@ func (r *UserRepository) CreateUser(ctx context.Context, user *models.User) erro
 // It uses a regex case-insensitive search to ensure email uniqueness regardless of case.
 func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*models.User, error) {
 	var user models.User
-	// Use case-insensitive regex for email lookup
-	// We escape special characters to treat them literally.
-	pattern := "^" + regexp.QuoteMeta(email) + "$"
-	filter := bson.M{"email": primitive.Regex{Pattern: pattern, Options: "i"}}
+	// Encrypt the incoming email to search exactly
+	encryptedEmail, err := encryption.Encrypt(strings.ToLower(email))
+	if err != nil {
+		return nil, err
+	}
+	filter := bson.M{"email": encryptedEmail}
 
-	err := r.collection.FindOne(ctx, filter).Decode(&user)
+	err = r.collection.FindOne(ctx, filter).Decode(&user)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, errors.New("user not found")
 		}
 		return nil, err
+	}
+
+	// Decrypt the email before returning
+	if decrypted, err := encryption.Decrypt(user.Email); err == nil {
+		user.Email = decrypted
 	}
 	return &user, nil
 }
@@ -78,6 +97,14 @@ func (r *UserRepository) FindByUsername(ctx context.Context, username string) (*
 		}
 		return nil, err
 	}
+
+	// Decrypt the email before returning
+	if user.Email != "" {
+		if decrypted, err := encryption.Decrypt(user.Email); err == nil {
+			user.Email = decrypted
+		}
+	}
+
 	return &user, nil
 }
 
@@ -91,6 +118,14 @@ func (r *UserRepository) FindByID(ctx context.Context, id primitive.ObjectID) (*
 		}
 		return nil, err
 	}
+
+	// Decrypt the email before returning
+	if user.Email != "" {
+		if decrypted, err := encryption.Decrypt(user.Email); err == nil {
+			user.Email = decrypted
+		}
+	}
+
 	return &user, nil
 }
 
@@ -186,6 +221,14 @@ func (r *UserRepository) FindByIDs(ctx context.Context, ids []primitive.ObjectID
 		return nil, err
 	}
 
+	for i := range users {
+		if users[i].Email != "" {
+			if decrypted, err := encryption.Decrypt(users[i].Email); err == nil {
+				users[i].Email = decrypted
+			}
+		}
+	}
+
 	return users, nil
 }
 
@@ -240,6 +283,15 @@ func (r *UserRepository) FindAll(ctx context.Context) ([]models.User, error) {
 	if err = cursor.All(ctx, &users); err != nil {
 		return nil, err
 	}
+
+	for i := range users {
+		if users[i].Email != "" {
+			if decrypted, err := encryption.Decrypt(users[i].Email); err == nil {
+				users[i].Email = decrypted
+			}
+		}
+	}
+
 	return users, nil
 }
 
