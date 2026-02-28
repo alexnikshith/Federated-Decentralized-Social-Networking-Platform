@@ -55,6 +55,7 @@ type RemoteFollow struct {
 	RemoteActorID  string             `json:"remote_actor_id" bson:"remote_actor_id"` // Who they follow
 	RemoteUsername string             `json:"remote_username" bson:"remote_username"` // Cached username
 	RemoteInstance string             `json:"remote_instance" bson:"remote_instance"` // The server domain
+	Status         string             `json:"status" bson:"status"`                   // "pending", "accepted" (ActivityPub Accept tracking)
 	CreatedAt      time.Time          `json:"created_at" bson:"created_at"`
 }
 
