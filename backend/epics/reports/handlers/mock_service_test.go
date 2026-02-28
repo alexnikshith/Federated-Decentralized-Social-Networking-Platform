@@ -14,6 +14,7 @@ type MockReportService struct {
 	GetFederationReportsFunc     func(ctx context.Context, startStr, endStr string) (*models.FederationStats, error)
 	GetInteractionReportFunc     func(ctx context.Context, userID string, startStr, endStr string) (*models.InteractionReport, error)
 	GetInteractionMadeReportFunc func(ctx context.Context, userID string, startStr, endStr string) (*models.InteractionReport, error)
+	GetTrafficReportFunc         func(ctx context.Context, startStr, endStr string) (*models.TrafficReport, error)
 }
 
 func (m *MockReportService) RecordActivity(ctx context.Context, userID string) error {
@@ -61,6 +62,13 @@ func (m *MockReportService) GetInteractionReport(ctx context.Context, userID str
 func (m *MockReportService) GetInteractionMadeReport(ctx context.Context, userID string, startStr, endStr string) (*models.InteractionReport, error) {
 	if m.GetInteractionMadeReportFunc != nil {
 		return m.GetInteractionMadeReportFunc(ctx, userID, startStr, endStr)
+	}
+	return nil, nil
+}
+
+func (m *MockReportService) GetTrafficReport(ctx context.Context, startStr, endStr string) (*models.TrafficReport, error) {
+	if m.GetTrafficReportFunc != nil {
+		return m.GetTrafficReportFunc(ctx, startStr, endStr)
 	}
 	return nil, nil
 }
