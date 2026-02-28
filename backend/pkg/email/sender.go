@@ -1,10 +1,14 @@
 package email
 
 import (
+	"bytes"
+	"encoding/json"
 	"federated-social/backend/config"
 	"fmt"
+	"io"
 	"log"
-	"net/smtp"
+	"net/http"
+	"time"
 )
 
 type EmailSender struct {
@@ -17,29 +21,68 @@ func NewEmailSender() *EmailSender {
 	}
 }
 
+// resendPayload represents the JSON payload to send to Resend API
+type resendPayload struct {
+	From    string   `json:"from"`
+	To      []string `json:"to"`
+	Subject string   `json:"subject"`
+	Html    string   `json:"html"`
+}
+
+// sendViaResend is a helper method to handle the HTTP request to the Resend API
+func (s *EmailSender) sendViaResend(toEmail, subject, htmlBody string, customFrom string) error {
+	apikey := s.config.ResendAPIKey
+	if apikey == "" {
+		return fmt.Errorf("RESEND_API_KEY is not configured")
+	}
+
+	fromStr := fmt.Sprintf("Nexus Security <%s>", s.config.SMTPFrom)
+	if customFrom != "" {
+		fromStr = fmt.Sprintf("Nexus Security <%s>", customFrom)
+	}
+
+	payload := resendPayload{
+		From:    fromStr,
+		To:      []string{toEmail},
+		Subject: subject,
+		Html:    htmlBody,
+	}
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal resend payload: %v", err)
+	}
+
+	req, err := http.NewRequest("POST", "https://api.resend.com/emails", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %v", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+apikey)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Failed to send email to %s via Resend API: %v", toEmail, err)
+		return fmt.Errorf("failed to send email via HTTP: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		log.Printf("Resend API returned error status %d: %s", resp.StatusCode, string(bodyBytes))
+		return fmt.Errorf("resend API error: %s", string(bodyBytes))
+	}
+
+	log.Printf("Email sent successfully to %s via Resend", toEmail)
+	return nil
+}
+
 // SendVerificationEmail sends a 2FA or verification code to the user's email.
 // It uses a premium HTML template for a professional look.
 func (s *EmailSender) SendVerificationEmail(toEmail, code string) error {
-	// Use the authenticated user as the sender to avoid spoofing issues with Gmail,
-	// but add a Display Name "Nexus Security" and the SMTPFrom address
-	senderEmail := s.config.SMTPFrom
-	password := s.config.SMTPPassword
-	host := s.config.SMTPHost
-	port := s.config.SMTPPort
-	address := host + ":" + port
-
-	// Email Headers
-	headers := make(map[string]string)
-	headers["From"] = fmt.Sprintf("Nexus Security <%s>", senderEmail)
-	headers["To"] = toEmail
-	headers["Subject"] = "Your Login Verification Code"
-	headers["MIME-Version"] = "1.0"
-	headers["Content-Type"] = "text/html; charset=\"UTF-8\""
-
-	headerStr := ""
-	for k, v := range headers {
-		headerStr += fmt.Sprintf("%s: %s\r\n", k, v)
-	}
+	subject := "Your Login Verification Code"
 
 	// Premium Dark Theme Template
 	body := fmt.Sprintf(`
@@ -84,40 +127,11 @@ func (s *EmailSender) SendVerificationEmail(toEmail, code string) error {
 </html>
 `, code)
 
-	msg := []byte(headerStr + "\r\n" + body)
-
-	auth := smtp.PlainAuth("", s.config.SMTPUser, password, host)
-
-	log.Printf("Attempting to send email to %s via %s", toEmail, address)
-
-	// Note: We use s.config.SMTPUser as the 'from' address in SendMail to match authentication
-	err := smtp.SendMail(address, auth, s.config.SMTPUser, []string{toEmail}, msg)
-	if err != nil {
-		log.Printf("Failed to send email: %v", err)
-		return fmt.Errorf("failed to send email: %v", err)
-	}
-
-	log.Printf("Email sent successfully to %s", toEmail)
-	return nil
+	return s.sendViaResend(toEmail, subject, body, "")
 }
 
 func (s *EmailSender) SendAdminRoleNotification(toEmail, username, newRole string) error {
-	password := s.config.SMTPPassword
-	host := s.config.SMTPHost
-	port := s.config.SMTPPort
-	address := host + ":" + port
-
-	headers := make(map[string]string)
-	headers["From"] = fmt.Sprintf("Nexus Security <%s>", s.config.SMTPFrom)
-	headers["To"] = toEmail
-	headers["Subject"] = "Account Permission Update"
-	headers["MIME-Version"] = "1.0"
-	headers["Content-Type"] = "text/html; charset=\"UTF-8\""
-
-	headerStr := ""
-	for k, v := range headers {
-		headerStr += fmt.Sprintf("%s: %s\r\n", k, v)
-	}
+	subject := "Account Permission Update"
 
 	body := fmt.Sprintf(`
 <!DOCTYPE html>
@@ -159,36 +173,10 @@ func (s *EmailSender) SendAdminRoleNotification(toEmail, username, newRole strin
 </html>
 `, username, newRole)
 
-	msg := []byte(headerStr + "\r\n" + body)
-	auth := smtp.PlainAuth("", s.config.SMTPUser, password, host)
-
-	log.Printf("Sending role notification to %s...", toEmail)
-	err := smtp.SendMail(address, auth, s.config.SMTPUser, []string{toEmail}, msg)
-	if err != nil {
-		log.Printf("ERROR: Failed to send role notification to %s: %v", toEmail, err)
-		return err
-	}
-
-	log.Printf("Role notification sent successfully to %s", toEmail)
-	return nil
+	return s.sendViaResend(toEmail, subject, body, "")
 }
 func (s *EmailSender) SendAccountDeactivationNotification(toEmail, username, reason string) error {
-	password := s.config.SMTPPassword
-	host := s.config.SMTPHost
-	port := s.config.SMTPPort
-	address := host + ":" + port
-
-	headers := make(map[string]string)
-	headers["From"] = fmt.Sprintf("Nexus Security <%s>", s.config.SMTPUser)
-	headers["To"] = toEmail
-	headers["Subject"] = "Account Deactivation Notice"
-	headers["MIME-Version"] = "1.0"
-	headers["Content-Type"] = "text/html; charset=\"UTF-8\""
-
-	headerStr := ""
-	for k, v := range headers {
-		headerStr += fmt.Sprintf("%s: %s\r\n", k, v)
-	}
+	subject := "Account Deactivation Notice"
 
 	body := fmt.Sprintf(`
 <!DOCTYPE html>
@@ -233,39 +221,12 @@ func (s *EmailSender) SendAccountDeactivationNotification(toEmail, username, rea
 </html>
 `, username, reason)
 
-	msg := []byte(headerStr + "\r\n" + body)
-	auth := smtp.PlainAuth("", s.config.SMTPUser, password, host)
-
-	log.Printf("Sending deactivation notice to %s...", toEmail)
-	err := smtp.SendMail(address, auth, s.config.SMTPUser, []string{toEmail}, msg)
-	if err != nil {
-		log.Printf("ERROR: Failed to send deactivation notice to %s: %v", toEmail, err)
-		return err
-	}
-
-	log.Printf("Deactivation notice sent successfully to %s", toEmail)
-	return nil
+	return s.sendViaResend(toEmail, subject, body, "")
 }
 
 // SendPasswordResetEmail sends a password reset code to the user's email.
 func (s *EmailSender) SendPasswordResetEmail(toEmail, code string) error {
-	senderEmail := s.config.SMTPFrom
-	password := s.config.SMTPPassword
-	host := s.config.SMTPHost
-	port := s.config.SMTPPort
-	address := host + ":" + port
-
-	headers := make(map[string]string)
-	headers["From"] = fmt.Sprintf("Nexus Security <%s>", senderEmail)
-	headers["To"] = toEmail
-	headers["Subject"] = "Reset Your Password"
-	headers["MIME-Version"] = "1.0"
-	headers["Content-Type"] = "text/html; charset=\"UTF-8\""
-
-	headerStr := ""
-	for k, v := range headers {
-		headerStr += fmt.Sprintf("%s: %s\r\n", k, v)
-	}
+	subject := "Reset Your Password"
 
 	body := fmt.Sprintf(`
 <!DOCTYPE html>
@@ -308,18 +269,5 @@ func (s *EmailSender) SendPasswordResetEmail(toEmail, code string) error {
 </html>
 `, code)
 
-	msg := []byte(headerStr + "\r\n" + body)
-
-	auth := smtp.PlainAuth("", s.config.SMTPUser, password, host)
-
-	log.Printf("Attempting to send password reset email to %s via %s", toEmail, address)
-
-	err := smtp.SendMail(address, auth, s.config.SMTPUser, []string{toEmail}, msg)
-	if err != nil {
-		log.Printf("Failed to send email: %v", err)
-		return fmt.Errorf("failed to send email: %v", err)
-	}
-
-	log.Printf("Password reset email sent successfully to %s", toEmail)
-	return nil
+	return s.sendViaResend(toEmail, subject, body, "")
 }
