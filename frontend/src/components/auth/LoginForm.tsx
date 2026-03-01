@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Globe, ArrowRight, Eye, EyeOff, Shield, ArrowLeft, KeyRound, Mail, CheckCircle2, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { SpaceDeviceFrame } from "./SpaceDeviceFrame";
 import "./SpaceDevice.css";
 import {
     Select,
@@ -235,277 +236,259 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister, hideBackNav = false, 
                     transition={{ duration: 0.8, ease: "anticipate" }}
                     className="relative w-full max-w-[650px] mx-auto z-10"
                 >
-                    <div className="device-wrapper">
-                        {/* Hardware Details */}
-                        <div className="antenna" />
-
-                        <div className="device-frame">
-                            <div className="corner tl" />
-                            <div className="corner tr" />
-                            <div className="corner bl" />
-                            <div className="corner br" />
-
-                            <div className="side-module left" />
-                            <div className="side-module right" />
-
-                            {/* Inner Screen Panel */}
-                            <div className="screen relative bg-black/80 backdrop-blur-md shadow-[inset_0_0_40px_rgba(0,0,0,0.8)] border border-white/5 overflow-y-auto custom-scrollbar">
-                                <div className="p-6 md:p-8 space-y-6 min-h-full flex flex-col justify-center">
-                                    {error && (
-                                        <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm shrink-0">
-                                            {error}
-                                        </div>
-                                    )}
-
-                                    {/* -- LOGIN VIEWS -- */}
-                                    {(view === 'login' || view === 'login_otp') && (
-                                        <form onSubmit={handleLoginSubmit} className="space-y-6">
-                                            {view === 'login' ? (
-                                                <>
-                                                    <div className="space-y-2 shrink-0">
-                                                        <Label htmlFor="instance">Instance</Label>
-                                                        <Select value={instance} onValueChange={setInstance}>
-                                                            <SelectTrigger className="h-11 bg-secondary border-border">
-                                                                <div className="flex items-center gap-2">
-                                                                    <Globe className="w-4 h-4 text-muted-foreground" />
-                                                                    <SelectValue placeholder="Select community" />
-                                                                </div>
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {COMMUNITIES.map((community) => (
-                                                                    <SelectItem key={community.id} value={community.url}>
-                                                                        <div className="flex flex-col text-left">
-                                                                            <span className="font-medium">{community.name}</span>
-                                                                        </div>
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                        <p className="text-xs text-muted-foreground">
-                                                            Select the community instance your account belongs to
-                                                        </p>
-                                                    </div>
-
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="email">Email</Label>
-                                                        <Input
-                                                            id="email"
-                                                            type="email"
-                                                            placeholder="you@example.com"
-                                                            value={email}
-                                                            onChange={(e) => setEmail(e.target.value)}
-                                                            className="h-11 bg-secondary border-border"
-                                                            required
-                                                        />
-                                                    </div>
-
-                                                    <div className="space-y-2">
-                                                        <div className="flex items-center justify-between">
-                                                            <Label htmlFor="password">Password</Label>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setView('forgot_email')}
-                                                                className="text-sm text-primary hover:underline"
-                                                            >
-                                                                Forgot password?
-                                                            </button>
-                                                        </div>
-                                                        <div className="relative">
-                                                            <Input
-                                                                id="password"
-                                                                type={showPassword ? "text" : "password"}
-                                                                placeholder="••••••••"
-                                                                value={password}
-                                                                onChange={(e) => setPassword(e.target.value)}
-                                                                className="h-11 bg-secondary border-border pr-10"
-                                                                required
-                                                            />
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setShowPassword(!showPassword)}
-                                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                                                            >
-                                                                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </>
-                                            ) : (
-                                                <div className="space-y-4">
-                                                    <Label htmlFor="otp">Verification Code</Label>
-                                                    <Input
-                                                        id="otp"
-                                                        type="text"
-                                                        placeholder="Enter 6-digit code"
-                                                        value={otp}
-                                                        onChange={(e) => setOtp(e.target.value)}
-                                                        className="h-14 bg-secondary border-border text-center text-2xl tracking-[0.5em] font-mono"
-                                                        maxLength={6}
-                                                        required
-                                                        autoFocus
-                                                    />
-                                                    <div className="text-center">
-                                                        <Button
-                                                            type="button"
-                                                            variant="link"
-                                                            className="text-sm text-muted-foreground"
-                                                            onClick={() => setView('login')}
-                                                        >
-                                                            Use a different email
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            <Button type="submit" variant="hero" className="w-full h-11 text-base" disabled={isLoading}>
-                                                {isLoading ? "Processing..." : (
-                                                    <>
-                                                        {view === 'login' ? "Sign In" : "Verify Code"}
-                                                        <ArrowRight className="w-4 h-4 ml-2" />
-                                                    </>
-                                                )}
-                                            </Button>
-
-                                            {view === 'login' && (
-                                                <>
-                                                    <div className="relative py-2">
-                                                        <div className="absolute inset-0 flex items-center">
-                                                            <div className="w-full border-t border-border"></div>
-                                                        </div>
-                                                        <div className="relative flex justify-center text-xs uppercase">
-                                                            <span className="bg-card px-2 text-muted-foreground">New to Nexus?</span>
-                                                        </div>
-                                                    </div>
-
-                                                    {onSwitchToRegister ? (
-                                                        <Button
-                                                            variant="outline"
-                                                            className="w-full h-11"
-                                                            onClick={(e) => { e.preventDefault(); onSwitchToRegister(); }}
-                                                        >
-                                                            Create an Account
-                                                        </Button>
-                                                    ) : (
-                                                        <Link to="/register">
-                                                            <Button variant="outline" className="w-full h-11">
-                                                                Create an Account
-                                                            </Button>
-                                                        </Link>
-                                                    )}
-                                                </>
-                                            )}
-                                        </form>
-                                    )}
-
-                                    {/* -- FORGOT PASSWORD VIEWS -- */}
-                                    {view === 'forgot_email' && (
-                                        <form onSubmit={handleForgotSendCode} className="space-y-6">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="email">Email Address</Label>
-                                                <div className="relative">
-                                                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                                    <Input
-                                                        id="email"
-                                                        type="email"
-                                                        placeholder="you@example.com"
-                                                        value={email}
-                                                        onChange={(e) => setEmail(e.target.value)}
-                                                        className="pl-10 h-11 bg-secondary border-border"
-                                                        required
-                                                        autoFocus
-                                                    />
-                                                </div>
-                                            </div>
-                                            <Button type="submit" variant="hero" className="w-full h-11 text-base" disabled={isLoading}>
-                                                {isLoading ? (
-                                                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending...</>
-                                                ) : "Send Verification Code"}
-                                            </Button>
-                                            <div className="text-center pt-2">
-                                                <Button type="button" variant="link" className="text-sm text-muted-foreground" onClick={() => setView('login')}>
-                                                    &larr; Back to login
-                                                </Button>
-                                            </div>
-                                        </form>
-                                    )}
-
-                                    {view === 'forgot_otp' && (
-                                        <form onSubmit={handleForgotVerifyCode} className="space-y-6">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="otp">Verification Code</Label>
-                                                <div className="relative">
-                                                    <CheckCircle2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                                    <Input
-                                                        id="otp"
-                                                        placeholder="Enter 6-digit code"
-                                                        value={otp}
-                                                        onChange={(e) => setOtp(e.target.value)}
-                                                        className="pl-10 h-14 bg-secondary border-border text-center text-2xl tracking-[0.5em] font-mono"
-                                                        maxLength={6}
-                                                        required
-                                                        autoFocus
-                                                    />
-                                                </div>
-                                            </div>
-                                            <Button type="submit" variant="hero" className="w-full h-11 text-base" disabled={isLoading}>
-                                                {isLoading ? (
-                                                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Verifying...</>
-                                                ) : "Verify Code"}
-                                            </Button>
-                                            <div className="text-center pt-2">
-                                                <Button type="button" variant="link" className="text-sm text-muted-foreground" onClick={() => setView('forgot_email')}>
-                                                    Use a different email
-                                                </Button>
-                                            </div>
-                                        </form>
-                                    )}
-
-                                    {view === 'forgot_reset' && (
-                                        <form onSubmit={handleResetPassword} className="space-y-6">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="newPassword">New Password</Label>
-                                                <div className="relative">
-                                                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                                    <Input
-                                                        id="newPassword"
-                                                        type="password"
-                                                        placeholder="Enter new password"
-                                                        value={newPassword}
-                                                        onChange={(e) => setNewPassword(e.target.value)}
-                                                        className="pl-10 h-11 bg-secondary border-border"
-                                                        required
-                                                        minLength={8}
-                                                        autoFocus
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="confirmPassword">Confirm Password</Label>
-                                                <div className="relative">
-                                                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                                    <Input
-                                                        id="confirmPassword"
-                                                        type="password"
-                                                        placeholder="Confirm new password"
-                                                        value={confirmPassword}
-                                                        onChange={(e) => setConfirmPassword(e.target.value)}
-                                                        className="pl-10 h-11 bg-secondary border-border"
-                                                        required
-                                                        minLength={8}
-                                                    />
-                                                </div>
-                                            </div>
-                                            <Button type="submit" variant="hero" className="w-full h-11 text-base" disabled={isLoading}>
-                                                {isLoading ? (
-                                                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Resetting...</>
-                                                ) : "Reset Password"}
-                                            </Button>
-                                        </form>
-                                    )}
-                                </div>
+                    <SpaceDeviceFrame className="p-6 md:p-8 space-y-6 min-h-full flex flex-col justify-center" wrapperClassName="w-full h-[600px]">
+                        {error && (
+                            <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm shrink-0">
+                                {error}
                             </div>
-                        </div>
-                    </div>
+                        )}
+
+                        {/* -- LOGIN VIEWS -- */}
+                        {(view === 'login' || view === 'login_otp') && (
+                            <form onSubmit={handleLoginSubmit} className="space-y-6">
+                                {view === 'login' ? (
+                                    <>
+                                        <div className="space-y-2 shrink-0">
+                                            <Label htmlFor="instance">Instance</Label>
+                                            <Select value={instance} onValueChange={setInstance}>
+                                                <SelectTrigger className="h-11 bg-secondary border-border">
+                                                    <div className="flex items-center gap-2">
+                                                        <Globe className="w-4 h-4 text-muted-foreground" />
+                                                        <SelectValue placeholder="Select community" />
+                                                    </div>
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {COMMUNITIES.map((community) => (
+                                                        <SelectItem key={community.id} value={community.url}>
+                                                            <div className="flex flex-col text-left">
+                                                                <span className="font-medium">{community.name}</span>
+                                                            </div>
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <p className="text-xs text-muted-foreground">
+                                                Select the community instance your account belongs to
+                                            </p>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="email">Email</Label>
+                                            <Input
+                                                id="email"
+                                                type="email"
+                                                placeholder="you@example.com"
+                                                value={email}
+                                                onChange={(e) => setEmail(e.target.value)}
+                                                className="h-11 bg-secondary border-border"
+                                                required
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <Label htmlFor="password">Password</Label>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setView('forgot_email')}
+                                                    className="text-sm text-primary hover:underline"
+                                                >
+                                                    Forgot password?
+                                                </button>
+                                            </div>
+                                            <div className="relative">
+                                                <Input
+                                                    id="password"
+                                                    type={showPassword ? "text" : "password"}
+                                                    placeholder="••••••••"
+                                                    value={password}
+                                                    onChange={(e) => setPassword(e.target.value)}
+                                                    className="h-11 bg-secondary border-border pr-10"
+                                                    required
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowPassword(!showPassword)}
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                                >
+                                                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="space-y-4">
+                                        <Label htmlFor="otp">Verification Code</Label>
+                                        <Input
+                                            id="otp"
+                                            type="text"
+                                            placeholder="Enter 6-digit code"
+                                            value={otp}
+                                            onChange={(e) => setOtp(e.target.value)}
+                                            className="h-14 bg-secondary border-border text-center text-2xl tracking-[0.5em] font-mono"
+                                            maxLength={6}
+                                            required
+                                            autoFocus
+                                        />
+                                        <div className="text-center">
+                                            <Button
+                                                type="button"
+                                                variant="link"
+                                                className="text-sm text-muted-foreground"
+                                                onClick={() => setView('login')}
+                                            >
+                                                Use a different email
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <Button type="submit" variant="hero" className="w-full h-11 text-base" disabled={isLoading}>
+                                    {isLoading ? "Processing..." : (
+                                        <>
+                                            {view === 'login' ? "Sign In" : "Verify Code"}
+                                            <ArrowRight className="w-4 h-4 ml-2" />
+                                        </>
+                                    )}
+                                </Button>
+
+                                {view === 'login' && (
+                                    <>
+                                        <div className="relative py-2">
+                                            <div className="absolute inset-0 flex items-center">
+                                                <div className="w-full border-t border-border"></div>
+                                            </div>
+                                            <div className="relative flex justify-center text-xs uppercase">
+                                                <span className="bg-card px-2 text-muted-foreground">New to Nexus?</span>
+                                            </div>
+                                        </div>
+
+                                        {onSwitchToRegister ? (
+                                            <Button
+                                                variant="outline"
+                                                className="w-full h-11"
+                                                onClick={(e) => { e.preventDefault(); onSwitchToRegister(); }}
+                                            >
+                                                Create an Account
+                                            </Button>
+                                        ) : (
+                                            <Link to="/register">
+                                                <Button variant="outline" className="w-full h-11">
+                                                    Create an Account
+                                                </Button>
+                                            </Link>
+                                        )}
+                                    </>
+                                )}
+                            </form>
+                        )}
+
+                        {/* -- FORGOT PASSWORD VIEWS -- */}
+                        {view === 'forgot_email' && (
+                            <form onSubmit={handleForgotSendCode} className="space-y-6">
+                                <div className="space-y-2">
+                                    <Label htmlFor="email">Email Address</Label>
+                                    <div className="relative">
+                                        <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            id="email"
+                                            type="email"
+                                            placeholder="you@example.com"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            className="pl-10 h-11 bg-secondary border-border"
+                                            required
+                                            autoFocus
+                                        />
+                                    </div>
+                                </div>
+                                <Button type="submit" variant="hero" className="w-full h-11 text-base" disabled={isLoading}>
+                                    {isLoading ? (
+                                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending...</>
+                                    ) : "Send Verification Code"}
+                                </Button>
+                                <div className="text-center pt-2">
+                                    <Button type="button" variant="link" className="text-sm text-muted-foreground" onClick={() => setView('login')}>
+                                        &larr; Back to login
+                                    </Button>
+                                </div>
+                            </form>
+                        )}
+
+                        {view === 'forgot_otp' && (
+                            <form onSubmit={handleForgotVerifyCode} className="space-y-6">
+                                <div className="space-y-2">
+                                    <Label htmlFor="otp">Verification Code</Label>
+                                    <div className="relative">
+                                        <CheckCircle2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            id="otp"
+                                            placeholder="Enter 6-digit code"
+                                            value={otp}
+                                            onChange={(e) => setOtp(e.target.value)}
+                                            className="pl-10 h-14 bg-secondary border-border text-center text-2xl tracking-[0.5em] font-mono"
+                                            maxLength={6}
+                                            required
+                                            autoFocus
+                                        />
+                                    </div>
+                                </div>
+                                <Button type="submit" variant="hero" className="w-full h-11 text-base" disabled={isLoading}>
+                                    {isLoading ? (
+                                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Verifying...</>
+                                    ) : "Verify Code"}
+                                </Button>
+                                <div className="text-center pt-2">
+                                    <Button type="button" variant="link" className="text-sm text-muted-foreground" onClick={() => setView('forgot_email')}>
+                                        Use a different email
+                                    </Button>
+                                </div>
+                            </form>
+                        )}
+
+                        {view === 'forgot_reset' && (
+                            <form onSubmit={handleResetPassword} className="space-y-6">
+                                <div className="space-y-2">
+                                    <Label htmlFor="newPassword">New Password</Label>
+                                    <div className="relative">
+                                        <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            id="newPassword"
+                                            type="password"
+                                            placeholder="Enter new password"
+                                            value={newPassword}
+                                            onChange={(e) => setNewPassword(e.target.value)}
+                                            className="pl-10 h-11 bg-secondary border-border"
+                                            required
+                                            minLength={8}
+                                            autoFocus
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                                    <div className="relative">
+                                        <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            id="confirmPassword"
+                                            type="password"
+                                            placeholder="Confirm new password"
+                                            value={confirmPassword}
+                                            onChange={(e) => setConfirmPassword(e.target.value)}
+                                            className="pl-10 h-11 bg-secondary border-border"
+                                            required
+                                            minLength={8}
+                                        />
+                                    </div>
+                                </div>
+                                <Button type="submit" variant="hero" className="w-full h-11 text-base" disabled={isLoading}>
+                                    {isLoading ? (
+                                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Resetting...</>
+                                    ) : "Reset Password"}
+                                </Button>
+                            </form>
+                        )}
+                    </SpaceDeviceFrame>
                 </motion.div>
             </div>
         </div>
