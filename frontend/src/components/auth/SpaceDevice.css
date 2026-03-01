@@ -3,10 +3,94 @@
 .device-wrapper {
   position: relative;
   width: 100%;
-  max-width: 650px; /* Reduced max-width for better proportion */
-  height: 600px;
-  margin: auto;
-  pointer-events: none; /* Let clicks pass through the frame */
+  height: 100%;
+  pointer-events: none;
+  /* Let clicks pass through the frame */
+  perspective: 1200px;
+  /* For 3D rotation */
+}
+
+/* Main Frame */
+.device-frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(145deg, #3b3f46, #1c1f24);
+  border-radius: 28px;
+  padding: 30px;
+  box-shadow:
+    inset 0 0 25px rgba(0, 0, 0, 0.8),
+    0 25px 60px rgba(0, 0, 0, 0.7);
+  border: 3px solid #555;
+  pointer-events: none;
+  transform-style: preserve-3d;
+  transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.device-frame::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(145deg, #1c1f24, #0a0b0d);
+  border-radius: 28px;
+  transform: translateZ(-9px);
+  z-index: -1;
+  border: 1px solid #333;
+}
+
+.device-frame::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(145deg, #0a0b0d, #000);
+  border-radius: 28px;
+  transform: translateZ(-18px);
+  z-index: -2;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.9);
+  border: 1px solid #222;
+}
+
+.device-frame.flat-mode {
+  transform: rotateX(72deg) translateY(-20px) translateZ(-50px) scale(0.95);
+}
+
+.device-frame.flat-mode .screen {
+  opacity: 0.2;
+  transition: opacity 0.8s ease;
+}
+
+/* Horizontal (landscape) mode — used for the account-details step */
+.device-frame.horizontal-mode .side-module {
+  /* Move the orange bars from left/right edges to top/bottom */
+  top: auto;
+  left: 50%;
+  transform: translateX(-50%) rotate(90deg);
+  width: 16px;
+  height: 120px;
+}
+
+.device-frame.horizontal-mode .side-module.left {
+  left: 50%;
+  top: -10px;
+  bottom: auto;
+}
+
+.device-frame.horizontal-mode .side-module.right {
+  left: 50%;
+  top: auto;
+  bottom: -10px;
+  right: auto;
+}
+
+.device-frame.horizontal-mode .antenna {
+  /* Hide antenna in horizontal mode — doesn't make sense sideways */
+  display: none;
 }
 
 /* Antenna */
@@ -21,29 +105,15 @@
   pointer-events: none;
 }
 
-/* Main Frame */
-.device-frame {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(145deg, #3b3f46, #1c1f24);
-  border-radius: 28px;
-  padding: 30px;
-  box-shadow:
-    inset 0 0 25px rgba(0,0,0,0.8),
-    0 25px 60px rgba(0,0,0,0.7);
-  border: 3px solid #555;
-  pointer-events: none;
-}
-
 /* Screen wrapper */
 .screen {
   width: 100%;
   height: 100%;
   background: black;
   border-radius: 16px;
-  box-shadow: inset 0 0 30px rgba(0,0,0,0.9);
-  pointer-events: auto; /* Re-enable clicks inside the screen */
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.9);
+  pointer-events: auto;
+  /* Re-enable clicks inside the screen */
   position: relative;
   overflow: hidden;
   display: flex;
@@ -60,10 +130,25 @@
   pointer-events: none;
 }
 
-.tl { top: 12px; left: 12px; }
-.tr { top: 12px; right: 12px; }
-.bl { bottom: 12px; left: 12px; }
-.br { bottom: 12px; right: 12px; }
+.tl {
+  top: 12px;
+  left: 12px;
+}
+
+.tr {
+  top: 12px;
+  right: 12px;
+}
+
+.bl {
+  bottom: 12px;
+  left: 12px;
+}
+
+.br {
+  bottom: 12px;
+  right: 12px;
+}
 
 /* Side modules */
 .side-module {
@@ -77,5 +162,10 @@
   pointer-events: none;
 }
 
-.left { left: -10px; }
-.right { right: -10px; }
+.left {
+  left: -10px;
+}
+
+.right {
+  right: -10px;
+}

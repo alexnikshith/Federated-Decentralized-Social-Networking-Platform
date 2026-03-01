@@ -4,10 +4,33 @@ import { authApi } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import type { SignupRequest } from '../types';
 import { COMMUNITIES } from '../../../src/config/communities';
-import { Users, Globe, ArrowRight, Check, AlertCircle, Loader2, ChevronLeft, Upload } from 'lucide-react';
+import { Users, Globe, ArrowRight, Check, AlertCircle, Loader2, ChevronLeft, Upload, Orbit } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SpaceDeviceFrame } from '../../../src/components/auth/SpaceDeviceFrame';
+import { HologramProjector } from '../../../src/components/auth/HologramProjector';
 import { Checkbox } from "@/components/ui/checkbox";
 
+// ── Fixed design dimensions for the lockstep group ──
+const DESIGN_W = 560;  // px
+const DESIGN_H = 475;  // px  (hologram 295 + beam-gap 80 + device-half 100)
+
+// Scales the group container to always fill the viewport as one unit.
+function useScaleToFit() {
+    const [scale, setScale] = React.useState(1);
+    React.useEffect(() => {
+        const update = () => {
+            const s = Math.min(
+                window.innerWidth / DESIGN_W,
+                window.innerHeight / DESIGN_H
+            );
+            setScale(Math.min(s, 1)); // never scale up beyond 1
+        };
+        update();
+        window.addEventListener('resize', update);
+        return () => window.removeEventListener('resize', update);
+    }, []);
+    return scale;
+}
 
 // SignupPage handles new user registration
 export const SignupPage: React.FC = () => {
@@ -37,6 +60,13 @@ export const SignupPage: React.FC = () => {
     const [usernameError, setUsernameError] = useState('');
     const [isCheckingUsername, setIsCheckingUsername] = useState(false);
     const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+
+    // Hologram entrance animation — starts hidden, rises up after device appears
+    const [hologramVisible, setHologramVisible] = useState(false);
+    useEffect(() => {
+        const timer = setTimeout(() => setHologramVisible(true), 500);
+        return () => clearTimeout(timer);
+    }, []);
 
     // Handle community selection transition
     const handleNextStep = () => {
@@ -161,375 +191,288 @@ export const SignupPage: React.FC = () => {
         }
     };
 
+    // Scale factor so the entire group shrinks/grows as one unit
+    const groupScale = useScaleToFit();
+
     return (
-        <div className="min-h-screen bg-background flex flex-col relative w-full items-center justify-center p-4">
-            {/* Global Cosmos Background */}
+        <div className="h-[100dvh] bg-background flex items-center justify-center relative w-full overflow-hidden">
+            {/* Space Shuttle Background */}
             <div
-                className="fixed inset-0 w-full h-full bg-[url('/cosmos-bg.png')] bg-cover bg-center bg-no-repeat opacity-40 mix-blend-screen pointer-events-none"
+                className="fixed inset-0 w-full h-full bg-[url('/Space_shuttle.png')] bg-cover bg-center bg-no-repeat opacity-40 mix-blend-screen pointer-events-none"
                 style={{ filter: "contrast(1.2) brightness(0.8)", zIndex: 0 }}
             />
-            {/* Global darkening overlay to ensure text readability */}
+            {/* Darkening overlay */}
             <div className="fixed inset-0 bg-background/60 pointer-events-none" style={{ zIndex: 0 }} />
 
-            <div className={cn(
-                "relative z-10 w-full transition-all duration-700 ease-in-out flex flex-col md:flex-row gap-8 items-stretch",
-                step === 1 ? "max-w-xl" : "max-w-5xl"
-            )}>
-                {/* Left Side - Info / Selection */}
-                <div className={cn(
-                    "flex-1 flex flex-col justify-center space-y-6 transition-all duration-500",
-                    step === 2 ? "md:max-w-sm" : ""
-                )}>
-                    <div className="space-y-2">
-                        <Link to="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors mb-4">
-                            <ChevronLeft className="w-4 h-4 mr-1" />
-                            Back to home
-                        </Link>
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-primary to-primary/50 flex items-center justify-center shadow-lg shadow-primary/20 mb-4">
-                            <Globe className="w-6 h-6 text-primary-foreground" />
-                        </div>
-                        <h1 className="text-4xl font-extrabold tracking-tight text-foreground lg:text-5xl">
-                            Join the <span className="text-primary italic">Federation</span>
-                        </h1>
-                        <p className="text-lg text-muted-foreground">
-                            Create your account on a community instance that fits you.
-                        </p>
-                    </div>
-
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-sm font-bold uppercase tracking-widest text-primary/80">
-                                {step === 1 ? 'Choose your community' : 'Selected Community'}
-                            </h3>
-                        </div>
-
-                        {step === 1 ? (
-                            <div className="grid gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                {COMMUNITIES.map((community) => (
-                                    <button
-                                        key={community.id}
-                                        onClick={() => setSelectedCommunityId(community.id)}
-                                        className={cn(
-                                            "group relative flex items-center gap-4 p-5 rounded-2xl border transition-all duration-300 text-left overflow-hidden",
-                                            selectedCommunityId === community.id
-                                                ? "bg-primary/10 border-primary/50 ring-1 ring-primary/20"
-                                                : "bg-card border-border hover:border-primary/30"
-                                        )}
-                                    >
-                                        <div className={cn(
-                                            "w-12 h-12 rounded-xl flex items-center justify-center transition-colors",
-                                            selectedCommunityId === community.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                                        )}>
-                                            <Users className="w-6 h-6" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <h4 className="font-bold text-foreground group-hover:text-primary transition-colors">{community.name}</h4>
-                                            <p className="text-xs text-muted-foreground truncate">{community.description}</p>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-tighter">Active</span>
-                                            {selectedCommunityId === community.id && (
-                                                <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                                                    <Check className="w-3 h-3 text-primary-foreground" />
-                                                </div>
+            {/*
+              ── LOCKED GROUP ──
+              A single DESIGN_W × DESIGN_H box.  All three elements live
+              inside it at fixed pixel co-ordinates. The whole box is then
+              scaled-down uniformly by groupScale so nothing drifts apart.
+            */}
+            <div
+                className="relative z-10 flex-shrink-0"
+                style={{
+                    width: DESIGN_W,
+                    height: DESIGN_H,
+                    transform: `scale(${groupScale})`,
+                    transformOrigin: 'center center',
+                }}
+            >
+                {/*
+                  HologramProjector stays visible for all 3 steps.
+                  Inside: an overflow-hidden slider with 3 panels side by side.
+                  translateX(0)   → step 1
+                  translateX(-33.333%) → step 2
+                  translateX(-66.666%) → step 3
+                */}
+                <HologramProjector isActive={hologramVisible} className="">
+                    <div className="w-full overflow-hidden">
+                        <div
+                            className="flex w-[300%] transition-transform duration-500 ease-in-out"
+                            style={{ transform: step === 1 ? 'translateX(0%)' : step === 2 ? 'translateX(-33.333%)' : 'translateX(-66.666%)' }}
+                        >
+                            {/* ── Panel 1: Community Selection ── */}
+                            <div className="w-1/3 shrink-0 flex flex-col gap-1.5 px-4 py-1">
+                                <h3 className="text-center font-bold text-sky-400 tracking-widest uppercase mb-1 drop-shadow-[0_0_15px_rgba(56,189,248,0.8)] text-xs">
+                                    Select Instance
+                                </h3>
+                                <div className="space-y-2 max-h-[22vh] overflow-y-auto custom-scrollbar pr-2">
+                                    {COMMUNITIES.map((community) => (
+                                        <button
+                                            key={community.id}
+                                            onClick={() => setSelectedCommunityId(community.id)}
+                                            className={cn(
+                                                "w-full p-2.5 rounded-xl border border-sky-500/30 bg-sky-950/40 backdrop-blur-md transition-all flex items-center justify-between group hover:border-sky-400 hover:bg-sky-900/50 hover:shadow-[0_0_20px_rgba(56,189,248,0.4)]",
+                                                selectedCommunityId === community.id && "border-sky-400 bg-sky-900/60 shadow-[0_0_30px_rgba(56,189,248,0.6)]"
                                             )}
-                                        </div>
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <Globe className={cn(
+                                                    "w-5 h-5",
+                                                    selectedCommunityId === community.id ? "text-sky-300 drop-shadow-[0_0_8px_rgba(125,211,252,1)]" : "text-sky-500/70"
+                                                )} />
+                                                <div className="text-left">
+                                                    <span className={cn(
+                                                        "font-medium block",
+                                                        selectedCommunityId === community.id ? "text-sky-100 drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]" : "text-sky-400/80"
+                                                    )}>{community.name}</span>
+                                                    <span className="text-[10px] text-sky-500/60 font-mono block mt-0.5">{community.url}</span>
+                                                </div>
+                                            </div>
+                                            {selectedCommunityId === community.id && (
+                                                <Check className="w-5 h-5 text-sky-300 drop-shadow-[0_0_8px_rgba(125,211,252,1)] shrink-0" />
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="flex flex-col gap-2 mt-1">
+                                    <button
+                                        onClick={handleNextStep}
+                                        disabled={!selectedCommunityId}
+                                        className="w-full bg-sky-500/20 hover:bg-sky-500/40 border border-sky-400/50 disabled:opacity-50 text-sky-100 font-bold py-2 text-xs rounded-xl transition-all shadow-[0_0_15px_rgba(56,189,248,0.3)] flex items-center justify-center gap-2 font-mono uppercase tracking-widest backdrop-blur-md"
+                                    >
+                                        Continue <ArrowRight className="w-4 h-4" />
                                     </button>
-                                ))}
-
-                                <button
-                                    onClick={handleNextStep}
-                                    className="mt-4 w-full bg-primary hover:bg-primary-hover text-primary-foreground font-bold py-4 rounded-2xl transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group"
-                                >
-                                    Continue to Account Details
-                                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="p-5 rounded-2xl bg-primary/5 border border-primary/20 flex items-center justify-between animate-in fade-in zoom-in-95 duration-300">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
-                                        <Users className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <h4 className="font-bold text-foreground text-sm">{COMMUNITIES.find(c => c.id === selectedCommunityId)?.name}</h4>
-                                        <p className="text-xs text-muted-foreground">{COMMUNITIES.find(c => c.id === selectedCommunityId)?.url}</p>
-                                    </div>
+                                    <p className="text-center text-[10px] md:text-xs text-sky-400/60 font-mono drop-shadow-[0_0_5px_rgba(56,189,248,0.5)]">
+                                        Already registered? <Link to="/login" className="text-sky-300 font-bold hover:underline drop-shadow-[0_0_8px_rgba(125,211,252,1)]">Login</Link>
+                                    </p>
                                 </div>
-                                <button
-                                    onClick={() => setStep(1)}
-                                    className="text-[10px] font-bold text-primary hover:underline uppercase tracking-widest"
-                                >
-                                    Change
-                                </button>
                             </div>
-                        )}
-                    </div>
-                </div>
 
-                {/* Right Side - Form */}
-                {step === 2 && (
-                    <div className="flex-1 animate-in fade-in slide-in-from-right-8 duration-700 ease-out">
-                        <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative overflow-hidden h-full">
-                            {/* Decorative elements */}
-                            <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/20 rounded-full blur-3xl" />
-                            <div className="absolute -bottom-24 -left-24 w-32 h-32 bg-primary/10 rounded-full blur-3xl" />
-
-                            <div className="relative z-10 flex flex-col h-full">
-                                <div className="mb-8">
-                                    <h2 className="text-2xl font-bold text-foreground">Account Details</h2>
-                                    <p className="text-sm text-muted-foreground">Fill in the info below to join the community.</p>
+                            {/* ── Panel 2: Account Details ── */}
+                            <div className="w-1/3 shrink-0 flex flex-col gap-1 px-4 py-1">
+                                <div className="flex items-center gap-3 mb-0">
+                                    <button
+                                        onClick={() => setStep(1)}
+                                        className="inline-flex items-center text-[10px] text-sky-400/60 hover:text-sky-300 transition-colors font-mono uppercase tracking-widest"
+                                    >
+                                        <ChevronLeft className="w-3 h-3 mr-1" /> Back
+                                    </button>
+                                    <h3 className="font-bold text-sky-400 tracking-widest uppercase drop-shadow-[0_0_15px_rgba(56,189,248,0.8)] font-mono text-xs">
+                                        Account Details
+                                    </h3>
                                 </div>
-
-                                <form onSubmit={handleSubmit} className="flex-1 flex flex-col gap-5">
-                                    {error && (
-                                        <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs font-medium flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
-                                            <AlertCircle className="w-4 h-4" />
-                                            {error}
-                                        </div>
-                                    )}
-
-                                    <div className="space-y-1.5">
-                                        <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest ml-1">Display Name</label>
+                                {error && (
+                                    <div className="p-2.5 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs font-medium flex items-center gap-2">
+                                        <AlertCircle className="w-4 h-4 shrink-0" />{error}
+                                    </div>
+                                )}
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-sky-400/60 uppercase tracking-widest ml-1 font-mono">Display Name</label>
+                                    <input
+                                        type="text"
+                                        value={formData.display_name}
+                                        onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
+                                        required
+                                        placeholder="John Doe"
+                                        className="w-full bg-sky-950/40 border border-sky-500/30 rounded-xl p-2 text-sky-100 focus:outline-none focus:border-sky-400/60 transition-all placeholder:text-sky-500/30 font-mono text-sm backdrop-blur-md"
+                                    />
+                                </div>
+                                <div className="space-y-1 relative">
+                                    <div className="flex justify-between items-center px-1">
+                                        <label className="text-[10px] font-bold text-sky-400/60 uppercase tracking-widest font-mono">Username</label>
+                                        {isCheckingUsername && <Loader2 className="w-3 h-3 text-sky-400 animate-spin" />}
+                                    </div>
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sky-500/60 font-mono">@</span>
                                         <input
                                             type="text"
-                                            value={formData.display_name}
-                                            onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
+                                            value={formData.username}
+                                            onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase() })}
                                             required
-                                            placeholder="John Doe"
-                                            className="w-full bg-secondary/50 border border-border rounded-2xl p-4 text-foreground focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-muted-foreground/30"
+                                            placeholder="your_username"
+                                            className={cn(
+                                                "w-full bg-sky-950/40 border rounded-xl p-2 pl-8 text-sky-100 focus:outline-none transition-all placeholder:text-sky-500/30 font-mono text-sm backdrop-blur-md",
+                                                usernameError ? "border-destructive/50" : "border-sky-500/30 focus:border-sky-400/60"
+                                            )}
                                         />
-                                    </div>
-
-                                    <div className="space-y-1.5 relative">
-                                        <div className="flex justify-between items-center px-1">
-                                            <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Username</label>
-                                            {isCheckingUsername && <Loader2 className="w-3 h-3 text-primary animate-spin" />}
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                            {usernameAvailable === true && !usernameError && <Check className="w-4 h-4 text-emerald-400" />}
                                         </div>
-                                        <div className="relative">
-                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-mono">@</span>
-                                            <input
-                                                type="text"
-                                                value={formData.username}
-                                                onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase() })}
-                                                required
-                                                placeholder="your_username"
-                                                className={cn(
-                                                    "w-full bg-secondary/50 border rounded-2xl p-4 pl-9 text-foreground focus:outline-none transition-all placeholder:text-muted-foreground/30",
-                                                    usernameError ? "border-destructive/50 ring-destructive/10" : "border-border focus:border-primary/50 focus:ring-primary/10"
-                                                )}
-                                            />
-                                            <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                                                {usernameAvailable === true && !usernameError && <Check className="w-4 h-4 text-emerald-500" />}
-                                            </div>
-                                        </div>
-                                        {usernameError && (
-                                            <p className="text-[10px] font-bold text-destructive animate-in fade-in slide-in-from-top-1 ml-1">{usernameError}</p>
-                                        )}
                                     </div>
-
-                                    <div className="space-y-1.5">
-                                        <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest ml-1">Email</label>
+                                    {usernameError && <p className="text-[10px] font-bold text-destructive ml-1">{usernameError}</p>}
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-sky-400/60 uppercase tracking-widest ml-1 font-mono">Email</label>
+                                    <input
+                                        type="email"
+                                        value={formData.email}
+                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                        required
+                                        placeholder="you@example.com"
+                                        className="w-full bg-sky-950/40 border border-sky-500/30 rounded-xl p-2.5 text-sky-100 focus:outline-none focus:border-sky-400/60 transition-all placeholder:text-sky-500/30 font-mono text-sm backdrop-blur-md"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-sky-400/60 uppercase tracking-widest ml-1 font-mono">Password</label>
+                                    <div className="grid grid-cols-2 gap-2">
                                         <input
-                                            type="email"
-                                            value={formData.email}
-                                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                            type="password"
+                                            value={formData.password}
+                                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                             required
-                                            placeholder="you@example.com"
-                                            className="w-full bg-secondary/50 border border-border rounded-2xl p-4 text-foreground focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-muted-foreground/30"
+                                            placeholder="Password"
+                                            className="w-full bg-sky-950/40 border border-sky-500/30 rounded-xl p-2.5 text-sky-100 focus:outline-none focus:border-sky-400/60 transition-all placeholder:text-sky-500/30 font-mono text-sm backdrop-blur-md"
+                                        />
+                                        <input
+                                            type="password"
+                                            value={confirmPassword}
+                                            onChange={(e) => setConfirmPassword(e.target.value)}
+                                            required
+                                            placeholder="Confirm"
+                                            className="w-full bg-sky-950/40 border border-sky-500/30 rounded-xl p-2.5 text-sky-100 focus:outline-none focus:border-sky-400/60 transition-all placeholder:text-sky-500/30 font-mono text-sm backdrop-blur-md"
                                         />
                                     </div>
+                                </div>
+                                <div className="flex items-center gap-3 p-2.5 rounded-xl border border-sky-500/20 bg-sky-950/30 backdrop-blur-md">
+                                    <Checkbox
+                                        id="is_discoverable"
+                                        checked={formData.is_discoverable || false}
+                                        onCheckedChange={(checked) => setFormData({ ...formData, is_discoverable: checked === true })}
+                                        className="data-[state=checked]:bg-sky-500 data-[state=checked]:border-sky-400"
+                                    />
+                                    <label htmlFor="is_discoverable" className="text-[10px] font-bold text-sky-300/80 cursor-pointer uppercase tracking-widest font-mono">
+                                        Global Visibility
+                                    </label>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (usernameError || usernameAvailable === false) return;
+                                        if (formData.password !== confirmPassword) { setError('Passwords do not match'); return; }
+                                        if (formData.password.length < 8) { setError('Password must be at least 8 characters'); return; }
+                                        setStep(3);
+                                    }}
+                                    disabled={loading || !!usernameError || usernameAvailable === false}
+                                    className="w-full bg-sky-500/20 hover:bg-sky-500/40 border border-sky-400/50 disabled:opacity-50 text-sky-100 font-bold py-2.5 text-xs md:text-sm rounded-xl transition-all shadow-[0_0_15px_rgba(56,189,248,0.3)] flex items-center justify-center gap-2 font-mono uppercase tracking-widest backdrop-blur-md mt-1"
+                                >
+                                    Continue <ArrowRight className="w-4 h-4" />
+                                </button>
+                            </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="space-y-1.5">
-                                            <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest ml-1">Password</label>
-                                            <input
-                                                type="password"
-                                                value={formData.password}
-                                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                                required
-                                                placeholder="••••••••"
-                                                className="w-full bg-secondary/50 border border-border rounded-2xl p-4 text-foreground focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-muted-foreground/30"
-                                            />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest ml-1">Confirm</label>
-                                            <input
-                                                type="password"
-                                                value={confirmPassword}
-                                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                                required
-                                                placeholder="••••••••"
-                                                className="w-full bg-secondary/50 border border-border rounded-2xl p-4 text-foreground focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-muted-foreground/30"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-start gap-4 p-4 rounded-2xl border border-border/50 bg-secondary/30 mt-2 transition-all hover:bg-secondary/50">
-                                        <Checkbox
-                                            id="is_discoverable"
-                                            checked={formData.is_discoverable || false}
-                                            onCheckedChange={(checked) => setFormData({ ...formData, is_discoverable: checked === true })}
-                                            className="mt-1 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground border-primary/50"
-                                        />
-                                        <div className="space-y-1">
-                                            <label htmlFor="is_discoverable" className="text-xs font-bold text-foreground cursor-pointer uppercase tracking-widest block">
-                                                Global Directory Visibility
-                                            </label>
-                                            <p className="text-[10px] text-muted-foreground leading-relaxed">
-                                                Allow your profile to be listed in the public directory and discoverable by users from other communities.
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <p className="text-[10px] text-muted-foreground text-center px-4 leading-relaxed mt-2">
-                                        By clicking "Create Account", you agree to our <span className="text-primary hover:underline cursor-pointer">Terms of Service</span> and <span className="text-primary hover:underline cursor-pointer">Privacy Policy</span>.
-                                    </p>
-
+                            {/* ── Panel 3: Avatar Selection ── */}
+                            <div className="w-1/3 shrink-0 flex flex-col items-center gap-2 px-6 py-1">
+                                <h3 className="text-center font-bold text-sky-400 tracking-widest uppercase drop-shadow-[0_0_15px_rgba(56,189,248,0.8)] text-xs">
+                                    Identity Projected
+                                </h3>
+                                <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-sky-400/50 shadow-[0_0_30px_rgba(56,189,248,0.6)] relative bg-black/50">
+                                    <img
+                                        src={formData.avatar_url}
+                                        alt="Selected Avatar"
+                                        className="w-full h-full object-cover mix-blend-screen"
+                                        style={{ filter: "brightness(1.5) contrast(1.2) hue-rotate(-20deg) drop-shadow(0 0 10px rgba(56,189,248,0.8))" }}
+                                    />
+                                </div>
+                                <div className="grid grid-cols-4 gap-2 w-full px-4">
+                                    {formData.avatar_url && !formData.avatar_url.startsWith('/avatars/') && (
+                                        <button type="button" className="aspect-square rounded-xl overflow-hidden transition-all duration-300 border-2 border-sky-400 shadow-[0_0_15px_rgba(56,189,248,0.5)] bg-black/50">
+                                            <img src={formData.avatar_url} alt="Custom" className="w-full h-full object-cover mix-blend-screen" style={{ filter: "brightness(1.5) contrast(1.2) hue-rotate(-20deg)" }} />
+                                        </button>
+                                    )}
+                                    {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
+                                        <button
+                                            key={num}
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, avatar_url: `/avatars/avatar_${num}.png` })}
+                                            className={cn(
+                                                "aspect-square rounded-xl overflow-hidden transition-all duration-300 border-2 bg-black/50",
+                                                formData.avatar_url === `/avatars/avatar_${num}.png`
+                                                    ? "border-sky-400 shadow-[0_0_15px_rgba(56,189,248,0.5)] scale-110"
+                                                    : "border-transparent border-sky-500/20 hover:border-sky-400/50 hover:scale-105 opacity-70"
+                                            )}
+                                        >
+                                            <img src={`/avatars/avatar_${num}.png`} alt={`Avatar ${num}`} className="w-full h-full object-cover mix-blend-screen" style={{ filter: "brightness(1.5) contrast(1.2) hue-rotate(-20deg)" }} />
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="w-full flex flex-col gap-3">
+                                    <input type="file" className="hidden" ref={fileInputRef} accept="image/*" onChange={handleAvatarUpload} />
                                     <button
                                         type="button"
-                                        onClick={() => {
-                                            if (usernameError || usernameAvailable === false) return;
-                                            if (formData.password !== confirmPassword) {
-                                                setError('Passwords do not match');
-                                                return;
-                                            }
-                                            if (formData.password.length < 8) {
-                                                setError('Password must be at least 8 characters long');
-                                                return;
-                                            }
-                                            setStep(3);
-                                        }}
-                                        disabled={loading || !!usernameError || usernameAvailable === false}
-                                        className="w-full mt-auto bg-primary hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground font-bold py-4 rounded-2xl transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-3 active:scale-[0.98]"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        disabled={uploadingAvatar}
+                                        className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-sky-400/50 text-sky-300 hover:bg-sky-500/20 transition-colors font-mono text-xs font-bold tracking-widest uppercase disabled:opacity-50 backdrop-blur-md shadow-[0_0_15px_rgba(56,189,248,0.2)]"
                                     >
-                                        Continue to Avatar Selection
-                                        <ArrowRight className="w-5 h-5" />
+                                        {uploadingAvatar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                                        {uploadingAvatar ? 'Uploading...' : 'Upload Custom'}
                                     </button>
-                                </form>
-
-                                <div className="mt-6 text-center">
-                                    <p className="text-xs text-muted-foreground">
-                                        Already have an account? <Link to="/login" className="text-primary font-bold hover:underline">Sign in</Link>
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {step === 3 && (
-                    <div className="flex-1 animate-in fade-in slide-in-from-right-8 duration-700 ease-out">
-                        <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative overflow-hidden h-full flex flex-col justify-between">
-                            <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/20 rounded-full blur-3xl" />
-                            <div className="absolute -bottom-24 -left-24 w-32 h-32 bg-primary/10 rounded-full blur-3xl" />
-
-                            <div className="relative z-10 flex flex-col h-full">
-                                <div className="mb-6">
-                                    <button
-                                        onClick={() => setStep(2)}
-                                        className="text-xs font-bold text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 mb-4 uppercase tracking-widest"
-                                    >
-                                        <ChevronLeft className="w-3 h-3" /> Back to Account Details
-                                    </button>
-                                    <h2 className="text-2xl font-bold text-foreground">Choose Your Avatar</h2>
-                                    <p className="text-sm text-muted-foreground">Select an identity for your new account.</p>
-                                </div>
-
-                                <div className="flex-1 flex flex-col items-center justify-center gap-8 py-8">
-                                    <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-primary/20 shadow-xl shadow-primary/10 relative group">
-                                        <img
-                                            src={formData.avatar_url}
-                                            alt="Selected Avatar"
-                                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                        />
-                                    </div>
-
-                                    <div className="grid grid-cols-4 gap-4 w-full max-w-sm">
-                                        {formData.avatar_url && !formData.avatar_url.startsWith('/avatars/') && (
-                                            <button
-                                                type="button"
-                                                className="aspect-square rounded-2xl overflow-hidden transition-all duration-300 border-2 relative group border-primary scale-110 shadow-lg shadow-primary/30 z-10"
-                                            >
-                                                <img src={formData.avatar_url} alt="Custom Avatar" className="w-full h-full object-cover" />
-                                                <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
-                                                    <Check className="w-5 h-5 text-white drop-shadow-md" />
-                                                </div>
-                                            </button>
-                                        )}
-                                        {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
-                                            <button
-                                                key={num}
-                                                type="button"
-                                                onClick={() => setFormData({ ...formData, avatar_url: `/avatars/avatar_${num}.png` })}
-                                                className={cn(
-                                                    "aspect-square rounded-2xl overflow-hidden transition-all duration-300 border-2 relative group",
-                                                    formData.avatar_url === `/avatars/avatar_${num}.png`
-                                                        ? "border-primary scale-110 shadow-lg shadow-primary/30 z-10"
-                                                        : "border-transparent hover:border-primary/50 hover:scale-105"
-                                                )}
-                                            >
-                                                <img
-                                                    src={`/avatars/avatar_${num}.png`}
-                                                    alt={`Avatar option ${num}`}
-                                                    className="w-full h-full object-cover"
-                                                />
-                                                {typeof formData.avatar_url === 'string' && formData.avatar_url.includes(`avatar_${num}.png`) && (
-                                                    <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
-                                                        <Check className="w-6 h-6 text-white drop-shadow-md" />
-                                                    </div>
-                                                )}
-                                            </button>
-                                        ))}
-                                    </div>
-
-                                    {/* Custom Upload Button */}
-                                    <div className="w-full max-w-sm mt-2">
-                                        <input
-                                            type="file"
-                                            className="hidden"
-                                            ref={fileInputRef}
-                                            accept="image/*"
-                                            onChange={handleAvatarUpload}
-                                        />
+                                    <div className="flex gap-3 w-full">
+                                        <button onClick={() => setStep(2)} className="flex-1 bg-sky-950/40 hover:bg-sky-900/60 border border-sky-500/30 text-sky-300 font-bold py-2.5 text-xs rounded-xl transition-all flex items-center justify-center gap-2 font-mono uppercase tracking-widest backdrop-blur-md">
+                                            <ChevronLeft className="w-4 h-4" /> Back
+                                        </button>
                                         <button
-                                            type="button"
-                                            onClick={() => fileInputRef.current?.click()}
-                                            disabled={uploadingAvatar}
-                                            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 border-dashed border-primary/30 text-primary hover:bg-primary/5 hover:border-primary/50 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                            onClick={handleSubmit}
+                                            disabled={loading}
+                                            className="flex-[2] bg-emerald-500/20 border border-emerald-400/50 hover:bg-emerald-500/40 disabled:opacity-50 text-emerald-100 font-bold py-2.5 text-xs rounded-xl transition-all shadow-[0_0_15px_rgba(52,211,153,0.3)] flex items-center justify-center gap-2 font-mono uppercase tracking-widest backdrop-blur-md"
                                         >
-                                            {uploadingAvatar ? (
-                                                <Loader2 className="w-4 h-4 animate-spin" />
-                                            ) : (
-                                                <Upload className="w-4 h-4" />
-                                            )}
-                                            {uploadingAvatar ? 'Uploading...' : 'Upload Custom Image'}
+                                            {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Finalizing...</> : <><Check className="w-4 h-4" /> Complete</>}
                                         </button>
                                     </div>
                                 </div>
-
-                                <button
-                                    onClick={handleSubmit}
-                                    disabled={loading}
-                                    className="w-full bg-primary hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground font-bold py-4 rounded-2xl transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-3 active:scale-[0.98] mt-auto"
-                                >
-                                    {loading ? (
-                                        <>
-                                            <Loader2 className="w-5 h-5 animate-spin" />
-                                            Joining the federation...
-                                        </>
-                                    ) : (
-                                        <>
-                                            Complete Registration
-                                            <Check className="w-5 h-5" />
-                                        </>
-                                    )}
-                                </button>
                             </div>
                         </div>
                     </div>
-                )}
+                </HologramProjector>
+
+                {/* Space Device — always flat/horizontal, just the visual base with the Orbit icon */}
+                <SpaceDeviceFrame
+                    isFlat
+                    isHorizontal
+                    className="opacity-0"
+                    wrapperClassName="z-10 shadow-2xl absolute bottom-0 left-0 right-0 mx-auto w-[95%] max-w-[720px] h-[260px] translate-y-6 scale-75 md:scale-90 transition-all duration-700"
+                >
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                        <div className="absolute w-[100px] h-[40px] bg-sky-400/40 rounded-[100%] blur-[15px]" />
+                        <Orbit
+                            className="relative w-16 h-16 text-sky-200 drop-shadow-[0_0_20px_rgba(56,189,248,1)]"
+                            style={{ animation: 'spin 12s linear infinite' }}
+                        />
+                    </div>
+                </SpaceDeviceFrame>
             </div>
         </div>
     );
 };
+
+
