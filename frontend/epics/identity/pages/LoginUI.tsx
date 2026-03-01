@@ -24,7 +24,7 @@ const Login = () => {
 
       {/* Foreground Content */}
       <div className="relative z-10 flex-1 flex flex-col">
-        <main className="flex-1 flex items-center justify-center py-4 px-4 w-full overflow-hidden">
+        <main className="flex-1 flex items-center justify-center py-4 px-4 w-full">
           <LoginForm />
         </main>
       </div>
