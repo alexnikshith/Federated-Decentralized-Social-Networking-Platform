@@ -1,81 +1,618 @@
-/* src/components/auth/SpaceDevice.css */
+/* ═══════════════════════════════════════════════════════
+   HOLOGRAM PROJECTOR — True CSS 3-D Geometry
+   ═══════════════════════════════════════════════════════ */
 
+:root {
+  --d-depth: 52px;
+  /* physical slab thickness               */
+  --d-dh: calc(var(--d-depth) / 2);
+}
+
+/* ── Scene (perspective camera) ── */
 .device-wrapper {
   position: relative;
   width: 100%;
-  max-width: 650px; /* Reduced max-width for better proportion */
-  height: 600px;
-  margin: auto;
-  pointer-events: none; /* Let clicks pass through the frame */
-}
-
-/* Antenna */
-.antenna {
-  position: absolute;
-  top: -40px;
-  right: 60px;
-  width: 6px;
-  height: 50px;
-  background: linear-gradient(to bottom, #888, #444);
-  border-radius: 3px;
+  height: 100%;
   pointer-events: none;
+  perspective: 1000px;
+  perspective-origin: 50% -150%;
+  /* camera above the device */
 }
 
-/* Main Frame */
+/* ─────────────────────────────────────────────
+   3-D BOX  (the chassis, transform-style:preserve-3d)
+   Width  = 100% of wrapper
+   Height = front-to-back depth of the top face
+   ───────────────────────────────────────────── */
 .device-frame {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(145deg, #3b3f46, #1c1f24);
-  border-radius: 28px;
-  padding: 30px;
-  box-shadow:
-    inset 0 0 25px rgba(0,0,0,0.8),
-    0 25px 60px rgba(0,0,0,0.7);
-  border: 3px solid #555;
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  /* height here = the Z-depth of the top face (front-to-back) */
+  height: 110px;
+  top: 50%;
+  transform-style: preserve-3d;
   pointer-events: none;
+  /* Default: upright (used on login page) */
+  transform: translateY(-50%);
 }
 
-/* Screen wrapper */
-.screen {
-  width: 100%;
-  height: 100%;
-  background: black;
-  border-radius: 16px;
-  box-shadow: inset 0 0 30px rgba(0,0,0,0.9);
-  pointer-events: auto; /* Re-enable clicks inside the screen */
+/* ── Upright/default mode: fill the full wrapper like the old flat box ── */
+.device-frame:not(.flat-mode) {
   position: relative;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 100%;
+  transform: none;
+  transform-style: flat;
+  border-radius: 20px;
+  background:
+    repeating-linear-gradient(89deg,
+      transparent, transparent 3px,
+      rgba(255, 255, 255, 0.007) 3px, rgba(255, 255, 255, 0.007) 4px),
+    linear-gradient(152deg, #3d424b 0%, #292d34 30%, #1d2026 60%, #111419 100%);
+  border: 2px solid rgba(255, 255, 255, 0.09);
+  box-shadow:
+    inset 0 2px 5px rgba(255, 255, 255, 0.07),
+    inset 0 -1px 4px rgba(0, 0, 0, 0.7),
+    0 8px 0 #0b0c0e,
+    0 16px 0 #09090b,
+    0 24px 0 #06070a,
+    0 30px 40px rgba(0, 0, 0, 0.95);
+}
+
+/* In upright mode the faces are not needed — hide them */
+.device-frame:not(.flat-mode) .face-top,
+.device-frame:not(.flat-mode) .face-bottom,
+.device-frame:not(.flat-mode) .face-front,
+.device-frame:not(.flat-mode) .face-back,
+.device-frame:not(.flat-mode) .face-left,
+.device-frame:not(.flat-mode) .face-right {
+  display: none;
+}
+
+/* Upright mode: screen fills the full frame */
+.device-frame:not(.flat-mode) .screen {
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  background: #050608;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.95);
+  pointer-events: auto;
   overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
-/* Corner bolts */
-.corner {
+/* Upright mode: hide hologram-specific elements */
+.device-frame:not(.flat-mode) .energy-core,
+.device-frame:not(.flat-mode) .seam,
+.device-frame:not(.flat-mode) .indicator-strip,
+.device-frame:not(.flat-mode) .vent-group,
+.device-frame:not(.flat-mode) .bolt {
+  display: none;
+}
+
+/* Upright mode: keep corner bolts and side bars as decorative elements */
+.device-frame:not(.flat-mode) .side-energy {
+  top: 50%;
+  transform: translateY(-50%);
+  width: 13px;
+  height: 65%;
+  border-radius: 5px;
+}
+
+/* ── flat + horizontal mode (hologram base)
+   rotateX tilts the top face toward the viewer  ── */
+.device-frame.flat-mode.horizontal-mode {
+  transform: rotateX(58deg) translateY(-25%);
+}
+
+/* fade the screen in flat mode */
+.device-frame.flat-mode .face-screen,
+.device-frame.flat-mode .screen {
+  opacity: 0.15;
+  transition: opacity 0.8s ease;
+}
+
+/* hide antenna in flat / horizontal */
+.device-frame.flat-mode .antenna,
+.device-frame.horizontal-mode .antenna {
+  display: none;
+}
+
+
+/* ═══════════════════════════════════
+   TOP FACE  — brushed titanium top panel
+   translateZ(dh) raises it to the top of the slab
+   ═══════════════════════════════════ */
+.face-top {
   position: absolute;
-  width: 18px;
-  height: 18px;
-  background: radial-gradient(circle at center, #aaa, #333);
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  transform: translateZ(var(--d-dh));
+  pointer-events: auto;
+  overflow: visible;
+
+  /* brushed horizontal metal grain */
+  background:
+    repeating-linear-gradient(89deg,
+      transparent,
+      transparent 3px,
+      rgba(255, 255, 255, 0.007) 3px,
+      rgba(255, 255, 255, 0.007) 4px),
+    linear-gradient(152deg,
+      #3d424b 0%,
+      #292d34 30%,
+      #1d2026 60%,
+      #111419 100%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow:
+    inset 0 2px 5px rgba(255, 255, 255, 0.07),
+    /* rim highlight */
+    inset 0 -1px 4px rgba(0, 0, 0, 0.7);
+}
+
+/* gloss sweep */
+.face-top::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 6%;
+  right: 6%;
+  height: 35%;
+  background: linear-gradient(180deg,
+      rgba(255, 255, 255, 0.05) 0%,
+      transparent 100%);
   border-radius: 50%;
   pointer-events: none;
 }
 
-.tl { top: 12px; left: 12px; }
-.tr { top: 12px; right: 12px; }
-.bl { bottom: 12px; left: 12px; }
-.br { bottom: 12px; right: 12px; }
-
-/* Side modules */
-.side-module {
+/* carbon-fibre corner panel (asymmetric) */
+.face-top::after {
+  content: '';
   position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 16px;
-  height: 160px;
-  background: linear-gradient(to bottom, #ff8c00, #8a4b00);
-  border-radius: 6px;
+  bottom: 6%;
+  left: 3%;
+  width: 16%;
+  height: 72%;
+  background:
+    repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0, 0, 0, 0.22) 2px, rgba(0, 0, 0, 0.22) 3px),
+    repeating-linear-gradient(-45deg, transparent, transparent 2px, rgba(0, 0, 0, 0.12) 2px, rgba(0, 0, 0, 0.12) 3px),
+    linear-gradient(135deg, #18191e, #0d0e12);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: 3px;
   pointer-events: none;
 }
 
-.left { left: -10px; }
-.right { right: -10px; }
+
+/* ═══════════════════════════════════
+   BOTTOM FACE
+   ═══════════════════════════════════ */
+.face-bottom {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  transform: rotateX(180deg) translateZ(var(--d-dh));
+  background: #080a0c;
+  border-top: 1px solid #1a1c20;
+}
+
+
+/* ═══════════════════════════════════
+   FRONT FACE  — viewer-facing edge (bottom of device)
+   Sits at the bottom edge of top-face, then stands up.
+   ═══════════════════════════════════ */
+.face-front {
+  position: absolute;
+  width: 100%;
+  height: var(--d-depth);
+  top: calc(100% - var(--d-depth));
+  left: 0;
+  transform: rotateX(-90deg) translateZ(var(--d-dh));
+
+  /* slightly lighter than top → plane separation */
+  background: linear-gradient(180deg,
+      #2b2f37 0%,
+      #1c1f25 50%,
+      #111418 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.9);
+
+  /* mid-section horizontal detail band */
+  box-shadow:
+    inset 0 12px 0 rgba(255, 255, 255, 0.03),
+    inset 0 12px 1px rgba(255, 255, 255, 0.02);
+}
+
+
+/* ═══════════════════════════════════
+   BACK FACE
+   ═══════════════════════════════════ */
+.face-back {
+  position: absolute;
+  width: 100%;
+  height: var(--d-depth);
+  top: 0;
+  left: 0;
+  transform: rotateX(90deg) translateZ(var(--d-dh));
+  background: #0a0b0e;
+}
+
+
+/* ═══════════════════════════════════
+   LEFT FACE
+   ═══════════════════════════════════ */
+.face-left {
+  position: absolute;
+  width: var(--d-depth);
+  height: 100%;
+  top: 0;
+  left: 0;
+  transform: rotateY(-90deg) translateZ(var(--d-dh));
+  background: linear-gradient(90deg, #0d0f13 0%, #1b1e24 100%);
+  border-right: 1px solid rgba(255, 255, 255, 0.035);
+}
+
+
+/* ═══════════════════════════════════
+   RIGHT FACE  — slightly lighter (asymmetric rim light)
+   ═══════════════════════════════════ */
+.face-right {
+  position: absolute;
+  width: var(--d-depth);
+  height: 100%;
+  top: 0;
+  right: 0;
+  left: auto;
+  transform: rotateY(90deg) translateZ(var(--d-dh));
+  background: linear-gradient(90deg, #232831 0%, #14161b 100%);
+  border-left: 1px solid rgba(255, 255, 255, 0.04);
+
+  /* subtle rim light on the right side */
+  box-shadow: inset -2px 0 6px rgba(255, 255, 255, 0.04);
+}
+
+
+/* ═══════════════════════════════════
+   SCREEN
+   ─ In upright mode: fills the full device-frame (normal login layout)
+   ─ In flat mode: floated to the same Z-plane as face-top
+   ═══════════════════════════════════ */
+.screen {
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  background: #050608;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.95);
+  pointer-events: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  z-index: 2;
+}
+
+/* In flat mode: lift the screen to the top-face Z-plane so it sits on the 3D surface */
+.device-frame.flat-mode .screen {
+  background: transparent;
+  box-shadow: none;
+  border-radius: 4px;
+  transform: translateZ(var(--d-dh));
+  z-index: 10;
+}
+
+/* Upright mode screen override to make content visible */
+.device-frame:not(.flat-mode) .screen {
+  border-radius: 16px;
+  background: #050608;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.95);
+}
+
+
+/* ═══════════════════════════════════
+   ENERGY EMITTER CORE  (hologram lens dot on top face)
+   ═══════════════════════════════════ */
+.energy-core {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+  background: radial-gradient(circle at 40% 38%,
+      rgba(14, 165, 233, 0.95) 0%,
+      rgba(14, 165, 233, 0.45) 50%,
+      transparent 72%);
+  box-shadow:
+    0 0 14px rgba(14, 165, 233, 0.95),
+    0 0 36px rgba(14, 165, 233, 0.45),
+    inset 0 0 8px rgba(255, 255, 255, 0.25);
+}
+
+.energy-core::after {
+  content: '';
+  position: absolute;
+  inset: 30%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 37% 35%, #fff 0%, rgba(14, 165, 233, 0.85) 100%);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.9);
+}
+
+
+/* ═══════════════════════════════════
+   PANEL SEAM LINES  (on top face)
+   ═══════════════════════════════════ */
+.seam {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(0, 0, 0, 0.5);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03);
+  z-index: 1;
+}
+
+.seam.seam-h {
+  left: 0;
+  right: 0;
+  height: 1px;
+}
+
+.seam.seam-v {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+
+.seam.upper {
+  top: 28%;
+}
+
+.seam.lower {
+  bottom: 28%;
+}
+
+.seam.left-seam {
+  left: 24%;
+}
+
+.seam.right-seam {
+  right: 24%;
+}
+
+
+/* ═══════════════════════════════════
+   INDICATOR STRIP  (blue glow on top face near front)
+   ═══════════════════════════════════ */
+.indicator-strip {
+  position: absolute;
+  bottom: 8px;
+  left: 26%;
+  right: 26%;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(to right,
+      transparent,
+      rgba(14, 165, 233, 0.45) 18%,
+      rgba(14, 165, 233, 0.9) 50%,
+      rgba(14, 165, 233, 0.45) 82%,
+      transparent);
+  box-shadow:
+    0 0 10px rgba(14, 165, 233, 0.75),
+    0 0 24px rgba(14, 165, 233, 0.35);
+  z-index: 3;
+  pointer-events: none;
+}
+
+
+/* ═══════════════════════════════════
+   VENT SLITS  (on front face)
+   ═══════════════════════════════════ */
+.vent-group {
+  position: absolute;
+  top: 50%;
+  right: 8%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: none;
+}
+
+.vent-slit {
+  width: 18px;
+  height: 2px;
+  background: rgba(0, 0, 0, 0.88);
+  border-radius: 1px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+
+/* ═══════════════════════════════════
+   CORNER SCREWS / BOLTS  (on top face)
+   ═══════════════════════════════════ */
+.bolt {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  z-index: 5;
+  background: radial-gradient(circle at 30% 30%,
+      #c8ccd3,
+      #6c717a 40%,
+      #2c2f35 75%,
+      #141618 100%);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.9),
+    inset 0 1px 1px rgba(255, 255, 255, 0.22);
+  pointer-events: none;
+}
+
+.bolt::before,
+.bolt::after {
+  content: '';
+  position: absolute;
+  background: rgba(0, 0, 0, 0.58);
+  border-radius: 1px;
+  top: 50%;
+  left: 50%;
+}
+
+.bolt::before {
+  width: 4px;
+  height: 1.5px;
+  transform: translate(-50%, -50%);
+}
+
+.bolt::after {
+  width: 1.5px;
+  height: 4px;
+  transform: translate(-50%, -50%);
+}
+
+.bolt-tl {
+  top: 7px;
+  left: 7px;
+}
+
+.bolt-tr {
+  top: 7px;
+  right: 7px;
+}
+
+.bolt-bl {
+  bottom: 7px;
+  left: 7px;
+}
+
+.bolt-br {
+  bottom: 7px;
+  right: 7px;
+}
+
+
+/* ═══════════════════════════════════
+   SIDE ENERGY BARS  (raised orange modules on edges)
+   Positioned as children of device-frame, protruding sideways
+   ═══════════════════════════════════ */
+.side-energy {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 13px;
+  height: 65%;
+  border-radius: 5px;
+  z-index: 6;
+  pointer-events: none;
+  background: linear-gradient(to bottom,
+      #ff6a00 0%,
+      #ff9200 32%,
+      #cc7000 66%,
+      #7a3600 100%);
+  box-shadow:
+    0 0 14px rgba(255, 138, 0, 0.95),
+    0 0 32px rgba(255, 100, 0, 0.5),
+    inset 0 2px 4px rgba(255, 220, 100, 0.4),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.45);
+}
+
+.side-energy::after {
+  content: '';
+  position: absolute;
+  top: 9%;
+  bottom: 9%;
+  left: 20%;
+  right: 55%;
+  background: linear-gradient(to bottom,
+      rgba(255, 240, 175, 0.75) 0%,
+      rgba(255, 200, 80, 0.25) 55%,
+      transparent 100%);
+  border-radius: 3px;
+}
+
+.side-energy.left {
+  left: -9px;
+}
+
+.side-energy.right {
+  right: -9px;
+}
+
+/* In horizontal mode: bars on top / bottom edges */
+.device-frame.horizontal-mode .side-energy {
+  top: auto;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 55%;
+  height: 12px;
+  border-radius: 5px;
+}
+
+.device-frame.horizontal-mode .side-energy.left {
+  top: -8px;
+  bottom: auto;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+}
+
+.device-frame.horizontal-mode .side-energy.right {
+  bottom: -8px;
+  top: auto;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+}
+
+
+/* ═══════════════════════════════════
+   ANTENNA  (upright mode only)
+   ═══════════════════════════════════ */
+.antenna {
+  position: absolute;
+  top: -38px;
+  right: 50px;
+  width: 5px;
+  height: 42px;
+  background: linear-gradient(to bottom, #aaa, #555 55%, #242424 100%);
+  border-radius: 3px 3px 0 0;
+  pointer-events: none;
+  z-index: 7;
+  box-shadow: inset 1px 0 2px rgba(255, 255, 255, 0.08);
+}
+
+.antenna::after {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 37% 32%, #ff6c00, #6b2800);
+  box-shadow: 0 0 10px rgba(255, 100, 0, 0.95);
+}
+
+
+/* ═══════════════════════════════════
+   AMBIENT OCCLUSION SHADOW under the device
+   ═══════════════════════════════════ */
+.device-wrapper::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 8%;
+  right: 8%;
+  height: 30px;
+  background: radial-gradient(ellipse at center,
+      rgba(0, 0, 0, 0.75) 0%, transparent 70%);
+  filter: blur(8px);
+  z-index: -1;
+  pointer-events: none;
+}
