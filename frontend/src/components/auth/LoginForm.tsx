@@ -234,9 +234,9 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister, hideBackNav = false, 
                     initial={{ opacity: 1, x: 0 }}
                     animate={isLoginExiting ? { opacity: 0, x: 200 } : { opacity: 1, x: 0 }}
                     transition={{ duration: 0.8, ease: "anticipate" }}
-                    className="relative w-full max-w-[650px] mx-auto z-10"
+                    className="relative w-full max-w-[400px] mx-auto z-10"
                 >
-                    <SpaceDeviceFrame className="p-6 md:p-8 space-y-6 min-h-full flex flex-col justify-center" wrapperClassName="w-full h-[600px]">
+                    <SpaceDeviceFrame className="p-6 md:p-8 space-y-6 min-h-full flex flex-col justify-center" wrapperClassName="w-full h-[540px]">
                         {error && (
                             <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm shrink-0">
                                 {error}
