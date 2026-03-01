@@ -7,7 +7,6 @@ import { useAuthStore } from "../../../epics/identity/store/authStore";
 import { useTheme } from "../theme-provider";
 
 const navigation = [
-  { name: "About", href: "/about" },
 ];
 
 const authNavigation = [
