@@ -15,10 +15,10 @@ export const HologramProjector = ({ children, className, isActive = true }: Holo
             className
         )}>
             {/* ── Content container ── */}
-            < div className="relative z-10 w-full max-w-[480px] mx-auto min-h-[280px] flex items-center justify-center pt-3 pb-4 -translate-y-10" >
+            < div className="relative z-10 w-full max-w-[480px] mx-auto min-h-[360px] flex items-center justify-center pt-4 pb-5 -translate-y-8" >
 
                 {/* Blue frosted panel with edge fade */}
-                < div className="absolute inset-y-0 -inset-x-16 rounded-2xl pointer-events-none"
+                < div className="absolute inset-y-0 -inset-x-28 rounded-2xl pointer-events-none"
                     style={{
                         background: 'linear-gradient(160deg, rgba(5, 82, 128, 0.72) 0%, rgba(14, 165, 233, 0.45) 100%)',
                         border: '1px solid rgba(56, 189, 248, 0.2)',
@@ -48,8 +48,8 @@ export const HologramProjector = ({ children, className, isActive = true }: Holo
             <div
                 className="absolute left-1/2 -translate-x-1/2 w-[240px] pointer-events-none z-20"
                 style={{
-                    bottom: '0px',
-                    height: '160px',
+                    bottom: '5px',
+                    height: '130px',
                     background: 'linear-gradient(to top, rgba(14,165,233,0.70) 0%, rgba(14,165,233,0.40) 50%, rgba(14,165,233,0.06) 62%, transparent 70%)',
                     clipPath: 'polygon(46% 100%, 54% 100%, 100% 0%, 0% 0%)',
                     filter: 'blur(16px)',
@@ -60,8 +60,8 @@ export const HologramProjector = ({ children, className, isActive = true }: Holo
             <div
                 className="absolute left-1/2 -translate-x-1/2 w-[240px] pointer-events-none z-20"
                 style={{
-                    bottom: '0px',
-                    height: '160px',
+                    bottom: '5px',
+                    height: '130px',
                     background: 'linear-gradient(to top, rgba(14,165,233,0.40) 0%, rgba(14,165,233,0.15) 50%, rgba(14,165,233,0.02) 62%, transparent 70%)',
                     clipPath: 'polygon(46% 100%, 54% 100%, 100% 0%, 0% 0%)',
                     filter: 'blur(4px)',

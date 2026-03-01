@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 // ── Fixed design dimensions for the lockstep group ──
 const DESIGN_W = 700;  // px (increased for wider panel bleed)
-const DESIGN_H = 500;  // px (increased for margin/spacing)
+const DESIGN_H = 620;  // px — taller canvas gives hologram more vertical space
 
 // Scales the group container to always fill the viewport as one unit.
 function useScaleToFit() {
@@ -215,7 +215,7 @@ export const SignupPage: React.FC = () => {
                 style={{
                     width: DESIGN_W,
                     height: DESIGN_H,
-                    transform: `scale(${groupScale})`,
+                    transform: `scale(${groupScale}) translateY(60px)`,
                     transformOrigin: 'center center',
                 }}
             >
@@ -229,155 +229,187 @@ export const SignupPage: React.FC = () => {
                 {/* HologramProjector pinned to the top of the group */}
                 <div className="absolute top-0 left-0 right-0">
                     <HologramProjector isActive={hologramVisible} className="">
-                        <div className="w-full overflow-hidden">
+                        {/* scanline overlay over all panels */}
+                        <div className="w-full overflow-hidden relative">
+                            <div className="pointer-events-none absolute inset-0 z-30" style={{
+                                backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.08) 3px, rgba(0,0,0,0.08) 4px)',
+                                mixBlendMode: 'multiply'
+                            }} />
                             <div
                                 className="flex w-[300%] transition-transform duration-500 ease-in-out"
                                 style={{ transform: step === 1 ? 'translateX(0%)' : step === 2 ? 'translateX(-33.333%)' : 'translateX(-66.666%)' }}
                             >
                                 {/* ── Panel 1: Community Selection ── */}
-                                <div className="w-1/3 shrink-0 flex flex-col gap-1.5 px-4 py-1">
-                                    <h3 className="text-center font-bold text-sky-400 tracking-widest uppercase mb-1 drop-shadow-[0_0_15px_rgba(56,189,248,0.8)] text-xs">
-                                        Select Instance
-                                    </h3>
-                                    <div className="space-y-2 max-h-[22vh] overflow-y-auto custom-scrollbar pr-2">
+                                <div className="w-1/3 shrink-0 flex flex-col gap-2 px-4 py-2">
+                                    {/* header */}
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-sky-400/60 to-transparent" />
+                                        <h3 className="text-center font-bold text-sky-300 tracking-[0.3em] uppercase text-[9px] font-mono drop-shadow-[0_0_8px_rgba(56,189,248,1)]">
+                                            SELECT INSTANCE
+                                        </h3>
+                                        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-sky-400/60 to-transparent" />
+                                    </div>
+
+                                    <div className="space-y-1.5 max-h-[22vh] overflow-y-auto custom-scrollbar pr-1">
                                         {COMMUNITIES.map((community) => (
                                             <button
                                                 key={community.id}
                                                 onClick={() => setSelectedCommunityId(community.id)}
                                                 className={cn(
-                                                    "w-full p-2.5 rounded-xl border border-sky-500/30 bg-sky-950/40 backdrop-blur-md transition-all flex items-center justify-between group hover:border-sky-400 hover:bg-sky-900/50 hover:shadow-[0_0_20px_rgba(56,189,248,0.4)]",
-                                                    selectedCommunityId === community.id && "border-sky-400 bg-sky-900/60 shadow-[0_0_30px_rgba(56,189,248,0.6)]"
+                                                    "w-full p-2.5 border transition-all flex items-center justify-between group relative overflow-hidden",
+                                                    "bg-sky-950/20 backdrop-blur-md",
+                                                    selectedCommunityId === community.id
+                                                        ? "border-sky-300/80 shadow-[0_0_18px_rgba(56,189,248,0.7),inset_0_0_20px_rgba(56,189,248,0.1)]"
+                                                        : "border-sky-500/20 hover:border-sky-400/50 hover:shadow-[0_0_10px_rgba(56,189,248,0.3)]"
                                                 )}
+                                                style={{ clipPath: 'polygon(8px 0%, 100% 0%, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0% 100%, 0% 8px)' }}
                                             >
-                                                <div className="flex items-center gap-3">
+                                                {/* active glow sweep */}
+                                                {selectedCommunityId === community.id && (
+                                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-sky-400/8 to-transparent animate-pulse" />
+                                                )}
+                                                <div className="flex items-center gap-2.5 relative z-10">
                                                     <Globe className={cn(
-                                                        "w-5 h-5",
-                                                        selectedCommunityId === community.id ? "text-sky-300 drop-shadow-[0_0_8px_rgba(125,211,252,1)]" : "text-sky-500/70"
+                                                        "w-4 h-4 shrink-0",
+                                                        selectedCommunityId === community.id ? "text-sky-200 drop-shadow-[0_0_6px_rgba(125,211,252,1)]" : "text-sky-500/50"
                                                     )} />
                                                     <div className="text-left">
                                                         <span className={cn(
-                                                            "font-medium block",
-                                                            selectedCommunityId === community.id ? "text-sky-100 drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]" : "text-sky-400/80"
+                                                            "font-mono font-bold block text-[11px] tracking-wider",
+                                                            selectedCommunityId === community.id ? "text-sky-100 drop-shadow-[0_0_4px_rgba(255,255,255,0.6)]" : "text-sky-400/70"
                                                         )}>{community.name}</span>
-                                                        <span className="text-[10px] text-sky-500/60 font-mono block mt-0.5">{community.url}</span>
+                                                        <span className="text-[9px] text-sky-500/50 font-mono block mt-0.5 tracking-widest">{community.url}</span>
                                                     </div>
                                                 </div>
                                                 {selectedCommunityId === community.id && (
-                                                    <Check className="w-5 h-5 text-sky-300 drop-shadow-[0_0_8px_rgba(125,211,252,1)] shrink-0" />
+                                                    <Check className="w-4 h-4 text-sky-200 drop-shadow-[0_0_6px_rgba(125,211,252,1)] shrink-0 relative z-10" />
                                                 )}
                                             </button>
                                         ))}
                                     </div>
-                                    <div className="flex flex-col gap-2 mt-1">
+
+                                    <div className="flex flex-col gap-1.5 mt-1">
                                         <button
                                             onClick={handleNextStep}
                                             disabled={!selectedCommunityId}
-                                            className="w-full bg-sky-500/20 hover:bg-sky-500/40 border border-sky-400/50 disabled:opacity-50 text-sky-100 font-bold py-2 text-xs rounded-xl transition-all shadow-[0_0_15px_rgba(56,189,248,0.3)] flex items-center justify-center gap-2 font-mono uppercase tracking-widest backdrop-blur-md"
+                                            className="w-full relative overflow-hidden disabled:opacity-40 font-mono text-[10px] font-bold tracking-[0.25em] uppercase py-2.5 transition-all"
+                                            style={{
+                                                background: selectedCommunityId ? 'linear-gradient(90deg, rgba(14,165,233,0.15), rgba(56,189,248,0.25), rgba(14,165,233,0.15))' : 'rgba(14,165,233,0.05)',
+                                                border: '1px solid rgba(56,189,248,0.5)',
+                                                clipPath: 'polygon(10px 0%, 100% 0%, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0% 100%, 0% 10px)',
+                                                color: '#bae6fd',
+                                                boxShadow: selectedCommunityId ? '0 0 20px rgba(14,165,233,0.4), inset 0 0 20px rgba(14,165,233,0.05)' : 'none'
+                                            }}
                                         >
-                                            Continue <ArrowRight className="w-4 h-4" />
+                                            <span className="relative z-10 flex items-center justify-center gap-2">
+                                                Continue <ArrowRight className="w-3.5 h-3.5" />
+                                            </span>
                                         </button>
-                                        <p className="text-center text-[10px] md:text-xs text-sky-400/60 font-mono drop-shadow-[0_0_5px_rgba(56,189,248,0.5)]">
-                                            Already registered? <Link to="/login" className="text-sky-300 font-bold hover:underline drop-shadow-[0_0_8px_rgba(125,211,252,1)]">Login</Link>
+                                        <p className="text-center text-[9px] text-sky-500/50 font-mono tracking-widest">
+                                            REGISTERED? <Link to="/login" className="text-sky-300/80 font-bold hover:text-sky-200 transition-colors drop-shadow-[0_0_4px_rgba(125,211,252,0.8)]">LOGIN</Link>
                                         </p>
                                     </div>
                                 </div>
 
                                 {/* ── Panel 2: Account Details ── */}
                                 <div className="w-1/3 shrink-0 flex flex-col gap-1 px-4 py-1">
-                                    <div className="flex items-center gap-3 mb-0">
-                                        <button
-                                            onClick={() => setStep(1)}
-                                            className="inline-flex items-center text-[10px] text-sky-400/60 hover:text-sky-300 transition-colors font-mono uppercase tracking-widest"
-                                        >
-                                            <ChevronLeft className="w-3 h-3 mr-1" /> Back
+                                    {/* title bar */}
+                                    <div className="flex items-center gap-2 mb-0.5">
+                                        <button onClick={() => setStep(1)} className="inline-flex items-center text-[9px] text-sky-500/50 hover:text-sky-300 transition-colors font-mono uppercase tracking-widest">
+                                            <ChevronLeft className="w-3 h-3" /> BACK
                                         </button>
-                                        <h3 className="font-bold text-sky-400 tracking-widest uppercase drop-shadow-[0_0_15px_rgba(56,189,248,0.8)] font-mono text-xs">
-                                            Account Details
-                                        </h3>
+                                        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-sky-400/40 to-transparent" />
+                                        <h3 className="font-bold text-sky-300 tracking-[0.25em] uppercase font-mono text-[9px] drop-shadow-[0_0_8px_rgba(56,189,248,1)]">ACCOUNT::DETAILS</h3>
+                                        <div className="flex-1 h-px bg-gradient-to-r from-sky-400/40 to-transparent" />
                                     </div>
+
                                     {error && (
-                                        <div className="p-2.5 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs font-medium flex items-center gap-2">
-                                            <AlertCircle className="w-4 h-4 shrink-0" />{error}
+                                        <div className="px-2.5 py-1.5 border border-red-500/40 bg-red-950/30 text-red-300 text-[9px] font-mono flex items-center gap-2" style={{ clipPath: 'polygon(6px 0%,100% 0%,100% 100%,0% 100%,0% 6px)' }}>
+                                            <AlertCircle className="w-3 h-3 shrink-0" />{error}
                                         </div>
                                     )}
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-sky-400/60 uppercase tracking-widest ml-1 font-mono">Display Name</label>
-                                        <input
-                                            type="text"
-                                            value={formData.display_name}
-                                            onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
-                                            required
-                                            placeholder="John Doe"
-                                            className="w-full bg-sky-950/40 border border-sky-500/30 rounded-xl p-2 text-sky-100 focus:outline-none focus:border-sky-400/60 transition-all placeholder:text-sky-500/30 font-mono text-sm backdrop-blur-md"
-                                        />
-                                    </div>
-                                    <div className="space-y-1 relative">
-                                        <div className="flex justify-between items-center px-1">
-                                            <label className="text-[10px] font-bold text-sky-400/60 uppercase tracking-widest font-mono">Username</label>
-                                            {isCheckingUsername && <Loader2 className="w-3 h-3 text-sky-400 animate-spin" />}
-                                        </div>
-                                        <div className="relative">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sky-500/60 font-mono">@</span>
-                                            <input
-                                                type="text"
-                                                value={formData.username}
-                                                onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase() })}
-                                                required
-                                                placeholder="your_username"
-                                                className={cn(
-                                                    "w-full bg-sky-950/40 border rounded-xl p-2 pl-8 text-sky-100 focus:outline-none transition-all placeholder:text-sky-500/30 font-mono text-sm backdrop-blur-md",
-                                                    usernameError ? "border-destructive/50" : "border-sky-500/30 focus:border-sky-400/60"
-                                                )}
-                                            />
-                                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                                {usernameAvailable === true && !usernameError && <Check className="w-4 h-4 text-emerald-400" />}
+
+                                    {/* holo-input helper */}
+                                    {([
+                                        { label: 'DISPLAY NAME', type: 'text', value: formData.display_name, key: 'display_name', placeholder: 'John Doe' },
+                                        { label: 'EMAIL', type: 'email', value: formData.email, key: 'email', placeholder: 'you@example.com' },
+                                    ] as const).map(({ label, type, value, key, placeholder }) => (
+                                        <div key={key} className="space-y-0.5">
+                                            <label className="text-[8px] font-bold text-sky-400/60 uppercase tracking-[0.25em] ml-1 font-mono flex items-center gap-1">
+                                                <span className="w-1 h-1 rounded-full bg-sky-400/60 inline-block" />{label}
+                                            </label>
+                                            <div className="relative">
+                                                <input
+                                                    type={type} value={value}
+                                                    onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
+                                                    required placeholder={placeholder}
+                                                    className="w-full bg-sky-950/30 border-b border-sky-500/40 py-1.5 px-2 text-sky-100 focus:outline-none focus:border-sky-300/80 transition-all placeholder:text-sky-600/40 font-mono text-[11px] tracking-wide"
+                                                    style={{ background: 'linear-gradient(90deg, rgba(14,165,233,0.05), rgba(14,165,233,0.02))' }}
+                                                />
+                                                <div className="absolute bottom-0 left-0 w-0 h-px bg-sky-300 transition-all duration-300 peer-focus:w-full" />
                                             </div>
                                         </div>
-                                        {usernameError && <p className="text-[10px] font-bold text-destructive ml-1">{usernameError}</p>}
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-sky-400/60 uppercase tracking-widest ml-1 font-mono">Email</label>
-                                        <input
-                                            type="email"
-                                            value={formData.email}
-                                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                            required
-                                            placeholder="you@example.com"
-                                            className="w-full bg-sky-950/40 border border-sky-500/30 rounded-xl p-2.5 text-sky-100 focus:outline-none focus:border-sky-400/60 transition-all placeholder:text-sky-500/30 font-mono text-sm backdrop-blur-md"
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-sky-400/60 uppercase tracking-widest ml-1 font-mono">Password</label>
-                                        <div className="grid grid-cols-2 gap-2">
+                                    ))}
+
+                                    {/* username field */}
+                                    <div className="space-y-0.5">
+                                        <div className="flex justify-between items-center px-1">
+                                            <label className="text-[8px] font-bold text-sky-400/60 uppercase tracking-[0.25em] font-mono flex items-center gap-1">
+                                                <span className="w-1 h-1 rounded-full bg-sky-400/60 inline-block" />USERNAME
+                                            </label>
+                                            {isCheckingUsername && <Loader2 className="w-2.5 h-2.5 text-sky-400 animate-spin" />}
+                                        </div>
+                                        <div className="relative">
+                                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-sky-400/50 font-mono text-[11px]">@</span>
                                             <input
-                                                type="password"
-                                                value={formData.password}
-                                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                                required
-                                                placeholder="Password"
-                                                className="w-full bg-sky-950/40 border border-sky-500/30 rounded-xl p-2.5 text-sky-100 focus:outline-none focus:border-sky-400/60 transition-all placeholder:text-sky-500/30 font-mono text-sm backdrop-blur-md"
+                                                type="text" value={formData.username}
+                                                onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase() })}
+                                                required placeholder="your_username"
+                                                className={cn(
+                                                    "w-full bg-sky-950/30 border-b py-1.5 px-2 pl-6 text-sky-100 focus:outline-none transition-all placeholder:text-sky-600/40 font-mono text-[11px] tracking-wide",
+                                                    usernameError ? "border-red-500/50" : "border-sky-500/40 focus:border-sky-300/80"
+                                                )}
+                                                style={{ background: 'linear-gradient(90deg, rgba(14,165,233,0.05), rgba(14,165,233,0.02))' }}
                                             />
-                                            <input
-                                                type="password"
-                                                value={confirmPassword}
-                                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                                required
-                                                placeholder="Confirm"
-                                                className="w-full bg-sky-950/40 border border-sky-500/30 rounded-xl p-2.5 text-sky-100 focus:outline-none focus:border-sky-400/60 transition-all placeholder:text-sky-500/30 font-mono text-sm backdrop-blur-md"
-                                            />
+                                            <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                                                {usernameAvailable === true && !usernameError && <Check className="w-3 h-3 text-emerald-400 drop-shadow-[0_0_4px_rgba(52,211,153,0.8)]" />}
+                                            </div>
+                                        </div>
+                                        {usernameError && <p className="text-[9px] font-bold text-red-400 ml-1 font-mono">{usernameError}</p>}
+                                    </div>
+
+                                    {/* password row */}
+                                    <div className="space-y-0.5">
+                                        <label className="text-[8px] font-bold text-sky-400/60 uppercase tracking-[0.25em] ml-1 font-mono flex items-center gap-1">
+                                            <span className="w-1 h-1 rounded-full bg-sky-400/60 inline-block" />PASSWORD
+                                        </label>
+                                        <div className="grid grid-cols-2 gap-1.5">
+                                            {(['password', 'confirmPassword'] as const).map((k, i) => (
+                                                <input key={k} type="password"
+                                                    value={k === 'password' ? formData.password : confirmPassword}
+                                                    onChange={(e) => k === 'password' ? setFormData({ ...formData, password: e.target.value }) : setConfirmPassword(e.target.value)}
+                                                    required placeholder={i === 0 ? 'Password' : 'Confirm'}
+                                                    className="w-full bg-sky-950/30 border-b border-sky-500/40 py-1.5 px-2 text-sky-100 focus:outline-none focus:border-sky-300/80 transition-all placeholder:text-sky-600/40 font-mono text-[11px]"
+                                                    style={{ background: 'linear-gradient(90deg, rgba(14,165,233,0.05), rgba(14,165,233,0.02))' }}
+                                                />
+                                            ))}
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-3 p-2.5 rounded-xl border border-sky-500/20 bg-sky-950/30 backdrop-blur-md">
+
+                                    {/* visibility toggle */}
+                                    <div className="flex items-center gap-2 px-1 py-1 border border-sky-500/15 bg-sky-950/20"
+                                        style={{ clipPath: 'polygon(6px 0%,100% 0%,100% calc(100% - 6px),calc(100% - 6px) 100%,0% 100%,0% 6px)' }}>
                                         <Checkbox
                                             id="is_discoverable"
                                             checked={formData.is_discoverable || false}
                                             onCheckedChange={(checked) => setFormData({ ...formData, is_discoverable: checked === true })}
-                                            className="data-[state=checked]:bg-sky-500 data-[state=checked]:border-sky-400"
+                                            className="w-3.5 h-3.5 data-[state=checked]:bg-sky-500 data-[state=checked]:border-sky-400"
                                         />
-                                        <label htmlFor="is_discoverable" className="text-[10px] font-bold text-sky-300/80 cursor-pointer uppercase tracking-widest font-mono">
-                                            Global Visibility
+                                        <label htmlFor="is_discoverable" className="text-[9px] font-bold text-sky-300/70 cursor-pointer uppercase tracking-[0.2em] font-mono">
+                                            GLOBAL VISIBILITY
                                         </label>
                                     </div>
+
                                     <button
                                         type="button"
                                         onClick={() => {
@@ -387,70 +419,115 @@ export const SignupPage: React.FC = () => {
                                             setStep(3);
                                         }}
                                         disabled={loading || !!usernameError || usernameAvailable === false}
-                                        className="w-full bg-sky-500/20 hover:bg-sky-500/40 border border-sky-400/50 disabled:opacity-50 text-sky-100 font-bold py-2.5 text-xs md:text-sm rounded-xl transition-all shadow-[0_0_15px_rgba(56,189,248,0.3)] flex items-center justify-center gap-2 font-mono uppercase tracking-widest backdrop-blur-md mt-1"
+                                        className="w-full relative overflow-hidden disabled:opacity-40 font-mono text-[10px] font-bold tracking-[0.25em] uppercase py-2 transition-all mt-0.5"
+                                        style={{
+                                            background: 'linear-gradient(90deg, rgba(14,165,233,0.15), rgba(56,189,248,0.28), rgba(14,165,233,0.15))',
+                                            border: '1px solid rgba(56,189,248,0.5)',
+                                            clipPath: 'polygon(10px 0%, 100% 0%, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0% 100%, 0% 10px)',
+                                            color: '#bae6fd',
+                                            boxShadow: '0 0 18px rgba(14,165,233,0.35), inset 0 0 16px rgba(14,165,233,0.05)'
+                                        }}
                                     >
-                                        Continue <ArrowRight className="w-4 h-4" />
+                                        Continue <ArrowRight className="w-3.5 h-3.5 inline ml-1" />
                                     </button>
                                 </div>
 
                                 {/* ── Panel 3: Avatar Selection ── */}
-                                <div className="w-1/3 shrink-0 flex flex-col items-center gap-2 px-6 py-1">
-                                    <h3 className="text-center font-bold text-sky-400 tracking-widest uppercase drop-shadow-[0_0_15px_rgba(56,189,248,0.8)] text-xs">
-                                        Identity Projected
-                                    </h3>
-                                    <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-sky-400/50 shadow-[0_0_30px_rgba(56,189,248,0.6)] relative bg-black/50">
-                                        <img
-                                            src={formData.avatar_url}
-                                            alt="Selected Avatar"
-                                            className="w-full h-full object-cover mix-blend-screen"
-                                            style={{ filter: "brightness(1.5) contrast(1.2) hue-rotate(-20deg) drop-shadow(0 0 10px rgba(56,189,248,0.8))" }}
-                                        />
+                                <div className="w-1/3 shrink-0 flex flex-col gap-2 px-3 py-2">
+                                    {/* title */}
+                                    <div className="flex items-center gap-2 w-full">
+                                        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-sky-400/40 to-transparent" />
+                                        <h3 className="text-center font-bold text-sky-300 tracking-[0.28em] uppercase text-[9px] font-mono drop-shadow-[0_0_8px_rgba(56,189,248,1)]">
+                                            IDENTITY::PROJECTED
+                                        </h3>
+                                        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-sky-400/40 to-transparent" />
                                     </div>
-                                    <div className="grid grid-cols-4 gap-2 w-full px-4">
-                                        {formData.avatar_url && !formData.avatar_url.startsWith('/avatars/') && (
-                                            <button type="button" className="aspect-square rounded-xl overflow-hidden transition-all duration-300 border-2 border-sky-400 shadow-[0_0_15px_rgba(56,189,248,0.5)] bg-black/50">
-                                                <img src={formData.avatar_url} alt="Custom" className="w-full h-full object-cover mix-blend-screen" style={{ filter: "brightness(1.5) contrast(1.2) hue-rotate(-20deg)" }} />
-                                            </button>
-                                        )}
-                                        {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
-                                            <button
-                                                key={num}
-                                                type="button"
-                                                onClick={() => setFormData({ ...formData, avatar_url: `/avatars/avatar_${num}.png` })}
-                                                className={cn(
-                                                    "aspect-square rounded-xl overflow-hidden transition-all duration-300 border-2 bg-black/50",
-                                                    formData.avatar_url === `/avatars/avatar_${num}.png`
-                                                        ? "border-sky-400 shadow-[0_0_15px_rgba(56,189,248,0.5)] scale-110"
-                                                        : "border-transparent border-sky-500/20 hover:border-sky-400/50 hover:scale-105 opacity-70"
+
+                                    {/* two-column: large preview + picker grid */}
+                                    <div className="flex gap-3 w-full">
+                                        {/* LEFT: large selected avatar */}
+                                        <div className="flex flex-col items-center gap-1 shrink-0">
+                                            <div className="relative">
+                                                <div className="absolute inset-0 rounded-full border border-sky-300/30 animate-ping"
+                                                    style={{ animationDuration: '2.2s', transform: 'scale(1.15)' }} />
+                                                <div className="absolute inset-0 rounded-full border border-sky-400/12 animate-ping"
+                                                    style={{ animationDuration: '3s', transform: 'scale(1.35)' }} />
+                                                <div className="w-[72px] h-[72px] rounded-full overflow-hidden relative bg-black/60"
+                                                    style={{
+                                                        border: '2px solid rgba(125,211,252,0.75)',
+                                                        boxShadow: '0 0 22px rgba(56,189,248,0.85), 0 0 50px rgba(56,189,248,0.3), inset 0 0 20px rgba(14,165,233,0.1)'
+                                                    }}>
+                                                    <img
+                                                        src={formData.avatar_url}
+                                                        alt="Selected Avatar"
+                                                        className="w-full h-full object-cover mix-blend-screen"
+                                                        style={{ filter: "brightness(1.6) contrast(1.3) hue-rotate(-20deg)" }}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <span className="text-[8px] font-mono text-sky-400/60 tracking-widest uppercase mt-0.5">SELECTED</span>
+                                        </div>
+
+                                        {/* RIGHT: compact picker + upload */}
+                                        <div className="flex-1 flex flex-col gap-1.5">
+                                            <div className="grid grid-cols-4 gap-1">
+                                                {formData.avatar_url && !formData.avatar_url.startsWith('/avatars/') && (
+                                                    <button type="button" className="aspect-square overflow-hidden border border-sky-300/70 shadow-[0_0_8px_rgba(56,189,248,0.5)] bg-black/50"
+                                                        style={{ clipPath: 'polygon(4px 0%,100% 0%,100% calc(100% - 4px),calc(100% - 4px) 100%,0% 100%,0% 4px)' }}>
+                                                        <img src={formData.avatar_url} alt="Custom" className="w-full h-full object-cover mix-blend-screen"
+                                                            style={{ filter: "brightness(1.5) contrast(1.2) hue-rotate(-20deg)" }} />
+                                                    </button>
                                                 )}
-                                            >
-                                                <img src={`/avatars/avatar_${num}.png`} alt={`Avatar ${num}`} className="w-full h-full object-cover mix-blend-screen" style={{ filter: "brightness(1.5) contrast(1.2) hue-rotate(-20deg)" }} />
-                                            </button>
-                                        ))}
-                                    </div>
-                                    <div className="w-full flex flex-col gap-3">
-                                        <input type="file" className="hidden" ref={fileInputRef} accept="image/*" onChange={handleAvatarUpload} />
-                                        <button
-                                            type="button"
-                                            onClick={() => fileInputRef.current?.click()}
-                                            disabled={uploadingAvatar}
-                                            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-sky-400/50 text-sky-300 hover:bg-sky-500/20 transition-colors font-mono text-xs font-bold tracking-widest uppercase disabled:opacity-50 backdrop-blur-md shadow-[0_0_15px_rgba(56,189,248,0.2)]"
-                                        >
-                                            {uploadingAvatar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                                            {uploadingAvatar ? 'Uploading...' : 'Upload Custom'}
-                                        </button>
-                                        <div className="flex gap-3 w-full">
-                                            <button onClick={() => setStep(2)} className="flex-1 bg-sky-950/40 hover:bg-sky-900/60 border border-sky-500/30 text-sky-300 font-bold py-2.5 text-xs rounded-xl transition-all flex items-center justify-center gap-2 font-mono uppercase tracking-widest backdrop-blur-md">
-                                                <ChevronLeft className="w-4 h-4" /> Back
-                                            </button>
-                                            <button
-                                                onClick={handleSubmit}
-                                                disabled={loading}
-                                                className="flex-[2] bg-emerald-500/20 border border-emerald-400/50 hover:bg-emerald-500/40 disabled:opacity-50 text-emerald-100 font-bold py-2.5 text-xs rounded-xl transition-all shadow-[0_0_15px_rgba(52,211,153,0.3)] flex items-center justify-center gap-2 font-mono uppercase tracking-widest backdrop-blur-md"
-                                            >
-                                                {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Finalizing...</> : <><Check className="w-4 h-4" /> Complete</>}
+                                                {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
+                                                    <button key={num} type="button"
+                                                        onClick={() => setFormData({ ...formData, avatar_url: `/avatars/avatar_${num}.png` })}
+                                                        className={cn(
+                                                            "aspect-square overflow-hidden transition-all duration-200 bg-black/50",
+                                                            formData.avatar_url === `/avatars/avatar_${num}.png`
+                                                                ? "scale-105"
+                                                                : "border border-sky-500/20 hover:border-sky-400/50 hover:scale-105 opacity-70 hover:opacity-100"
+                                                        )}
+                                                        style={{
+                                                            clipPath: 'polygon(4px 0%,100% 0%,100% calc(100% - 4px),calc(100% - 4px) 100%,0% 100%,0% 4px)',
+                                                            ...(formData.avatar_url === `/avatars/avatar_${num}.png` ? {
+                                                                border: '1.5px solid rgba(125,211,252,0.85)',
+                                                                boxShadow: '0 0 12px rgba(56,189,248,0.7)'
+                                                            } : {})
+                                                        }}
+                                                    >
+                                                        <img src={`/avatars/avatar_${num}.png`} alt={`Avatar ${num}`} className="w-full h-full object-cover mix-blend-screen"
+                                                            style={{ filter: "brightness(1.5) contrast(1.2) hue-rotate(-20deg)" }} />
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            <input type="file" className="hidden" ref={fileInputRef} accept="image/*" onChange={handleAvatarUpload} />
+                                            <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadingAvatar}
+                                                className="w-full flex items-center justify-center gap-1 py-1 font-mono text-[8px] font-bold tracking-[0.18em] uppercase text-sky-300/70 hover:text-sky-200 disabled:opacity-50 transition-colors"
+                                                style={{ border: '1px solid rgba(56,189,248,0.2)', background: 'rgba(14,165,233,0.04)' }}>
+                                                {uploadingAvatar ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Upload className="w-2.5 h-2.5" />}
+                                                {uploadingAvatar ? 'UPLOADING...' : 'UPLOAD CUSTOM'}
                                             </button>
                                         </div>
+                                    </div>
+
+                                    {/* nav buttons */}
+                                    <div className="flex gap-2 w-full mt-auto">
+                                        <button onClick={() => setStep(2)}
+                                            className="flex-1 font-mono text-[9px] font-bold tracking-[0.2em] uppercase text-sky-400/60 hover:text-sky-300 py-2 transition-colors flex items-center justify-center gap-1"
+                                            style={{ border: '1px solid rgba(56,189,248,0.15)' }}>
+                                            <ChevronLeft className="w-3 h-3" /> BACK
+                                        </button>
+                                        <button onClick={handleSubmit} disabled={loading}
+                                            className="flex-[2] relative overflow-hidden disabled:opacity-40 font-mono text-[10px] font-bold tracking-[0.2em] uppercase py-2 transition-all"
+                                            style={{
+                                                background: 'linear-gradient(90deg, rgba(52,211,153,0.12), rgba(52,211,153,0.22), rgba(52,211,153,0.12))',
+                                                border: '1px solid rgba(52,211,153,0.5)',
+                                                clipPath: 'polygon(8px 0%,100% 0%,100% calc(100% - 8px),calc(100% - 8px) 100%,0% 100%,0% 8px)',
+                                                color: '#6ee7b7',
+                                                boxShadow: '0 0 15px rgba(52,211,153,0.3)'
+                                            }}>
+                                            {loading ? <><Loader2 className="w-3 h-3 animate-spin inline mr-1" />FINALIZING</> : <><Check className="w-3 h-3 inline mr-1" />COMPLETE</>}
+                                        </button>
                                     </div>
                                 </div>
                             </div>
