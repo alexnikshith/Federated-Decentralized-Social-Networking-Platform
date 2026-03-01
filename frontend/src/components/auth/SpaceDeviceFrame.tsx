@@ -6,13 +6,14 @@ interface SpaceDeviceFrameProps {
     children: React.ReactNode;
     className?: string;
     wrapperClassName?: string;
+    style?: React.CSSProperties;
     isFlat?: boolean;
     isHorizontal?: boolean;
 }
 
-export const SpaceDeviceFrame = ({ children, className, wrapperClassName, isFlat, isHorizontal }: SpaceDeviceFrameProps) => {
+export const SpaceDeviceFrame = ({ children, className, wrapperClassName, style, isFlat, isHorizontal }: SpaceDeviceFrameProps) => {
     return (
-        <div className={cn("device-wrapper", wrapperClassName)}>
+        <div className={cn("device-wrapper", wrapperClassName)} style={style}>
             <div className={cn("device-frame", isFlat && "flat-mode", isHorizontal && "horizontal-mode")}>
                 {/* Hardware Details */}
                 <div className="antenna" />
