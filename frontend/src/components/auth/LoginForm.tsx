@@ -194,7 +194,7 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister, hideBackNav = false, 
                 </div>
             )}
 
-            <div className="w-full max-w-5xl mx-auto grid md:grid-cols-2 gap-12 items-center p-6">
+            <div className="w-full max-w-5xl mx-auto grid md:grid-cols-2 gap-6 items-center p-6">
                 {/* Left Column: Heading & Info */}
                 <motion.div
                     className="text-left space-y-6"
@@ -236,7 +236,7 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister, hideBackNav = false, 
                     transition={{ duration: 0.8, ease: "anticipate" }}
                     className="relative w-full max-w-[650px] mx-auto z-10"
                 >
-                    <SpaceDeviceFrame className="p-6 md:p-8 space-y-6 min-h-full flex flex-col justify-center" wrapperClassName="w-full h-[600px]">
+                    <SpaceDeviceFrame className="p-5 md:p-7 space-y-5 min-h-full flex flex-col justify-center" wrapperClassName="w-full h-[min(560px,72vh)]">
                         {error && (
                             <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm shrink-0">
                                 {error}
