@@ -243,11 +243,11 @@ export const SignupPage: React.FC = () => {
                                 <div className="w-1/3 shrink-0 flex flex-col gap-2 px-4 py-2">
                                     {/* header */}
                                     <div className="flex items-center gap-2 mb-1">
-                                        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-sky-400/60 to-transparent" />
-                                        <h3 className="text-center font-bold text-sky-300 tracking-[0.3em] uppercase text-[9px] font-mono drop-shadow-[0_0_8px_rgba(56,189,248,1)]">
+                                        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-amber-500/60 to-transparent" />
+                                        <h3 className="text-center font-bold text-amber-400 tracking-[0.3em] uppercase text-[9px] font-mono drop-shadow-[0_0_8px_rgba(255,146,0,1)]">
                                             SELECT INSTANCE
                                         </h3>
-                                        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-sky-400/60 to-transparent" />
+                                        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-amber-500/60 to-transparent" />
                                     </div>
 
                                     <div className="space-y-1.5 max-h-[22vh] overflow-y-auto custom-scrollbar pr-1">
@@ -257,32 +257,32 @@ export const SignupPage: React.FC = () => {
                                                 onClick={() => setSelectedCommunityId(community.id)}
                                                 className={cn(
                                                     "w-full p-2.5 border transition-all flex items-center justify-between group relative overflow-hidden",
-                                                    "bg-sky-950/20 backdrop-blur-md",
+                                                    "bg-amber-950/20 backdrop-blur-md",
                                                     selectedCommunityId === community.id
-                                                        ? "border-sky-300/80 shadow-[0_0_18px_rgba(56,189,248,0.7),inset_0_0_20px_rgba(56,189,248,0.1)]"
-                                                        : "border-sky-500/20 hover:border-sky-400/50 hover:shadow-[0_0_10px_rgba(56,189,248,0.3)]"
+                                                        ? "border-amber-400/80 shadow-[0_0_18px_rgba(255,146,0,0.6),inset_0_0_20px_rgba(255,146,0,0.1)]"
+                                                        : "border-amber-500/20 hover:border-amber-400/50 hover:shadow-[0_0_10px_rgba(255,146,0,0.2)]"
                                                 )}
                                                 style={{ clipPath: 'polygon(8px 0%, 100% 0%, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0% 100%, 0% 8px)' }}
                                             >
                                                 {/* active glow sweep */}
                                                 {selectedCommunityId === community.id && (
-                                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-sky-400/8 to-transparent animate-pulse" />
+                                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-500/8 to-transparent animate-pulse" />
                                                 )}
                                                 <div className="flex items-center gap-2.5 relative z-10">
                                                     <Globe className={cn(
                                                         "w-4 h-4 shrink-0",
-                                                        selectedCommunityId === community.id ? "text-sky-200 drop-shadow-[0_0_6px_rgba(125,211,252,1)]" : "text-sky-500/50"
+                                                        selectedCommunityId === community.id ? "text-amber-200 drop-shadow-[0_0_6px_rgba(251,191,36,0.8)]" : "text-amber-600/50"
                                                     )} />
                                                     <div className="text-left">
                                                         <span className={cn(
                                                             "font-mono font-bold block text-[11px] tracking-wider",
-                                                            selectedCommunityId === community.id ? "text-sky-100 drop-shadow-[0_0_4px_rgba(255,255,255,0.6)]" : "text-sky-400/70"
+                                                            selectedCommunityId === community.id ? "text-amber-100 drop-shadow-[0_0_4px_rgba(255,255,255,0.4)]" : "text-amber-500/60"
                                                         )}>{community.name}</span>
-                                                        <span className="text-[9px] text-sky-500/50 font-mono block mt-0.5 tracking-widest">{community.url}</span>
+                                                        <span className="text-[9px] text-amber-600/40 font-mono block mt-0.5 tracking-widest">{community.url}</span>
                                                     </div>
                                                 </div>
                                                 {selectedCommunityId === community.id && (
-                                                    <Check className="w-4 h-4 text-sky-200 drop-shadow-[0_0_6px_rgba(125,211,252,1)] shrink-0 relative z-10" />
+                                                    <Check className="w-4 h-4 text-amber-200 drop-shadow-[0_0_6px_rgba(251,191,36,1)] shrink-0 relative z-10" />
                                                 )}
                                             </button>
                                         ))}
@@ -294,19 +294,19 @@ export const SignupPage: React.FC = () => {
                                             disabled={!selectedCommunityId}
                                             className="w-full relative overflow-hidden disabled:opacity-40 font-mono text-[10px] font-bold tracking-[0.25em] uppercase py-2.5 transition-all"
                                             style={{
-                                                background: selectedCommunityId ? 'linear-gradient(90deg, rgba(14,165,233,0.15), rgba(56,189,248,0.25), rgba(14,165,233,0.15))' : 'rgba(14,165,233,0.05)',
-                                                border: '1px solid rgba(56,189,248,0.5)',
+                                                background: selectedCommunityId ? 'linear-gradient(90deg, rgba(234,88,12,0.15), rgba(245,158,11,0.25), rgba(234,88,12,0.15))' : 'rgba(234,88,12,0.05)',
+                                                border: '1px solid rgba(245,158,11,0.5)',
                                                 clipPath: 'polygon(10px 0%, 100% 0%, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0% 100%, 0% 10px)',
-                                                color: '#bae6fd',
-                                                boxShadow: selectedCommunityId ? '0 0 20px rgba(14,165,233,0.4), inset 0 0 20px rgba(14,165,233,0.05)' : 'none'
+                                                color: '#fef3c7',
+                                                boxShadow: selectedCommunityId ? '0 0 20px rgba(234,88,12,0.3), inset 0 0 20px rgba(234,88,12,0.05)' : 'none'
                                             }}
                                         >
                                             <span className="relative z-10 flex items-center justify-center gap-2">
                                                 Continue <ArrowRight className="w-3.5 h-3.5" />
                                             </span>
                                         </button>
-                                        <p className="text-center text-[9px] text-sky-500/50 font-mono tracking-widest">
-                                            REGISTERED? <Link to="/login" className="text-sky-300/80 font-bold hover:text-sky-200 transition-colors drop-shadow-[0_0_4px_rgba(125,211,252,0.8)]">LOGIN</Link>
+                                        <p className="text-center text-[9px] text-amber-600/50 font-mono tracking-widest">
+                                            REGISTERED? <Link to="/login" className="text-amber-400 font-bold hover:text-amber-200 transition-colors drop-shadow-[0_0_4px_rgba(251,191,36,0.5)]">LOGIN</Link>
                                         </p>
                                     </div>
                                 </div>
@@ -315,12 +315,12 @@ export const SignupPage: React.FC = () => {
                                 <div className="w-1/3 shrink-0 flex flex-col gap-1 px-4 py-1">
                                     {/* title bar */}
                                     <div className="flex items-center gap-2 mb-0.5">
-                                        <button onClick={() => setStep(1)} className="inline-flex items-center text-[9px] text-sky-500/50 hover:text-sky-300 transition-colors font-mono uppercase tracking-widest">
+                                        <button onClick={() => setStep(1)} className="inline-flex items-center text-[9px] text-amber-600/70 hover:text-amber-400 transition-colors font-mono uppercase tracking-widest">
                                             <ChevronLeft className="w-3 h-3" /> BACK
                                         </button>
-                                        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-sky-400/40 to-transparent" />
-                                        <h3 className="font-bold text-sky-300 tracking-[0.25em] uppercase font-mono text-[9px] drop-shadow-[0_0_8px_rgba(56,189,248,1)]">ACCOUNT::DETAILS</h3>
-                                        <div className="flex-1 h-px bg-gradient-to-r from-sky-400/40 to-transparent" />
+                                        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-amber-500/40 to-transparent" />
+                                        <h3 className="font-bold text-amber-400 tracking-[0.25em] uppercase font-mono text-[9px] drop-shadow-[0_0_8px_rgba(255,146,0,1)]">ACCOUNT::DETAILS</h3>
+                                        <div className="flex-1 h-px bg-gradient-to-r from-amber-500/40 to-transparent" />
                                     </div>
 
                                     {error && (
@@ -335,16 +335,16 @@ export const SignupPage: React.FC = () => {
                                         { label: 'EMAIL', type: 'email', value: formData.email, key: 'email', placeholder: 'you@example.com' },
                                     ] as const).map(({ label, type, value, key, placeholder }) => (
                                         <div key={key} className="space-y-0.5">
-                                            <label className="text-[8px] font-bold text-sky-400/60 uppercase tracking-[0.25em] ml-1 font-mono flex items-center gap-1">
-                                                <span className="w-1 h-1 rounded-full bg-sky-400/60 inline-block" />{label}
+                                            <label className="text-[8px] font-bold text-amber-500/60 uppercase tracking-[0.25em] ml-1 font-mono flex items-center gap-1">
+                                                <span className="w-1 h-1 rounded-full bg-amber-500/60 inline-block" />{label}
                                             </label>
                                             <div className="relative">
                                                 <input
                                                     type={type} value={value}
                                                     onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
                                                     required placeholder={placeholder}
-                                                    className="w-full bg-sky-950/30 border-b border-sky-500/40 py-1.5 px-2 text-sky-100 focus:outline-none focus:border-sky-300/80 transition-all placeholder:text-sky-600/40 font-mono text-[11px] tracking-wide"
-                                                    style={{ background: 'linear-gradient(90deg, rgba(14,165,233,0.05), rgba(14,165,233,0.02))' }}
+                                                    className="w-full bg-amber-950/20 border-b border-amber-600/40 py-1.5 px-2 text-amber-100 focus:outline-none focus:border-amber-400/80 transition-all placeholder:text-amber-700/40 font-mono text-[11px] tracking-wide"
+                                                    style={{ background: 'linear-gradient(90deg, rgba(234,88,12,0.05), rgba(234,88,12,0.02))' }}
                                                 />
                                                 <div className="absolute bottom-0 left-0 w-0 h-px bg-sky-300 transition-all duration-300 peer-focus:w-full" />
                                             </div>
@@ -354,8 +354,8 @@ export const SignupPage: React.FC = () => {
                                     {/* username field */}
                                     <div className="space-y-0.5">
                                         <div className="flex justify-between items-center px-1">
-                                            <label className="text-[8px] font-bold text-sky-400/60 uppercase tracking-[0.25em] font-mono flex items-center gap-1">
-                                                <span className="w-1 h-1 rounded-full bg-sky-400/60 inline-block" />USERNAME
+                                            <label className="text-[8px] font-bold text-amber-500/60 uppercase tracking-[0.25em] font-mono flex items-center gap-1">
+                                                <span className="w-1 h-1 rounded-full bg-amber-500/60 inline-block" />USERNAME
                                             </label>
                                             {isCheckingUsername && <Loader2 className="w-2.5 h-2.5 text-sky-400 animate-spin" />}
                                         </div>
@@ -366,10 +366,10 @@ export const SignupPage: React.FC = () => {
                                                 onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase() })}
                                                 required placeholder="your_username"
                                                 className={cn(
-                                                    "w-full bg-sky-950/30 border-b py-1.5 px-2 pl-6 text-sky-100 focus:outline-none transition-all placeholder:text-sky-600/40 font-mono text-[11px] tracking-wide",
-                                                    usernameError ? "border-red-500/50" : "border-sky-500/40 focus:border-sky-300/80"
+                                                    "w-full bg-amber-950/20 border-b py-1.5 px-2 pl-6 text-amber-100 focus:outline-none transition-all placeholder:text-amber-700/40 font-mono text-[11px] tracking-wide",
+                                                    usernameError ? "border-red-500/50" : "border-amber-600/40 focus:border-amber-400/80"
                                                 )}
-                                                style={{ background: 'linear-gradient(90deg, rgba(14,165,233,0.05), rgba(14,165,233,0.02))' }}
+                                                style={{ background: 'linear-gradient(90deg, rgba(234,88,12,0.05), rgba(234,88,12,0.02))' }}
                                             />
                                             <div className="absolute right-2 top-1/2 -translate-y-1/2">
                                                 {usernameAvailable === true && !usernameError && <Check className="w-3 h-3 text-emerald-400 drop-shadow-[0_0_4px_rgba(52,211,153,0.8)]" />}
@@ -380,8 +380,8 @@ export const SignupPage: React.FC = () => {
 
                                     {/* password row */}
                                     <div className="space-y-0.5">
-                                        <label className="text-[8px] font-bold text-sky-400/60 uppercase tracking-[0.25em] ml-1 font-mono flex items-center gap-1">
-                                            <span className="w-1 h-1 rounded-full bg-sky-400/60 inline-block" />PASSWORD
+                                        <label className="text-[8px] font-bold text-amber-500/60 uppercase tracking-[0.25em] ml-1 font-mono flex items-center gap-1">
+                                            <span className="w-1 h-1 rounded-full bg-amber-500/60 inline-block" />PASSWORD
                                         </label>
                                         <div className="grid grid-cols-2 gap-1.5">
                                             {(['password', 'confirmPassword'] as const).map((k, i) => (
@@ -389,23 +389,23 @@ export const SignupPage: React.FC = () => {
                                                     value={k === 'password' ? formData.password : confirmPassword}
                                                     onChange={(e) => k === 'password' ? setFormData({ ...formData, password: e.target.value }) : setConfirmPassword(e.target.value)}
                                                     required placeholder={i === 0 ? 'Password' : 'Confirm'}
-                                                    className="w-full bg-sky-950/30 border-b border-sky-500/40 py-1.5 px-2 text-sky-100 focus:outline-none focus:border-sky-300/80 transition-all placeholder:text-sky-600/40 font-mono text-[11px]"
-                                                    style={{ background: 'linear-gradient(90deg, rgba(14,165,233,0.05), rgba(14,165,233,0.02))' }}
+                                                    className="w-full bg-amber-950/20 border-b border-amber-600/40 py-1.5 px-2 text-amber-100 focus:outline-none focus:border-amber-400/80 transition-all placeholder:text-amber-700/40 font-mono text-[11px]"
+                                                    style={{ background: 'linear-gradient(90deg, rgba(234,88,12,0.05), rgba(234,88,12,0.02))' }}
                                                 />
                                             ))}
                                         </div>
                                     </div>
 
                                     {/* visibility toggle */}
-                                    <div className="flex items-center gap-2 px-1 py-1 border border-sky-500/15 bg-sky-950/20"
+                                    <div className="flex items-center gap-2 px-1 py-1 border border-amber-500/15 bg-amber-950/20"
                                         style={{ clipPath: 'polygon(6px 0%,100% 0%,100% calc(100% - 6px),calc(100% - 6px) 100%,0% 100%,0% 6px)' }}>
                                         <Checkbox
                                             id="is_discoverable"
                                             checked={formData.is_discoverable || false}
                                             onCheckedChange={(checked) => setFormData({ ...formData, is_discoverable: checked === true })}
-                                            className="w-3.5 h-3.5 data-[state=checked]:bg-sky-500 data-[state=checked]:border-sky-400"
+                                            className="w-3.5 h-3.5 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-400"
                                         />
-                                        <label htmlFor="is_discoverable" className="text-[9px] font-bold text-sky-300/70 cursor-pointer uppercase tracking-[0.2em] font-mono">
+                                        <label htmlFor="is_discoverable" className="text-[9px] font-bold text-amber-400/80 cursor-pointer uppercase tracking-[0.2em] font-mono">
                                             GLOBAL VISIBILITY
                                         </label>
                                     </div>
@@ -421,11 +421,11 @@ export const SignupPage: React.FC = () => {
                                         disabled={loading || !!usernameError || usernameAvailable === false}
                                         className="w-full relative overflow-hidden disabled:opacity-40 font-mono text-[10px] font-bold tracking-[0.25em] uppercase py-2 transition-all mt-0.5"
                                         style={{
-                                            background: 'linear-gradient(90deg, rgba(14,165,233,0.15), rgba(56,189,248,0.28), rgba(14,165,233,0.15))',
-                                            border: '1px solid rgba(56,189,248,0.5)',
+                                            background: 'linear-gradient(90deg, rgba(234,88,12,0.15), rgba(245,158,11,0.28), rgba(234,88,12,0.15))',
+                                            border: '1px solid rgba(245,158,11,0.5)',
                                             clipPath: 'polygon(10px 0%, 100% 0%, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0% 100%, 0% 10px)',
-                                            color: '#bae6fd',
-                                            boxShadow: '0 0 18px rgba(14,165,233,0.35), inset 0 0 16px rgba(14,165,233,0.05)'
+                                            color: '#fef3c7',
+                                            boxShadow: '0 0 18px rgba(234,88,12,0.3), inset 0 0 16px rgba(234,88,12,0.05)'
                                         }}
                                     >
                                         Continue <ArrowRight className="w-3.5 h-3.5 inline ml-1" />
@@ -436,11 +436,11 @@ export const SignupPage: React.FC = () => {
                                 <div className="w-1/3 shrink-0 flex flex-col gap-2 px-3 py-2">
                                     {/* title */}
                                     <div className="flex items-center gap-2 w-full">
-                                        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-sky-400/40 to-transparent" />
-                                        <h3 className="text-center font-bold text-sky-300 tracking-[0.28em] uppercase text-[9px] font-mono drop-shadow-[0_0_8px_rgba(56,189,248,1)]">
+                                        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-amber-500/40 to-transparent" />
+                                        <h3 className="text-center font-bold text-amber-400 tracking-[0.28em] uppercase text-[9px] font-mono drop-shadow-[0_0_8px_rgba(255,146,0,1)]">
                                             IDENTITY::PROJECTED
                                         </h3>
-                                        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-sky-400/40 to-transparent" />
+                                        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-amber-500/40 to-transparent" />
                                     </div>
 
                                     {/* two-column: large preview + picker grid */}
@@ -448,20 +448,20 @@ export const SignupPage: React.FC = () => {
                                         {/* LEFT: large selected avatar */}
                                         <div className="flex flex-col items-center gap-1 shrink-0">
                                             <div className="relative">
-                                                <div className="absolute inset-0 rounded-full border border-sky-300/30 animate-ping"
+                                                <div className="absolute inset-0 rounded-full border border-amber-400/30 animate-ping"
                                                     style={{ animationDuration: '2.2s', transform: 'scale(1.15)' }} />
-                                                <div className="absolute inset-0 rounded-full border border-sky-400/12 animate-ping"
+                                                <div className="absolute inset-0 rounded-full border border-amber-500/12 animate-ping"
                                                     style={{ animationDuration: '3s', transform: 'scale(1.35)' }} />
                                                 <div className="w-[72px] h-[72px] rounded-full overflow-hidden relative bg-black/60"
                                                     style={{
-                                                        border: '2px solid rgba(125,211,252,0.75)',
-                                                        boxShadow: '0 0 22px rgba(56,189,248,0.85), 0 0 50px rgba(56,189,248,0.3), inset 0 0 20px rgba(14,165,233,0.1)'
+                                                        border: '2px solid rgba(251,191,36,0.75)',
+                                                        boxShadow: '0 0 22px rgba(255,146,0,0.7), 0 0 50px rgba(255,146,0,0.2), inset 0 0 20px rgba(234,88,12,0.1)'
                                                     }}>
                                                     <img
                                                         src={formData.avatar_url}
                                                         alt="Selected Avatar"
                                                         className="w-full h-full object-cover mix-blend-screen"
-                                                        style={{ filter: "brightness(1.6) contrast(1.3) hue-rotate(-20deg)" }}
+                                                        style={{ filter: "brightness(1.5) contrast(1.2) sepia(100%) hue-rotate(-15deg) saturate(140%)" }}
                                                     />
                                                 </div>
                                             </div>
@@ -472,10 +472,10 @@ export const SignupPage: React.FC = () => {
                                         <div className="flex-1 flex flex-col gap-1.5">
                                             <div className="grid grid-cols-4 gap-1">
                                                 {formData.avatar_url && !formData.avatar_url.startsWith('/avatars/') && (
-                                                    <button type="button" className="aspect-square overflow-hidden border border-sky-300/70 shadow-[0_0_8px_rgba(56,189,248,0.5)] bg-black/50"
+                                                    <button type="button" className="aspect-square overflow-hidden border border-amber-400/70 shadow-[0_0_8px_rgba(255,146,0,0.4)] bg-black/50"
                                                         style={{ clipPath: 'polygon(4px 0%,100% 0%,100% calc(100% - 4px),calc(100% - 4px) 100%,0% 100%,0% 4px)' }}>
                                                         <img src={formData.avatar_url} alt="Custom" className="w-full h-full object-cover mix-blend-screen"
-                                                            style={{ filter: "brightness(1.5) contrast(1.2) hue-rotate(-20deg)" }} />
+                                                            style={{ filter: "brightness(1.4) contrast(1.1) sepia(100%) hue-rotate(-15deg) saturate(120%)" }} />
                                                     </button>
                                                 )}
                                                 {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
@@ -485,25 +485,25 @@ export const SignupPage: React.FC = () => {
                                                             "aspect-square overflow-hidden transition-all duration-200 bg-black/50",
                                                             formData.avatar_url === `/avatars/avatar_${num}.png`
                                                                 ? "scale-105"
-                                                                : "border border-sky-500/20 hover:border-sky-400/50 hover:scale-105 opacity-70 hover:opacity-100"
+                                                                : "border border-amber-600/20 hover:border-amber-400/50 hover:scale-105 opacity-70 hover:opacity-100"
                                                         )}
                                                         style={{
                                                             clipPath: 'polygon(4px 0%,100% 0%,100% calc(100% - 4px),calc(100% - 4px) 100%,0% 100%,0% 4px)',
                                                             ...(formData.avatar_url === `/avatars/avatar_${num}.png` ? {
-                                                                border: '1.5px solid rgba(125,211,252,0.85)',
-                                                                boxShadow: '0 0 12px rgba(56,189,248,0.7)'
+                                                                border: '1.5px solid rgba(251,191,36,0.85)',
+                                                                boxShadow: '0 0 12px rgba(255,146,0,0.6)'
                                                             } : {})
                                                         }}
                                                     >
                                                         <img src={`/avatars/avatar_${num}.png`} alt={`Avatar ${num}`} className="w-full h-full object-cover mix-blend-screen"
-                                                            style={{ filter: "brightness(1.5) contrast(1.2) hue-rotate(-20deg)" }} />
+                                                            style={{ filter: "brightness(1.4) contrast(1.1) sepia(100%) hue-rotate(-15deg) saturate(120%)" }} />
                                                     </button>
                                                 ))}
                                             </div>
                                             <input type="file" className="hidden" ref={fileInputRef} accept="image/*" onChange={handleAvatarUpload} />
                                             <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadingAvatar}
-                                                className="w-full flex items-center justify-center gap-1 py-1 font-mono text-[8px] font-bold tracking-[0.18em] uppercase text-sky-300/70 hover:text-sky-200 disabled:opacity-50 transition-colors"
-                                                style={{ border: '1px solid rgba(56,189,248,0.2)', background: 'rgba(14,165,233,0.04)' }}>
+                                                className="w-full flex items-center justify-center gap-1 py-1 font-mono text-[8px] font-bold tracking-[0.18em] uppercase text-amber-400/70 hover:text-amber-200 disabled:opacity-50 transition-colors"
+                                                style={{ border: '1px solid rgba(245,158,11,0.2)', background: 'rgba(234,88,12,0.04)' }}>
                                                 {uploadingAvatar ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Upload className="w-2.5 h-2.5" />}
                                                 {uploadingAvatar ? 'UPLOADING...' : 'UPLOAD CUSTOM'}
                                             </button>
@@ -513,8 +513,8 @@ export const SignupPage: React.FC = () => {
                                     {/* nav buttons */}
                                     <div className="flex gap-2 w-full mt-auto">
                                         <button onClick={() => setStep(2)}
-                                            className="flex-1 font-mono text-[9px] font-bold tracking-[0.2em] uppercase text-sky-400/60 hover:text-sky-300 py-2 transition-colors flex items-center justify-center gap-1"
-                                            style={{ border: '1px solid rgba(56,189,248,0.15)' }}>
+                                            className="flex-1 font-mono text-[9px] font-bold tracking-[0.2em] uppercase text-amber-500/60 hover:text-amber-400 py-2 transition-colors flex items-center justify-center gap-1"
+                                            style={{ border: '1px solid rgba(245,158,11,0.15)' }}>
                                             <ChevronLeft className="w-3 h-3" /> BACK
                                         </button>
                                         <button onClick={handleSubmit} disabled={loading}
@@ -544,9 +544,9 @@ export const SignupPage: React.FC = () => {
                     style={{ top: 275 }}
                 >
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-                        <div className="absolute w-[100px] h-[40px] bg-sky-400/40 rounded-[100%] blur-[15px]" />
+                        <div className="absolute w-[100px] h-[40px] bg-amber-500/30 rounded-[100%] blur-[15px]" />
                         <Orbit
-                            className="relative w-16 h-16 text-sky-200 drop-shadow-[0_0_20px_rgba(56,189,248,1)]"
+                            className="relative w-16 h-16 text-amber-100 drop-shadow-[0_0_20px_rgba(255,146,0,0.8)]"
                             style={{ animation: 'spin 12s linear infinite' }}
                         />
                     </div>

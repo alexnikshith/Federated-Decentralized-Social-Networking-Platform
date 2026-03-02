@@ -17,11 +17,11 @@ export const HologramProjector = ({ children, className, isActive = true }: Holo
             {/* ── Content container ── */}
             < div className="relative z-10 w-full max-w-[480px] mx-auto min-h-[360px] flex items-center justify-center pt-4 pb-5 -translate-y-8" >
 
-                {/* Blue frosted panel with edge fade */}
+                {/* Dark frosted panel with orange edge glow */}
                 < div className="absolute inset-y-0 -inset-x-28 rounded-2xl pointer-events-none"
                     style={{
-                        background: 'linear-gradient(160deg, rgba(5, 82, 128, 0.72) 0%, rgba(14, 165, 233, 0.45) 100%)',
-                        border: '1px solid rgba(56, 189, 248, 0.2)',
+                        background: 'linear-gradient(160deg, rgba(30, 15, 4, 0.80) 0%, rgba(60, 30, 5, 0.45) 100%)',
+                        border: '1px solid rgba(200, 100, 0, 0.15)',
                         backdropFilter: 'blur(10px)',
                         WebkitMaskImage: [
                             'linear-gradient(to right,  transparent 0%, black 15%, black 85%, transparent 100%)',
@@ -50,9 +50,9 @@ export const HologramProjector = ({ children, className, isActive = true }: Holo
                 style={{
                     bottom: '5px',
                     height: '130px',
-                    background: 'linear-gradient(to top, rgba(14,165,233,0.70) 0%, rgba(14,165,233,0.40) 50%, rgba(14,165,233,0.06) 62%, transparent 70%)',
+                    background: 'linear-gradient(to top, rgba(200,90,0,0.55) 0%, rgba(180,70,0,0.28) 50%, rgba(160,60,0,0.04) 62%, transparent 70%)',
                     clipPath: 'polygon(46% 100%, 54% 100%, 100% 0%, 0% 0%)',
-                    filter: 'blur(16px)',
+                    filter: 'blur(18px)',
                     mixBlendMode: 'screen',
                 } as React.CSSProperties}
             />
@@ -62,9 +62,9 @@ export const HologramProjector = ({ children, className, isActive = true }: Holo
                 style={{
                     bottom: '5px',
                     height: '130px',
-                    background: 'linear-gradient(to top, rgba(14,165,233,0.40) 0%, rgba(14,165,233,0.15) 50%, rgba(14,165,233,0.02) 62%, transparent 70%)',
+                    background: 'linear-gradient(to top, rgba(220,110,0,0.28) 0%, rgba(180,70,0,0.10) 50%, rgba(160,60,0,0.01) 62%, transparent 70%)',
                     clipPath: 'polygon(46% 100%, 54% 100%, 100% 0%, 0% 0%)',
-                    filter: 'blur(4px)',
+                    filter: 'blur(5px)',
                     mixBlendMode: 'screen',
                 } as React.CSSProperties}
             />
