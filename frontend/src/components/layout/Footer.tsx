@@ -1,22 +1,18 @@
 import { Link } from "react-router-dom";
-import { Globe, Github, Twitter, Heart } from "lucide-react";
+import { Globe, Github } from "lucide-react";
 
 const footerLinks = {
   platform: [
-    { name: "Explore", href: "/explore" },
-    { name: "Communities", href: "/communities" },
     { name: "About", href: "/about" },
     { name: "Documentation", href: "/docs" },
   ],
   legal: [
     { name: "Privacy Policy", href: "/privacy" },
     { name: "Terms of Service", href: "/terms" },
-    { name: "Community Guidelines", href: "/guidelines" },
   ],
   resources: [
     { name: "Federation Protocol", href: "/protocol" },
     { name: "Instance Setup", href: "/setup" },
-    { name: "API Reference", href: "/api" },
   ],
 };
 
@@ -38,20 +34,12 @@ export function Footer() {
             </p>
             <div className="flex items-center gap-3">
               <a
-                href="https://github.com"
+                href="https://github.com/RiteeshTM/Federated-Decentralized-Social-Networking-Platform"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors"
               >
                 <Github className="w-4 h-4" />
-              </a>
-              <a
-                href="https://twitter.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors"
-              >
-                <Twitter className="w-4 h-4" />
               </a>
             </div>
           </div>
@@ -111,9 +99,6 @@ export function Footer() {
         <div className="flex flex-col md:flex-row items-center justify-between mt-12 pt-8 border-t border-border/50 gap-4">
           <p className="text-sm text-muted-foreground">
             © {new Date().getFullYear()} Nexus. Open source and community driven.
-          </p>
-          <p className="text-sm text-muted-foreground flex items-center gap-1">
-            Built with <Heart className="w-3.5 h-3.5 text-destructive" /> for a better social web
           </p>
         </div>
       </div>
