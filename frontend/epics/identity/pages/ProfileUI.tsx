@@ -733,7 +733,7 @@ const ProfileUI = () => {
                           try {
                             // Detect if this is a remote user
                             // Detect if this is a remote user
-                            const currentInstanceUrl = localStorage.getItem('active_community_url') || import.meta.env.VITE_API_URL || 'http://localhost:8080';
+                            const currentInstanceUrl = localStorage.getItem('active_community_url') || import.meta.env.VITE_API_URL || import.meta.env.VITE_COMMUNITY1_URL || 'http://localhost:8080';
                             const currentInstanceDomain = currentInstanceUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
                             const profileInstance = (profileUser.instance || targetCommunityUrl || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
 

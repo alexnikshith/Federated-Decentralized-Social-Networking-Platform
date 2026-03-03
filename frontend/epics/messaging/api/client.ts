@@ -2,7 +2,7 @@ import axios from 'axios';
 import { useAuthStore } from '../../identity/store/authStore';
 import { Conversation, Message, SendMessageRequest } from '../types';
 
-const API_URL = localStorage.getItem('active_community_url') || import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const API_URL = localStorage.getItem('active_community_url') || import.meta.env.VITE_API_URL || import.meta.env.VITE_COMMUNITY1_URL || 'http://localhost:8080';
 
 const api = axios.create({
     baseURL: API_URL,
