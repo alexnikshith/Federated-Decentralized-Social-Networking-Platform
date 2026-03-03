@@ -143,9 +143,6 @@ const About: React.FC = () => {
 
                     {/* Footer Quote */}
                     <div className="max-w-3xl mx-auto text-center">
-                        <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mx-auto mb-6">
-                            <Heart className="w-6 h-6 text-destructive" />
-                        </div>
                         <h2 className="text-2xl italic font-serif text-foreground/80 mb-4">
                             "Connecting the world, one community at a time."
                         </h2>

@@ -4,7 +4,6 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { HeroSection } from "@/components/landing/HeroSection";
 import { FeaturesSection } from "@/components/landing/FeaturesSection";
-import { EpicsSection } from "@/components/landing/EpicsSection";
 
 
 const Index = () => {
@@ -31,7 +30,6 @@ const Index = () => {
         <main className="flex-1">
           <HeroSection />
           <FeaturesSection />
-          <EpicsSection />
         </main>
         <Footer />
       </div>
