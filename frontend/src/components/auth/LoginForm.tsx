@@ -6,10 +6,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Globe, ArrowRight, Eye, EyeOff, Shield, ArrowLeft, KeyRound, Mail, CheckCircle2, Loader2 } from "lucide-react";
+import { Orbit, ChevronLeft, Globe, ArrowRight, Eye, EyeOff, Shield, KeyRound, Mail, CheckCircle2, Loader2, Info } from "lucide-react";
 import { motion } from "framer-motion";
-import { SpaceDeviceFrame } from "./SpaceDeviceFrame";
-import "./SpaceDevice.css";
 import {
     Select,
     SelectContent,
@@ -180,52 +178,64 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister, hideBackNav = false, 
     };
 
     return (
-        <div className="w-full h-full flex flex-col justify-center">
+        <>
             {/* Back Button */}
-            {!hideBackNav && (
-                <div className="absolute top-4 left-4 md:top-8 md:left-8 z-[10]">
-                    <Button
-                        variant="ghost"
-                        className="gap-2 text-muted-foreground hover:text-foreground"
-                        onClick={() => navigate('/')}
-                    >
-                        <ArrowLeft className="w-4 h-4" /> Back
-                    </Button>
-                </div>
-            )}
+            {
+                !hideBackNav && (
+                    <div className="absolute top-4 left-6 z-[100]">
+                        <button
+                            onClick={() => {
+                                if (view === 'login') navigate('/');
+                                else setView('login');
+                            }}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-amber-500/20 bg-amber-500/5 text-amber-500/60 hover:text-amber-500 hover:border-amber-500/40 hover:bg-amber-500/10 transition-all group active:scale-95"
+                        >
+                            <ChevronLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
+                            <span className="text-[10px] font-mono tracking-[0.2em] font-bold uppercase">BACK</span>
+                        </button>
+                    </div>
+                )
+            }
 
-            <div className="w-full max-w-5xl mx-auto grid md:grid-cols-2 gap-12 items-center p-6">
+            <div className="w-full max-w-[880px] mx-auto grid grid-cols-2 gap-x-12 items-center px-10 pt-14 pb-6 h-full relative z-40">
+                {/* Decoration corners */}
+                <div className="absolute top-0 left-0 w-8 h-8 border-l-2 border-t-2 border-amber-500/40 rounded-tl-2xl" />
+                <div className="absolute top-0 right-0 w-8 h-8 border-r-2 border-t-2 border-amber-500/40 rounded-tr-2xl" />
+                <div className="absolute bottom-0 left-0 w-8 h-8 border-l-2 border-b-2 border-amber-500/40 rounded-bl-2xl" />
+                <div className="absolute bottom-0 right-0 w-8 h-8 border-r-2 border-b-2 border-amber-500/40 rounded-br-2xl" />
+                <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'linear-gradient(rgba(255,146,0,0.5) 1px, transparent 1px)', backgroundSize: '100% 3px' }} />
+
                 {/* Left Column: Heading & Info */}
                 <motion.div
-                    className="text-left space-y-6"
+                    className="text-left space-y-6 flex flex-col justify-center h-full"
                     initial={{ opacity: 1, x: 0 }}
                     animate={isLoginExiting ? { opacity: 0, x: -200 } : { opacity: 1, x: 0 }}
                     transition={{ duration: 0.8, ease: "anticipate" }}
                 >
-                    <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center">
-                        <Globe className="w-8 h-8 text-primary" />
+                    <div className="flex items-center justify-between mb-4 border-b border-amber-500/20 pb-2">
+                        <h1 className="text-lg font-bold text-amber-500 tracking-[0.4em] uppercase font-mono">
+                            {view === 'login' && "Welcome back"}
+                            {view === 'login_otp' && "Verify Identity"}
+                            {view === 'forgot_email' && "Recovery"}
+                            {view === 'forgot_otp' && "Verify Recovery"}
+                            {view === 'forgot_reset' && "Reset Protocol"}
+                        </h1>
+                        <div className="text-xs font-mono text-amber-500/40">[ AUTH_PHASE ]</div>
                     </div>
 
-                    <div>
-                        <h1 className="font-display text-4xl md:text-5xl font-bold mb-4">
-                            {view === 'login' && "Welcome back"}
-                            {view === 'login_otp' && "Verify It's You"}
-                            {view === 'forgot_email' && "Forgot Password?"}
-                            {view === 'forgot_otp' && "Verify Email"}
-                            {view === 'forgot_reset' && "Reset Password"}
-                        </h1>
-                        <p className="text-lg text-muted-foreground">
-                            {view === 'login' && "Sign in to your Nexus account to connect with your community."}
-                            {view === 'login_otp' && `We've sent a 6-digit code to ${email}. Please enter it below.`}
-                            {view === 'forgot_email' && "Enter your registered email address and we'll send you a verification code."}
-                            {view === 'forgot_otp' && `Enter the code sent to your email.`}
-                            {view === 'forgot_reset' && "Create a new password for your account."}
+                    <div className="space-y-4">
+                        <p className="text-sm font-mono text-amber-400/80 leading-relaxed tracking-wider">
+                            {view === 'login' && "Initialize secure connection to your community. Credentials required for login."}
+                            {view === 'login_otp' && `A 6-digit verification code has been sent to ${email}. Submit code to authorize access.`}
+                            {view === 'forgot_email' && "Submit your registered email to receive recovery instructions."}
+                            {view === 'forgot_otp' && `Submit the recovery code sent to your terminal.`}
+                            {view === 'forgot_reset' && "Establish a new high-entropy password for your account."}
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground pt-4">
-                        <Shield className="w-4 h-4" />
-                        <span>Your credentials are encrypted end-to-end</span>
+                    <div className="bg-amber-500/[0.03] border border-amber-500/10 rounded-xl p-4 flex items-center gap-3">
+                        <Shield className="w-5 h-5 text-amber-500/60" />
+                        <span className="text-[10px] font-mono text-amber-400/60 uppercase tracking-widest leading-none">Quantum-encrypted end-to-handshake tunnel active</span>
                     </div>
                 </motion.div>
 
@@ -234,263 +244,275 @@ export const LoginForm = ({ onSuccess, onSwitchToRegister, hideBackNav = false, 
                     initial={{ opacity: 1, x: 0 }}
                     animate={isLoginExiting ? { opacity: 0, x: 200 } : { opacity: 1, x: 0 }}
                     transition={{ duration: 0.8, ease: "anticipate" }}
-                    className="relative w-full max-w-[400px] mx-auto z-10"
+                    className="relative w-full z-10 space-y-4"
                 >
-                    <SpaceDeviceFrame className="p-6 md:p-8 space-y-6 min-h-full flex flex-col justify-center" wrapperClassName="w-full h-[540px]">
-                        {error && (
-                            <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm shrink-0">
-                                {error}
-                            </div>
-                        )}
+                    {error && (
+                        <div className="px-3 py-2 border border-red-500/40 bg-red-950/30 text-red-300 text-[10px] font-mono flex items-center gap-2 mb-2">
+                            <Info className="w-4 h-4 shrink-0" />{error}
+                        </div>
+                    )}
 
-                        {/* -- LOGIN VIEWS -- */}
-                        {(view === 'login' || view === 'login_otp') && (
-                            <form onSubmit={handleLoginSubmit} className="space-y-6">
-                                {view === 'login' ? (
-                                    <>
-                                        <div className="space-y-2 shrink-0">
-                                            <Label htmlFor="instance">Instance</Label>
-                                            <Select value={instance} onValueChange={setInstance}>
-                                                <SelectTrigger className="h-11 bg-secondary border-border">
-                                                    <div className="flex items-center gap-2">
-                                                        <Globe className="w-4 h-4 text-muted-foreground" />
-                                                        <SelectValue placeholder="Select community" />
-                                                    </div>
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {COMMUNITIES.map((community) => (
-                                                        <SelectItem key={community.id} value={community.url}>
-                                                            <div className="flex flex-col text-left">
-                                                                <span className="font-medium">{community.name}</span>
-                                                            </div>
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <p className="text-xs text-muted-foreground">
-                                                Select the community instance your account belongs to
-                                            </p>
+                    {/* -- LOGIN VIEWS -- */}
+                    {(view === 'login' || view === 'login_otp') && (
+                        <form onSubmit={handleLoginSubmit} className="space-y-4">
+                            {view === 'login' ? (
+                                <>
+                                    <div className="space-y-1.5">
+                                        <div className="flex items-center gap-2 font-mono mb-2">
+                                            <div className="w-1.5 h-[1px] bg-amber-500/80" />
+                                            <span className="text-[10px] font-bold text-amber-300/80 tracking-[0.2em] uppercase">NEURAL NODE</span>
+                                            <div className="flex-1 h-[1px] bg-gradient-to-r from-amber-500/20 to-transparent" />
                                         </div>
+                                        <Select value={instance} onValueChange={setInstance}>
+                                            <SelectTrigger className="w-full bg-amber-500/[0.03] border-amber-500/20 h-10 text-amber-50 font-mono text-sm focus:ring-0 focus:ring-offset-0 focus:border-amber-400">
+                                                <div className="flex items-center gap-2">
+                                                    <Globe className="w-3.5 h-3.5 text-amber-500/40" />
+                                                    <SelectValue placeholder="Select node" />
+                                                </div>
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-amber-950 border-amber-500/20 text-amber-100 font-mono">
+                                                {COMMUNITIES.map((community) => (
+                                                    <SelectItem key={community.id} value={community.url} className="focus:bg-amber-500/20 focus:text-amber-100 cursor-pointer">
+                                                        <span className="text-xs">{community.name}</span>
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
 
-                                        <div className="space-y-2">
-                                            <Label htmlFor="email">Email</Label>
-                                            <Input
-                                                id="email"
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold text-amber-500/60 uppercase tracking-widest ml-1 font-mono block">EMAIL</label>
+                                        <div className="relative">
+                                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-600/40 w-4 h-4" />
+                                            <input
                                                 type="email"
-                                                placeholder="you@example.com"
+                                                placeholder="you@nebula.net"
                                                 value={email}
                                                 onChange={(e) => setEmail(e.target.value)}
-                                                className="h-11 bg-secondary border-border"
+                                                className="w-full bg-amber-500/[0.03] border border-amber-500/20 rounded-lg py-2 pl-10 pr-3 text-amber-50 text-sm font-mono tracking-wider focus:outline-none focus:border-amber-400 focus:bg-amber-500/[0.08] transition-all placeholder:text-amber-800/30"
                                                 required
                                             />
                                         </div>
+                                    </div>
 
-                                        <div className="space-y-2">
-                                            <div className="flex items-center justify-between">
-                                                <Label htmlFor="password">Password</Label>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setView('forgot_email')}
-                                                    className="text-sm text-primary hover:underline"
-                                                >
-                                                    Forgot password?
-                                                </button>
-                                            </div>
-                                            <div className="relative">
-                                                <Input
-                                                    id="password"
-                                                    type={showPassword ? "text" : "password"}
-                                                    placeholder="••••••••"
-                                                    value={password}
-                                                    onChange={(e) => setPassword(e.target.value)}
-                                                    className="h-11 bg-secondary border-border pr-10"
-                                                    required
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowPassword(!showPassword)}
-                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                                                >
-                                                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <div className="space-y-4">
-                                        <Label htmlFor="otp">Verification Code</Label>
-                                        <Input
-                                            id="otp"
-                                            type="text"
-                                            placeholder="Enter 6-digit code"
-                                            value={otp}
-                                            onChange={(e) => setOtp(e.target.value)}
-                                            className="h-14 bg-secondary border-border text-center text-2xl tracking-[0.5em] font-mono"
-                                            maxLength={6}
-                                            required
-                                            autoFocus
-                                        />
-                                        <div className="text-center">
-                                            <Button
+                                    <div className="space-y-1.5">
+                                        <div className="flex items-center justify-between ml-1">
+                                            <label className="text-xs font-bold text-amber-500/60 uppercase tracking-widest font-mono">PASSWORD</label>
+                                            <button
                                                 type="button"
-                                                variant="link"
-                                                className="text-sm text-muted-foreground"
-                                                onClick={() => setView('login')}
+                                                onClick={() => setView('forgot_email')}
+                                                className="text-[10px] font-mono text-amber-300 hover:text-amber-400 transition-colors uppercase tracking-widest"
                                             >
-                                                Use a different email
-                                            </Button>
+                                                FORGOT PASSWORD?
+                                            </button>
+                                        </div>
+                                        <div className="relative">
+                                            <input
+                                                type={showPassword ? "text" : "password"}
+                                                placeholder="••••••••"
+                                                value={password}
+                                                onChange={(e) => setPassword(e.target.value)}
+                                                className="w-full bg-amber-500/[0.03] border border-amber-500/20 rounded-lg py-2 pl-3 pr-10 text-amber-50 text-sm font-mono tracking-wider focus:outline-none focus:border-amber-400 focus:bg-amber-500/[0.08] transition-all placeholder:text-amber-800/30"
+                                                required
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-amber-500/40 hover:text-amber-400 transition-colors"
+                                            >
+                                                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                            </button>
                                         </div>
                                     </div>
-                                )}
+                                </>
+                            ) : (
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-2 font-mono mb-2">
+                                        <div className="w-1.5 h-[1px] bg-amber-500/80" />
+                                        <span className="text-[10px] font-bold text-amber-300/80 tracking-[0.2em] uppercase">VERIFICATION_CODE</span>
+                                        <div className="flex-1 h-[1px] bg-gradient-to-r from-amber-500/20 to-transparent" />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        placeholder="000000"
+                                        value={otp}
+                                        onChange={(e) => setOtp(e.target.value)}
+                                        className="w-full bg-amber-500/[0.03] border border-amber-500/20 rounded-lg py-4 text-center text-3xl tracking-[0.5em] font-mono text-amber-100 focus:outline-none focus:border-amber-400 focus:bg-amber-500/[0.08] transition-all placeholder:text-amber-800/30"
+                                        maxLength={6}
+                                        required
+                                        autoFocus
+                                    />
+                                    <div className="text-center">
+                                        <button
+                                            type="button"
+                                            className="text-[10px] font-mono text-amber-500/40 hover:text-amber-400 transition-colors uppercase tracking-widest"
+                                            onClick={() => setView('login')}
+                                        >
+                                            RESTART_HANDSHAKE
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
-                                <Button type="submit" variant="hero" className="w-full h-11 text-base" disabled={isLoading}>
-                                    {isLoading ? "Processing..." : (
-                                        <>
-                                            {view === 'login' ? "Sign In" : "Verify Code"}
-                                            <ArrowRight className="w-4 h-4 ml-2" />
-                                        </>
-                                    )}
-                                </Button>
-
-                                {view === 'login' && (
-                                    <>
-                                        <div className="relative py-2">
-                                            <div className="absolute inset-0 flex items-center">
-                                                <div className="w-full border-t border-border"></div>
-                                            </div>
-                                            <div className="relative flex justify-center text-xs uppercase">
-                                                <span className="bg-card px-2 text-muted-foreground">New to Nexus?</span>
-                                            </div>
-                                        </div>
-
-                                        {onSwitchToRegister ? (
-                                            <Button
-                                                variant="outline"
-                                                className="w-full h-11"
-                                                onClick={(e) => { e.preventDefault(); onSwitchToRegister(); }}
-                                            >
-                                                Create an Account
-                                            </Button>
-                                        ) : (
-                                            <Link to="/register">
-                                                <Button variant="outline" className="w-full h-11">
-                                                    Create an Account
-                                                </Button>
-                                            </Link>
+                            <div className="pt-2">
+                                <button
+                                    type="submit"
+                                    disabled={isLoading}
+                                    className="w-full relative group/btn py-3 overflow-hidden text-center disabled:opacity-40"
+                                >
+                                    <span className="relative z-10 font-mono text-sm font-bold tracking-[0.4em] text-amber-100 flex items-center justify-center gap-3">
+                                        {isLoading ? "PROCESSING..." : (
+                                            <>
+                                                {view === 'login' ? "LOGIN" : "VERIFY_CODE"}
+                                                <ArrowRight className="w-4 h-4" />
+                                            </>
                                         )}
-                                    </>
-                                )}
-                            </form>
-                        )}
+                                    </span>
+                                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[90%] h-[1px] bg-gradient-to-r from-transparent via-amber-400 to-transparent shadow-[0_0_15px_rgba(245,158,11,1)]" />
+                                </button>
+                            </div>
 
-                        {/* -- FORGOT PASSWORD VIEWS -- */}
-                        {view === 'forgot_email' && (
-                            <form onSubmit={handleForgotSendCode} className="space-y-6">
-                                <div className="space-y-2">
-                                    <Label htmlFor="email">Email Address</Label>
-                                    <div className="relative">
-                                        <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                        <Input
-                                            id="email"
-                                            type="email"
-                                            placeholder="you@example.com"
-                                            value={email}
-                                            onChange={(e) => setEmail(e.target.value)}
-                                            className="pl-10 h-11 bg-secondary border-border"
-                                            required
-                                            autoFocus
-                                        />
-                                    </div>
+                            {view === 'login' && (
+                                <div className="pt-2">
+                                    <p className="text-center text-[10px] text-amber-500/40 font-mono tracking-[0.2em] uppercase">
+                                        UNAUTHORIZED? {onSwitchToRegister ? (
+                                            <button onClick={(e) => { e.preventDefault(); onSwitchToRegister(); }} className="text-amber-400 font-bold hover:text-amber-200 transition-colors">REGISTER</button>
+                                        ) : (
+                                            <Link to="/register" className="text-amber-400 font-bold hover:text-amber-200 transition-colors">REGISTER</Link>
+                                        )}
+                                    </p>
                                 </div>
-                                <Button type="submit" variant="hero" className="w-full h-11 text-base" disabled={isLoading}>
-                                    {isLoading ? (
-                                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending...</>
-                                    ) : "Send Verification Code"}
-                                </Button>
-                                <div className="text-center pt-2">
-                                    <Button type="button" variant="link" className="text-sm text-muted-foreground" onClick={() => setView('login')}>
-                                        &larr; Back to login
-                                    </Button>
-                                </div>
-                            </form>
-                        )}
+                            )}
+                        </form>
+                    )}
 
-                        {view === 'forgot_otp' && (
-                            <form onSubmit={handleForgotVerifyCode} className="space-y-6">
-                                <div className="space-y-2">
-                                    <Label htmlFor="otp">Verification Code</Label>
-                                    <div className="relative">
-                                        <CheckCircle2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input
-                                            id="otp"
-                                            placeholder="Enter 6-digit code"
-                                            value={otp}
-                                            onChange={(e) => setOtp(e.target.value)}
-                                            className="pl-10 h-14 bg-secondary border-border text-center text-2xl tracking-[0.5em] font-mono"
-                                            maxLength={6}
-                                            required
-                                            autoFocus
-                                        />
-                                    </div>
-                                </div>
-                                <Button type="submit" variant="hero" className="w-full h-11 text-base" disabled={isLoading}>
-                                    {isLoading ? (
-                                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Verifying...</>
-                                    ) : "Verify Code"}
-                                </Button>
-                                <div className="text-center pt-2">
-                                    <Button type="button" variant="link" className="text-sm text-muted-foreground" onClick={() => setView('forgot_email')}>
-                                        Use a different email
-                                    </Button>
-                                </div>
-                            </form>
-                        )}
+                    {/* -- FORGOT PASSWORD VIEWS -- */}
+                    {view === 'forgot_email' && (
+                        <form onSubmit={handleForgotSendCode} className="space-y-4">
+                            <div className="flex items-center gap-2 font-mono mb-2">
+                                <div className="w-1.5 h-[1px] bg-amber-500/80" />
+                                <span className="text-[10px] font-bold text-amber-300/80 tracking-[0.2em] uppercase">RECOVERY_EMAIL</span>
+                                <div className="flex-1 h-[1px] bg-gradient-to-r from-amber-500/20 to-transparent" />
+                            </div>
+                            <div className="relative">
+                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-600/40 w-4 h-4" />
+                                <input
+                                    type="email"
+                                    placeholder="you@nebula.net"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="w-full bg-amber-500/[0.03] border border-amber-500/20 rounded-lg py-2 pl-10 pr-3 text-amber-50 text-sm font-mono tracking-wider focus:outline-none focus:border-amber-400 focus:bg-amber-500/[0.08] transition-all placeholder:text-amber-800/30"
+                                    required
+                                    autoFocus
+                                />
+                            </div>
+                            <div className="pt-2">
+                                <button
+                                    type="submit"
+                                    disabled={isLoading}
+                                    className="w-full relative group/btn py-3 overflow-hidden text-center disabled:opacity-40"
+                                >
+                                    <span className="relative z-10 font-mono text-sm font-bold tracking-[0.4em] text-amber-100 flex items-center justify-center gap-3 uppercase">
+                                        {isLoading ? "SENDING..." : "SEND OTP"}
+                                    </span>
+                                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[90%] h-[1px] bg-gradient-to-r from-transparent via-amber-400 to-transparent shadow-[0_0_15px_rgba(245,158,11,1)]" />
+                                </button>
+                            </div>
+                            <div className="text-center">
+                                <button
+                                    type="button"
+                                    className="text-[10px] font-mono text-amber-500/40 hover:text-amber-400 transition-colors uppercase tracking-widest"
+                                    onClick={() => setView('login')}
+                                >
+                                    &larr; BACK TO LOGIN
+                                </button>
+                            </div>
+                        </form>
+                    )}
 
-                        {view === 'forgot_reset' && (
-                            <form onSubmit={handleResetPassword} className="space-y-6">
-                                <div className="space-y-2">
-                                    <Label htmlFor="newPassword">New Password</Label>
+                    {view === 'forgot_otp' && (
+                        <form onSubmit={handleForgotVerifyCode} className="space-y-4">
+                            <div className="flex items-center gap-2 font-mono mb-2">
+                                <div className="w-1.5 h-[1px] bg-amber-500/80" />
+                                <span className="text-[10px] font-bold text-amber-300/80 tracking-[0.2em] uppercase">RECOVERY_CODE</span>
+                                <div className="flex-1 h-[1px] bg-gradient-to-r from-amber-500/20 to-transparent" />
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="000000"
+                                value={otp}
+                                onChange={(e) => setOtp(e.target.value)}
+                                className="w-full bg-amber-500/[0.03] border border-amber-500/20 rounded-lg py-4 text-center text-3xl tracking-[0.5em] font-mono text-amber-100 focus:outline-none focus:border-amber-400 focus:bg-amber-500/[0.08] transition-all placeholder:text-amber-800/30"
+                                maxLength={6}
+                                required
+                                autoFocus
+                            />
+                            <div className="pt-2">
+                                <button
+                                    type="submit"
+                                    disabled={isLoading}
+                                    className="w-full relative group/btn py-3 overflow-hidden text-center disabled:opacity-40"
+                                >
+                                    <span className="relative z-10 font-mono text-sm font-bold tracking-[0.4em] text-amber-100 flex items-center justify-center gap-3 uppercase">
+                                        {isLoading ? "VERIFYING..." : "VERIFY OTP"}
+                                    </span>
+                                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[90%] h-[1px] bg-gradient-to-r from-transparent via-amber-400 to-transparent shadow-[0_0_15px_rgba(245,158,11,1)]" />
+                                </button>
+                            </div>
+                        </form>
+                    )}
+
+                    {view === 'forgot_reset' && (
+                        <form onSubmit={handleResetPassword} className="space-y-4">
+                            <div className="space-y-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-amber-500/60 uppercase tracking-widest ml-1 font-mono block">NEW PASSWORD</label>
                                     <div className="relative">
-                                        <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input
-                                            id="newPassword"
+                                        <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-600/40 w-4 h-4" />
+                                        <input
                                             type="password"
-                                            placeholder="Enter new password"
+                                            placeholder="••••••••"
                                             value={newPassword}
                                             onChange={(e) => setNewPassword(e.target.value)}
-                                            className="pl-10 h-11 bg-secondary border-border"
+                                            className="w-full bg-amber-500/[0.03] border border-amber-500/20 rounded-lg py-2 pl-10 pr-3 text-amber-50 text-sm font-mono tracking-wider focus:outline-none focus:border-amber-400 focus:bg-amber-500/[0.08] transition-all placeholder:text-amber-800/30"
                                             required
                                             minLength={8}
                                             autoFocus
                                         />
                                     </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-amber-500/60 uppercase tracking-widest ml-1 font-mono block">CONFIRM PASSWORD</label>
                                     <div className="relative">
-                                        <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input
-                                            id="confirmPassword"
+                                        <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-600/40 w-4 h-4" />
+                                        <input
                                             type="password"
-                                            placeholder="Confirm new password"
+                                            placeholder="••••••••"
                                             value={confirmPassword}
                                             onChange={(e) => setConfirmPassword(e.target.value)}
-                                            className="pl-10 h-11 bg-secondary border-border"
+                                            className="w-full bg-amber-500/[0.03] border border-amber-500/20 rounded-lg py-2 pl-10 pr-3 text-amber-50 text-sm font-mono tracking-wider focus:outline-none focus:border-amber-400 focus:bg-amber-500/[0.08] transition-all placeholder:text-amber-800/30"
                                             required
                                             minLength={8}
                                         />
                                     </div>
                                 </div>
-                                <Button type="submit" variant="hero" className="w-full h-11 text-base" disabled={isLoading}>
-                                    {isLoading ? (
-                                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Resetting...</>
-                                    ) : "Reset Password"}
-                                </Button>
-                            </form>
-                        )}
-                    </SpaceDeviceFrame>
+                            </div>
+                            <div className="pt-2">
+                                <button
+                                    type="submit"
+                                    disabled={isLoading}
+                                    className="w-full relative group/btn py-3 overflow-hidden text-center disabled:opacity-40"
+                                >
+                                    <span className="relative z-10 font-mono text-sm font-bold tracking-[0.4em] text-amber-100 flex items-center justify-center gap-3 uppercase">
+                                        {isLoading ? "RESETTING..." : "CHANGE PASSWORD"}
+                                    </span>
+                                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[90%] h-[1px] bg-gradient-to-r from-transparent via-amber-400 to-transparent shadow-[0_0_15px_rgba(245,158,11,1)]" />
+                                </button>
+                            </div>
+                        </form>
+                    )}
                 </motion.div>
             </div>
-        </div>
+        </>
     );
 };
