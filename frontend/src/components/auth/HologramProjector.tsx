@@ -5,12 +5,13 @@ interface HologramProjectorProps {
     children: React.ReactNode;
     className?: string;
     isActive?: boolean;
+    theme?: 'amber' | 'emerald';
 }
 
 // ── Static Particles Component ──
 // We move particles to a separate component and memoize it with an empty dependency array
 // so they flow continuously without being affected by parent re-renders (like typing).
-const StaticParticles = React.memo(() => {
+const StaticParticles = React.memo(({ theme = 'amber' }: { theme?: 'amber' | 'emerald' }) => {
     const particles = useMemo(() => {
         return [...Array(24)].map((_, i) => ({
             id: i,
@@ -27,7 +28,10 @@ const StaticParticles = React.memo(() => {
             {particles.map((p) => (
                 <div
                     key={p.id}
-                    className="absolute w-[2px] h-[2px] bg-amber-400/50 rounded-full animate-float"
+                    className={cn(
+                        "absolute w-[2px] h-[2px] rounded-full animate-float",
+                        theme === 'emerald' ? "bg-emerald-400/50" : "bg-amber-400/50"
+                    )}
                     style={{
                         left: p.left,
                         bottom: p.bottom,
@@ -43,7 +47,26 @@ const StaticParticles = React.memo(() => {
 
 StaticParticles.displayName = 'StaticParticles';
 
-export const HologramProjector = React.memo(({ children, className, isActive = true }: HologramProjectorProps) => {
+export const HologramProjector = React.memo(({ children, className, isActive = true, theme = 'amber' }: HologramProjectorProps) => {
+    const themeStyles = {
+        emerald: {
+            scanline: 'rgba(16,185,129,0.5)',
+            glowFrom: 'from-emerald-500/10',
+            beam1: 'linear-gradient(to top, rgba(5,150,105,0.6) 0%, rgba(6,95,70,0.18) 20%, rgba(6,78,59,0.04) 35%, transparent 50%)',
+            beam2: 'linear-gradient(to top, rgba(16,185,129,0.4) 0%, rgba(6,95,70,0.08) 25%, transparent 50%)',
+            beam3: 'linear-gradient(to top, rgba(52,211,153,0.3) 0%, rgba(6,95,70,0.1) 20%, transparent 50%)',
+        },
+        amber: {
+            scanline: 'rgba(255,140,0,0.5)',
+            glowFrom: 'from-amber-500/10',
+            beam1: 'linear-gradient(to top, rgba(200,90,0,0.6) 0%, rgba(180,70,0,0.18) 20%, rgba(160,60,0,0.04) 35%, transparent 50%)',
+            beam2: 'linear-gradient(to top, rgba(220,110,0,0.4) 0%, rgba(180,70,0,0.08) 25%, transparent 50%)',
+            beam3: 'linear-gradient(to top, rgba(245,158,11,0.3) 0%, rgba(180,70,0,0.1) 20%, transparent 50%)',
+        }
+    };
+
+    const currentTheme = themeStyles[theme];
+
     const beamStyle = {
         bottom: '30px',
         mixBlendMode: 'screen',
@@ -51,7 +74,7 @@ export const HologramProjector = React.memo(({ children, className, isActive = t
 
     return (
         <div className={cn(
-            "relative w-full transition-all duration-[1000ms] ease-out z-[60]",
+            "relative w-full transition-all duration-1000 ease-out z-[60]",
             isActive ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 translate-y-4 pointer-events-none",
             className
         )}>
@@ -75,12 +98,12 @@ export const HologramProjector = React.memo(({ children, className, isActive = t
                 >
                     {/* Subtle scanline pattern internal to the panel - Retained for texture */}
                     <div className="absolute inset-0 opacity-[0.04]" style={{
-                        backgroundImage: 'linear-gradient(rgba(255,140,0,0.5) 1px, transparent 1px)',
+                        backgroundImage: `linear-gradient(${currentTheme.scanline} 1px, transparent 1px)`,
                         backgroundSize: '100% 3px'
                     }} />
 
                     {/* Interior aurora/glow accent - Retained for volumetric feel */}
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[120%] h-1/2 bg-gradient-to-t from-amber-500/10 to-transparent blur-[80px]" />
+                    <div className={cn("absolute bottom-0 left-1/2 -translate-x-1/2 w-[120%] h-1/2 bg-gradient-to-t to-transparent blur-[80px]", currentTheme.glowFrom)} />
                 </div>
 
                 <div className="w-full relative z-10 px-12">
@@ -97,7 +120,7 @@ export const HologramProjector = React.memo(({ children, className, isActive = t
                 style={{
                     ...beamStyle,
                     height: '220px',
-                    background: 'linear-gradient(to top, rgba(200,90,0,0.6) 0%, rgba(180,70,0,0.18) 20%, rgba(160,60,0,0.04) 35%, transparent 50%)',
+                    background: currentTheme.beam1,
                     clipPath: 'polygon(49.2% 100%, 50.8% 100%, 100% 0%, 0% 0%)',
                     filter: 'blur(35px)',
                 }}
@@ -108,7 +131,7 @@ export const HologramProjector = React.memo(({ children, className, isActive = t
                 style={{
                     ...beamStyle,
                     height: '240px',
-                    background: 'linear-gradient(to top, rgba(220,110,0,0.4) 0%, rgba(180,70,0,0.08) 25%, transparent 50%)',
+                    background: currentTheme.beam2,
                     clipPath: 'polygon(49.6% 100%, 50.4% 100%, 100% 0%, 0% 0%)',
                     filter: 'blur(12px)',
                 }}
@@ -119,14 +142,14 @@ export const HologramProjector = React.memo(({ children, className, isActive = t
                 style={{
                     ...beamStyle,
                     height: '220px',
-                    background: 'linear-gradient(to top, rgba(245,158,11,0.3) 0%, rgba(180,70,0,0.1) 20%, transparent 50%)',
+                    background: currentTheme.beam3,
                     clipPath: 'polygon(49.8% 100%, 50.2% 100%, 100% 0%, 0% 0%)',
                     filter: 'blur(2px)',
                 }}
             />
 
             {/* Floating Energy Particles */}
-            <StaticParticles />
+            <StaticParticles theme={theme} />
         </div>
     );
 });

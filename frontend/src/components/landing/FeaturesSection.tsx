@@ -1,99 +1,133 @@
 import {
   Shield,
-  Users,
-  Globe,
+  Zap,
+  Cpu,
+  Share2,
   Lock,
-  MessageSquare,
-  BarChart3,
-  Eye,
-  Heart
+  Activity,
+  Orbit
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
 const features = [
   {
     icon: Shield,
-    title: "Privacy First",
-    description: "Your data belongs to you. No tracking, no profiling, no selling your information to advertisers.",
-    color: "primary",
+    title: "NEURAL PRIVACY",
+    description: "Your consciousness, your data. No tracking, no profiling, just pure sovereign encryption.",
+    glow: "shadow-cyan-500/20",
+    border: "border-cyan-500/20",
+    text: "text-cyan-400"
   },
   {
-    icon: Users,
-    title: "Community Owned",
-    description: "Each instance is independently operated with its own rules, culture, and moderation policies.",
-    color: "accent",
+    icon: Cpu,
+    title: "DECENTRALIZED CORE",
+    description: "Operate on independent nodes. No central authority, no single point of failure. The network is everywhere.",
+    glow: "shadow-purple-500/20",
+    border: "border-purple-500/20",
+    text: "text-purple-400"
   },
   {
-    icon: Globe,
-    title: "Global Discovery",
-    description: "Search and connect with users across every community in the federation through our opt-in Global Directory.",
-    color: "success",
+    icon: Orbit,
+    title: "COSMIC FEDERATION",
+    description: "Seamlessly bridge across diverse communities. A unified galaxy of unique social instances.",
+    glow: "shadow-blue-500/20",
+    border: "border-blue-500/20",
+    text: "text-blue-400"
   },
   {
     icon: Lock,
-    title: "Decentralized Identity",
-    description: "Your account lives on your chosen instance. No single authority controls your online presence.",
-    color: "primary",
+    title: "SOVEREIGN IDENTITY",
+    description: "Your identity lives on your terms. Decoupled from corporate control and algorithmic bias.",
+    glow: "shadow-indigo-500/20",
+    border: "border-indigo-500/20",
+    text: "text-indigo-400"
   },
   {
-    icon: MessageSquare,
-    title: "Meaningful Interactions",
-    description: "No algorithmic manipulation. See content from people you follow, in chronological order.",
-    color: "accent",
+    icon: Zap,
+    title: "REAL-TIME SYNC",
+    description: "Instantaneous state propagation across the mesh. Experience the speed of thought in every interaction.",
+    glow: "shadow-white/10",
+    border: "border-white/20",
+    text: "text-white"
   },
   {
-    icon: BarChart3,
-    title: "Transparent Analytics",
-    description: "Privacy-respecting reports that inform without surveillance. No hidden metrics or dark patterns.",
-    color: "success",
+    icon: Activity,
+    title: "TRANSPARENT PULSE",
+    description: "Open-source metrics without surveillance. Visualize the network's health in real-time.",
+    glow: "shadow-emerald-500/20",
+    border: "border-emerald-500/20",
+    text: "text-emerald-400"
   },
 ];
 
-const iconColors = {
-  primary: "text-primary bg-primary/15",
-  accent: "text-accent bg-accent/15",
-  success: "text-success bg-success/15",
-};
-
 export function FeaturesSection() {
   return (
-    <section className="py-24 relative">
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-secondary/30 to-transparent" />
+    <section className="py-32 relative overflow-hidden bg-transparent">
+      {/* Background Ambience - very subtle */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-gradient-to-b from-transparent via-cyan-500/[0.02] to-transparent pointer-events-none" />
 
       <div className="container mx-auto px-4 lg:px-8 relative z-10">
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">
-            Built on <span className="text-gradient-teal">ethical principles</span>
-          </h2>
-          <p className="text-lg text-muted-foreground">
-            Every feature is designed with privacy, transparency, and user autonomy in mind.
-            Here's what makes Nexus different.
-          </p>
+        <div className="text-center max-w-3xl mx-auto mb-24">
+          <motion.h2
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            className="text-4xl md:text-5xl font-bold mb-6 tracking-tight text-white uppercase"
+          >
+            Universal <span className="text-cyan-400">Architectures</span>
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-lg text-cyan-100/40 uppercase tracking-[0.2em] font-light"
+          >
+            Engineering the future of human connectivity
+          </motion.p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {features.map((feature, index) => (
-            <div
+            <motion.div
               key={feature.title}
-              className="glass-card rounded-xl p-6 hover:border-primary/30 transition-all duration-300 group opacity-0 animate-fade-in-up"
-              style={{ animationDelay: `${0.1 + index * 0.1}s` }}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: index * 0.1, duration: 0.6 }}
+              className={cn(
+                "group relative p-8 rounded-[2rem] bg-white/[0.01] border backdrop-blur-xl transition-all duration-500",
+                "hover:bg-white/[0.03] hover:-translate-y-2",
+                feature.border,
+                `hover:${feature.glow} hover:shadow-2xl`
+              )}
             >
               <div className={cn(
-                "w-12 h-12 rounded-lg flex items-center justify-center mb-4 transition-transform group-hover:scale-110",
-                iconColors[feature.color as keyof typeof iconColors]
+                "w-14 h-14 rounded-2xl flex items-center justify-center mb-8 transition-all duration-500 group-hover:scale-110 group-hover:rotate-6",
+                "bg-white/[0.03] border border-white/5",
+                feature.text
               )}>
-                <feature.icon className="w-6 h-6" />
+                <feature.icon className="w-7 h-7" />
               </div>
-              <h3 className="font-display font-semibold text-lg mb-2">
+
+              <h3 className="text-xl font-bold mb-4 tracking-wider text-white group-hover:text-cyan-400 transition-colors">
                 {feature.title}
               </h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">
+
+              <p className="text-cyan-100/30 text-sm leading-relaxed font-light group-hover:text-cyan-100/60 transition-colors">
                 {feature.description}
               </p>
-            </div>
+
+              {/* Decorative Corner */}
+              <div className={cn(
+                "absolute top-4 right-4 w-2 h-2 rounded-full opacity-20 group-hover:opacity-100 transition-opacity",
+                feature.text.replace('text', 'bg')
+              )} />
+            </motion.div>
           ))}
         </div>
       </div>
     </section>
   );
 }
+
