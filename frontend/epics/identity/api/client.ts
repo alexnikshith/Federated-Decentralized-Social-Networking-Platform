@@ -13,7 +13,7 @@ import type {
 } from '../types';
 import { useAuthStore } from '../store/authStore';
 
-const API_URL = localStorage.getItem('active_community_url') || import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const API_URL = localStorage.getItem('active_community_url') || import.meta.env.VITE_API_URL || import.meta.env.VITE_COMMUNITY1_URL || 'http://localhost:8080';
 
 // Create axios instance with base configuration
 const api = axios.create({
@@ -39,13 +39,13 @@ api.interceptors.response.use(
     (error: AxiosError<ApiError>) => {
         // Check if error is 401 and comes from the active community
         if (error.response?.status === 401) {
-            const activeUrl = localStorage.getItem('active_community_url') || import.meta.env.VITE_API_URL || 'http://localhost:8080';
+            const activeUrl = localStorage.getItem('active_community_url') || import.meta.env.VITE_API_URL || import.meta.env.VITE_COMMUNITY1_URL || 'http://localhost:8080';
             const requestUrl = error.config?.url || '';
 
             // Ensure we are only throwing away our session if the 401 came from the instance that issued the token!
             // If the user's token fails on their HOME instance, we clear auth.
             // If they sent their token to a federated/remote instance and it fails, we simply ignore it instead of wiping their local session.
-            const homeUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+            const homeUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_COMMUNITY1_URL || 'http://localhost:8080';
             const isHomeRequest = requestUrl.startsWith('/') ? (activeUrl === homeUrl) : requestUrl.startsWith(homeUrl);
 
             const isAuthEndpoint = requestUrl.includes('/auth/login') ||
