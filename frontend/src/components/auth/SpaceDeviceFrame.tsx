@@ -9,6 +9,7 @@ interface SpaceDeviceFrameProps {
     style?: React.CSSProperties;
     isFlat?: boolean;
     isHorizontal?: boolean;
+    theme?: 'amber' | 'emerald';
 }
 
 export const SpaceDeviceFrame = ({
@@ -18,6 +19,7 @@ export const SpaceDeviceFrame = ({
     style,
     isFlat,
     isHorizontal,
+    theme = 'amber',
 }: SpaceDeviceFrameProps) => {
     return (
         <div className={cn('device-wrapper', wrapperClassName)} style={style}>
@@ -25,6 +27,7 @@ export const SpaceDeviceFrame = ({
                 'device-frame',
                 isFlat && 'flat-mode',
                 isHorizontal && 'horizontal-mode',
+                theme === 'emerald' && 'emerald-theme',
             )}>
                 {/* ── Antenna (shown only when upright) ── */}
                 <div className="antenna" />

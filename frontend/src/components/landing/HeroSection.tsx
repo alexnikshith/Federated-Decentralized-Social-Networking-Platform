@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 
-import { ArrowRight, Shield, Users, Globe } from "lucide-react";
+import { ArrowRight, Shield, Users, Globe, Network } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export function HeroSection() {
@@ -49,6 +49,13 @@ export function HeroSection() {
               <div className="flex items-center gap-2 mb-2">
                 <Globe className="w-5 h-5 text-success" />
                 <span className="font-display font-semibold text-lg">Federated</span>
+              </div>
+              <span className="text-sm text-muted-foreground">Connect with other instances</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="flex items-center gap-2 mb-2">
+                <Network className="w-5 h-5 text-success" />
+                <span className="font-display font-semibold text-lg">Decentralized</span>
               </div>
               <span className="text-sm text-muted-foreground">No central control</span>
             </div>

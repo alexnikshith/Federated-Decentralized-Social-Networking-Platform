@@ -36,6 +36,7 @@ export const SignupPage: React.FC = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isRegistered, setIsRegistered] = useState(false);
+    const [isSwitchingPage, setIsSwitchingPage] = useState(false);
 
     const [emailError, setEmailError] = useState('');
     const [isCheckingEmail, setIsCheckingEmail] = useState(false);
@@ -170,7 +171,7 @@ export const SignupPage: React.FC = () => {
             setIsRegistered(true);
             setTimeout(() => {
                 navigate('/login', { state: { email: formData.email, signupSuccess: true } });
-            }, 2000);
+            }, 1000);
         } catch (error) {
             const errorMessage = error && typeof error === 'object' && 'response' in error
                 ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
@@ -180,23 +181,30 @@ export const SignupPage: React.FC = () => {
         }
     };
 
+    const handleSwitchToLogin = (e?: React.MouseEvent) => {
+        if (e) e.preventDefault();
+        setIsSwitchingPage(true);
+        setTimeout(() => {
+            navigate('/login');
+        }, 1000);
+    };
 
     return (
-        <IdentityLayout>
+        <IdentityLayout isExiting={isSwitchingPage} isCinematic={false} theme={isRegistered ? 'emerald' : 'amber'}>
             {isRegistered ? (
-                <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-amber-950/20 backdrop-blur-md animate-in fade-in duration-500">
+                <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-emerald-950/20 backdrop-blur-md animate-in fade-in duration-500">
                     <div className="relative">
-                        <div className="absolute inset-0 bg-amber-500/20 rounded-full animate-ping-slow scale-150" />
-                        <div className="w-20 h-20 rounded-full border-2 border-amber-400 flex items-center justify-center bg-amber-950/40 relative z-10">
-                            <Check className="w-10 h-10 text-amber-400" />
+                        <div className="absolute inset-0 bg-emerald-500/20 rounded-full animate-ping-slow scale-150" />
+                        <div className="w-20 h-20 rounded-full border-2 border-emerald-400 flex items-center justify-center bg-emerald-950/40 relative z-10">
+                            <Check className="w-10 h-10 text-emerald-400" />
                         </div>
                     </div>
-                    <h2 className="mt-8 text-2xl font-bold text-amber-500 tracking-[0.5em] uppercase font-mono animate-pulse">SUCCESSFULLY REGISTERED!</h2>
-                    <p className="mt-4 text-amber-400/60 font-mono text-xs tracking-widest uppercase">Initializing community access...</p>
+                    <h2 className="mt-8 text-2xl font-bold text-emerald-500 tracking-[0.5em] uppercase font-mono animate-pulse">SUCCESSFULLY REGISTERED!</h2>
+                    <p className="mt-4 text-emerald-400/60 font-mono text-xs tracking-widest uppercase">Initializing community access...</p>
                 </div>
             ) : (
                 <>
-                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'linear-gradient(rgba(255,146,0,0.5) 1px, transparent 1px)', backgroundSize: '100% 3px' }} />
+                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'linear-gradient(rgba(16,185,129,0.5) 1px, transparent 1px)', backgroundSize: '100% 3px' }} />
 
                     <div className="absolute top-0 left-0 w-8 h-8 border-l-2 border-t-2 border-amber-500/40 rounded-tl-2xl" />
                     <div className="absolute top-0 right-0 w-8 h-8 border-r-2 border-t-2 border-amber-500/40 rounded-tr-2xl" />
@@ -207,8 +215,14 @@ export const SignupPage: React.FC = () => {
                     <div className="absolute top-4 left-6 z-[100]">
                         <button
                             onClick={() => {
-                                if (step === 1) navigate('/');
-                                else setStep((prev) => (prev - 1) as 1 | 2 | 3);
+                                if (step === 1) {
+                                    setIsSwitchingPage(true);
+                                    setTimeout(() => {
+                                        navigate('/');
+                                    }, 1000);
+                                } else {
+                                    setStep((prev) => (prev - 1) as 1 | 2 | 3);
+                                }
                             }}
                             className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-amber-500/20 bg-amber-500/5 text-amber-500/60 hover:text-amber-500 hover:border-amber-500/40 hover:bg-amber-500/10 transition-all group active:scale-95"
                         >
@@ -222,8 +236,9 @@ export const SignupPage: React.FC = () => {
                         style={{ transform: step === 1 ? 'translateX(0%)' : step === 2 ? 'translateX(-33.333%)' : 'translateX(-66.666%)' }}
                     >
                         {/* ── Panel 1: Community Selection ── */}
-                        <div className="w-1/3 shrink-0 flex flex-col gap-0 px-10 pt-14 pb-6">
-                            <div className="flex items-center justify-between mb-4 border-b border-amber-500/20 pb-2">
+                        <div className="w-1/3 shrink-0 flex flex-col gap-0 px-10 pt-10 pb-6">
+
+                            <div className="flex items-center justify-between mt-8 mb-4 border-b border-amber-500/20 pb-2">
                                 <h2 className="text-lg font-bold text-amber-500 tracking-[0.4em] uppercase font-mono">COMMUNITY</h2>
                                 <div className="text-xs font-mono text-amber-500/40">[ PHASE_01 ]</div>
                             </div>
@@ -270,7 +285,7 @@ export const SignupPage: React.FC = () => {
                                     {selectedCommunityId && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[90%] h-[1px] bg-gradient-to-r from-transparent via-amber-400 to-transparent shadow-[0_0_15px_rgba(245,158,11,1)]" />}
                                 </button>
                                 <p className="text-center mt-4 text-xs text-amber-500/70 font-mono tracking-[0.2em] uppercase">
-                                    ALREADY_REGISTERED? <Link to="/login" className="text-amber-400 font-bold hover:text-amber-200 transition-colors">LOGIN</Link>
+                                    ALREADY_REGISTERED? <button onClick={handleSwitchToLogin} className="text-amber-400 font-bold hover:text-amber-200 transition-colors">LOGIN</button>
                                 </p>
                             </div>
                         </div>
