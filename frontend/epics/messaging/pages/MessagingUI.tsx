@@ -92,7 +92,7 @@ const MessagingUI: React.FC = () => {
         // WebSocket Connection Setup
         if (!token) return;
 
-        const apiUrl = localStorage.getItem('active_community_url') || import.meta.env.VITE_API_URL || 'http://localhost:8080';
+        const apiUrl = localStorage.getItem('active_community_url') || import.meta.env.VITE_API_URL || import.meta.env.VITE_COMMUNITY1_URL || 'http://localhost:8080';
         const wsProtocol = apiUrl.startsWith('https') ? 'wss' : 'ws';
         const wsUrl = `${apiUrl.replace(/^http[s]?:\/\//, '')}/ws?token=${token}`;
         const socketUrl = `${wsProtocol}://${wsUrl}`;
