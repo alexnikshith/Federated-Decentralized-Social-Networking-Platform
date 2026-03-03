@@ -129,9 +129,9 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
                                     {post.media_url && (
                                         <div className="rounded-xl overflow-hidden border border-border/50 bg-black/5 w-full">
                                             {post.media_type === 'video' ? (
-                                                <video controls src={post.media_url.startsWith('http') ? post.media_url : `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}${post.media_url}`} className="w-full h-auto object-contain max-h-[70vh]" />
+                                                <video controls src={post.media_url.startsWith('http') ? post.media_url : `${import.meta.env.VITE_API_URL || import.meta.env.VITE_COMMUNITY1_URL || 'http://localhost:8080'}${post.media_url}`} className="w-full h-auto object-contain max-h-[70vh]" />
                                             ) : (
-                                                <img src={post.media_url.startsWith('http') ? post.media_url : `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}${post.media_url}`} alt="Post content" className="w-full h-auto object-contain max-h-[70vh]" />
+                                                <img src={post.media_url.startsWith('http') ? post.media_url : `${import.meta.env.VITE_API_URL || import.meta.env.VITE_COMMUNITY1_URL || 'http://localhost:8080'}${post.media_url}`} alt="Post content" className="w-full h-auto object-contain max-h-[70vh]" />
                                             )}
                                         </div>
                                     )}

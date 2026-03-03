@@ -115,7 +115,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({ open, onClos
                     <div className="flex items-center gap-3">
                         <div className="relative w-10 h-10 rounded-full bg-primary/80 border-2 border-white/50 overflow-hidden flex items-center justify-center text-white font-bold">
                             {currentStory.author_avatar ? (
-                                <img src={currentStory.author_avatar.startsWith('http') ? currentStory.author_avatar : `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}${currentStory.author_avatar}`} alt={currentStory.author_name} className="w-full h-full object-cover" />
+                                <img src={currentStory.author_avatar.startsWith('http') ? currentStory.author_avatar : `${import.meta.env.VITE_API_URL || import.meta.env.VITE_COMMUNITY1_URL || 'http://localhost:8080'}${currentStory.author_avatar}`} alt={currentStory.author_name} className="w-full h-full object-cover" />
                             ) : (
                                 currentStory.author_name?.[0]?.toUpperCase()
                             )}
@@ -142,13 +142,13 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({ open, onClos
                 {/* Media Content */}
                 {currentStory.media_type === 'image' ? (
                     <img
-                        src={currentStory.media_url.startsWith('http') ? currentStory.media_url : `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}${currentStory.media_url}`}
+                        src={currentStory.media_url.startsWith('http') ? currentStory.media_url : `${import.meta.env.VITE_API_URL || import.meta.env.VITE_COMMUNITY1_URL || 'http://localhost:8080'}${currentStory.media_url}`}
                         alt="Story"
                         className="w-full h-full sm:w-auto sm:h-full sm:max-w-full object-cover sm:object-contain"
                     />
                 ) : (
                     <video
-                        src={currentStory.media_url.startsWith('http') ? currentStory.media_url : `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}${currentStory.media_url}`}
+                        src={currentStory.media_url.startsWith('http') ? currentStory.media_url : `${import.meta.env.VITE_API_URL || import.meta.env.VITE_COMMUNITY1_URL || 'http://localhost:8080'}${currentStory.media_url}`}
                         className="w-full h-full sm:w-auto sm:h-full sm:max-w-full object-cover sm:object-contain"
                         autoPlay
                         loop

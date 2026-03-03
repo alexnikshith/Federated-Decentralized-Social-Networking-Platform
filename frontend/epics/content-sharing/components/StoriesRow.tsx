@@ -45,7 +45,7 @@ export const StoriesRow: React.FC = () => {
     const getAvatarSrc = (url: string) => {
         if (!url) return '';
         if (url.startsWith('http')) return url;
-        const apiUrl = localStorage.getItem('active_community_url') || import.meta.env.VITE_API_URL || 'http://localhost:8080';
+        const apiUrl = localStorage.getItem('active_community_url') || import.meta.env.VITE_API_URL || import.meta.env.VITE_COMMUNITY1_URL || 'http://localhost:8080';
         return `${apiUrl}${url}`;
     };
 

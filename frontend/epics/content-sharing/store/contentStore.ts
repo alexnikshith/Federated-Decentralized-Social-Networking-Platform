@@ -215,7 +215,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
 
         try {
             // Call the reports API endpoint
-            const API_URL = localStorage.getItem('active_community_url') || import.meta.env.VITE_API_URL || 'http://localhost:8080';
+            const API_URL = localStorage.getItem('active_community_url') || import.meta.env.VITE_API_URL || import.meta.env.VITE_COMMUNITY1_URL || 'http://localhost:8080';
             const token = localStorage.getItem('token');
             await fetch(`${API_URL}/api/reports/user`, {
                 method: 'POST',
