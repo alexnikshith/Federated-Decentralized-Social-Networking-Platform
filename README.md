@@ -32,33 +32,35 @@ npm run dev
 
 ## Project Overview
 
-This project implements a **federated decentralized social networking platform** that enables privacy-aware communication, decentralized identity, and controlled cross-instance interaction without centralized control.
+This platform implements a **federated decentralized social networking ecosystem** designed for privacy-centric communication and decentralized identity management. It features a **Premium Cinematic UI/UX** that utilizes interactive holographic projections, glassmorphism, and dynamic celestial animations to provide a futuristic user experience.
 
-Each server instance is independently managed and stores its own data, while communicating with other trusted instances using a **custom REST-based federation protocol**.
+Each node in the network is independently managed, ensuring data sovereignty, while cross-instance interaction is enabled through a **High-Fidelity Federation Protocol**.
 
-This project is developed as part of **23CSE311 – Software Engineering**.
+Developed as a flagship project for **23CSE311 – Software Engineering**.
 
 
 ## Technology Stack
 
-**Backend:**
-- Go 1.21 (net/http, gorilla/mux)
-- MongoDB 7.0
-- JWT Authentication (golang-jwt/jwt/v5)
-- Bcrypt password hashing
-
 **Frontend:**
-- React 18 + TypeScript 5
-- Vite 5 (build tool)
-- React Router 6 (routing)
-- TanStack React Query (server state)
-- Zustand 4 (local state)
-- Tailwind CSS + shadcn UI (40+ components)
-- Axios (HTTP client)
+- **React 18** + **TypeScript 5**
+- **Vite 5** (Ultra-fast build pipeline)
+- **Framer Motion** (Cinematic Handshakes & Advanced Animations)
+- **Lucide React** (High-Density Vector Icons)
+- **Sonner** (Enriched Notification System)
+- **Tailwind CSS** + **shadcn UI** (40+ Atomic Components)
+- **Custom CSS Engine** (Glassmorphism & Holographic Effects)
+- **Zustand 4** (Neural State Management)
+- **React Query** (Asynchronous Synchronization)
+
+**Backend:**
+- **Go 1.21** (High-performance concurrency)
+- **MongoDB 7.0** (Document-based persistence)
+- **JWT V5** (Secure Neural Authentication)
+- **Bcrypt** (Military-grade password hashing)
 
 **DevOps:**
-- Docker & Docker Compose
-- Multi-stage builds
+- **Docker & Docker Compose** (Containerized orchestration)
+- **Multi-stage builds** (Optimized deployment footprints)
 
 ---
 
@@ -227,15 +229,17 @@ Federated-Decentralized-Social-Networking-Platform/
 
 ---
 
-## Security Features
+## Advanced Identity & Security
 
-- 🔐 **JWT Authentication** - Token-based auth with 24h expiry
-- 🔒 **Bcrypt Password Hashing** - Industry-standard encryption
-- 🛡️ **Session Management** - Database-backed token validation
-- 👁️ **Privacy Controls** - Public/followers-only profiles
-- 📊 **Activity Logging** - Comprehensive audit trail
-- 🚫 **Soft Deletion** - Account deactivation with data preservation
-- 🔄 **CORS Configuration** - Secure cross-origin requests
+- 🦾 **Cinematic Handshake Protocol** - Unified holographic authentication flow with interactive opening/closing transitions.
+- 🔐 **Real-time Neural Validation** - Debounced email existence checks against the active Neural Node before submission.
+- 🛡️ **Synchronized Defense Patterns** - Unified password complexity requirements across Signup and Recovery flows.
+- 👁️ **Data Privacy Toggles** - Integrated visibility controls for sensitive input fields.
+- 🔒 **JWT Neural Link** - Token-based authentication with 24-hour synchronized expiry.
+- 🔒 **Bcrypt Shielding** - Industry-standard hashing for all stored credentials.
+- 👁️ **Privacy Geofencing** - Granular profile visibility controls (Public vs. Secure).
+- 📊 **Audit Handshakes** - Comprehensive activity logging for all security events.
+- 🚫 **Soft Deactivation** - Secure account deactivation with state preservation.
 
 ---
 

@@ -13,7 +13,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Loader2, User, Settings, Shield, Bell, Lock, AlertTriangle, Edit, Clock, Upload } from "lucide-react";
+import { Loader2, User, Settings, Shield, Bell, Lock, AlertTriangle, Edit, Clock, Upload, Eye, EyeOff, ShieldCheck, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { User as UserType, ActivityLog } from "../types";
 import { useToast } from "@/hooks/use-toast";
@@ -85,6 +85,21 @@ export const SettingsPage = () => {
 
     const [passwordLoading, setPasswordLoading] = useState(false);
     const [is2FAEnabled, setIs2FAEnabled] = useState(false);
+    const [showOldPassword, setShowOldPassword] = useState(false);
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+    // Real-time password validation logic
+    const passwordRequirements = {
+        min8: passwordData.new_password.length >= 8,
+        hasUpper: /[A-Z]/.test(passwordData.new_password),
+        hasLower: /[a-z]/.test(passwordData.new_password),
+        hasNumber: /\d/.test(passwordData.new_password),
+        hasSpecial: /[@$!%*?&]/.test(passwordData.new_password),
+    };
+
+    const isPasswordValid = Object.values(passwordRequirements).every(Boolean);
+    const passwordsMatch = passwordData.new_password === passwordData.confirm_password && passwordData.new_password !== '';
 
     // Avatar upload state
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -367,10 +382,10 @@ export const SettingsPage = () => {
             return;
         }
 
-        if (passwordData.new_password.length < 8) {
+        if (!isPasswordValid) {
             toast({
                 title: "Error",
-                description: "Password must be at least 8 characters long",
+                description: "Password does not meet security requirements",
                 variant: "destructive",
             });
             return;
@@ -825,45 +840,101 @@ export const SettingsPage = () => {
                                                 <form onSubmit={handlePasswordSubmit} className={cn("space-y-6 transition-all duration-700 ease-out", !isPasswordEditing && "opacity-60 grayscale-[0.2] pointer-events-none select-none blur-[2px]")}>
                                                     <div className="space-y-2">
                                                         <Label htmlFor="old_password">Current Password</Label>
-                                                        <Input
-                                                            id="old_password"
-                                                            type="password"
-                                                            value={passwordData.old_password}
-                                                            onChange={(e) => setPasswordData({ ...passwordData, old_password: e.target.value })}
-                                                            placeholder="Enter current password"
-                                                            className="h-11 bg-secondary/30"
-                                                            disabled={!isPasswordEditing}
-                                                            required
-                                                        />
+                                                        <div className="relative">
+                                                            <Input
+                                                                id="old_password"
+                                                                type={showOldPassword ? "text" : "password"}
+                                                                value={passwordData.old_password}
+                                                                onChange={(e) => setPasswordData({ ...passwordData, old_password: e.target.value })}
+                                                                placeholder="Enter current password"
+                                                                className="h-11 bg-secondary/30 pr-10"
+                                                                disabled={!isPasswordEditing}
+                                                                required
+                                                            />
+                                                            <button
+                                                                type="button" onClick={() => setShowOldPassword(!showOldPassword)}
+                                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                                                            >
+                                                                {showOldPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                                                            </button>
+                                                        </div>
                                                     </div>
 
                                                     <div className="space-y-2">
                                                         <Label htmlFor="new_password">New Password</Label>
-                                                        <Input
-                                                            id="new_password"
-                                                            type="password"
-                                                            value={passwordData.new_password}
-                                                            onChange={(e) => setPasswordData({ ...passwordData, new_password: e.target.value })}
-                                                            placeholder="Enter new password"
-                                                            className="h-11 bg-secondary/30"
-                                                            disabled={!isPasswordEditing}
-                                                            required
-                                                        />
-                                                        <p className="text-xs text-muted-foreground">Password must be at least 8 characters long.</p>
+                                                        <div className="relative">
+                                                            <Input
+                                                                id="new_password"
+                                                                type={showNewPassword ? "text" : "password"}
+                                                                value={passwordData.new_password}
+                                                                onChange={(e) => setPasswordData({ ...passwordData, new_password: e.target.value })}
+                                                                placeholder="Enter new password"
+                                                                className="h-11 bg-secondary/30 pr-10"
+                                                                disabled={!isPasswordEditing}
+                                                                required
+                                                            />
+                                                            <button
+                                                                type="button" onClick={() => setShowNewPassword(!showNewPassword)}
+                                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                                                            >
+                                                                {showNewPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                                                            </button>
+                                                        </div>
                                                     </div>
 
+                                                    {isPasswordEditing && (
+                                                        <div className="bg-secondary/10 border border-border/50 rounded-xl p-4 space-y-3 animate-in fade-in slide-in-from-top-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <ShieldCheck size={16} className="text-primary" />
+                                                                <span className="text-xs font-bold uppercase tracking-widest">Security Requirements</span>
+                                                            </div>
+
+                                                            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                                                                {[
+                                                                    { label: '8+ characters', met: passwordRequirements.min8 },
+                                                                    { label: 'Uppercase', met: passwordRequirements.hasUpper },
+                                                                    { label: 'Lowercase', met: passwordRequirements.hasLower },
+                                                                    { label: 'Number', met: passwordRequirements.hasNumber },
+                                                                    { label: 'Special char', met: passwordRequirements.hasSpecial },
+                                                                ].map((req, i) => (
+                                                                    <div key={i} className={cn(
+                                                                        "flex items-center gap-2 transition-all duration-300",
+                                                                        req.met ? "text-green-500" : "text-muted-foreground"
+                                                                    )}>
+                                                                        {req.met ? <Check size={12} className="stroke-[3]" /> : <div className="w-1.5 h-1.5 bg-current rounded-full" />}
+                                                                        <span className="text-[11px] font-medium leading-none">{req.label}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
                                                     <div className="space-y-2">
-                                                        <Label htmlFor="confirm_password">Confirm New Password</Label>
-                                                        <Input
-                                                            id="confirm_password"
-                                                            type="password"
-                                                            value={passwordData.confirm_password}
-                                                            onChange={(e) => setPasswordData({ ...passwordData, confirm_password: e.target.value })}
-                                                            placeholder="Confirm new password"
-                                                            className="h-11 bg-secondary/30"
-                                                            disabled={!isPasswordEditing}
-                                                            required
-                                                        />
+                                                        <Label htmlFor="confirm_password" display-flex items-center justify-between>
+                                                            Confirm New Password
+                                                            {passwordsMatch && <Check size={12} className="text-green-500 ml-2 inline-block" />}
+                                                        </Label>
+                                                        <div className="relative">
+                                                            <Input
+                                                                id="confirm_password"
+                                                                type={showConfirmPassword ? "text" : "password"}
+                                                                value={passwordData.confirm_password}
+                                                                onChange={(e) => setPasswordData({ ...passwordData, confirm_password: e.target.value })}
+                                                                placeholder="Confirm new password"
+                                                                className={cn(
+                                                                    "h-11 bg-secondary/30 pr-10",
+                                                                    passwordData.confirm_password && !passwordsMatch ? "border-destructive/40" : ""
+                                                                )}
+                                                                disabled={!isPasswordEditing}
+                                                                required
+                                                            />
+                                                            <button
+                                                                type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                                                            >
+                                                                {showConfirmPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                                                            </button>
+                                                        </div>
                                                     </div>
 
                                                     {isPasswordEditing && (
@@ -882,7 +953,7 @@ export const SettingsPage = () => {
                                                             >
                                                                 Cancel
                                                             </Button>
-                                                            <Button type="submit" disabled={passwordLoading} className="min-w-[150px]">
+                                                            <Button type="submit" disabled={passwordLoading || !isPasswordValid || !passwordsMatch} className="min-w-[150px]">
                                                                 {passwordLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                                                                 Update Password
                                                             </Button>
