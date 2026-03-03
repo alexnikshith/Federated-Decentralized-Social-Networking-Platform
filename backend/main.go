@@ -23,6 +23,7 @@ import (
 	"federated-social/backend/pkg/websocket"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -31,15 +32,28 @@ import (
 
 // bootstrapFederationInstances ensures that known federated instances are registered in the database
 func bootstrapFederationInstances(ctx context.Context, instanceRepo *federationRepo.InstanceRepository) {
-	// Define the peer server based on current instance
+	// Define the peer server based on current instance.
+	// PEER_DOMAIN and PEER_INBOX_URL env vars override the localhost defaults for production (Render).
 	var peerDomain, peerInbox string
 
 	if config.AppConfig.InstanceName == "server1" {
-		peerDomain = "localhost:8081"
-		peerInbox = "http://server2:8080/federation/inbox"
+		peerDomain = os.Getenv("PEER_DOMAIN")
+		if peerDomain == "" {
+			peerDomain = "localhost:8081"
+		}
+		peerInbox = os.Getenv("PEER_INBOX_URL")
+		if peerInbox == "" {
+			peerInbox = "http://localhost:8081/federation/inbox"
+		}
 	} else if config.AppConfig.InstanceName == "server2" {
-		peerDomain = "localhost:8080"
-		peerInbox = "http://server1:8080/federation/inbox"
+		peerDomain = os.Getenv("PEER_DOMAIN")
+		if peerDomain == "" {
+			peerDomain = "localhost:8080"
+		}
+		peerInbox = os.Getenv("PEER_INBOX_URL")
+		if peerInbox == "" {
+			peerInbox = "http://localhost:8080/federation/inbox"
+		}
 	} else {
 		// If instance name is something else, skip bootstrap
 		log.Printf("Skipping federation bootstrap for unknown instance: %s", config.AppConfig.InstanceName)
