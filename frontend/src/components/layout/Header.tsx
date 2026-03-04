@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Globe, Menu, X, Shield, Users, Bell, User, LayoutDashboard, Rss, Sun, Moon, TrendingUp } from "lucide-react";
+import { Menu, X, Shield, Users, Bell, User, LayoutDashboard, Rss, Sun, Moon, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "../../../epics/identity/store/authStore";
@@ -24,20 +24,25 @@ export function Header() {
 
   return (
     <header className={cn(
-      "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
-      isLanding ? "bg-background/50 backdrop-blur-md border-b border-border/10" : "bg-background/80 backdrop-blur-xl border-b border-border/50"
+      "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
+      isLanding
+        ? "bg-black/5 backdrop-blur-xl border-b border-white/[0.05] h-20"
+        : "bg-background/80 backdrop-blur-xl border-b border-border/50 h-16"
     )}>
       <nav className="container mx-auto px-4 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
+        <div className={cn("flex items-center justify-between transition-all duration-500", isLanding ? "h-20" : "h-16")}>
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group">
             <div className="relative">
-              <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center group-hover:bg-primary/30 transition-colors">
-                <Globe className="w-5 h-5 text-primary" />
+              <div className="w-10 h-10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <img src="/logo.png" alt="Nexus Logo" className="w-8 h-8 object-contain" />
               </div>
               <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-accent federation-dot connected" />
             </div>
-            <span className="font-display font-bold text-xl tracking-tight">
+            <span className={cn(
+              "font-bold text-xl tracking-[0.2em] uppercase transition-colors",
+              isLanding ? "text-white" : "text-foreground"
+            )}>
               Nexus
             </span>
           </Link>
@@ -90,14 +95,14 @@ export function Header() {
             {!isAuthenticated ? (
               <>
                 <Link to="/login">
-                  <Button variant="ghost" size="sm">
-                    Sign In
-                  </Button>
+                  <button className="px-6 py-2 text-xs font-bold tracking-[0.2em] uppercase text-white/50 hover:text-white transition-colors">
+                    Log In
+                  </button>
                 </Link>
                 <Link to="/register">
-                  <Button variant="hero" size="sm">
-                    Sign Up
-                  </Button>
+                  <button className="px-6 py-2 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-bold tracking-[0.2em] uppercase rounded-full hover:bg-cyan-500/20 hover:border-cyan-500/40 transition-all shadow-[0_0_20px_rgba(6,182,212,0.1)]">
+                    Join Network
+                  </button>
                 </Link>
               </>
             ) : (

@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import type { SignupRequest } from '../types';
 import { COMMUNITIES } from '../../../src/config/communities';
 import { Users, Globe, ArrowRight, Check, AlertCircle, Loader2, ChevronLeft, Upload, Orbit, Eye, EyeOff, ShieldCheck, ShieldAlert, Info } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { IdentityLayout } from '../../../src/components/auth/IdentityLayout';
 
@@ -54,6 +55,23 @@ export const SignupPage: React.FC = () => {
     const isPasswordValid = Object.values(passwordRequirements).every(Boolean);
     const passwordsMatch = formData.password === confirmPassword && formData.password !== '';
 
+    // Auto-clear errors after 3 seconds and reset causative fields
+    useEffect(() => {
+        if (error || emailError || usernameError) {
+            const timer = setTimeout(() => {
+                if (usernameError) setFormData(prev => ({ ...prev, username: '' }));
+                if (emailError) setFormData(prev => ({ ...prev, email: '' }));
+                if (error) {
+                    setFormData(prev => ({ ...prev, password: '' }));
+                    setConfirmPassword('');
+                }
+                setError('');
+                setEmailError('');
+                setUsernameError('');
+            }, 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [error, emailError, usernameError]);
 
     const handleNextStep = () => {
         const comm = COMMUNITIES.find(c => c.id === selectedCommunityId);
@@ -297,11 +315,19 @@ export const SignupPage: React.FC = () => {
                                 <div className="text-xs font-mono text-amber-500/40">[ PHASE_02 ]</div>
                             </div>
 
-                            {error && (
-                                <div className="mb-4 px-3 py-2 border border-red-500/40 bg-red-950/30 text-red-300 text-[10px] font-mono flex items-center gap-2">
-                                    <AlertCircle className="w-4 h-4 shrink-0" />{error}
-                                </div>
-                            )}
+                            <AnimatePresence mode="popLayout">
+                                {error && (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                                        animate={{ opacity: 1, height: 'auto', marginBottom: 16 }}
+                                        exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                                        transition={{ duration: 0.3 }}
+                                        className="px-3 py-2 border border-red-500/40 bg-red-950/30 text-red-300 text-[10px] font-mono flex items-center gap-2 overflow-hidden"
+                                    >
+                                        <AlertCircle className="w-4 h-4 shrink-0" />{error}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
 
                             <div className="grid grid-cols-2 gap-x-8 gap-y-2">
                                 {/* LEFT COLUMN: IDENTITY & VISIBILITY */}
@@ -318,7 +344,10 @@ export const SignupPage: React.FC = () => {
                                                 <label className="text-xs font-bold text-amber-500/60 uppercase tracking-widest ml-1 font-mono block">DISPLAY_NAME</label>
                                                 <input
                                                     type="text" value={formData.display_name}
-                                                    onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
+                                                    onChange={(e) => {
+                                                        setFormData({ ...formData, display_name: e.target.value });
+                                                        setError('');
+                                                    }}
                                                     required placeholder="John Doe"
                                                     className="w-full bg-amber-500/[0.03] border border-amber-500/20 rounded-lg py-2 px-3 text-amber-50 text-sm font-mono tracking-wider focus:outline-none focus:border-amber-400 focus:bg-amber-500/[0.08] transition-all placeholder:text-amber-800/30"
                                                 />
@@ -332,7 +361,11 @@ export const SignupPage: React.FC = () => {
                                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-600/40 font-mono text-sm">@</span>
                                                     <input
                                                         type="text" value={formData.username}
-                                                        onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase() })}
+                                                        onChange={(e) => {
+                                                            setFormData({ ...formData, username: e.target.value.toLowerCase() });
+                                                            setError('');
+                                                            setUsernameError('');
+                                                        }}
                                                         required placeholder="username"
                                                         className={cn(
                                                             "w-full bg-amber-500/[0.03] border rounded-lg py-2 pl-7 pr-3 text-amber-50 text-sm font-mono tracking-wider focus:outline-none focus:bg-amber-500/[0.08] transition-all placeholder:text-amber-800/30",
@@ -342,7 +375,18 @@ export const SignupPage: React.FC = () => {
                                                 </div>
                                             </div>
                                         </div>
-                                        {usernameError && <p className="text-[10px] font-bold text-red-400/80 ml-1 font-mono uppercase mt-[-12px]">{usernameError}</p>}
+                                        <AnimatePresence>
+                                            {usernameError && (
+                                                <motion.p
+                                                    initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                                                    animate={{ opacity: 1, height: 'auto', marginTop: 4 }}
+                                                    exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                                                    className="text-[10px] font-bold text-red-400/80 ml-1 font-mono uppercase overflow-hidden"
+                                                >
+                                                    {usernameError}
+                                                </motion.p>
+                                            )}
+                                        </AnimatePresence>
                                     </div>
 
                                     <div className="space-y-4">
@@ -408,7 +452,11 @@ export const SignupPage: React.FC = () => {
                                             <div className="relative">
                                                 <input
                                                     type="email" value={formData.email}
-                                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                                    onChange={(e) => {
+                                                        setFormData({ ...formData, email: e.target.value });
+                                                        setError('');
+                                                        setEmailError('');
+                                                    }}
                                                     required placeholder="you@nebula.net"
                                                     className={cn(
                                                         "w-full bg-amber-500/[0.03] border rounded-lg py-2 px-3 text-amber-50 text-sm font-mono tracking-wider focus:outline-none focus:bg-amber-500/[0.08] transition-all placeholder:text-amber-800/30",
@@ -421,7 +469,18 @@ export const SignupPage: React.FC = () => {
                                                     {emailAvailable === false && <AlertCircle className="w-3 h-3 text-red-500/60" />}
                                                 </div>
                                             </div>
-                                            {emailError && <p className="text-[10px] font-bold text-red-400/80 ml-1 font-mono uppercase mt-1 leading-none">{emailError}</p>}
+                                            <AnimatePresence>
+                                                {emailError && (
+                                                    <motion.p
+                                                        initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                                                        animate={{ opacity: 1, height: 'auto', marginTop: 4 }}
+                                                        exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                                                        className="text-[10px] font-bold text-red-400/80 ml-1 font-mono uppercase overflow-hidden leading-none"
+                                                    >
+                                                        {emailError}
+                                                    </motion.p>
+                                                )}
+                                            </AnimatePresence>
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-4">
@@ -430,7 +489,10 @@ export const SignupPage: React.FC = () => {
                                                 <div className="relative">
                                                     <input
                                                         type={showPassword ? "text" : "password"} value={formData.password}
-                                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                                        onChange={(e) => {
+                                                            setFormData({ ...formData, password: e.target.value });
+                                                            setError('');
+                                                        }}
                                                         required placeholder="••••••••"
                                                         className="w-full bg-amber-500/[0.03] border border-amber-500/20 rounded-lg py-2 pl-3 pr-10 text-amber-50 text-sm font-mono tracking-wider focus:outline-none focus:border-amber-400 focus:bg-amber-500/[0.08] transition-all placeholder:text-amber-800/30"
                                                     />
@@ -450,7 +512,10 @@ export const SignupPage: React.FC = () => {
                                                 <div className="relative">
                                                     <input
                                                         type={showConfirmPassword ? "text" : "password"} value={confirmPassword}
-                                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                                        onChange={(e) => {
+                                                            setConfirmPassword(e.target.value);
+                                                            setError('');
+                                                        }}
                                                         required placeholder="••••••••"
                                                         className={cn(
                                                             "w-full bg-amber-500/[0.03] border rounded-lg py-2 pl-3 pr-10 text-amber-50 text-sm font-mono tracking-wider focus:outline-none focus:bg-amber-500/[0.08] transition-all placeholder:text-amber-800/30",
