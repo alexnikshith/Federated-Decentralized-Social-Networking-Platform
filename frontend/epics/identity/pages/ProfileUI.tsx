@@ -644,9 +644,9 @@ const ProfileUI = () => {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
               <div className="flex flex-col md:flex-row md:items-end gap-6">
                 {/* Avatar */}
-                <div className="w-32 h-32 md:w-40 md:h-40 rounded-3xl bg-primary flex items-center justify-center text-5xl font-bold text-primary-foreground border-8 border-background shadow-2xl z-10">
+                <div className="w-32 h-32 md:w-40 md:h-40 rounded-3xl bg-primary flex items-center justify-center text-5xl font-bold text-primary-foreground border-8 border-background shadow-2xl z-10 overflow-hidden">
                   {profileUser.avatar_url ? (
-                    <img src={profileUser.avatar_url} alt={profileUser.display_name} className="w-full h-full object-cover rounded-[1.25rem]" />
+                    <img src={profileUser.avatar_url} alt={profileUser.display_name} className="w-full h-full object-cover" />
                   ) : (
                     profileUser.display_name?.[0]?.toUpperCase() || profileUser.username[0].toUpperCase()
                   )}
