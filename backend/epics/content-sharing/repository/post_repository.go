@@ -598,6 +598,24 @@ func (r *PostRepository) DeleteCommentsByUser(ctx context.Context, userID primit
 	return err
 }
 
+// DeleteSavedPostsByUser removes all saved-post bookmarks belonging to a user
+func (r *PostRepository) DeleteSavedPostsByUser(ctx context.Context, userID primitive.ObjectID) error {
+	_, err := r.savedPosts.DeleteMany(ctx, bson.M{"user_id": userID})
+	return err
+}
+
+// DeleteReportsByUser removes all reports submitted by a user
+func (r *PostRepository) DeleteReportsByUser(ctx context.Context, userID primitive.ObjectID) error {
+	_, err := r.reports.DeleteMany(ctx, bson.M{"reporter_id": userID})
+	return err
+}
+
+// DeleteInteractionsByUser removes all post interaction records (interested/not_interested) by a user
+func (r *PostRepository) DeleteInteractionsByUser(ctx context.Context, userID primitive.ObjectID) error {
+	_, err := r.interactions.DeleteMany(ctx, bson.M{"user_id": userID})
+	return err
+}
+
 // CountPostsByAuthor returns the number of active posts by a specific user
 func (r *PostRepository) CountPostsByAuthor(ctx context.Context, userID primitive.ObjectID) (int64, error) {
 	filter := bson.M{

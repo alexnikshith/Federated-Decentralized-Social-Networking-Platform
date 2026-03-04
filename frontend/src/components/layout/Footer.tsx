@@ -98,14 +98,11 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row items-center justify-between mt-20 pt-10 border-t border-white/5 gap-6">
-          <p className="text-[10px] font-bold tracking-[0.4em] uppercase text-white/10">
+        {/* Center-aligned copyright seamlessly grouped with above links */}
+        <div className="flex justify-center mt-12 pb-4">
+          <p className="text-[10px] font-bold tracking-[0.4em] uppercase text-white/100 text-center">
             © {new Date().getFullYear()} NEXUS CORE SYSTEM • v0.4.2-COSMOS
           </p>
-          <div className="flex gap-8">
-            <span className="text-[10px] font-bold tracking-[0.4em] uppercase text-white/10">Encrypted</span>
-            <span className="text-[10px] font-bold tracking-[0.4em] uppercase text-white/10">Verified</span>
-          </div>
         </div>
       </div>
     </footer>

@@ -7,19 +7,22 @@ import (
 	"federated-social/backend/epics/content-sharing/models"
 	"federated-social/backend/epics/content-sharing/repository"
 	authRepo "federated-social/backend/epics/identity/repository"
+	"log"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type StoryService struct {
-	repo     *repository.StoryRepository
-	userRepo *authRepo.UserRepository
+	repo                *repository.StoryRepository
+	userRepo            *authRepo.UserRepository
+	notificationService *NotificationService
 }
 
 func NewStoryService() *StoryService {
 	return &StoryService{
-		repo:     repository.NewStoryRepository(),
-		userRepo: authRepo.NewUserRepository(), // Assume this exists and is accessible
+		repo:                repository.NewStoryRepository(),
+		userRepo:            authRepo.NewUserRepository(),
+		notificationService: NewNotificationService(),
 	}
 }
 
@@ -59,6 +62,7 @@ func (s *StoryService) CreateStory(ctx context.Context, userID primitive.ObjectI
 		MediaURL:     story.MediaURL,
 		MediaType:    story.MediaType,
 		Content:      story.Content,
+		Likes:        story.Likes,
 		CreatedAt:    story.CreatedAt,
 		ExpiresAt:    story.ExpiresAt,
 	}, nil
@@ -103,6 +107,7 @@ func (s *StoryService) GetActiveStories(ctx context.Context) ([]*dto.StoryRespon
 			MediaURL:     story.MediaURL,
 			MediaType:    story.MediaType,
 			Content:      story.Content,
+			Likes:        story.Likes,
 			CreatedAt:    story.CreatedAt,
 			ExpiresAt:    story.ExpiresAt,
 		})
@@ -126,4 +131,96 @@ func (s *StoryService) DeleteStory(ctx context.Context, storyID, userID primitiv
 	}
 
 	return s.repo.DeleteStory(ctx, storyID)
+}
+
+// LikeStory adds the current user's ID to the story's likes and notifies the story owner
+func (s *StoryService) LikeStory(ctx context.Context, storyID, userID primitive.ObjectID) error {
+	// 1. Persist the like
+	if err := s.repo.LikeStory(ctx, storyID, userID.Hex()); err != nil {
+		return err
+	}
+
+	// 2. Lookup story to get the owner
+	story, err := s.repo.GetStoryByID(ctx, storyID)
+	if err != nil || story == nil {
+		return nil // Don't fail the like just because we can't notify
+	}
+
+	// Don't notify if the owner liked their own story
+	if story.AuthorID == userID {
+		return nil
+	}
+
+	// 3. Lookup the liker's display name + avatar for the notification
+	likerUser, err := s.userRepo.FindByID(ctx, userID)
+	likerName := ""
+	likerAvatar := ""
+	if err == nil && likerUser != nil {
+		likerName = likerUser.Username
+		if likerUser.DisplayName != "" {
+			likerName = likerUser.DisplayName
+		}
+		likerAvatar = likerUser.AvatarURL
+	}
+
+	// 4. Send notification — type "story_like", entity = storyID
+	if err := s.notificationService.CreateNotification(
+		ctx,
+		story.AuthorID, // recipient
+		userID,         // actor
+		"story_like",
+		storyID,
+		"",
+		likerName,
+		likerAvatar,
+	); err != nil {
+		log.Printf("WARNING: failed to send story_like notification: %v", err)
+	}
+
+	return nil
+}
+
+// UnlikeStory removes the current user's ID from the story's likes
+func (s *StoryService) UnlikeStory(ctx context.Context, storyID, userID primitive.ObjectID) error {
+	return s.repo.UnlikeStory(ctx, storyID, userID.Hex())
+}
+
+// LikerInfo carries resolved user info for a story liker
+type LikerInfo struct {
+	ID          string `json:"id"`
+	Username    string `json:"username"`
+	DisplayName string `json:"display_name"`
+	AvatarURL   string `json:"avatar_url"`
+}
+
+// GetStoryLikers resolves the user IDs in a story's likes to full user info
+func (s *StoryService) GetStoryLikers(ctx context.Context, storyID primitive.ObjectID) ([]LikerInfo, error) {
+	story, err := s.repo.GetStoryByID(ctx, storyID)
+	if err != nil {
+		return nil, errors.New("story not found")
+	}
+
+	likers := make([]LikerInfo, 0, len(story.Likes))
+	for _, uidStr := range story.Likes {
+		oid, err := primitive.ObjectIDFromHex(uidStr)
+		if err != nil {
+			continue
+		}
+		user, err := s.userRepo.FindByID(ctx, oid)
+		if err != nil || user == nil {
+			continue
+		}
+		displayName := user.Username
+		if user.DisplayName != "" {
+			displayName = user.DisplayName
+		}
+		likers = append(likers, LikerInfo{
+			ID:          uidStr,
+			Username:    user.Username,
+			DisplayName: displayName,
+			AvatarURL:   user.AvatarURL,
+		})
+	}
+
+	return likers, nil
 }

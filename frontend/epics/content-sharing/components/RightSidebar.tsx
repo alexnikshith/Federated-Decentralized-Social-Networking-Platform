@@ -48,26 +48,6 @@ export const RightSidebar: React.FC = () => {
     return (
         <div className="w-[300px] hidden xl:block flex-shrink-0 space-y-6 pt-2 pb-8 fixed right-8 top-8 h-[calc(100vh-4rem)] overflow-y-auto scroller-hidden">
 
-            {/* Trending Now Widget */}
-            <div className="glass-card rounded-2xl p-5 border border-white/5 shadow-sm bg-background/40 backdrop-blur-xl">
-                <div className="flex items-center gap-2 mb-4">
-                    <TrendingUp className="w-5 h-5 text-primary" />
-                    <h2 className="font-display font-bold text-lg text-foreground">Trending Now</h2>
-                </div>
-
-                <div className="flex flex-col items-center justify-center py-6 text-center space-y-3">
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                        <TrendingUp className="w-6 h-6" />
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-foreground">Coming Soon</h3>
-                        <p className="text-xs text-muted-foreground mt-1 px-4">Trending topics and local tags are currently indexing.</p>
-                    </div>
-                </div>
-
-
-            </div>
-
             {/* Suggested Connections Widget */}
             <div className="glass-card rounded-2xl p-5 border border-white/5 shadow-sm bg-background/40 backdrop-blur-xl">
                 <div className="flex items-center gap-2 mb-4">
@@ -132,7 +112,7 @@ export const RightSidebar: React.FC = () => {
                                 setIsLoading(true);
                                 const users = await searchUsers('', 30);
                                 const shuffled = users.sort(() => 0.5 - Math.random());
-                                setSuggestedUsers(shuffled.filter(u => !u.is_following && u.id !== currentUser?.id).slice(0, 4));
+                                setSuggestedUsers(shuffled.filter(u => !u.is_following && u.id !== currentUser?.id).slice(0, 6));
                             } catch (error) {
                                 console.error("Failed to fetch suggested users", error);
                             } finally {

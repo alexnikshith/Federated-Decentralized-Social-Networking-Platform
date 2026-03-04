@@ -150,6 +150,14 @@ export const LoginForm = ({
         return () => clearTimeout(timer);
     }, [email, instance, view]);
 
+    const handleSwitchToRegister = (e?: React.MouseEvent) => {
+        if (e) e.preventDefault();
+        onSwitchToRegister?.();
+        setTimeout(() => {
+            navigate('/signup');
+        }, 0);
+    };
+
     const handleLoginSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);

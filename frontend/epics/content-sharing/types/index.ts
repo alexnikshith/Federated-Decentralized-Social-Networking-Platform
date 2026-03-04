@@ -36,7 +36,7 @@ export interface Comment {
 // Notification alerts the user to interactions
 export interface Notification {
     id: string;
-    type: 'like' | 'comment' | 'follow' | 'mention' | 'message';
+    type: 'like' | 'comment' | 'follow' | 'mention' | 'message' | 'story_like';
     related_entity_id: string;
     related_user_id: string;
     related_user_name: string;
