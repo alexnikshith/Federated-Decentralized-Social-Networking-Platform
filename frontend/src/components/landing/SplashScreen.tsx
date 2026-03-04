@@ -1,9 +1,24 @@
 "use client"
 
+import { useRef } from "react";
 import { motion } from "framer-motion";
 import { ParticleTextEffect } from "../particle-text-effect";
 
+const SESSION_KEY = "nexus_particle_intro_seen"
+
 export function SplashScreen() {
+    // Same ref-based guard used in ParticleTextEffect —
+    // evaluated once per instance, never on re-renders.
+    const alreadySeenRef = useRef<boolean | null>(null)
+    if (alreadySeenRef.current === null) {
+        alreadySeenRef.current =
+            typeof window !== "undefined" &&
+            sessionStorage.getItem(SESSION_KEY) === "true"
+    }
+
+    // Already seen this session — render nothing, no black screen
+    if (alreadySeenRef.current) return null
+
     return (
         <motion.div
             initial={{ opacity: 1 }}

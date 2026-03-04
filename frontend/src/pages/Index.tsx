@@ -7,21 +7,29 @@ import { FeaturesSection } from "@/components/landing/FeaturesSection";
 import { SplashScreen } from "@/components/landing/SplashScreen";
 import { AnimatePresence, motion } from "framer-motion";
 
+const SESSION_KEY = "nexus_particle_intro_seen";
 
 const Index = () => {
-  const [showSplash, setShowSplash] = useState(true);
+  // If the session flag is already set, skip the splash immediately —
+  // useState initializer runs once, synchronously, before any render.
+  const [showSplash, setShowSplash] = useState(
+    () => typeof window !== "undefined" && sessionStorage.getItem(SESSION_KEY) !== "true"
+  );
+
   const clearAllSessions = useAuthStore(state => state.clearAllSessions);
 
   useEffect(() => {
-    // Reset all sessions whenever landing page is triggered
     clearAllSessions();
+
+    // Only run the timer if splash is actually showing
+    if (!showSplash) return;
 
     const timer = setTimeout(() => {
       setShowSplash(false);
     }, 4500);
 
     return () => clearTimeout(timer);
-  }, [clearAllSessions]);
+  }, []);
 
   return (
     <AnimatePresence mode="wait">
@@ -30,9 +38,10 @@ const Index = () => {
       ) : (
         <motion.div
           key="main"
-          initial={{ opacity: 0 }}
+          // No fade-in on return visits — only animate on first load
+          initial={{ opacity: showSplash ? 0 : 1 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 1.5, ease: "easeOut" }}
+          transition={{ duration: showSplash ? 1.5 : 0, ease: "easeOut" }}
           className="min-h-screen flex flex-col relative bg-transparent"
         >
           {/* Global Cinematic Cosmos Background */}
