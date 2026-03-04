@@ -11,13 +11,14 @@ type CreateStoryRequest struct {
 
 // StoryResponse represents a formatted story returned to the client
 type StoryResponse struct {
-	ID         string    `json:"id"`
-	AuthorID   string    `json:"author_id"`
-	AuthorName string    `json:"author_name"`
-	AuthorAvatar string  `json:"author_avatar"`
-	MediaURL   string    `json:"media_url"`
-	MediaType  string    `json:"media_type"`
-	Content    string    `json:"content,omitempty"`
-	CreatedAt  time.Time `json:"created_at"`
-	ExpiresAt  time.Time `json:"expires_at"`
+	ID           string    `json:"id"`
+	AuthorID     string    `json:"author_id"`
+	AuthorName   string    `json:"author_name"`
+	AuthorAvatar string    `json:"author_avatar"`
+	MediaURL     string    `json:"media_url"`
+	MediaType    string    `json:"media_type"`
+	Content      string    `json:"content,omitempty"`
+	Likes        []string  `json:"likes"`
+	CreatedAt    time.Time `json:"created_at"`
+	ExpiresAt    time.Time `json:"expires_at"`
 }

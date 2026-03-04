@@ -51,7 +51,7 @@ export const IdentityLayout: React.FC<IdentityLayoutProps> = ({
     // Theme color mappings
     const themeClasses = {
         border: isEmerald ? 'border-emerald-500/30' : 'border-amber-500/30',
-        bg: isEmerald ? 'bg-emerald-950/[0.40]' : 'bg-amber-950/[0.40]',
+        bg: isEmerald ? 'bg-emerald-950/[0.80]' : 'bg-amber-950/[0.80]',
         glow: isEmerald ? 'bg-emerald-500/30' : 'bg-amber-500/30',
         icon: isEmerald ? 'text-emerald-100' : 'text-amber-100',
         shadow: isEmerald ? 'drop-shadow-[0_0_20px_rgba(16,185,129,0.8)]' : 'drop-shadow-[0_0_20px_rgba(255,146,0,0.8)]'
@@ -61,25 +61,13 @@ export const IdentityLayout: React.FC<IdentityLayoutProps> = ({
         if (isExiting) {
             setHologramVisible(false);
         } else {
-            const timer = setTimeout(() => setHologramVisible(true), 800);
+            const timer = setTimeout(() => setHologramVisible(true), 200);
             return () => clearTimeout(timer);
         }
     }, [isExiting]);
 
     return (
-        <div className="h-[100dvh] bg-background flex items-center justify-center relative w-full overflow-hidden">
-            {/* Global Cosmos Background */}
-            <motion.div
-                className="fixed inset-0 w-full h-full bg-[url('/Space_shuttle.png')] bg-cover bg-center bg-no-repeat mix-blend-screen pointer-events-none"
-                initial={{ scale: 1, opacity: 0.4 }}
-                animate={{
-                    scale: isExiting && isCinematic ? 5 : 1,
-                    opacity: isExiting ? (isCinematic ? 0.9 : 0.4) : 0.4
-                }}
-                transition={{ duration: 1.0, ease: isCinematic ? "easeIn" : "easeOut" }}
-                style={{ filter: "contrast(1.2) brightness(0.8)", zIndex: 0 }}
-            />
-            <div className="fixed inset-0 bg-background/60 pointer-events-none" style={{ zIndex: 0 }} />
+        <div className="h-[100dvh] bg-transparent flex items-center justify-center relative w-full overflow-hidden">
 
             <div
                 className="relative z-10 flex-shrink-0"
@@ -94,7 +82,7 @@ export const IdentityLayout: React.FC<IdentityLayoutProps> = ({
                     <HologramProjector isActive={hologramVisible} theme={theme}>
                         <div
                             className={cn(
-                                "relative -left-[10px] rounded-2xl border backdrop-blur-[2px] overflow-hidden",
+                                "relative -left-[10px] rounded-2xl border backdrop-blur-md overflow-hidden",
                                 themeClasses.border,
                                 themeClasses.bg
                             )}

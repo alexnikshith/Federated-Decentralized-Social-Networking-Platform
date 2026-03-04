@@ -22,13 +22,10 @@ import { TransitionState } from '../../../epics/identity/store/authStore';
 import './Dashboard.css';
 
 export const DashboardPage: React.FC = () => {
-    const { user, transitionState } = useAuthStore();
+    const { user } = useAuthStore();
     const { posts, loading, error, fetchFeed, fetchUnreadCount, unreadCount, feedType, setFeedType } = useContentStore();
     const [sidebarType, setSidebarType] = useState<'notifications' | 'search' | null>(null);
     const [searchParams, setSearchParams] = useSearchParams();
-
-    // The dashboard should only render its cards *after* the cinematic 3D DOM_HANDOFF has reached COMPLETE or IDLE
-    const isReady = transitionState === TransitionState.COMPLETE || transitionState === TransitionState.IDLE;
 
     useEffect(() => {
         if (searchParams.get('search') === 'true') {
@@ -65,22 +62,15 @@ export const DashboardPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 xl:grid-cols-[1fr_300px] gap-6 max-w-7xl mx-auto">
                     {/* Main Feed Section */}
-                    <div className="feed-section stagger-2 min-w-0">
+                    <div className="feed-section min-w-0">
 
                         {/* New Top Content Layout */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: isReady ? 1 : 0, y: isReady ? 0 : 20 }}
-                            transition={{ duration: 0.8, delay: 0.1, ease: 'easeOut' }}
-                        >
+                        <div>
                             <StoriesRow />
-                        </motion.div>
+                        </div>
 
-                        <motion.div
+                        <div
                             className="flex items-center justify-between mb-4"
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: isReady ? 1 : 0, y: isReady ? 0 : 20 }}
-                            transition={{ duration: 0.8, delay: 0.3, ease: 'easeOut' }}
                         >
                             <h2 className="section-title mb-0">
                                 <Rss className="w-5 h-5 text-primary" />
@@ -106,13 +96,10 @@ export const DashboardPage: React.FC = () => {
                                     Public
                                 </button>
                             </div>
-                        </motion.div>
+                        </div>
 
-                        <motion.div
+                        <div
                             className="space-y-4"
-                            initial={{ opacity: 0, scale: 0.98 }}
-                            animate={{ opacity: isReady ? 1 : 0, scale: isReady ? 1 : 0.98 }}
-                            transition={{ duration: 0.8, delay: 0.5, ease: 'easeOut' }}
                         >
                             {loading && (!posts || posts.length === 0) && (
                                 <div className="feed-loading">
@@ -138,23 +125,19 @@ export const DashboardPage: React.FC = () => {
 
                             {posts && posts
                                 .map((post, index) => (
-                                    <div key={post.id} className="opacity-0 animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
+                                    <div key={post.id}>
                                         <div className="glass-card rounded-xl overflow-hidden">
                                             <PostCard post={post} />
                                         </div>
                                     </div>
                                 ))}
-                        </motion.div>
+                        </div>
                     </div>
 
                     {/* Right Sidebar */}
-                    <motion.div
-                        initial={{ opacity: 0, x: 50 }}
-                        animate={{ opacity: isReady ? 1 : 0, x: isReady ? 0 : 50 }}
-                        transition={{ duration: 0.8, delay: 0.7, ease: 'easeOut' }}
-                    >
+                    <div>
                         <RightSidebar />
-                    </motion.div>
+                    </div>
 
                     {/* Overlay */}
                     {sidebarType && (
@@ -166,7 +149,7 @@ export const DashboardPage: React.FC = () => {
 
                     {/* Sidebar section */}
                     <div className={cn(
-                        "sidebar-section stagger-3",
+                        "sidebar-section",
                         sidebarType ? "active" : ""
                     )}>
                         <div className="flex items-center justify-between mb-4">

@@ -9,6 +9,7 @@ interface Story {
     media_url: string;
     media_type: 'image' | 'video';
     content?: string;
+    likes: string[];  // user IDs who liked
     created_at: string;
     expires_at: string;
 }
@@ -20,6 +21,8 @@ interface StoryStore {
     fetchStories: () => Promise<void>;
     createStory: (media_url: string, media_type: string, content?: string) => Promise<void>;
     deleteStory: (id: string) => Promise<void>;
+    likeStory: (id: string) => Promise<void>;
+    unlikeStory: (id: string) => Promise<void>;
 }
 
 const getApiUrl = () => {
@@ -47,7 +50,7 @@ export const useStoryStore = create<StoryStore>((set, get) => ({
             });
             if (!res.ok) throw new Error('Failed to fetch stories');
             const data = await res.json();
-            set({ stories: data.data || [], loading: false });
+            set({ stories: (data.data || []).map((s: any) => ({ ...s, likes: s.likes ?? [] })), loading: false });
         } catch (error: any) {
             set({ error: error.message, loading: false });
             console.error(error);
@@ -64,8 +67,7 @@ export const useStoryStore = create<StoryStore>((set, get) => ({
 
             if (!res.ok) throw new Error('Failed to create story');
             const data = await res.json();
-            // Prefix to the list locally
-            const newStory = data.data;
+            const newStory = { ...data.data, likes: data.data.likes ?? [] };
             set(state => ({ stories: [newStory, ...state.stories] }));
         } catch (error: any) {
             console.error(error);
@@ -86,5 +88,61 @@ export const useStoryStore = create<StoryStore>((set, get) => ({
             console.error(error);
             throw error;
         }
-    }
+    },
+
+    likeStory: async (id) => {
+        const userId = useAuthStore.getState().user?.id;
+        if (!userId) return;
+        // Optimistic update
+        set(state => ({
+            stories: state.stories.map(s =>
+                s.id === id && !s.likes.includes(userId)
+                    ? { ...s, likes: [...s.likes, userId] }
+                    : s
+            )
+        }));
+        try {
+            const res = await fetch(`${getApiUrl()}/api/stories/${id}/like`, {
+                method: 'POST',
+                headers: getHeaders()
+            });
+            if (!res.ok) throw new Error('Failed to like story');
+        } catch (error: any) {
+            // Rollback on failure
+            set(state => ({
+                stories: state.stories.map(s =>
+                    s.id === id ? { ...s, likes: s.likes.filter(uid => uid !== userId) } : s
+                )
+            }));
+            console.error(error);
+        }
+    },
+
+    unlikeStory: async (id) => {
+        const userId = useAuthStore.getState().user?.id;
+        if (!userId) return;
+        // Optimistic update
+        set(state => ({
+            stories: state.stories.map(s =>
+                s.id === id ? { ...s, likes: s.likes.filter(uid => uid !== userId) } : s
+            )
+        }));
+        try {
+            const res = await fetch(`${getApiUrl()}/api/stories/${id}/like`, {
+                method: 'DELETE',
+                headers: getHeaders()
+            });
+            if (!res.ok) throw new Error('Failed to unlike story');
+        } catch (error: any) {
+            // Rollback on failure
+            set(state => ({
+                stories: state.stories.map(s =>
+                    s.id === id && !s.likes.includes(userId)
+                        ? { ...s, likes: [...s.likes, userId] }
+                        : s
+                )
+            }));
+            console.error(error);
+        }
+    },
 }));

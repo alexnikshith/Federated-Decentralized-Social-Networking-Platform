@@ -101,7 +101,7 @@ export function Header() {
                 </Link>
                 <Link to="/register">
                   <button className="px-6 py-2 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-bold tracking-[0.2em] uppercase rounded-full hover:bg-cyan-500/20 hover:border-cyan-500/40 transition-all shadow-[0_0_20px_rgba(6,182,212,0.1)]">
-                    Join Network
+                    Sign Up
                   </button>
                 </Link>
               </>

@@ -204,7 +204,7 @@ export const SignupPage: React.FC = () => {
         setIsSwitchingPage(true);
         setTimeout(() => {
             navigate('/login');
-        }, 1000);
+        }, 0);
     };
 
     return (
@@ -237,7 +237,7 @@ export const SignupPage: React.FC = () => {
                                     setIsSwitchingPage(true);
                                     setTimeout(() => {
                                         navigate('/');
-                                    }, 1000);
+                                    }, 0);
                                 } else {
                                     setStep((prev) => (prev - 1) as 1 | 2 | 3);
                                 }
@@ -254,57 +254,82 @@ export const SignupPage: React.FC = () => {
                         style={{ transform: step === 1 ? 'translateX(0%)' : step === 2 ? 'translateX(-33.333%)' : 'translateX(-66.666%)' }}
                     >
                         {/* ── Panel 1: Community Selection ── */}
-                        <div className="w-1/3 shrink-0 flex flex-col gap-0 px-10 pt-10 pb-6">
-
-                            <div className="flex items-center justify-between mt-8 mb-4 border-b border-amber-500/20 pb-2">
-                                <h2 className="text-lg font-bold text-amber-500 tracking-[0.4em] uppercase font-mono">COMMUNITY</h2>
-                                <div className="text-xs font-mono text-amber-500/40">[ PHASE_01 ]</div>
+                        <div className="w-1/3 shrink-0 flex items-stretch">
+                            {/* Left Column: Welcome Heading */}
+                            <div className="flex-1 flex flex-col items-center justify-center px-10 relative">
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="text-center"
+                                >
+                                    <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto mb-6">
+                                        <Globe className="w-8 h-8 text-amber-400" />
+                                    </div>
+                                    <h1 className="text-3xl font-light tracking-[0.2em] uppercase text-white mb-2">
+                                        Welcome to <span className="font-bold text-amber-400">Nexus</span>
+                                    </h1>
+                                    <p className="text-sm font-mono tracking-widest text-amber-100/40 uppercase">
+                                        Identity Registration Protocol
+                                    </p>
+                                </motion.div>
                             </div>
 
-                            <div className="space-y-3 max-h-[35vh] overflow-y-auto custom-scrollbar pr-3">
-                                {COMMUNITIES.map((community) => (
-                                    <button
-                                        key={community.id}
-                                        onClick={() => setSelectedCommunityId(community.id)}
-                                        className={cn(
-                                            "w-full p-4 border rounded-xl transition-all flex items-center justify-between group relative overflow-hidden",
-                                            "bg-amber-500/[0.02] backdrop-blur-md",
-                                            selectedCommunityId === community.id
-                                                ? "border-amber-400 shadow-[0_0_20px_rgba(255,146,0,0.2),inset_0_0_15px_rgba(255,146,0,0.05)] bg-amber-500/[0.08]"
-                                                : "border-amber-500/10 hover:border-amber-400/40 hover:bg-amber-500/[0.04]"
-                                        )}
-                                    >
-                                        <div className="flex items-center gap-3 relative z-10">
-                                            <div className={cn(
-                                                "w-10 h-10 rounded-lg flex items-center justify-center border transition-colors",
-                                                selectedCommunityId === community.id ? "bg-amber-500/20 border-amber-400/50" : "bg-black/40 border-amber-500/10"
-                                            )}>
-                                                <Globe className={cn("w-5 h-5", selectedCommunityId === community.id ? "text-amber-200" : "text-amber-600/40")} />
+                            {/* Vertical Divider */}
+                            <div className="w-[1px] bg-amber-500/10 my-10" />
+
+                            {/* Right Column: Community List */}
+                            <div className="flex-1 flex flex-col px-10 pt-10 pb-6 relative">
+                                <div className="flex items-center justify-between mb-4 border-b border-amber-500/20 pb-2 flex-shrink-0">
+                                    <h2 className="text-lg font-bold text-amber-500 tracking-[0.4em] uppercase font-mono">COMMUNITY</h2>
+                                    <div className="text-xs font-mono text-amber-500/40">[ PHASE_01 ]</div>
+                                </div>
+
+                                <div className="space-y-3 flex-1 overflow-y-auto custom-scrollbar pr-3">
+                                    {COMMUNITIES.map((community) => (
+                                        <button
+                                            key={community.id}
+                                            onClick={() => setSelectedCommunityId(community.id)}
+                                            className={cn(
+                                                "w-full p-4 border rounded-xl transition-all flex items-center justify-between group relative overflow-hidden",
+                                                "bg-amber-500/[0.02] backdrop-blur-md",
+                                                selectedCommunityId === community.id
+                                                    ? "border-amber-400 shadow-[0_0_20px_rgba(255,146,0,0.2),inset_0_0_15px_rgba(255,146,0,0.05)] bg-amber-500/[0.08]"
+                                                    : "border-amber-500/10 hover:border-amber-400/40 hover:bg-amber-500/[0.04]"
+                                            )}
+                                        >
+                                            <div className="flex items-center gap-3 relative z-10">
+                                                <div className={cn(
+                                                    "w-10 h-10 rounded-lg flex items-center justify-center border transition-colors",
+                                                    selectedCommunityId === community.id ? "bg-amber-500/20 border-amber-400/50" : "bg-black/40 border-amber-500/10"
+                                                )}>
+                                                    <Globe className={cn("w-5 h-5", selectedCommunityId === community.id ? "text-amber-200" : "text-amber-600/40")} />
+                                                </div>
+                                                <div className="text-left">
+                                                    <span className={cn("font-mono font-bold block text-sm tracking-wider", selectedCommunityId === community.id ? "text-amber-100" : "text-amber-500/60")}>{community.name}</span>
+                                                    <span className="text-[10px] text-amber-600/40 font-mono block mt-0.5 uppercase tracking-widest">{community.url}</span>
+                                                </div>
                                             </div>
-                                            <div className="text-left">
-                                                <span className={cn("font-mono font-bold block text-sm tracking-wider", selectedCommunityId === community.id ? "text-amber-100" : "text-amber-500/60")}>{community.name}</span>
-                                                <span className="text-[10px] text-amber-600/40 font-mono block mt-0.5 uppercase tracking-widest">{community.url}</span>
-                                            </div>
-                                        </div>
-                                        {selectedCommunityId === community.id && (
-                                            <div className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center shadow-[0_0_10px_rgba(245,158,11,0.5)]">
-                                                <Check className="w-3 h-3 text-amber-950 stroke-[3]" />
-                                            </div>
-                                        )}
+                                            {selectedCommunityId === community.id && (
+                                                <div className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center shadow-[0_0_10px_rgba(245,158,11,0.5)]">
+                                                    <Check className="w-3 h-3 text-amber-950 stroke-[3]" />
+                                                </div>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <div className="mt-4 pt-4 border-t border-amber-500/10 flex-shrink-0">
+                                    <button type="button" onClick={handleNextStep} disabled={!selectedCommunityId} className="w-full relative group/btn py-3 overflow-hidden text-center disabled:opacity-40">
+                                        <span className="relative z-10 font-mono text-base font-bold tracking-[0.4em] text-amber-100 flex items-center justify-center gap-3">
+                                            CONTINUE <ArrowRight className="w-4 h-4" />
+                                        </span>
+                                        {selectedCommunityId && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[90%] h-[1px] bg-gradient-to-r from-transparent via-amber-400 to-transparent shadow-[0_0_15px_rgba(245,158,11,1)]" />}
                                     </button>
-                                ))}
-                            </div>
-
-                            <div className="mt-auto pt-6">
-                                <button type="button" onClick={handleNextStep} disabled={!selectedCommunityId} className="w-full relative group/btn py-3 overflow-hidden text-center disabled:opacity-40">
-                                    <span className="relative z-10 font-mono text-base font-bold tracking-[0.4em] text-amber-100 flex items-center justify-center gap-3">
-                                        CONTINUE <ArrowRight className="w-4 h-4" />
-                                    </span>
-                                    {selectedCommunityId && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[90%] h-[1px] bg-gradient-to-r from-transparent via-amber-400 to-transparent shadow-[0_0_15px_rgba(245,158,11,1)]" />}
-                                </button>
-                                <p className="text-center mt-4 text-xs text-amber-500/70 font-mono tracking-[0.2em] uppercase">
-                                    ALREADY_REGISTERED? <button onClick={handleSwitchToLogin} className="text-amber-400 font-bold hover:text-amber-200 transition-colors">LOGIN</button>
-                                </p>
+                                    <p className="text-center mt-4 text-xs text-amber-500/70 font-mono tracking-[0.2em] uppercase">
+                                        ALREADY_REGISTERED? <button onClick={handleSwitchToLogin} className="text-amber-400 font-bold hover:text-amber-200 transition-colors">LOGIN</button>
+                                    </p>
+                                </div>
                             </div>
                         </div>
 

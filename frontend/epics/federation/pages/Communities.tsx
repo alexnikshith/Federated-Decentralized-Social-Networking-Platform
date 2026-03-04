@@ -188,7 +188,7 @@ const Communities = () => {
           {/* Header */}
           <div className="max-w-3xl mb-12">
             <h1 className="font-display text-4xl md:text-5xl font-bold mb-4">
-              Explore <span className="text-gradient-gold">Communities</span>
+              Explore <span className="text-gradient-gold">Federation</span>
             </h1>
             <p className="text-lg text-muted-foreground">
               Find your people. Each community is independently operated. Join one to create an account there.
