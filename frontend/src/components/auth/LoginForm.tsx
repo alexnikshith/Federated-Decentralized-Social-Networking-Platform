@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Orbit, ChevronLeft, Globe, ArrowRight, Eye, EyeOff, Shield, KeyRound, Mail, CheckCircle2, Loader2, Info, AlertCircle, Check, ShieldCheck } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
     Select,
     SelectContent,
@@ -64,6 +64,29 @@ export const LoginForm = ({
 
     const isPasswordValid = Object.values(passwordRequirements).every(Boolean);
     const passwordsMatch = newPassword === confirmPassword && newPassword !== '';
+
+    // Auto-clear errors after 3 seconds and reset causative fields
+    useEffect(() => {
+        if (error || emailCheckError) {
+            const timer = setTimeout(() => {
+                if (emailCheckError) {
+                    setEmail("");
+                }
+                if (error) {
+                    // Reset field based on view
+                    if (view === 'login') setPassword("");
+                    if (view === 'login_otp' || view === 'forgot_otp') setOtp("");
+                    if (view === 'forgot_reset') {
+                        setNewPassword("");
+                        setConfirmPassword("");
+                    }
+                }
+                setError(null);
+                setEmailCheckError(null);
+            }, 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [error, emailCheckError, view]);
 
     const location = useLocation();
     const [signupSuccess, setSignupSuccess] = useState(false);
@@ -301,16 +324,30 @@ export const LoginForm = ({
                     transition={{ duration: 0.8, ease: "anticipate" }}
                     className="relative w-full max-w-[440px] mx-auto z-10 space-y-4 flex-1 flex flex-col justify-center"
                 >
-                    {error && (
-                        <div className="px-3 py-2 border border-red-500/40 bg-red-950/30 text-red-300 text-[10px] font-mono flex items-center gap-2 mb-2">
-                            <Info className="w-4 h-4 shrink-0" />{error}
-                        </div>
-                    )}
-                    {emailCheckError && (view === 'login' || view === 'forgot_email') && (
-                        <div className="px-3 py-2 border border-red-500/40 bg-red-950/30 text-red-300 text-[10px] font-mono flex items-center gap-2 mb-2 animate-in fade-in slide-in-from-top-1 duration-300">
-                            <AlertCircle className="w-4 h-4 shrink-0" />{emailCheckError}
-                        </div>
-                    )}
+                    <AnimatePresence mode="popLayout">
+                        {error && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                                animate={{ opacity: 1, height: 'auto', marginBottom: 8 }}
+                                exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                                transition={{ duration: 0.3 }}
+                                className="px-3 py-2 border border-red-500/40 bg-red-950/30 text-red-300 text-[10px] font-mono flex items-center gap-2 overflow-hidden"
+                            >
+                                <Info className="w-4 h-4 shrink-0" />{error}
+                            </motion.div>
+                        )}
+                        {emailCheckError && (view === 'login' || view === 'forgot_email') && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                                animate={{ opacity: 1, height: 'auto', marginBottom: 8 }}
+                                exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                                transition={{ duration: 0.3 }}
+                                className="px-3 py-2 border border-red-500/40 bg-red-950/30 text-red-300 text-[10px] font-mono flex items-center gap-2 overflow-hidden"
+                            >
+                                <AlertCircle className="w-4 h-4 shrink-0" />{emailCheckError}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
                     {/* -- LOGIN VIEWS -- */}
                     {(view === 'login' || view === 'login_otp') && (
@@ -349,7 +386,13 @@ export const LoginForm = ({
                                         <div className="relative">
                                             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600/40 w-4 h-4" />
                                             <input
-                                                type="email" placeholder="you@nebula.net" value={email} onChange={(e) => setEmail(e.target.value)} required
+                                                type="email" placeholder="you@nebula.net" value={email}
+                                                onChange={(e) => {
+                                                    setEmail(e.target.value);
+                                                    setError(null);
+                                                    setEmailCheckError(null);
+                                                }}
+                                                required
                                                 className={cn(
                                                     "w-full bg-emerald-500/[0.03] border rounded-lg py-2 pl-10 pr-10 text-emerald-50 text-sm font-mono tracking-wider focus:outline-none focus:bg-emerald-500/[0.08] transition-all placeholder:text-emerald-800/30",
                                                     emailCheckError ? "border-red-500/40" : "border-emerald-500/20 focus:border-emerald-400"
@@ -379,7 +422,10 @@ export const LoginForm = ({
                                                 type={showPassword ? "text" : "password"}
                                                 placeholder="••••••••"
                                                 value={password}
-                                                onChange={(e) => setPassword(e.target.value)}
+                                                onChange={(e) => {
+                                                    setPassword(e.target.value);
+                                                    setError(null);
+                                                }}
                                                 className="w-full bg-emerald-500/[0.03] border border-emerald-500/20 rounded-lg py-2 pl-3 pr-10 text-emerald-50 text-sm font-mono tracking-wider focus:outline-none focus:border-emerald-400 focus:bg-emerald-500/[0.08] transition-all placeholder:text-emerald-800/30"
                                                 required
                                             />
@@ -404,7 +450,10 @@ export const LoginForm = ({
                                         type="text"
                                         placeholder="000000"
                                         value={otp}
-                                        onChange={(e) => setOtp(e.target.value)}
+                                        onChange={(e) => {
+                                            setOtp(e.target.value);
+                                            setError(null);
+                                        }}
                                         className="w-full bg-emerald-500/[0.03] border border-emerald-500/20 rounded-lg py-4 text-center text-3xl tracking-[0.5em] font-mono text-emerald-100 focus:outline-none focus:border-emerald-400 focus:bg-emerald-500/[0.08] transition-all placeholder:text-emerald-800/30"
                                         maxLength={6}
                                         required
@@ -540,7 +589,10 @@ export const LoginForm = ({
                                             type={showPassword ? "text" : "password"}
                                             placeholder="••••••••"
                                             value={newPassword}
-                                            onChange={(e) => setNewPassword(e.target.value)}
+                                            onChange={(e) => {
+                                                setNewPassword(e.target.value);
+                                                setError(null);
+                                            }}
                                             className="w-full bg-emerald-500/[0.03] border border-emerald-500/20 rounded-lg py-2 pl-10 pr-10 text-emerald-50 text-sm font-mono tracking-wider focus:outline-none focus:border-emerald-400 focus:bg-emerald-500/[0.08] transition-all placeholder:text-emerald-800/30"
                                             required
                                             autoFocus
@@ -564,7 +616,10 @@ export const LoginForm = ({
                                             type={showConfirmPassword ? "text" : "password"}
                                             placeholder="••••••••"
                                             value={confirmPassword}
-                                            onChange={(e) => setConfirmPassword(e.target.value)}
+                                            onChange={(e) => {
+                                                setConfirmPassword(e.target.value);
+                                                setError(null);
+                                            }}
                                             className={cn(
                                                 "w-full bg-emerald-500/[0.03] border rounded-lg py-2 pl-10 pr-10 text-emerald-50 text-sm font-mono tracking-wider focus:outline-none focus:bg-emerald-500/[0.08] transition-all placeholder:text-emerald-800/30",
                                                 confirmPassword && !passwordsMatch ? "border-red-500/40" : "border-emerald-500/20 focus:border-emerald-400"
