@@ -107,7 +107,7 @@ export function FeaturesSection() {
                 "bg-white/[0.03] border border-white/5",
                 feature.text, feature.border
               )}>
-                <feature.icon className="w-6 h-6" />
+                <feature.icon className="w-7 h-7" />
               </div>
 
               <h3 className="text-sm font-bold font-mono tracking-widest mb-4 text-white group-hover:text-cyan-400 transition-colors uppercase">
