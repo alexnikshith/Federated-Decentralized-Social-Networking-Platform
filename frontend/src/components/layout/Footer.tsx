@@ -103,6 +103,10 @@ export function Footer() {
           <p className="text-[10px] font-bold tracking-[0.4em] uppercase text-white/100 text-center">
             © {new Date().getFullYear()} NEXUS CORE SYSTEM • v0.4.2-COSMOS
           </p>
+          <div className="flex gap-8">
+            <span className="text-[10px] font-bold tracking-[0.4em] uppercase text-white/10">Encrypted</span>
+            <span className="text-[10px] font-bold tracking-[0.4em] uppercase text-white/10">Verified</span>
+          </div>
         </div>
       </div>
     </footer>
