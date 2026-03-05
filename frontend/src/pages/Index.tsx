@@ -38,10 +38,10 @@ const Index = () => {
       ) : (
         <motion.div
           key="main"
-          // Very fast fade-in when splash finishes
+          // No fade-in on return visits — only animate on first load
           initial={{ opacity: showSplash ? 0 : 1 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: showSplash ? 0.3 : 0, ease: "easeOut" }}
+          transition={{ duration: showSplash ? 1.5 : 0, ease: "easeOut" }}
           className="min-h-screen flex flex-col relative bg-transparent"
         >
 

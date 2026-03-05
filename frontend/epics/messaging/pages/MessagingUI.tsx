@@ -63,6 +63,7 @@ const MessagingUI: React.FC = () => {
         type: 'image' | 'video' | 'file';
     } | null>(null);
     const [uploadingMedia, setUploadingMedia] = useState(false);
+    const [sending, setSending] = useState(false);
 
     // New Chat State (Virtual conversation before first message)
     const [isNewChat, setIsNewChat] = useState(false);
@@ -279,9 +280,11 @@ const MessagingUI: React.FC = () => {
                 // Clear params after processing
                 setSearchParams({}, { replace: true });
             }
+            return convs;
         } catch (error) {
             console.error('Failed to load conversations:', error);
             setConversations([]);
+            return [];
         } finally {
             setLoading(false);
         }
@@ -330,7 +333,7 @@ const MessagingUI: React.FC = () => {
 
     const handleSendMessage = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
-        if ((!messageInput.trim() && !selectedMedia) || !currentUser) return;
+        if ((!messageInput.trim() && !selectedMedia) || !currentUser || sending) return;
         if (!selectedConversation && !isNewChat) return;
 
         let receiverId: string;
@@ -347,6 +350,8 @@ const MessagingUI: React.FC = () => {
         } else {
             return;
         }
+
+        setSending(true);
 
         try {
             let mediaUrl = '';
@@ -374,7 +379,11 @@ const MessagingUI: React.FC = () => {
                 receiver_community_url: receiverCommunityUrl
             });
 
-            setMessages(prev => [...(Array.isArray(prev) ? prev : []), newMsg]);
+            setMessages(prev => {
+                const currentPrev = Array.isArray(prev) ? prev : [];
+                if (currentPrev.some(m => m.id === newMsg.id)) return currentPrev;
+                return [...currentPrev, newMsg];
+            });
             setMessageInput('');
             setSelectedMedia(null);
             setUploadingMedia(false);
@@ -386,6 +395,10 @@ const MessagingUI: React.FC = () => {
                 await loadConversations();
                 setIsNewChat(false);
                 setNewChatUser(null);
+                const newConv = updatedConvs.find(c => c.participants.some(p => p.id === receiverId));
+                if (newConv) {
+                    setSelectedConversation(newConv);
+                }
             } else if (selectedConversation) {
                 setConversations(prev => {
                     const currentPrev = Array.isArray(prev) ? prev : [];
@@ -403,6 +416,8 @@ const MessagingUI: React.FC = () => {
         } catch (error) {
             console.error('Failed to send message:', error);
             setUploadingMedia(false);
+        } finally {
+            setSending(false);
         }
     };
 
@@ -891,7 +906,7 @@ const MessagingUI: React.FC = () => {
                                     <div className="flex-shrink-0">
                                         <Button
                                             type="submit"
-                                            disabled={(!messageInput.trim() && !selectedMedia) || uploadingMedia || (!isNewChat && selectedConversation && (getOtherParticipant(selectedConversation.participants).is_deactivated || getOtherParticipant(selectedConversation.participants).is_deleted))}
+                                            disabled={(!messageInput.trim() && !selectedMedia) || uploadingMedia || sending || (!isNewChat && selectedConversation && (getOtherParticipant(selectedConversation.participants).is_deactivated || getOtherParticipant(selectedConversation.participants).is_deleted))}
                                             className={cn(
                                                 "rounded-full h-10 w-10 p-0 flex items-center justify-center transition-all border-none transform",
                                                 messageInput.trim() || selectedMedia
@@ -899,7 +914,7 @@ const MessagingUI: React.FC = () => {
                                                     : "bg-secondary text-muted-foreground scale-95 opacity-50"
                                             )}
                                         >
-                                            {uploadingMedia ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className={cn("w-4 h-4", (messageInput.trim() || selectedMedia) ? "translate-x-0.5" : "")} />}
+                                            {(uploadingMedia || sending) ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className={cn("w-4 h-4", (messageInput.trim() || selectedMedia) ? "translate-x-0.5" : "")} />}
                                         </Button>
                                     </div>
                                 </form>
