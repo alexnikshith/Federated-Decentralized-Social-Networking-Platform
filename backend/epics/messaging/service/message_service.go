@@ -122,9 +122,17 @@ func (s *MessageService) SendMessage(ctx context.Context, senderID primitive.Obj
 		if req.ReceiverCommunityURL != "" {
 			go func() {
 				// We need our own community URL and username to tell the recipient who we are
-				senderCommunityUrl := config.AppConfig.InstanceDomain
+				senderCommunityUrl := config.AppConfig.BaseURL()
 				if !strings.HasPrefix(senderCommunityUrl, "http://") && !strings.HasPrefix(senderCommunityUrl, "https://") {
 					senderCommunityUrl = "http://" + senderCommunityUrl
+				}
+
+				resolvedURL := s.resolveFederationURL(req.ReceiverCommunityURL)
+				resolvedSenderURL := s.resolveFederationURL(senderCommunityUrl)
+
+				// Prevent loopback duplication where local instance federates to itself
+				if resolvedURL == resolvedSenderURL {
+					return
 				}
 
 				senderUsername := "Unknown User"
@@ -147,7 +155,6 @@ func (s *MessageService) SendMessage(ctx context.Context, senderID primitive.Obj
 					FileName:           req.FileName,
 				}
 
-				resolvedURL := s.resolveFederationURL(req.ReceiverCommunityURL)
 				body, _ := json.Marshal(deliveryReq)
 				resp, err := http.Post(resolvedURL+"/api/messages/remote", "application/json", bytes.NewBuffer(body))
 				if err != nil {

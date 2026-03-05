@@ -5,6 +5,18 @@ import React from "react";
 
 // ─── Hero Section ─────────────────────────────────────────────────────────────
 export function HeroSection() {
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
+
+  // Track cursor across the entire page and forward into SplineScene
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    setMousePos({ x: e.clientX, y: e.clientY })
+  }, [])
+
+  useEffect(() => {
+    window.addEventListener("mousemove", handleMouseMove)
+    return () => window.removeEventListener("mousemove", handleMouseMove)
+  }, [handleMouseMove])
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-transparent pt-20">
       <div className="container mx-auto px-4 lg:px-8 relative z-10 flex flex-col items-center justify-center text-center">
