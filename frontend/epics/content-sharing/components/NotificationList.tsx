@@ -43,7 +43,8 @@ export const NotificationList: React.FC = () => {
         switch (type) {
             case 'like':
                 return <Heart className="w-4 h-4 text-destructive fill-current" />;
-            // ...
+            case 'story_like':
+                return <Heart className="w-4 h-4 text-pink-500 fill-current" />;
             case 'comment':
                 return <MessageSquare className="w-4 h-4 text-primary fill-current" />;
             case 'message':
@@ -91,6 +92,8 @@ export const NotificationList: React.FC = () => {
         switch (notif.type) {
             case 'like':
                 return <span>{usernameElement} liked your post</span>;
+            case 'story_like':
+                return <span>{usernameElement} liked your story</span>;
             case 'comment':
                 // Check if this is a reply to a comment
                 if (notif.parent_comment_id && notif.parent_comment_content) {
@@ -160,6 +163,9 @@ export const NotificationList: React.FC = () => {
                                         navigate(`/profile/${notif.related_user_name}`);
                                     } else if (notif.type === 'message') {
                                         navigate('/messages');
+                                    } else if (notif.type === 'story_like') {
+                                        // Navigate to dashboard and auto-open the story
+                                        navigate(`/dashboard?openStory=${notif.related_entity_id}`);
                                     } else if (notif.type === 'like' || notif.type === 'mention') {
                                         // Open post in dialog
                                         setSelectedPostId(notif.related_entity_id);

@@ -25,8 +25,19 @@ class Particle {
   colorBlendRate = 0.01
 
   move() {
-    let proximityMult = 1
     const distance = Math.sqrt(Math.pow(this.pos.x - this.target.x, 2) + Math.pow(this.pos.y - this.target.y, 2))
+
+    if (distance < 0.5) {
+      this.pos.x = this.target.x
+      this.pos.y = this.target.y
+      this.vel.x = 0
+      this.vel.y = 0
+      this.acc.x = 0
+      this.acc.y = 0
+      return
+    }
+
+    let proximityMult = 1
     if (distance < this.closeEnoughTarget) {
       proximityMult = distance / this.closeEnoughTarget
     }
@@ -98,15 +109,24 @@ class Particle {
   }
 
   private generateRandomPos(x: number, y: number, mag: number): Vector2D {
-    const randomX = Math.random() * 1000
-    const randomY = Math.random() * 500
-    const direction = { x: randomX - x, y: randomY - y }
-    const magnitude = Math.sqrt(direction.x * direction.x + direction.y * direction.y)
+    const randomX = Math.random() * 1000;
+    const randomY = Math.random() * 500;
+
+    const direction = {
+      x: randomX - x,
+      y: randomY - y,
+    };
+
+    const magnitude = Math.sqrt(direction.x * direction.x + direction.y * direction.y);
     if (magnitude > 0) {
-      direction.x = (direction.x / magnitude) * mag
-      direction.y = (direction.y / magnitude) * mag
+      direction.x = (direction.x / magnitude) * mag;
+      direction.y = (direction.y / magnitude) * mag;
     }
-    return { x: x + direction.x, y: y + direction.y }
+
+    return {
+      x: x + direction.x,
+      y: y + direction.y,
+    };
   }
 }
 
@@ -123,7 +143,7 @@ export function ParticleTextEffect({ words = DEFAULT_WORDS }: ParticleTextEffect
   const particlesRef = useRef<Particle[]>([])
   const frameCountRef = useRef(0)
   const wordIndexRef = useRef(0)
-  const mouseRef = useRef({ x: 0, y: 0, isPressed: false })
+  const mouseRef = useRef({ x: 0, y: 0, isPressed: false, isRightClick: false })
 
   // ── Checked once at mount time via useRef, not at render time ──
   // Using a ref means: (a) it's evaluated inside the browser (no SSR mismatch),
@@ -142,13 +162,22 @@ export function ParticleTextEffect({ words = DEFAULT_WORDS }: ParticleTextEffect
   const generateRandomPos = (x: number, y: number, mag: number): Vector2D => {
     const randomX = Math.random() * 1000
     const randomY = Math.random() * 500
-    const direction = { x: randomX - x, y: randomY - y }
+
+    const direction = {
+      x: randomX - x,
+      y: randomY - y,
+    }
+
     const magnitude = Math.sqrt(direction.x * direction.x + direction.y * direction.y)
     if (magnitude > 0) {
       direction.x = (direction.x / magnitude) * mag
       direction.y = (direction.y / magnitude) * mag
     }
-    return { x: x + direction.x, y: y + direction.y }
+
+    return {
+      x: x + direction.x,
+      y: y + direction.y,
+    }
   }
 
   const nextWord = (word: string, canvas: HTMLCanvasElement) => {
@@ -181,7 +210,7 @@ export function ParticleTextEffect({ words = DEFAULT_WORDS }: ParticleTextEffect
     }
     for (let i = coordsIndexes.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
-      ;[coordsIndexes[i], coordsIndexes[j]] = [coordsIndexes[j], coordsIndexes[i]]
+        ;[coordsIndexes[i], coordsIndexes[j]] = [coordsIndexes[j], coordsIndexes[i]]
     }
 
     for (const coordIndex of coordsIndexes) {
@@ -200,10 +229,11 @@ export function ParticleTextEffect({ words = DEFAULT_WORDS }: ParticleTextEffect
           const randomPos = generateRandomPos(canvas.width / 2, canvas.height / 2, (canvas.width + canvas.height) / 2)
           particle.pos.x = randomPos.x
           particle.pos.y = randomPos.y
-          particle.maxSpeed = Math.random() * 6 + 4
-          particle.maxForce = particle.maxSpeed * 0.05
+          // Adjusted speed to be slightly slower to fill the new 3.5s splash animation
+          particle.maxSpeed = Math.random() * 15 + 10
+          particle.maxForce = particle.maxSpeed * 0.1
           particle.particleSize = Math.random() * 4 + 4
-          particle.colorBlendRate = Math.random() * 0.0275 + 0.0025
+          particle.colorBlendRate = Math.random() * 0.05 + 0.05
           particles.push(particle)
         }
 
@@ -272,8 +302,8 @@ export function ParticleTextEffect({ words = DEFAULT_WORDS }: ParticleTextEffect
     const canvas = canvasRef.current
     if (!canvas) return
 
-    canvas.width = 1200
-    canvas.height = 400
+    canvas.width = 1000
+    canvas.height = 500
 
     // Mark seen immediately so navigating away and back skips it
     sessionStorage.setItem(SESSION_KEY, "true")
@@ -283,17 +313,26 @@ export function ParticleTextEffect({ words = DEFAULT_WORDS }: ParticleTextEffect
 
     const handleMouseDown = (e: MouseEvent) => {
       mouseRef.current.isPressed = true
+      mouseRef.current.isRightClick = e.button === 2
       const rect = canvas.getBoundingClientRect()
       mouseRef.current.x = (e.clientX - rect.left) * (canvas.width / rect.width)
       mouseRef.current.y = (e.clientY - rect.top) * (canvas.height / rect.height)
     }
-    const handleMouseUp = () => { mouseRef.current.isPressed = false }
+
+    const handleMouseUp = () => {
+      mouseRef.current.isPressed = false
+      mouseRef.current.isRightClick = false
+    }
+
     const handleMouseMove = (e: MouseEvent) => {
       const rect = canvas.getBoundingClientRect()
       mouseRef.current.x = (e.clientX - rect.left) * (canvas.width / rect.width)
       mouseRef.current.y = (e.clientY - rect.top) * (canvas.height / rect.height)
     }
-    const handleContextMenu = (e: MouseEvent) => { e.preventDefault() }
+
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault()
+    }
 
     canvas.addEventListener("mousedown", handleMouseDown)
     window.addEventListener("mouseup", handleMouseUp)
@@ -313,11 +352,16 @@ export function ParticleTextEffect({ words = DEFAULT_WORDS }: ParticleTextEffect
   if (alreadySeenRef.current) return null
 
   return (
-    <div className="flex flex-col items-center justify-center w-full">
+    <div className="absolute inset-0 flex flex-col items-center justify-center w-full h-full pointer-events-none">
       <canvas
         ref={canvasRef}
-        className="w-full h-auto cursor-crosshair"
-        style={{ filter: "drop-shadow(0 0 20px rgba(6, 182, 212, 0.4))" }}
+        className="block cursor-crosshair pointer-events-auto"
+        style={{
+          width: "1000px",
+          height: "500px",
+          maxWidth: "100%",
+          filter: "drop-shadow(0 0 20px rgba(6, 182, 212, 0.4))",
+        }}
       />
     </div>
   )

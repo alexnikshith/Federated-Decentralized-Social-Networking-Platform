@@ -255,3 +255,44 @@ func (r *MessageRepository) MarkConversationAsRead(ctx context.Context, conversa
 	_, err := r.messages.UpdateMany(ctx, filter, update)
 	return err
 }
+
+// DeleteMessagesByUser deletes all messages sent by a specific user
+func (r *MessageRepository) DeleteMessagesByUser(ctx context.Context, userID primitive.ObjectID) error {
+	_, err := r.messages.DeleteMany(ctx, bson.M{"sender_id": userID})
+	return err
+}
+
+// DeleteConversationsByUser deletes all conversations a user participates in,
+// along with all messages within those conversations.
+func (r *MessageRepository) DeleteConversationsByUser(ctx context.Context, userID primitive.ObjectID) error {
+	// 1. Find all conversation IDs where userID is a participant
+	cursor, err := r.conversations.Find(ctx, bson.M{"participants": userID})
+	if err != nil {
+		return err
+	}
+	defer cursor.Close(ctx)
+
+	var convIDs []primitive.ObjectID
+	for cursor.Next(ctx) {
+		var conv struct {
+			ID primitive.ObjectID `bson:"_id"`
+		}
+		if cursor.Decode(&conv) == nil {
+			convIDs = append(convIDs, conv.ID)
+		}
+	}
+
+	if len(convIDs) == 0 {
+		return nil
+	}
+
+	// 2. Delete all messages in those conversations
+	_, err = r.messages.DeleteMany(ctx, bson.M{"conversation_id": bson.M{"$in": convIDs}})
+	if err != nil {
+		return err
+	}
+
+	// 3. Delete the conversations themselves
+	_, err = r.conversations.DeleteMany(ctx, bson.M{"_id": bson.M{"$in": convIDs}})
+	return err
+}

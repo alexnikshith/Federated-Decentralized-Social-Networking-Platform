@@ -5,6 +5,7 @@ import (
 	contentRepo "federated-social/backend/epics/content-sharing/repository"
 	"federated-social/backend/epics/content-sharing/service"
 	identityRepo "federated-social/backend/epics/identity/repository"
+	messagingRepo "federated-social/backend/epics/messaging/repository"
 	"federated-social/backend/pkg/email"
 	"log"
 	"net/http"
@@ -20,6 +21,8 @@ import (
 type AdminHandler struct {
 	userRepo         *identityRepo.UserRepository
 	postRepo         *contentRepo.PostRepository
+	storyRepo        *contentRepo.StoryRepository
+	messageRepo      *messagingRepo.MessageRepository
 	activityRepo     *identityRepo.ActivityRepository
 	sessionRepo      *identityRepo.SessionRepository
 	followRepo       *contentRepo.FollowRepository
@@ -33,6 +36,8 @@ func NewAdminHandler() *AdminHandler {
 	return &AdminHandler{
 		userRepo:         identityRepo.NewUserRepository(),
 		postRepo:         contentRepo.NewPostRepository(),
+		storyRepo:        contentRepo.NewStoryRepository(),
+		messageRepo:      messagingRepo.NewMessageRepository(),
 		activityRepo:     identityRepo.NewActivityRepository(),
 		sessionRepo:      identityRepo.NewSessionRepository(),
 		followRepo:       contentRepo.NewFollowRepository(),
@@ -219,29 +224,40 @@ func (h *AdminHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Nuclear wipe in order:
+	// Full cascade wipe:
 
-	// 1. Posts, Likes, Comments
+	// 1. Posts, Likes, Comments, Saved Posts, Reports, Interactions
 	_ = h.postRepo.DeletePostsByAuthor(ctx, oid)
 	_ = h.postRepo.DeleteLikesByUser(ctx, oid)
 	_ = h.postRepo.DeleteCommentsByUser(ctx, oid)
+	_ = h.postRepo.DeleteSavedPostsByUser(ctx, oid)
+	_ = h.postRepo.DeleteReportsByUser(ctx, oid)
+	_ = h.postRepo.DeleteInteractionsByUser(ctx, oid)
 
-	// 2. Follows
+	// 2. Stories
+	_ = h.storyRepo.DeleteStoriesByAuthor(ctx, oid)
+
+	// 3. Messages & Conversations
+	_ = h.messageRepo.DeleteConversationsByUser(ctx, oid)
+	_ = h.messageRepo.DeleteMessagesByUser(ctx, oid)
+
+	// 4. Follows
 	_ = h.followRepo.DeleteAllFollows(ctx, oid)
 
-	// 3. Notifications
+	// 5. Notifications
 	_ = h.notificationRepo.DeleteUserNotifications(ctx, oid)
 
-	// 4. Sessions & Activity
+	// 6. Sessions & Activity
 	_ = h.sessionRepo.InvalidateAllUserSessions(ctx, oid)
 	_ = h.activityRepo.DeleteUserActivity(ctx, oid)
 
-	// 5. Finally, the User record
+	// 7. Finally, the User record itself
 	if err := h.userRepo.DeleteUser(ctx, oid); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	log.Printf("Admin: fully deleted user %s and all associated data", userID)
 	w.WriteHeader(http.StatusOK)
 }
 

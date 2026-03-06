@@ -70,3 +70,61 @@ func (h *StoryHandler) DeleteStory(w http.ResponseWriter, r *http.Request) {
 
 	respondSuccess(w, "Story deleted successfully", nil, http.StatusOK)
 }
+
+// LikeStory handles POST /api/stories/:id/like
+func (h *StoryHandler) LikeStory(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserIDFromContext(r.Context())
+	vars := mux.Vars(r)
+
+	storyID, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		respondError(w, "Invalid story ID", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.storyService.LikeStory(r.Context(), storyID, userID); err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondSuccess(w, "Story liked", nil, http.StatusOK)
+}
+
+// UnlikeStory handles DELETE /api/stories/:id/like
+func (h *StoryHandler) UnlikeStory(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserIDFromContext(r.Context())
+	vars := mux.Vars(r)
+
+	storyID, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		respondError(w, "Invalid story ID", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.storyService.UnlikeStory(r.Context(), storyID, userID); err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondSuccess(w, "Story unliked", nil, http.StatusOK)
+}
+
+// GetStoryLikers handles GET /api/stories/:id/likes
+// Returns resolved user info (display name + avatar) for all likers - owner only enforced in frontend
+func (h *StoryHandler) GetStoryLikers(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+
+	storyID, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		respondError(w, "Invalid story ID", http.StatusBadRequest)
+		return
+	}
+
+	likers, err := h.storyService.GetStoryLikers(r.Context(), storyID)
+	if err != nil {
+		respondError(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	respondSuccess(w, "Story likers retrieved", likers, http.StatusOK)
+}

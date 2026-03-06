@@ -19,6 +19,7 @@ import { ThemeProvider } from './components/theme-provider';
 import { MainLayout } from './components/layout/MainLayout';
 import { useAutoLogout } from './hooks/useAutoLogout';
 import { useActivityHeartbeat } from './hooks/useActivityHeartbeat';
+import { GlobalAuthBackground } from './components/layout/GlobalAuthBackground';
 
 import { useAuthStore } from '../epics/identity/store/authStore';
 import { authApi } from '../epics/identity/api/client';
@@ -50,7 +51,8 @@ import AdminDashboard from '../epics/admin/pages/AdminDashboard';
 import Index from './pages/Index';
 import NotFound from './pages/NotFound';
 import { NotificationsPage } from './pages/NotificationsPage';
-import { CinematicLoginTransition } from './components/transitions/CinematicLoginTransition';
+
+
 
 
 
@@ -76,10 +78,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
     return (
         <MainLayout>
             <AutoLogoutWrapper>
-                <div
-                    className="transition-opacity duration-1000"
-                    style={{ opacity: isTransitioning ? 0 : 1 }}
-                >
+                <div className="w-full h-full">
                     {children}
                 </div>
             </AutoLogoutWrapper>
@@ -116,7 +115,7 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
     // Keep the element mounted but hidden if transitioning to allow the animation overlay to play over it
     return (
-        <div style={{ opacity: isTransitioning ? 0 : 1 }} className="transition-opacity duration-500 w-full h-full">
+        <div className="w-full h-full">
             {children}
         </div>
     );
@@ -212,6 +211,7 @@ const AppContent: React.FC = () => {
             </AlertDialog>
 
             <BrowserRouter>
+                <GlobalAuthBackground />
                 <Routes>
                     {/* Public Routes */}
                     <Route path="/" element={<Index />} />
@@ -345,7 +345,6 @@ const App: React.FC = () => (
             <TooltipProvider>
                 <Toaster />
                 <Sonner />
-                <CinematicLoginTransition />
                 <AppContent />
             </TooltipProvider>
         </QueryClientProvider>

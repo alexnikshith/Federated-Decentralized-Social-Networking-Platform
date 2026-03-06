@@ -74,8 +74,8 @@ export const HologramProjector = React.memo(({ children, className, isActive = t
 
     return (
         <div className={cn(
-            "relative w-full transition-all duration-1000 ease-out z-[60]",
-            isActive ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 translate-y-4 pointer-events-none",
+            "relative w-full ease-out z-[60]",
+            isActive ? "transition-all duration-1000 opacity-100 scale-100 translate-y-0" : "transition-none duration-0 opacity-0 scale-95 translate-y-4 pointer-events-none",
             className
         )}>
             {/* ── Content container ── */}

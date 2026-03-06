@@ -6,25 +6,24 @@ import { useAuthStore } from "../store/authStore";
 
 const Login = () => {
   const navigate = useNavigate();
-  const { isLoginExiting: isLoggingIn } = useAuthStore();
   const [isSwitchingPage, setIsSwitchingPage] = useState(false);
 
   const handleSwitchToRegister = () => {
     setIsSwitchingPage(true);
     setTimeout(() => {
       navigate('/register');
-    }, 1000); // Wait for the 1s hologram transition
+    }, 0); // Removed the 1s transition delay for faster UX
   };
 
   const handleBackToLanding = () => {
     setIsSwitchingPage(true);
     setTimeout(() => {
       navigate('/');
-    }, 1000);
+    }, 0);
   };
 
   return (
-    <IdentityLayout isExiting={isLoggingIn || isSwitchingPage} isCinematic={isLoggingIn} theme="emerald">
+    <IdentityLayout isExiting={isSwitchingPage} isCinematic={false} theme="emerald">
       <LoginForm onSwitchToRegister={handleSwitchToRegister} onBackToLanding={handleBackToLanding} />
     </IdentityLayout>
   );
