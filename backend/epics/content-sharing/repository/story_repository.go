@@ -108,3 +108,41 @@ func (r *StoryRepository) UnlikeStory(ctx context.Context, storyID primitive.Obj
 	)
 	return err
 }
+
+// MarkViewed adds userID to the story's viewed_by array (idempotent via $addToSet)
+func (r *StoryRepository) MarkViewed(ctx context.Context, storyID primitive.ObjectID, userID string) error {
+	_, err := r.collection.UpdateOne(
+		ctx,
+		bson.M{"_id": storyID},
+		bson.M{"$addToSet": bson.M{"viewed_by": userID}},
+	)
+	return err
+}
+
+// GetViewedStoryIDs returns the IDs of all active stories that userID has already viewed
+func (r *StoryRepository) GetViewedStoryIDs(ctx context.Context, userID string) ([]string, error) {
+	now := time.Now()
+	filter := bson.M{
+		"expires_at": bson.M{"$gt": now},
+		"viewed_by":  userID,
+	}
+
+	cursor, err := r.collection.Find(ctx, filter, options.Find().SetProjection(bson.M{"_id": 1}))
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var results []struct {
+		ID primitive.ObjectID `bson:"_id"`
+	}
+	if err := cursor.All(ctx, &results); err != nil {
+		return nil, err
+	}
+
+	ids := make([]string, len(results))
+	for i, r := range results {
+		ids[i] = r.ID.Hex()
+	}
+	return ids, nil
+}

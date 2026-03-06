@@ -731,8 +731,10 @@ const ProfileUI = () => {
                         onClick={async () => {
                           if (!profileUser) return;
                           try {
-                            // Detect if this is a remote user
-                            // Detect if this is a remote user
+                            // A valid local user ID is a 24-char hex MongoDB ObjectID.
+                            // If it's anything else (ActivityPub URI, etc.), always use the federated follow path.
+                            const isValidObjectId = /^[a-f0-9]{24}$/i.test(profileUser.id);
+
                             const currentInstanceUrl = localStorage.getItem('active_community_url') || import.meta.env.VITE_API_URL || import.meta.env.VITE_COMMUNITY1_URL || 'http://localhost:8080';
                             const currentInstanceDomain = currentInstanceUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
                             const profileInstance = (profileUser.instance || targetCommunityUrl || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
@@ -743,36 +745,34 @@ const ProfileUI = () => {
                               (currentInstanceDomain.includes('localhost:8081') && profileInstance === 'community-2')
                             );
 
-                            // It is remote if profile instance is set AND distinct from current instance AND not a known local alias
-                            const isRemoteUser = profileInstance !== '' &&
+                            // It is remote if:
+                            // - the ID is not a valid local ObjectID, OR
+                            // - the profile instance is different from the current instance
+                            const isRemoteUser = !isValidObjectId || (
+                              profileInstance !== '' &&
                               profileInstance !== currentInstanceDomain &&
-                              !isLocalAlias;
+                              !isLocalAlias
+                            );
 
                             if (isFollowing) {
                               if (isRemoteUser) {
-                                // Unfollow remote user
-                                const handle = `${profileUser.username}@${profileInstance}`;
+                                const handle = `${profileUser.username}@${profileInstance || currentInstanceDomain}`;
                                 await unfollowRemoteUser(handle);
                               } else {
-                                // Unfollow local user
                                 await unfollowUser(profileUser.id);
                               }
                               setIsFollowing(false);
                               setProfileUser(prev => prev ? { ...prev, followers_count: (prev.followers_count || 0) - 1 } : null);
-                              // Refetch posts and updated profile stats from server for real-time consistency
                               setTimeout(() => loadProfileData(false), 500);
                             } else {
                               if (isRemoteUser) {
-                                // Follow remote user
-                                const handle = `${profileUser.username}@${profileInstance}`;
+                                const handle = `${profileUser.username}@${profileInstance || currentInstanceDomain}`;
                                 await followRemoteUser(handle);
                               } else {
-                                // Follow local user
                                 await followUser(profileUser.id);
                               }
                               setIsFollowing(true);
                               setProfileUser(prev => prev ? { ...prev, followers_count: (prev.followers_count || 0) + 1 } : null);
-                              // Refetch posts and updated profile stats from server for real-time consistency
                               setTimeout(() => loadProfileData(false), 500);
                             }
                           } catch (err) {

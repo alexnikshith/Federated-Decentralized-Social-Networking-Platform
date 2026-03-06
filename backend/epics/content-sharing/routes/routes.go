@@ -25,7 +25,10 @@ func RegisterContentSharingRoutes(router *mux.Router) {
 	// Story routes
 	router.Handle("/api/stories", middleware.AuthMiddleware(http.HandlerFunc(storyHandler.CreateStory))).Methods("POST", "OPTIONS")
 	router.Handle("/api/stories", middleware.OptionalAuth(http.HandlerFunc(storyHandler.GetActiveStories))).Methods("GET", "OPTIONS")
+	// /viewed must be registered before /{id} to avoid the wildcard swallowing it
+	router.Handle("/api/stories/viewed", middleware.AuthMiddleware(http.HandlerFunc(storyHandler.GetViewedStoryIDs))).Methods("GET", "OPTIONS")
 	router.Handle("/api/stories/{id}", middleware.AuthMiddleware(http.HandlerFunc(storyHandler.DeleteStory))).Methods("DELETE", "OPTIONS")
+	router.Handle("/api/stories/{id}/view", middleware.AuthMiddleware(http.HandlerFunc(storyHandler.MarkViewed))).Methods("POST", "OPTIONS")
 	router.Handle("/api/stories/{id}/like", middleware.AuthMiddleware(http.HandlerFunc(storyHandler.LikeStory))).Methods("POST", "OPTIONS")
 	router.Handle("/api/stories/{id}/like", middleware.AuthMiddleware(http.HandlerFunc(storyHandler.UnlikeStory))).Methods("DELETE", "OPTIONS")
 	router.Handle("/api/stories/{id}/likes", middleware.AuthMiddleware(http.HandlerFunc(storyHandler.GetStoryLikers))).Methods("GET", "OPTIONS")
