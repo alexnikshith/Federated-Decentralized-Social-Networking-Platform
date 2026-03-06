@@ -63,7 +63,7 @@ const TrafficChart: React.FC<TrafficChartProps> = ({ data, loading }) => {
                                         {Math.abs(entry.value)}
                                     </span>
                                     <span className="text-[10px] text-muted-foreground/60 font-medium mt-1 uppercase tracking-wider">
-                                        {entry.dataKey === 'deleted_users' ? 'Deleted Users' : getMetricLabel(activeMetric)}
+                                        {entry.dataKey === 'deleted_users' ? 'Users Left' : getMetricLabel(activeMetric)}
                                     </span>
                                 </div>
                             );

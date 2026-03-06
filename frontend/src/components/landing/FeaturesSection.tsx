@@ -81,9 +81,9 @@ export function FeaturesSection() {
             initial={{ opacity: 0, y: 10 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-lg text-cyan-100/40 uppercase tracking-[0.2em] font-light"
+            className="text-sm text-cyan-100/40 uppercase tracking-[0.3em] font-mono font-bold"
           >
-            Engineering the future of human connectivity
+            [ ENGINEERING THE FUTURE OF HUMAN CONNECTIVITY ]
           </motion.p>
         </div>
 
@@ -96,21 +96,21 @@ export function FeaturesSection() {
               viewport={{ once: true }}
               transition={{ delay: index * 0.1, duration: 0.6 }}
               className={cn(
-                "group relative p-8 rounded-[2rem] bg-white/[0.01] border backdrop-blur-xl transition-all duration-500",
+                "group relative p-8 rounded-sm bg-white/[0.01] border-t border-l-2 backdrop-blur-xl transition-all duration-500",
                 "hover:bg-white/[0.03] hover:-translate-y-2",
                 feature.border,
                 `hover:${feature.glow} hover:shadow-2xl`
               )}
             >
               <div className={cn(
-                "w-14 h-14 rounded-2xl flex items-center justify-center mb-8 transition-all duration-500 group-hover:scale-110 group-hover:rotate-6",
+                "w-12 h-12 rounded-sm border-t border-l-2 flex items-center justify-center mb-8 transition-all duration-500 group-hover:scale-110",
                 "bg-white/[0.03] border border-white/5",
-                feature.text
+                feature.text, feature.border
               )}>
                 <feature.icon className="w-7 h-7" />
               </div>
 
-              <h3 className="text-xl font-bold mb-4 tracking-wider text-white group-hover:text-cyan-400 transition-colors">
+              <h3 className="text-sm font-bold font-mono tracking-widest mb-4 text-white group-hover:text-cyan-400 transition-colors uppercase">
                 {feature.title}
               </h3>
 
@@ -120,8 +120,12 @@ export function FeaturesSection() {
 
               {/* Decorative Corner */}
               <div className={cn(
-                "absolute top-4 right-4 w-2 h-2 rounded-full opacity-20 group-hover:opacity-100 transition-opacity",
-                feature.text.replace('text', 'bg')
+                "absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 opacity-20 group-hover:opacity-100 transition-opacity",
+                feature.border
+              )} />
+              <div className={cn(
+                "absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 opacity-20 group-hover:opacity-100 transition-opacity",
+                feature.border
               )} />
             </motion.div>
           ))}

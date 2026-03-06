@@ -111,7 +111,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
     // Settings, Theme, Logout are in bottom section manually
     const sidebarLinks: Links[] = [
         {
-            label: "Communities",
+            label: "Federation",
             href: "/communities",
             icon: (
                 <IconUsers className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
@@ -474,7 +474,7 @@ export const Logo = () => {
             onClick={() => navigate("/dashboard")}
             className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal text-black cursor-pointer"
         >
-            <div className="h-5 w-6 shrink-0 rounded-tl-lg rounded-tr-sm rounded-br-lg rounded-bl-sm bg-black dark:bg-white" />
+            <img src="/logo.png" alt="Nexus Social" className="h-7 w-7 shrink-0 rounded-lg object-cover" />
             <motion.span
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -493,7 +493,7 @@ export const LogoIcon = () => {
             onClick={() => navigate("/dashboard")}
             className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal text-black cursor-pointer"
         >
-            <div className="h-5 w-6 shrink-0 rounded-tl-lg rounded-tr-sm rounded-br-lg rounded-bl-sm bg-black dark:bg-white" />
+            <img src="/logo.png" alt="Nexus Social" className="h-7 w-7 shrink-0 rounded-lg object-cover" />
         </div>
     );
 };

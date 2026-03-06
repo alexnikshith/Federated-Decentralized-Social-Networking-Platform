@@ -82,3 +82,29 @@ func (r *StoryRepository) DeleteStory(ctx context.Context, id primitive.ObjectID
 	_, err := r.collection.DeleteOne(ctx, bson.M{"_id": id})
 	return err
 }
+
+// DeleteStoriesByAuthor deletes all stories created by a specific user
+func (r *StoryRepository) DeleteStoriesByAuthor(ctx context.Context, authorID primitive.ObjectID) error {
+	_, err := r.collection.DeleteMany(ctx, bson.M{"author_id": authorID})
+	return err
+}
+
+// LikeStory adds userID to the story's likes array (idempotent via $addToSet)
+func (r *StoryRepository) LikeStory(ctx context.Context, storyID primitive.ObjectID, userID string) error {
+	_, err := r.collection.UpdateOne(
+		ctx,
+		bson.M{"_id": storyID},
+		bson.M{"$addToSet": bson.M{"likes": userID}},
+	)
+	return err
+}
+
+// UnlikeStory removes userID from the story's likes array
+func (r *StoryRepository) UnlikeStory(ctx context.Context, storyID primitive.ObjectID, userID string) error {
+	_, err := r.collection.UpdateOne(
+		ctx,
+		bson.M{"_id": storyID},
+		bson.M{"$pull": bson.M{"likes": userID}},
+	)
+	return err
+}

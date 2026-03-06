@@ -83,6 +83,9 @@ const MessagingUI: React.FC = () => {
     // Track if it's the first load of messages for a conversation to scroll instantly
     const isInitialLoad = useRef(true);
 
+    // Suppress loadMessages when transitioning from isNewChat (messages already in state)
+    const skipNextMessageLoad = useRef(false);
+
     // Ensure conversations is ALWAYS an array even if state somehow becomes null
     const safeConversations = Array.isArray(conversations) ? conversations : [];
 
@@ -146,6 +149,11 @@ const MessagingUI: React.FC = () => {
     // Load messages when conversation is selected
     useEffect(() => {
         if (selectedConversation?.id) {
+            if (skipNextMessageLoad.current) {
+                // Skip reload — messages are already in state (first message in new chat)
+                skipNextMessageLoad.current = false;
+                return;
+            }
             isInitialLoad.current = true;
             loadMessages(selectedConversation.id);
         }
@@ -381,7 +389,10 @@ const MessagingUI: React.FC = () => {
             setUploadingMedia(false);
 
             if (isNewChat) {
-                const updatedConvs = await loadConversations();
+                // Flag to suppress the loadMessages that fires when selectedConversation changes
+                // because messages are already in state (optimistically added above)
+                skipNextMessageLoad.current = true;
+                await loadConversations();
                 setIsNewChat(false);
                 setNewChatUser(null);
                 const newConv = updatedConvs.find(c => c.participants.some(p => p.id === receiverId));

@@ -26,7 +26,7 @@ const Index = () => {
 
     const timer = setTimeout(() => {
       setShowSplash(false);
-    }, 4500);
+    }, 3500);
 
     return () => clearTimeout(timer);
   }, []);
@@ -38,18 +38,13 @@ const Index = () => {
       ) : (
         <motion.div
           key="main"
-          // No fade-in on return visits — only animate on first load
+          // Very fast fade-in when splash finishes
           initial={{ opacity: showSplash ? 0 : 1 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: showSplash ? 1.5 : 0, ease: "easeOut" }}
+          transition={{ duration: showSplash ? 0.3 : 0, ease: "easeOut" }}
           className="min-h-screen flex flex-col relative bg-transparent"
         >
-          {/* Global Cinematic Cosmos Background */}
-          <div className="fixed inset-0 w-full h-full bg-[#020617] z-[-2]" />
-          <div
-            className="fixed inset-0 w-full h-full bg-[url('/cosmos-bg.png')] bg-cover bg-center bg-no-repeat opacity-70 mix-blend-lighten pointer-events-none z-[-1]"
-            style={{ filter: "contrast(1.2) brightness(0.9)" }}
-          />
+
 
           {/* Animated Nebula Overlays */}
           <div className="fixed inset-0 pointer-events-none z-[-1] overflow-hidden">

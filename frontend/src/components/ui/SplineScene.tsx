@@ -74,9 +74,10 @@ interface SplineSceneProps {
   // Forwarded mouse position for cursor tracking from HeroSection
   mouseX?: number
   mouseY?: number
+  onLoad?: () => void
 }
 
-function SplineSceneInner({ scene, className, style, mouseX, mouseY }: SplineSceneProps) {
+function SplineSceneInner({ scene, className, style, mouseX, mouseY, onLoad }: SplineSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -84,30 +85,37 @@ function SplineSceneInner({ scene, className, style, mouseX, mouseY }: SplineSce
     if (!container) return
 
     // Get or reuse the cached canvas (robot only loads once ever)
+    const isAlreadyBooted = !!cachedCanvas && !!cachedApp
     const canvas = getOrCreateSplineCanvas(scene)
 
-    // Re-attach canvas to this container (it may be coming from a different
-    // page's DOM node that was unmounted)
+    if (isAlreadyBooted && onLoad) {
+      // If the app was already booted previously in the cache, fire onLoad immediately
+      onLoad()
+    } else if (!isAlreadyBooted && cachedApp) {
+      // If it's a fresh boot, listen for the spline 'load' event
+      cachedApp.addEventListener('load', () => {
+        if (onLoad) onLoad()
+      })
+    }
+
+    // Re-attach canvas to this container
     if (canvas.parentElement !== container) {
       container.appendChild(canvas)
     }
 
-    // Sync canvas dimensions to container
-    const resizeObserver = new ResizeObserver(() => {
-      canvas.width = container.clientWidth
-      canvas.height = container.clientHeight
-    })
-    resizeObserver.observe(container)
+    // Force a re-render if the app had paused
+    if (isAlreadyBooted && cachedApp && typeof cachedApp.play === 'function') {
+      cachedApp.play();
+    }
 
     return () => {
-      resizeObserver.disconnect()
-      // Do NOT remove the canvas from the DOM here — detaching it from
-      // the container is enough. The canvas + app stay alive in the cache.
+      // Detach the canvas from the container when unmounting
+      // The canvas + app stay alive in the cache.
       if (canvas.parentElement === container) {
         container.removeChild(canvas)
       }
     }
-  }, [scene])
+  }, [scene, onLoad])
 
   // Forward cursor position into Spline for head tracking
   useEffect(() => {

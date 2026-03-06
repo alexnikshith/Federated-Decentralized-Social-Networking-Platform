@@ -109,8 +109,8 @@ export const useAuthStore = create<AuthState>()(
                         token,
                         isAuthenticated: true,
                         isLoginExiting: false,
-                        isTransitioning: true, // Trigger cinematic transition on explicit login
-                        transitionState: TransitionState.WORMHOLE_TRAVEL,
+                        isTransitioning: false,
+                        transitionState: TransitionState.IDLE,
                         lastActivity: now,
                         sessions: newSessions
                     };
@@ -263,7 +263,7 @@ export const useAuthStore = create<AuthState>()(
                         user: session.user,
                         token: session.token,
                         isAuthenticated: true,
-                        isTransitioning: true, // Trigger cinematic transition on account switch too
+                        isTransitioning: false,
                         lastActivity: Date.now()
                     });
                 } else if (intentToLogin) {
@@ -295,7 +295,7 @@ export const useAuthStore = create<AuthState>()(
                         user: session.user,
                         token: session.token,
                         isAuthenticated: true,
-                        isTransitioning: true, // Trigger cinematic transition on community switch
+                        isTransitioning: false,
                         lastActivity: Date.now()
                     });
                 } else {
