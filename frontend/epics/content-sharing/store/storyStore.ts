@@ -23,6 +23,8 @@ interface StoryStore {
     deleteStory: (id: string) => Promise<void>;
     likeStory: (id: string) => Promise<void>;
     unlikeStory: (id: string) => Promise<void>;
+    markStoryViewed: (id: string) => Promise<void>;
+    getViewedStoryIDs: () => Promise<string[]>;
 }
 
 const getApiUrl = () => {
@@ -143,6 +145,33 @@ export const useStoryStore = create<StoryStore>((set, get) => ({
                 )
             }));
             console.error(error);
+        }
+    },
+
+    // Fire-and-forget: records a story view on the server (idempotent)
+    markStoryViewed: async (id) => {
+        try {
+            await fetch(`${getApiUrl()}/api/stories/${id}/view`, {
+                method: 'POST',
+                headers: getHeaders()
+            });
+        } catch (error: any) {
+            // Non-critical — just log
+            console.warn('Failed to record story view:', error);
+        }
+    },
+
+    // Fetches all story IDs the current user has viewed (from server)
+    getViewedStoryIDs: async () => {
+        try {
+            const res = await fetch(`${getApiUrl()}/api/stories/viewed`, {
+                headers: getHeaders()
+            });
+            if (!res.ok) return [];
+            const data = await res.json();
+            return (data.data as string[]) ?? [];
+        } catch {
+            return [];
         }
     },
 }));

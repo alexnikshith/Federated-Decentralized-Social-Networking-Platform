@@ -185,6 +185,16 @@ func (s *StoryService) UnlikeStory(ctx context.Context, storyID, userID primitiv
 	return s.repo.UnlikeStory(ctx, storyID, userID.Hex())
 }
 
+// MarkStoryViewed records that userID has viewed the given story (idempotent)
+func (s *StoryService) MarkStoryViewed(ctx context.Context, storyID, userID primitive.ObjectID) error {
+	return s.repo.MarkViewed(ctx, storyID, userID.Hex())
+}
+
+// GetViewedStoryIDs returns hex IDs of all active stories viewed by userID
+func (s *StoryService) GetViewedStoryIDs(ctx context.Context, userID primitive.ObjectID) ([]string, error) {
+	return s.repo.GetViewedStoryIDs(ctx, userID.Hex())
+}
+
 // LikerInfo carries resolved user info for a story liker
 type LikerInfo struct {
 	ID          string `json:"id"`
