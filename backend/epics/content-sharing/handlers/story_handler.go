@@ -128,3 +128,37 @@ func (h *StoryHandler) GetStoryLikers(w http.ResponseWriter, r *http.Request) {
 
 	respondSuccess(w, "Story likers retrieved", likers, http.StatusOK)
 }
+
+// MarkViewed handles POST /api/stories/:id/view
+// Records that the current user has viewed the story (idempotent)
+func (h *StoryHandler) MarkViewed(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserIDFromContext(r.Context())
+	vars := mux.Vars(r)
+
+	storyID, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		respondError(w, "Invalid story ID", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.storyService.MarkStoryViewed(r.Context(), storyID, userID); err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondSuccess(w, "Story marked as viewed", nil, http.StatusOK)
+}
+
+// GetViewedStoryIDs handles GET /api/stories/viewed
+// Returns the IDs of all active stories the current user has already viewed
+func (h *StoryHandler) GetViewedStoryIDs(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserIDFromContext(r.Context())
+
+	ids, err := h.storyService.GetViewedStoryIDs(r.Context(), userID)
+	if err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondSuccess(w, "Viewed story IDs retrieved", ids, http.StatusOK)
+}

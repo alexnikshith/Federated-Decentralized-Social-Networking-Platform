@@ -175,7 +175,15 @@ export const useAuthStore = create<AuthState>()(
 
             // clearAllSessions removes everything locally
             clearAllSessions: () => {
-                localStorage.clear();
+                // Remove only auth-related localStorage keys — preserve story viewed state and other user data
+                const keysToRemove: string[] = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && !key.startsWith('viewed_story_ids')) {
+                        keysToRemove.push(key);
+                    }
+                }
+                keysToRemove.forEach(k => localStorage.removeItem(k));
                 set({
                     user: null,
                     token: null,

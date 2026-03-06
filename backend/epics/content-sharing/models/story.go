@@ -14,6 +14,7 @@ type Story struct {
 	MediaType string             `json:"media_type" bson:"media_type"`               // Type of media: "image", "video"
 	Content   string             `json:"content,omitempty" bson:"content,omitempty"` // Optional text on the story
 	Likes     []string           `json:"likes" bson:"likes"`                         // User IDs who liked this story
+	ViewedBy  []string           `json:"viewed_by" bson:"viewed_by"`                 // User IDs who have viewed this story
 	ExpiresAt time.Time          `json:"expires_at" bson:"expires_at"`               // 24 hours from creation
 	CreatedAt time.Time          `json:"created_at" bson:"created_at"`
 }

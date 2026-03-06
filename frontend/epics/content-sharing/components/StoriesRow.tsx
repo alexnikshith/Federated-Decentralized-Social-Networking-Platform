@@ -7,52 +7,72 @@ import { StoryViewerModal } from './StoryViewerModal';
 import { motion } from 'motion/react';
 
 // ─── Viewed-story persistence (localStorage) ──────────────────────────────────
-const VIEWED_KEY = 'viewed_story_ids';
+const viewedKey = (userId?: string) => `viewed_story_ids${userId ? `_${userId}` : ''}`;
 
-const loadViewedIds = (): Set<string> => {
+const loadViewedIds = (userId?: string): Set<string> => {
     try {
-        const raw = localStorage.getItem(VIEWED_KEY);
+        const raw = localStorage.getItem(viewedKey(userId));
         return raw ? new Set(JSON.parse(raw)) : new Set();
     } catch {
         return new Set();
     }
 };
 
-const saveViewedIds = (ids: Set<string>) => {
+const saveViewedIds = (ids: Set<string>, userId?: string) => {
     try {
-        localStorage.setItem(VIEWED_KEY, JSON.stringify([...ids]));
+        localStorage.setItem(viewedKey(userId), JSON.stringify([...ids]));
     } catch { /* ignore */ }
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export const StoriesRow: React.FC = () => {
     const { user } = useAuthStore();
-    const { stories, fetchStories } = useStoryStore();
+    const { stories, fetchStories, markStoryViewed, getViewedStoryIDs } = useStoryStore();
 
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [viewerIndex, setViewerIndex] = useState<number | null>(null);
-    const [viewedIds, setViewedIds] = useState<Set<string>>(loadViewedIds);
+    const [viewedIds, setViewedIds] = useState<Set<string>>(() => loadViewedIds(user?.id));
 
     useEffect(() => {
         fetchStories();
     }, [fetchStories]);
 
-    // Mark all stories for an author as viewed when the viewer closes
-    const handleViewerClose = useCallback((authorId?: string) => {
-        if (authorId) {
-            const authorStoryIds = stories
-                .filter(s => s.author_id === authorId)
-                .map(s => s.id);
+    // When the user changes, reload viewed IDs scoped to the new account
+    // Merge server-side state (source of truth) with localStorage cache
+    useEffect(() => {
+        const userId = user?.id;
+        // Seed from localStorage immediately (instant UI update)
+        setViewedIds(loadViewedIds(userId));
 
-            setViewedIds(prev => {
-                const next = new Set(prev);
-                authorStoryIds.forEach(id => next.add(id));
-                saveViewedIds(next);
-                return next;
+        // If authenticated, fetch from server and merge (handles cross-device/incognito)
+        if (userId) {
+            getViewedStoryIDs().then(serverIds => {
+                if (serverIds.length === 0) return;
+                setViewedIds(prev => {
+                    const next = new Set(prev);
+                    serverIds.forEach(id => next.add(id));
+                    saveViewedIds(next, userId);
+                    return next;
+                });
             });
         }
+    }, [user?.id]);
+
+    // Receive the specific story IDs that were actually navigated to,
+    // persist to localStorage + server (fire-and-forget)
+    const handleViewerClose = useCallback((viewedStoryIds: string[]) => {
+        if (viewedStoryIds.length > 0) {
+            setViewedIds(prev => {
+                const next = new Set(prev);
+                viewedStoryIds.forEach(id => next.add(id));
+                saveViewedIds(next, user?.id);
+                return next;
+            });
+            // Push each view to the server (idempotent, fire-and-forget)
+            viewedStoryIds.forEach(id => markStoryViewed(id));
+        }
         setViewerIndex(null);
-    }, [stories]);
+    }, [user?.id, markStoryViewed]);
 
     // Group stories by author — unviewed groups first, then fully viewed
     const groupedStories = useMemo(() => {
@@ -91,7 +111,6 @@ export const StoriesRow: React.FC = () => {
         return `${apiUrl}${url}`;
     };
 
-    // Determine the author ID for the currently open viewer
     const openAuthorId = useMemo(() => {
         if (viewerIndex === null) return undefined;
         return stories[viewerIndex]?.author_id;
@@ -287,8 +306,9 @@ export const StoriesRow: React.FC = () => {
             {viewerIndex !== null && (
                 <StoryViewerModal
                     open={viewerIndex !== null}
-                    onClose={() => handleViewerClose(openAuthorId)}
+                    onClose={handleViewerClose}
                     initialStoryIndex={viewerIndex}
+                    viewedIds={viewedIds}
                 />
             )}
         </>
