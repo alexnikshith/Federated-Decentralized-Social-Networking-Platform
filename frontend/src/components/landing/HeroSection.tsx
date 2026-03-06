@@ -1,7 +1,7 @@
 import { Shield, Zap, Share2, Cpu } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import React from "react";
+import React, { useState, useCallback, useEffect } from "react";
 
 // ─── Hero Section ─────────────────────────────────────────────────────────────
 export function HeroSection() {
