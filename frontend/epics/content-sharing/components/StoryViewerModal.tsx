@@ -7,8 +7,9 @@ import { AnimatePresence, motion } from 'motion/react';
 
 interface StoryViewerModalProps {
     open: boolean;
-    onClose: () => void;
+    onClose: (viewedStoryIds: string[]) => void;
     initialStoryIndex: number;
+    viewedIds?: Set<string>;
 }
 
 interface LikerInfo {
@@ -31,7 +32,7 @@ const resolveAvatar = (url: string) => {
     return `${getApiUrl()}${url}`;
 };
 
-export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({ open, onClose, initialStoryIndex }) => {
+export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({ open, onClose, initialStoryIndex, viewedIds }) => {
     const { stories, deleteStory, likeStory, unlikeStory } = useStoryStore();
     const { user } = useAuthStore();
 
@@ -48,15 +49,30 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({ open, onClos
     const [likersLoading, setLikersLoading] = useState(false);
     const [likeLoading, setLikeLoading] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
+    // Track which stories were actually navigated to (not just opened)
+    const viewedIdsRef = useRef<Set<string>>(new Set());
 
     useEffect(() => {
         if (open) {
-            setCurrentIndex(0);
+            // Start at the first story this user hasn't seen yet
+            const firstUnviewedIdx = viewedIds
+                ? authorStories.findIndex(s => !viewedIds.has(s.id))
+                : -1;
+            setCurrentIndex(firstUnviewedIdx >= 0 ? firstUnviewedIdx : 0);
             setShowLikers(false);
             setReplyText('');
             setLikers([]);
+            viewedIdsRef.current = new Set();
         }
     }, [open]);
+
+    // Mark the current story as viewed each time the index changes
+    useEffect(() => {
+        if (open && currentStory) {
+            viewedIdsRef.current.add(currentStory.id);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentIndex, open]);
 
     if (!open || authorStories.length === 0) return null;
 
@@ -69,21 +85,25 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({ open, onClos
     const likes: string[] = currentStory.likes ?? [];
     const isLiked = user ? likes.includes(user.id) : false;
 
+    const closeWithViewed = useCallback(() => {
+        onClose([...viewedIdsRef.current]);
+    }, [onClose]);
+
     const goToPrev = () => {
         if (currentIndex > 0) setCurrentIndex(currentIndex - 1);
-        else onClose();
+        else closeWithViewed();
     };
 
     const goToNext = () => {
         if (currentIndex < authorStories.length - 1) setCurrentIndex(currentIndex + 1);
-        else onClose();
+        else closeWithViewed();
     };
 
     const handleDelete = async () => {
         setIsDeleting(true);
         try {
             await deleteStory(currentStory.id);
-            if (authorStories.length === 1) onClose();
+            if (authorStories.length === 1) closeWithViewed();
             else if (currentIndex === authorStories.length - 1) setCurrentIndex(currentIndex - 1);
         } finally {
             setIsDeleting(false);
@@ -158,14 +178,14 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({ open, onClos
     return (
         <div
             className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md flex items-center justify-center animate-in fade-in duration-300"
-            onClick={onClose}
+            onClick={closeWithViewed}
         >
             {/* Close Button */}
             <Button
                 variant="ghost"
                 size="icon"
                 className="absolute top-4 right-4 text-white hover:bg-white/20 z-[110] rounded-full w-10 h-10"
-                onClick={onClose}
+                onClick={closeWithViewed}
             >
                 <X className="w-6 h-6" />
             </Button>
