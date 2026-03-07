@@ -12,6 +12,7 @@ import (
 	reportRepo "federated-social/backend/epics/reports/repository"
 	safetyRepo "federated-social/backend/epics/safety/repository"
 	safetyService "federated-social/backend/epics/safety/service"
+	"fmt"
 	"log"
 	"regexp"
 	"sort"
@@ -133,30 +134,44 @@ func (s *PostService) CreatePost(ctx context.Context, userID primitive.ObjectID,
 		if err == nil && users[userID] != nil {
 			user := users[userID]
 
-			// Broadcast to instances with followers asynchronously
+			// Broadcast ActivityPub Create activity to all remote followers
 			go func() {
-				// Get unique instances where this user has followers
-				instances, err := s.federationService.GetFollowerInstances(context.Background(), userID)
-				if err != nil {
-					log.Printf("Failed to get follower instances for federation: %v", err)
+				bgCtx := context.Background()
+
+				// Ensure the user has an RSA keypair for signing
+				fullUser, err := s.federationService.GetUserWithKeyPair(bgCtx, userID)
+				if err != nil || fullUser == nil {
+					log.Printf("[AP Post] Could not load user keypair for %s: %v", user.Username, err)
 					return
 				}
 
-				if len(instances) == 0 {
-					log.Printf("No remote followers found for user %s, skipping federation", user.Username)
-					return
+				base := config.AppConfig.BaseURL()
+				actorURL := fmt.Sprintf("%s/users/%s", base, fullUser.Username)
+				postID := post.ID.Hex()
+				noteID := fmt.Sprintf("%s/users/%s/posts/%s", base, fullUser.Username, postID)
+				createID := fmt.Sprintf("%s/activities/create-%s", base, postID)
+				keyID := actorURL + "#main-key"
+
+				note := map[string]interface{}{
+					"type":         "Note",
+					"id":           noteID,
+					"attributedTo": actorURL,
+					"content":      post.Content,
+					"published":    post.CreatedAt.UTC().Format(time.RFC3339),
+					"to":           []string{"https://www.w3.org/ns/activitystreams#Public"},
+				}
+				createActivity := map[string]interface{}{
+					"@context":  "https://www.w3.org/ns/activitystreams",
+					"type":      "Create",
+					"id":        createID,
+					"actor":     actorURL,
+					"published": post.CreatedAt.UTC().Format(time.RFC3339),
+					"to":        []string{"https://www.w3.org/ns/activitystreams#Public"},
+					"object":    note,
 				}
 
-				for _, domain := range instances {
-					// Validate instance is trusted/known before sending?
-					// Ideally yes, but GetFollowerInstances comes from our DB of accepted followers.
-
-					if err := s.federationService.SendCreatePost(context.Background(), post, user, domain); err != nil {
-						log.Printf("Federation to %s failed for post %s: %v", domain, post.ID.Hex(), err)
-					} else {
-						log.Printf("Federation to %s succeeded for post %s", domain, post.ID.Hex())
-					}
-				}
+				log.Printf("[AP Post] Delivering Create for post %s by %s", postID, fullUser.Username)
+				s.federationService.DeliverActivityToFollowers(bgCtx, fullUser.Username, fullUser.PrivateKeyPem, keyID, userID, createActivity)
 			}()
 		}
 	}

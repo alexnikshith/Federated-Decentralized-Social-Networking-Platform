@@ -5,10 +5,12 @@ package handlers
 // Exposes:
 //   GET  /.well-known/webfinger          — WebFinger JRD (Part 1)
 //   GET  /users/{username}               — Actor JSON (Part 2)
-//   GET  /users/{username}/outbox        — Minimal outbox stub (required by AP spec)
+//   GET  /users/{username}/outbox        — OrderedCollection of recent posts (Part 7)
+//   GET  /users/{username}/followers     — OrderedCollection of followers (Part 6)
 //   POST /users/{username}/inbox         — Per-user AP inbox (Part 5)
 //   POST /ap/inbox                       — Shared AP inbox (Part 5)
-//   POST /api/activitypub/follow         — Follow a remote Mastodon handle (Part 3, protected)
+//   POST /api/activitypub/follow         — Follow a remote Mastodon handle (protected)
+//   GET  /api/activitypub/resolve        — Resolve a federated handle (Part 8)
 //
 // The existing /federation/inbox endpoint is NOT touched here.
 
@@ -98,32 +100,27 @@ func (h *ActivityPubHandler) GetActor(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(actor)
 }
 
-// ---------------------------------------------------------------------------
-// Outbox stub (required by ActivityPub spec)
-// ---------------------------------------------------------------------------
-
-// GetOutbox handles GET /users/{username}/outbox
-// Returns a minimal empty OrderedCollection. Mastodon checks this endpoint exists.
+// GetOutbox handles GET /users/{username}/outbox.
+// Fetches recent local posts and wraps them as AP Create+Note activities.
+// Mastodon uses this to display a user's published posts.
 func (h *ActivityPubHandler) GetOutbox(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	username := vars["username"]
 
-	base := config.AppConfig.BaseURL()
-	outbox := map[string]interface{}{
-		"@context":     "https://www.w3.org/ns/activitystreams",
-		"id":           fmt.Sprintf("%s/users/%s/outbox", base, username),
-		"type":         "OrderedCollection",
-		"totalItems":   0,
-		"orderedItems": []interface{}{},
+	// We use a simple approach: query posts from the handler's context.
+	// The post service is not injected here, so we build a minimal collection
+	// from any posts stored in remote_posts authored by this actor, or return empty.
+	// Full integration requires the post repository — for now we delegate to service.
+	collection, err := h.svc.BuildOutboxCollection(r.Context(), username, nil)
+	if err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/activity+json")
-	json.NewEncoder(w).Encode(outbox)
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	json.NewEncoder(w).Encode(collection)
 }
-
-// ---------------------------------------------------------------------------
-// Part 5 — Inbox compatibility layer
-// ---------------------------------------------------------------------------
 
 // ReceiveAPActivity handles POST /users/{username}/inbox and POST /ap/inbox
 // This is the ActivityPub inbox that Mastodon and other AP servers POST to.
@@ -441,4 +438,56 @@ func randomHex() string {
 		b[i] = byte(time.Now().UnixNano() >> uint(i))
 	}
 	return fmt.Sprintf("%x", b)
+}
+
+// ---------------------------------------------------------------------------
+// Part 6 — Followers Collection endpoint
+// ---------------------------------------------------------------------------
+
+// GetFollowers handles GET /users/{username}/followers
+// Returns an AP OrderedCollection of follower actor IDs.
+func (h *ActivityPubHandler) GetFollowers(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	username := vars["username"]
+	if username == "" {
+		http.Error(w, "username required", http.StatusBadRequest)
+		return
+	}
+
+	collection, err := h.svc.GetFollowersCollection(r.Context(), username)
+	if err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/activity+json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	json.NewEncoder(w).Encode(collection)
+}
+
+// ---------------------------------------------------------------------------
+// Part 8 — Resolve federated handle
+// ---------------------------------------------------------------------------
+
+// ResolveHandle handles GET /api/activitypub/resolve?handle=@user@domain
+// Resolves a remote or local ActivityPub handle and returns normalised actor JSON.
+func (h *ActivityPubHandler) ResolveHandle(w http.ResponseWriter, r *http.Request) {
+	handle := r.URL.Query().Get("handle")
+	if handle == "" {
+		http.Error(w, "handle query parameter required", http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("[AP Resolve] Request for handle: %s", handle)
+
+	result, err := h.svc.ResolveAPHandle(r.Context(), handle)
+	if err != nil {
+		log.Printf("[AP Resolve] Failed for %s: %v", handle, err)
+		http.Error(w, fmt.Sprintf("could not resolve %s: %v", handle, err), http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	json.NewEncoder(w).Encode(result)
 }

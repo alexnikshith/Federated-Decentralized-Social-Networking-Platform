@@ -18,7 +18,7 @@ type User struct {
 	AvatarURL    string             `json:"avatar_url" bson:"avatar_url"`
 
 	// Privacy settings
-	ProfileVisibility string `json:"profile_visibility" bson:"profile_visibility"` // "public" or "followers" - controls who can see detailed profile info
+	ProfileVisibility string `json:"profile_visibility" bson:"profile_visibility"` // "public" or "followers" // "public" or "followers" - controls who can see detailed profile info
 
 	// Account status
 	IsActive       bool   `json:"is_active" bson:"is_active"`             // True if the user has verified email/is approved
