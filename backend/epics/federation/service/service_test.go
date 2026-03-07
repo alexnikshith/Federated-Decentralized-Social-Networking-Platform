@@ -130,6 +130,15 @@ func (m *mockRelationshipsRepo) GetRemoteFollowing(ctx context.Context, localUse
 func (m *mockRelationshipsRepo) GetRemoteFollowers(ctx context.Context, localUserID primitive.ObjectID) ([]models.RemoteFollower, error) {
 	return nil, nil
 }
+func (m *mockRelationshipsRepo) GetAcceptedFollowers(ctx context.Context, localUserID primitive.ObjectID) ([]models.RemoteFollower, error) {
+	return nil, nil
+}
+func (m *mockRelationshipsRepo) RemoveRemoteFollowerByActorID(ctx context.Context, remoteActorID string) error {
+	return nil
+}
+func (m *mockRelationshipsRepo) UpdateRemoteFollowStatus(ctx context.Context, remoteActorID, status string) error {
+	return nil
+}
 func (m *mockRelationshipsRepo) CountRemoteFollowers(ctx context.Context, localUserID primitive.ObjectID) (int64, error) {
 	return 0, nil
 }

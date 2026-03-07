@@ -456,6 +456,25 @@ func (s *FederationService) GetUserByUsername(ctx context.Context, username stri
 	}, nil
 }
 
+// GetUserWithKeyPair fetches a local user by ID, ensures they have an RSA keypair,
+// and returns the full User model (with PrivateKeyPem populated).
+// Used by post_service.go to sign ActivityPub Create activities.
+func (s *FederationService) GetUserWithKeyPair(ctx context.Context, userID primitive.ObjectID) (*userResult, error) {
+	user, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil || user == nil {
+		return nil, fmt.Errorf("user not found: %s", userID.Hex())
+	}
+	user, err = s.userRepo.EnsureKeyPair(ctx, user.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to ensure keypair: %w", err)
+	}
+	return &userResult{
+		ID:            user.ID,
+		Username:      user.Username,
+		PrivateKeyPem: user.PrivateKeyPem,
+	}, nil
+}
+
 // userResult is a minimal projection of a local user for ActivityPub use.
 type userResult struct {
 	ID            interface{ Hex() string }
@@ -464,13 +483,14 @@ type userResult struct {
 }
 
 // StoreRemoteFollower upserts a remote follower record for a local user.
+// It attempts to fetch the remote actor to persist the inbox and sharedInbox URLs.
 func (s *FederationService) StoreRemoteFollower(ctx context.Context, localUserID interface{ Hex() string }, actorID, username, instance string) error {
 	objectID, err := primitive.ObjectIDFromHex(localUserID.Hex())
 	if err != nil {
 		return err
 	}
 
-	// Upsert the remote user first
+	// Upsert the remote user cache
 	remoteUser := &models.RemoteUser{
 		ActorID:     actorID,
 		Username:    username,
@@ -479,29 +499,81 @@ func (s *FederationService) StoreRemoteFollower(ctx context.Context, localUserID
 		FetchedAt:   time.Now(),
 		CreatedAt:   time.Now(),
 	}
-	if err := s.remoteUserRepo.UpsertRemoteUser(ctx, remoteUser); err != nil {
-		log.Printf("ActivityPub: StoreRemoteFollower - upsert remote user failed: %v", err)
+
+	// Try to fetch actor JSON to get inbox, sharedInbox, and public key
+	inboxURL := ""
+	sharedInboxURL := ""
+	actFetchCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
+	defer cancel()
+	if actor, fetchErr := s.FetchRemoteActor(actFetchCtx, actorID); fetchErr == nil {
+		remoteUser.InboxURL = actor.Inbox
+		remoteUser.PublicKeyPem = actor.PublicKey.PublicKeyPem
+		inboxURL = actor.Inbox
+		// sharedInbox lives inside endpoints map — check by re-fetching raw JSON
+		sharedInboxURL = extractSharedInbox(actFetchCtx, s, actorID)
 	}
 
-	// Record the follower relationship
+	if err := s.remoteUserRepo.UpsertRemoteUser(ctx, remoteUser); err != nil {
+		log.Printf("[AP Follow] Warning - upsert remote user failed: %v", err)
+	}
+
+	// Record the follower relationship with full inbox data
 	follower := &models.RemoteFollower{
 		LocalUserID:    objectID,
 		RemoteActorID:  actorID,
+		RemoteUsername: username,
 		RemoteInstance: instance,
+		InboxURL:       inboxURL,
+		SharedInboxURL: sharedInboxURL,
+		FollowStatus:   "accepted", // We auto-accept all follows
 		CreatedAt:      time.Now(),
 	}
+
+	log.Printf("[AP Follow] Stored follower: actorID=%s inbox=%s sharedInbox=%s", actorID, inboxURL, sharedInboxURL)
 	return s.relationshipsRepo.AddRemoteFollower(ctx, follower)
 }
 
-// MarkFollowAccepted marks a pending RemoteFollow as accepted when we receive Accept.
+// MarkFollowAccepted marks a pending RemoteFollower as accepted when we receive an Accept.
 func (s *FederationService) MarkFollowAccepted(ctx context.Context, remoteActorID string) {
-	// Best-effort — use existing GetRemoteFollowing to find and update if possible
-	log.Printf("ActivityPub: MarkFollowAccepted for %s (implementation deferred to repository layer)", remoteActorID)
+	if err := s.relationshipsRepo.UpdateRemoteFollowStatus(ctx, remoteActorID, "accepted"); err != nil {
+		log.Printf("[AP Accept] Warning - failed to mark follow accepted for %s: %v", remoteActorID, err)
+		return
+	}
+	log.Printf("[AP Accept] Follow from %s marked as accepted", remoteActorID)
 }
 
 // RemoveRemoteFollowerByActorID removes a remote follower when we receive Undo/Follow.
 func (s *FederationService) RemoveRemoteFollowerByActorID(ctx context.Context, actorID string) {
-	log.Printf("ActivityPub: RemoveRemoteFollowerByActorID %s (best-effort)", actorID)
+	if err := s.relationshipsRepo.RemoveRemoteFollowerByActorID(ctx, actorID); err != nil {
+		log.Printf("[AP Undo] Warning - failed to remove follower %s: %v", actorID, err)
+		return
+	}
+	log.Printf("[AP Undo] Removed follower: %s", actorID)
+}
+
+// extractSharedInbox fetches the raw actor JSON and extracts endpoints.sharedInbox.
+func extractSharedInbox(ctx context.Context, s *FederationService, actorURL string) string {
+	req, err := http.NewRequestWithContext(ctx, "GET", actorURL, nil)
+	if err != nil {
+		return ""
+	}
+	req.Header.Set("Accept", "application/activity+json")
+	resp, err := s.httpClient.Do(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		return ""
+	}
+	defer resp.Body.Close()
+
+	var raw map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
+		return ""
+	}
+	if endpoints, ok := raw["endpoints"].(map[string]interface{}); ok {
+		if shared, ok := endpoints["sharedInbox"].(string); ok {
+			return shared
+		}
+	}
+	return ""
 }
 
 // StoreRemotePost stores a remote AP Note object in the remote_posts collection.
@@ -544,5 +616,217 @@ func (s *FederationService) StoreRemoteBoost(ctx context.Context, actorID, boost
 func (s *FederationService) DeleteRemotePostByID(ctx context.Context, postID string) {
 	if err := s.remotePostRepo.DeleteRemotePost(ctx, postID); err != nil {
 		log.Printf("ActivityPub: DeleteRemotePostByID %s failed: %v", postID, err)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Part 5 — Push-based delivery of Create activities
+// ---------------------------------------------------------------------------
+
+// DeliverActivityToFollowers sends an AP activity to all remote followers of a local user.
+// It deduplicates by sharedInbox (preferred) or inbox, and uses a 10s timeout per request.
+// Errors per inbox are logged but never crash the caller.
+func (s *FederationService) DeliverActivityToFollowers(ctx context.Context, localUsername, privateKeyPem, keyID string, localUserID primitive.ObjectID, activity map[string]interface{}) {
+	followers, err := s.relationshipsRepo.GetAcceptedFollowers(ctx, localUserID)
+	if err != nil {
+		log.Printf("[AP Deliver] Failed to load followers for %s: %v", localUsername, err)
+		return
+	}
+	if len(followers) == 0 {
+		log.Printf("[AP Deliver] No followers for %s — skipping delivery", localUsername)
+		return
+	}
+
+	// Deduplicate by inbox URL: prefer sharedInbox over per-user inbox
+	seen := make(map[string]bool)
+	var inboxes []string
+	for _, f := range followers {
+		target := f.SharedInboxURL
+		if target == "" {
+			target = f.InboxURL
+		}
+		if target != "" && !seen[target] {
+			seen[target] = true
+			inboxes = append(inboxes, target)
+		}
+	}
+
+	log.Printf("[AP Deliver] Delivering to %d inbox(es) for %s", len(inboxes), localUsername)
+
+	for _, inbox := range inboxes {
+		deliverCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		err := s.SendAPActivity(deliverCtx, inbox, activity, privateKeyPem, keyID)
+		cancel()
+		if err != nil {
+			log.Printf("[AP Deliver] FAILED → %s : %v", inbox, err)
+		} else {
+			log.Printf("[AP Deliver] OK → %s", inbox)
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Part 6 — Followers Collection endpoint
+// ---------------------------------------------------------------------------
+
+// GetFollowersCollection returns an AP OrderedCollection of remote follower actor IDs
+// for the given local username.
+func (s *FederationService) GetFollowersCollection(ctx context.Context, username string) (map[string]interface{}, error) {
+	user, err := s.userRepo.FindByUsername(ctx, username)
+	if err != nil || user == nil {
+		return nil, fmt.Errorf("user not found: %s", username)
+	}
+
+	followers, err := s.relationshipsRepo.GetRemoteFollowers(ctx, user.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load followers: %w", err)
+	}
+
+	base := config.AppConfig.BaseURL()
+	collectionID := fmt.Sprintf("%s/users/%s/followers", base, username)
+
+	var items []string
+	for _, f := range followers {
+		items = append(items, f.RemoteActorID)
+	}
+
+	return map[string]interface{}{
+		"@context":     "https://www.w3.org/ns/activitystreams",
+		"id":           collectionID,
+		"type":         "OrderedCollection",
+		"totalItems":   len(items),
+		"orderedItems": items,
+	}, nil
+}
+
+// ---------------------------------------------------------------------------
+// Part 7 — Outbox endpoint
+// ---------------------------------------------------------------------------
+
+// OutboxActivity wraps a local post as an AP Create+Note activity for the outbox.
+type OutboxActivity struct {
+	ID        string
+	Content   string
+	Published time.Time
+}
+
+// GetOutboxActivities builds an AP OrderedCollection from a local user's recent posts.
+// It accepts a list of OutboxActivity items (fetched by the handler from the post service).
+func (s *FederationService) BuildOutboxCollection(ctx context.Context, username string, posts []OutboxActivity) (map[string]interface{}, error) {
+	user, err := s.userRepo.FindByUsername(ctx, username)
+	if err != nil || user == nil {
+		return nil, fmt.Errorf("user not found: %s", username)
+	}
+
+	base := config.AppConfig.BaseURL()
+	actorURL := fmt.Sprintf("%s/users/%s", base, username)
+	outboxURL := actorURL + "/outbox"
+
+	var items []map[string]interface{}
+	for _, p := range posts {
+		noteID := fmt.Sprintf("%s/users/%s/posts/%s", base, username, p.ID)
+		createID := fmt.Sprintf("%s/activities/create-%s", base, p.ID)
+		note := map[string]interface{}{
+			"type":         "Note",
+			"id":           noteID,
+			"attributedTo": actorURL,
+			"content":      p.Content,
+			"published":    p.Published.UTC().Format(time.RFC3339),
+			"to":           []string{"https://www.w3.org/ns/activitystreams#Public"},
+		}
+		create := map[string]interface{}{
+			"@context":  "https://www.w3.org/ns/activitystreams",
+			"type":      "Create",
+			"id":        createID,
+			"actor":     actorURL,
+			"published": p.Published.UTC().Format(time.RFC3339),
+			"to":        []string{"https://www.w3.org/ns/activitystreams#Public"},
+			"object":    note,
+		}
+		items = append(items, create)
+	}
+
+	if items == nil {
+		items = []map[string]interface{}{}
+	}
+
+	return map[string]interface{}{
+		"@context":     "https://www.w3.org/ns/activitystreams",
+		"id":           outboxURL,
+		"type":         "OrderedCollection",
+		"totalItems":   len(items),
+		"orderedItems": items,
+	}, nil
+}
+
+// ---------------------------------------------------------------------------
+// Part 8 — Federated resolve endpoint
+// ---------------------------------------------------------------------------
+
+// ResolveAPHandle resolves a federated handle (@user@domain) or a local username.
+// For remote handles: WebFinger → FetchActor → UpsertRemoteUser (with 24h cache).
+// For local names (no domain): returns the local user as an AP actor.
+// Returns a normalised map suitable for JSON response.
+func (s *FederationService) ResolveAPHandle(ctx context.Context, handle string) (map[string]interface{}, error) {
+	handle = strings.TrimPrefix(handle, "@")
+	parts := strings.SplitN(handle, "@", 2)
+
+	// Local user only — no domain
+	if len(parts) == 1 || parts[1] == "" || parts[1] == config.AppConfig.InstanceDomain {
+		username := parts[0]
+		return s.BuildActorJSON(ctx, username)
+	}
+
+	username, domain := parts[0], parts[1]
+	actorID := fmt.Sprintf("https://%s/users/%s", domain, username)
+
+	// Check cache (skip remote fetch if cached within 24h)
+	cached, _ := s.remoteUserRepo.GetRemoteUsersByActorIDs(ctx, []string{actorID})
+	if ru, ok := cached[actorID]; ok && time.Since(ru.FetchedAt) < 24*time.Hour {
+		log.Printf("[AP Resolve] Cache hit for %s (fetched %s ago)", actorID, time.Since(ru.FetchedAt).Round(time.Minute))
+		return remoteUserToMap(ru), nil
+	}
+
+	// Fetch via WebFinger
+	log.Printf("[AP Resolve] Fetching remote handle @%s@%s", username, domain)
+	actor, err := s.WebFingerResolveHandle(ctx, handle)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve @%s@%s: %w", username, domain, err)
+	}
+
+	// Upsert into remote_users
+	ru := &models.RemoteUser{
+		ActorID:      actor.ID,
+		Username:     actor.PreferredUsername,
+		DisplayName:  actor.Name,
+		Instance:     extractDomain(actor.ID),
+		Bio:          actor.Summary,
+		InboxURL:     actor.Inbox,
+		PublicKeyPem: actor.PublicKey.PublicKeyPem,
+		FetchedAt:    time.Now(),
+		CreatedAt:    time.Now(),
+	}
+	if actor.Icon != nil {
+		ru.AvatarURL = actor.Icon.URL
+	}
+	if err := s.remoteUserRepo.UpsertRemoteUser(ctx, ru); err != nil {
+		log.Printf("[AP Resolve] Warning - failed to cache remote user: %v", err)
+	}
+
+	log.Printf("[AP Resolve] Resolved and cached @%s@%s → %s", username, domain, actor.ID)
+	return remoteUserToMap(ru), nil
+}
+
+// remoteUserToMap converts a RemoteUser to a map for JSON response.
+func remoteUserToMap(ru *models.RemoteUser) map[string]interface{} {
+	return map[string]interface{}{
+		"actor_id":    ru.ActorID,
+		"username":    ru.Username,
+		"displayName": ru.DisplayName,
+		"instance":    ru.Instance,
+		"avatar_url":  ru.AvatarURL,
+		"bio":         ru.Bio,
+		"inbox_url":   ru.InboxURL,
+		"fetched_at":  ru.FetchedAt.UTC().Format(time.RFC3339),
 	}
 }
