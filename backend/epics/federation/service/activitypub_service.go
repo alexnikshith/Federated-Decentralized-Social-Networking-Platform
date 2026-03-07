@@ -350,6 +350,69 @@ func (s *FederationService) FollowMastodonUser(ctx context.Context, localUserID 
 	return nil
 }
 
+// UnfollowRemoteUser sends a signed AP Undo{Follow} to the remote inbox and removes the local follow record.
+// Without sending the Undo, Mastodon keeps the follower relationship on its side, causing re-follow to silently fail.
+func (s *FederationService) UnfollowRemoteUser(ctx context.Context, localUserID primitive.ObjectID, remoteUser *models.RemoteUser) error {
+	// Load local user + ensure signing key
+	localUser, err := s.userRepo.FindByID(ctx, localUserID)
+	if err != nil || localUser == nil {
+		return fmt.Errorf("local user not found")
+	}
+	localUser, err = s.userRepo.EnsureKeyPair(ctx, localUser.ID)
+	if err != nil {
+		return fmt.Errorf("keypair error: %w", err)
+	}
+
+	base := config.AppConfig.BaseURL()
+	localActorURL := fmt.Sprintf("%s/users/%s", base, localUser.Username)
+
+	// Resolve remote inbox (use stored InboxURL from cache, fallback to FetchRemoteActor)
+	inboxURL := remoteUser.InboxURL
+	if inboxURL == "" {
+		fetchCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
+		defer cancel()
+		actor, fetchErr := s.FetchRemoteActor(fetchCtx, remoteUser.ActorID)
+		if fetchErr == nil {
+			inboxURL = actor.Inbox
+		}
+	}
+
+	if inboxURL == "" {
+		log.Printf("[AP Unfollow] Warning: no inbox URL for %s — removing local record only", remoteUser.ActorID)
+	} else {
+		// Build Undo{Follow} activity
+		activityID := fmt.Sprintf("%s/activities/%s", base, newUUID())
+		followID := fmt.Sprintf("%s/activities/%s", base, newUUID()) // reconstructed follow ID
+
+		undoActivity := map[string]interface{}{
+			"@context": "https://www.w3.org/ns/activitystreams",
+			"id":       activityID,
+			"type":     "Undo",
+			"actor":    localActorURL,
+			"object": map[string]interface{}{
+				"id":     followID,
+				"type":   "Follow",
+				"actor":  localActorURL,
+				"object": remoteUser.ActorID,
+			},
+		}
+
+		if sendErr := s.SendAPActivity(ctx, inboxURL, undoActivity, localUser.PrivateKeyPem, localActorURL+"#main-key"); sendErr != nil {
+			log.Printf("[AP Unfollow] Warning - failed to send Undo Follow to %s: %v", inboxURL, sendErr)
+			// Continue — clear local record regardless
+		} else {
+			log.Printf("[AP Unfollow] Sent Undo Follow to %s inbox: %s", remoteUser.ActorID, inboxURL)
+		}
+	}
+
+	// Remove local RemoteFollow record
+	if removeErr := s.relationshipsRepo.RemoveRemoteFollow(ctx, localUserID, remoteUser.ActorID, remoteUser.Username, remoteUser.Instance); removeErr != nil {
+		log.Printf("[AP Unfollow] Warning - failed to remove local follow record: %v", removeErr)
+	}
+
+	return nil
+}
+
 // ---------------------------------------------------------------------------
 // Part 4 — Signed HTTP delivery
 // ---------------------------------------------------------------------------
