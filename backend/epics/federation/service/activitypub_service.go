@@ -483,53 +483,78 @@ type userResult struct {
 }
 
 // StoreRemoteFollower upserts a remote follower record for a local user.
-// It attempts to fetch the remote actor to persist the inbox and sharedInbox URLs.
-func (s *FederationService) StoreRemoteFollower(ctx context.Context, localUserID interface{ Hex() string }, actorID, username, instance string) error {
+// Always uses the canonical actor.ID from the fetched actor JSON, not the raw payload actor field.
+func (s *FederationService) StoreRemoteFollower(ctx context.Context, localUserID interface{ Hex() string }, rawActorID, username, instance string) error {
 	objectID, err := primitive.ObjectIDFromHex(localUserID.Hex())
 	if err != nil {
 		return err
 	}
 
-	// Upsert the remote user cache
-	remoteUser := &models.RemoteUser{
-		ActorID:     actorID,
-		Username:    username,
-		Instance:    instance,
-		DisplayName: username,
-		FetchedAt:   time.Now(),
-		CreatedAt:   time.Now(),
-	}
-
-	// Try to fetch actor JSON to get inbox, sharedInbox, and public key
-	inboxURL := ""
-	sharedInboxURL := ""
+	// Fetch the actor JSON to get the canonical ID, inbox, and public key.
+	// This is the critical step: the raw actorID from the inbox payload may be
+	// a localhost URL (e.g. http://localhost:8081/users/x). We use actor.ID instead.
 	actFetchCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
 	defer cancel()
-	if actor, fetchErr := s.FetchRemoteActor(actFetchCtx, actorID); fetchErr == nil {
-		remoteUser.InboxURL = actor.Inbox
-		remoteUser.PublicKeyPem = actor.PublicKey.PublicKeyPem
+
+	canonicalActorID := rawActorID // fallback if fetch fails
+	inboxURL := ""
+	sharedInboxURL := ""
+	publicKeyPem := ""
+	displayName := username
+
+	actor, fetchErr := s.FetchRemoteActor(actFetchCtx, rawActorID)
+	if fetchErr != nil {
+		log.Printf("[AP Follow] Warning - could not fetch actor %s: %v — using raw actorID as fallback", rawActorID, fetchErr)
+	} else {
+		// Use the canonical actor.ID (not the raw inbox actor field)
+		canonicalActorID = actor.ID
 		inboxURL = actor.Inbox
-		// sharedInbox lives inside endpoints map — check by re-fetching raw JSON
-		sharedInboxURL = extractSharedInbox(actFetchCtx, s, actorID)
+		publicKeyPem = actor.PublicKey.PublicKeyPem
+		if actor.PreferredUsername != "" {
+			username = actor.PreferredUsername
+		}
+		if actor.Name != "" {
+			displayName = actor.Name
+		}
+		if actor.ID != "" {
+			instance = extractDomain(actor.ID)
+		}
+		sharedInboxURL = extractSharedInbox(actFetchCtx, s, canonicalActorID)
 	}
 
+	// Upsert into remote_users with full actor details
+	remoteUser := &models.RemoteUser{
+		ActorID:        canonicalActorID,
+		Username:       username,
+		DisplayName:    displayName,
+		Instance:       instance,
+		InboxURL:       inboxURL,
+		SharedInboxURL: sharedInboxURL,
+		PublicKeyPem:   publicKeyPem,
+		FetchedAt:      time.Now(),
+		CreatedAt:      time.Now(),
+	}
+	if actor != nil && actor.Icon != nil {
+		remoteUser.AvatarURL = actor.Icon.URL
+	}
 	if err := s.remoteUserRepo.UpsertRemoteUser(ctx, remoteUser); err != nil {
 		log.Printf("[AP Follow] Warning - upsert remote user failed: %v", err)
 	}
 
-	// Record the follower relationship with full inbox data
+	// Record the follower relationship using the canonical actor ID
 	follower := &models.RemoteFollower{
 		LocalUserID:    objectID,
-		RemoteActorID:  actorID,
+		RemoteActorID:  canonicalActorID,
 		RemoteUsername: username,
 		RemoteInstance: instance,
 		InboxURL:       inboxURL,
 		SharedInboxURL: sharedInboxURL,
-		FollowStatus:   "accepted", // We auto-accept all follows
+		FollowStatus:   "accepted",
 		CreatedAt:      time.Now(),
 	}
 
-	log.Printf("[AP Follow] Stored follower: actorID=%s inbox=%s sharedInbox=%s", actorID, inboxURL, sharedInboxURL)
+	log.Printf("[AP Follow] Stored follower: canonical=%s raw=%s inbox=%s sharedInbox=%s",
+		canonicalActorID, rawActorID, inboxURL, sharedInboxURL)
 	return s.relationshipsRepo.AddRemoteFollower(ctx, follower)
 }
 
@@ -818,15 +843,30 @@ func (s *FederationService) ResolveAPHandle(ctx context.Context, handle string) 
 }
 
 // remoteUserToMap converts a RemoteUser to a map for JSON response.
+// remoteUserToMap converts a RemoteUser to a normalized response map.
+// Always returns username (preferredUsername), display_name (name), handle (@user@domain), domain.
+// Never returns numeric actor IDs as the username.
 func remoteUserToMap(ru *models.RemoteUser) map[string]interface{} {
+	handle := ""
+	if ru.Username != "" && ru.Instance != "" {
+		handle = "@" + ru.Username + "@" + ru.Instance
+	}
 	return map[string]interface{}{
-		"actor_id":    ru.ActorID,
-		"username":    ru.Username,
-		"displayName": ru.DisplayName,
-		"instance":    ru.Instance,
-		"avatar_url":  ru.AvatarURL,
-		"bio":         ru.Bio,
-		"inbox_url":   ru.InboxURL,
-		"fetched_at":  ru.FetchedAt.UTC().Format(time.RFC3339),
+		// canonical AP identifier
+		"actor_id": ru.ActorID,
+		"id":       ru.ActorID,
+		// display fields
+		"username":     ru.Username,
+		"displayName":  ru.DisplayName,
+		"display_name": ru.DisplayName,
+		// federation routing
+		"instance": ru.Instance,
+		"domain":   ru.Instance,
+		"handle":   handle,
+		// profile
+		"avatar_url": ru.AvatarURL,
+		"bio":        ru.Bio,
+		"inbox_url":  ru.InboxURL,
+		"fetched_at": ru.FetchedAt.UTC().Format(time.RFC3339),
 	}
 }
