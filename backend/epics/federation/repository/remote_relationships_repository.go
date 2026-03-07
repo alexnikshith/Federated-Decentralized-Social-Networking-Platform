@@ -100,7 +100,8 @@ func (r *RemoteRelationshipsRepository) AddRemoteFollow(ctx context.Context, fol
 	return err
 }
 
-// AddRemoteFollower records that a remote user follows a local user
+// AddRemoteFollower records that a remote user follows a local user.
+// Stores inbox/sharedInbox/username so delivery doesn't require a remote fetch later.
 func (r *RemoteRelationshipsRepository) AddRemoteFollower(ctx context.Context, follower *models.RemoteFollower) error {
 	follower.CreatedAt = time.Now()
 
@@ -110,8 +111,12 @@ func (r *RemoteRelationshipsRepository) AddRemoteFollower(ctx context.Context, f
 	}
 	update := bson.M{
 		"$set": bson.M{
-			"remote_instance": follower.RemoteInstance,
-			"created_at":      follower.CreatedAt,
+			"remote_username":  follower.RemoteUsername,
+			"remote_instance":  follower.RemoteInstance,
+			"inbox_url":        follower.InboxURL,
+			"shared_inbox_url": follower.SharedInboxURL,
+			"follow_status":    follower.FollowStatus,
+			"created_at":       follower.CreatedAt,
 		},
 	}
 
@@ -162,13 +167,44 @@ func (r *RemoteRelationshipsRepository) RemoveRemoteFollow(ctx context.Context, 
 	return err
 }
 
-// RemoveRemoteFollower removes a remote follower
+// RemoveRemoteFollower removes a specific remote follower for a local user
 func (r *RemoteRelationshipsRepository) RemoveRemoteFollower(ctx context.Context, localUserID primitive.ObjectID, remoteActorID string) error {
 	_, err := r.remoteFollowers.DeleteOne(ctx, bson.M{
 		"local_user_id":   localUserID,
 		"remote_actor_id": remoteActorID,
 	})
 	return err
+}
+
+// RemoveRemoteFollowerByActorID removes a remote follower from ALL local users (used when Undo/Follow received).
+func (r *RemoteRelationshipsRepository) RemoveRemoteFollowerByActorID(ctx context.Context, remoteActorID string) error {
+	_, err := r.remoteFollowers.DeleteMany(ctx, bson.M{"remote_actor_id": remoteActorID})
+	return err
+}
+
+// UpdateRemoteFollowStatus updates the follow_status field for a remote follower record.
+func (r *RemoteRelationshipsRepository) UpdateRemoteFollowStatus(ctx context.Context, remoteActorID, status string) error {
+	_, err := r.remoteFollowers.UpdateMany(
+		ctx,
+		bson.M{"remote_actor_id": remoteActorID},
+		bson.M{"$set": bson.M{"follow_status": status}},
+	)
+	return err
+}
+
+// GetAcceptedFollowers returns all followers whose follow_status is "accepted" for a local user.
+func (r *RemoteRelationshipsRepository) GetAcceptedFollowers(ctx context.Context, localUserID primitive.ObjectID) ([]models.RemoteFollower, error) {
+	cursor, err := r.remoteFollowers.Find(ctx, bson.M{"local_user_id": localUserID})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var followers []models.RemoteFollower
+	if err := cursor.All(ctx, &followers); err != nil {
+		return nil, err
+	}
+	return followers, nil
 }
 
 // GetFollowerInstances returns unique instances that have users following the local user
