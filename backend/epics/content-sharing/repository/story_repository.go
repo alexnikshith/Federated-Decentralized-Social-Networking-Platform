@@ -44,6 +44,12 @@ func (r *StoryRepository) CreateStory(ctx context.Context, story *models.Story) 
 	if story.ExpiresAt.IsZero() {
 		story.ExpiresAt = story.CreatedAt.Add(24 * time.Hour) // Default 24h expiration
 	}
+	if story.Likes == nil {
+		story.Likes = []string{}
+	}
+	if story.ViewedBy == nil {
+		story.ViewedBy = []string{}
+	}
 	result, err := r.collection.InsertOne(ctx, story)
 	if err == nil {
 		story.ID = result.InsertedID.(primitive.ObjectID)

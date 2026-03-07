@@ -103,7 +103,13 @@ func (r *ReportRepository) CountReports(ctx context.Context, reportedID primitiv
 // DeactivateUser deactivates a user account
 func (r *ReportRepository) DeactivateUser(ctx context.Context, userID primitive.ObjectID) error {
 	filter := bson.M{"_id": userID}
-	update := bson.M{"$set": bson.M{"is_active": false}}
+	update := bson.M{
+		"$set": bson.M{
+			"is_active":      false,
+			"is_deactivated": true,
+			"updated_at":     time.Now(),
+		},
+	}
 	_, err := r.usersCollection.UpdateOne(ctx, filter, update)
 	return err
 }
