@@ -65,6 +65,8 @@ func RegisterContentSharingRoutes(router *mux.Router) {
 	router.Handle("/api/users/{id}/unfollow", middleware.AuthMiddleware(http.HandlerFunc(followHandler.Unfollow))).Methods("DELETE", "OPTIONS")
 	router.Handle("/api/users/{id}/followers", middleware.OptionalAuth(http.HandlerFunc(followHandler.GetFollowers))).Methods("GET", "OPTIONS")
 	router.Handle("/api/users/{id}/following", middleware.OptionalAuth(http.HandlerFunc(followHandler.GetFollowing))).Methods("GET", "OPTIONS")
+	// Unified follow endpoint — supports both local and remote handles
+	router.Handle("/api/follow", middleware.AuthMiddleware(http.HandlerFunc(followHandler.FollowHandle))).Methods("POST", "OPTIONS")
 
 	// Notification routes
 	router.Handle("/api/notifications", middleware.AuthMiddleware(http.HandlerFunc(notificationHandler.GetNotifications))).Methods("GET", "OPTIONS")
