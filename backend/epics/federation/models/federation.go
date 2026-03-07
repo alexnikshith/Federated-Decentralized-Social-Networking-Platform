@@ -21,12 +21,15 @@ type Instance struct {
 // RemoteUser represents a user from a remote federated instance (cached locally)
 type RemoteUser struct {
 	ID                primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	ActorID           string             `json:"actor_id" bson:"actor_id"`         // e.g., "https://server2.com/users/akhil"
-	Username          string             `json:"username" bson:"username"`         // e.g., "akhil"
-	DisplayName       string             `json:"display_name" bson:"display_name"` // e.g., "Akhil Kumar"
-	Instance          string             `json:"instance" bson:"instance"`         // e.g., "server2.com"
+	ActorID           string             `json:"actor_id" bson:"actor_id"`                     // e.g., "https://mastodon.social/users/alice"
+	Username          string             `json:"username" bson:"username"`                     // e.g., "alice"
+	DisplayName       string             `json:"display_name" bson:"display_name"`             // e.g., "Alice"
+	Instance          string             `json:"instance" bson:"instance"`                     // e.g., "mastodon.social"
 	AvatarURL         string             `json:"avatar_url" bson:"avatar_url"`
 	Bio               string             `json:"bio" bson:"bio"`
+	PublicKeyPem      string             `json:"public_key_pem" bson:"public_key_pem"`         // Cached public key for signature verification
+	InboxURL          string             `json:"inbox_url" bson:"inbox_url"`                   // Actor inbox URL
+	SharedInboxURL    string             `json:"shared_inbox_url" bson:"shared_inbox_url"`     // Actor sharedInbox (preferred for delivery)
 	ProfileVisibility string             `json:"profile_visibility" bson:"profile_visibility"` // "public", "private", "followers"
 	FetchedAt         time.Time          `json:"fetched_at" bson:"fetched_at"`                 // Last time we fetched this user's data
 	CreatedAt         time.Time          `json:"created_at" bson:"created_at"`
@@ -62,9 +65,13 @@ type RemoteFollow struct {
 // RemoteFollower represents a remote user following a local user
 type RemoteFollower struct {
 	ID             primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	LocalUserID    primitive.ObjectID `json:"local_user_id" bson:"local_user_id"`     // Who is being followed
-	RemoteActorID  string             `json:"remote_actor_id" bson:"remote_actor_id"` // Who is following
-	RemoteInstance string             `json:"remote_instance" bson:"remote_instance"` // Their server
+	LocalUserID    primitive.ObjectID `json:"local_user_id" bson:"local_user_id"`       // Who is being followed
+	RemoteActorID  string             `json:"remote_actor_id" bson:"remote_actor_id"`   // Who is following
+	RemoteUsername string             `json:"remote_username" bson:"remote_username"`   // Cached username
+	RemoteInstance string             `json:"remote_instance" bson:"remote_instance"`   // Their server
+	InboxURL       string             `json:"inbox_url" bson:"inbox_url"`               // Remote actor inbox
+	SharedInboxURL string             `json:"shared_inbox_url" bson:"shared_inbox_url"` // Remote sharedInbox (preferred)
+	FollowStatus   string             `json:"follow_status" bson:"follow_status"`       // "pending", "accepted"
 	CreatedAt      time.Time          `json:"created_at" bson:"created_at"`
 }
 
