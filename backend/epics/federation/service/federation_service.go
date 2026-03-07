@@ -713,37 +713,6 @@ func (s *FederationService) FollowRemoteUser(ctx context.Context, localUserID pr
 	return s.QueueFederationEvent(ctx, envelope, remoteUser.Instance)
 }
 
-// UnfollowRemoteUser handles a local user unfollowing a remote user
-func (s *FederationService) UnfollowRemoteUser(ctx context.Context, localUserID primitive.ObjectID, remoteUser *models.RemoteUser) error {
-	// 1. Remove local record of remote follow
-	if err := s.relationshipsRepo.RemoveRemoteFollow(ctx, localUserID, remoteUser.ActorID, remoteUser.Username, remoteUser.Instance); err != nil {
-		return fmt.Errorf("failed to remove remote follow record: %w", err)
-	}
-
-	// Fetch local user for ActorID
-	localUser, err := s.userRepo.FindByID(ctx, localUserID)
-	if err != nil {
-		return fmt.Errorf("failed to fetch local user: %w", err)
-	}
-
-	// 2. Send "Undo" Activity to remote instance
-	followerActorID := fmt.Sprintf("http://%s/users/%s", config.AppConfig.InstanceDomain, localUser.Username)
-
-	envelope := &models.ActivityEnvelope{
-		Type:      "Undo",
-		Actor:     followerActorID,
-		Origin:    config.AppConfig.InstanceDomain,
-		Timestamp: time.Now(),
-		Object: bson.M{
-			"type":   "Follow",
-			"actor":  followerActorID,
-			"object": remoteUser.ActorID,
-		},
-	}
-
-	return s.QueueFederationEvent(ctx, envelope, remoteUser.Instance)
-}
-
 // RemoveRemoteFollow removes a remote follow relationship (simplified wrapper for handlers)
 func (s *FederationService) RemoveRemoteFollow(ctx context.Context, localUserID primitive.ObjectID, actorID, username, instance string) error {
 	log.Printf("RemoveRemoteFollow: localUserID=%s, actorID=%s", localUserID.Hex(), actorID)

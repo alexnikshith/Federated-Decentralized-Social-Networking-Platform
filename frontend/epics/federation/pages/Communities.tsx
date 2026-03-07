@@ -137,13 +137,21 @@ const Communities = () => {
 
   // ── Follow ─────────────────────────────────────────────────────────────────
   const handleFollow = async (person: FederatedUser) => {
-    const key = person.handle || person.actor_id || person.username;
-    if (!key) return;
+    // Build the full handle: prefer person.handle, then construct @user@domain if domain/instance present
+    const fullHandle =
+      person.handle ||
+      (person.username && (person.domain || person.instance)
+        ? `@${person.username}@${person.domain || person.instance}`
+        : person.username);
+
+    if (!fullHandle) return;
+
+    const key = person.actor_id || person.handle || `${person.username}@${person.domain || person.instance || "local"}`;
     setFollowLoading(s => new Set(s).add(key));
     try {
-      await api.post("/api/follow", { handle: person.handle || person.username });
+      await api.post("/api/follow", { handle: fullHandle });
       setFollowing(s => new Set(s).add(key));
-      toast.success(`Following ${person.handle || person.username}`);
+      toast.success(`Following ${fullHandle}`);
     } catch (e: any) {
       toast.error(e?.response?.data?.message || "Could not follow user.");
     } finally {
@@ -151,8 +159,11 @@ const Communities = () => {
     }
   };
 
-  const isFollowing = (pu: FederatedUser) =>
-    pu.is_following || following.has(pu.handle || pu.actor_id || pu.username || "");
+  const isFollowing = (pu: FederatedUser) => {
+    const key = pu.actor_id || pu.handle || `${pu.username}@${pu.domain || pu.instance || "local"}`;
+    return pu.is_following || following.has(key);
+  };
+
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
