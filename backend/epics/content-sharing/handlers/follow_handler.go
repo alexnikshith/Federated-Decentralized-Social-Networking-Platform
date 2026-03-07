@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"encoding/json"
 	"federated-social/backend/epics/content-sharing/service"
 	"federated-social/backend/middleware"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -98,4 +100,36 @@ func (h *FollowHandler) GetFollowing(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondSuccess(w, "Following retrieved successfully", following, http.StatusOK)
+}
+
+// FollowHandle handles POST /api/follow
+// Accepts {"handle": "username"} for local or {"handle": "@user@domain"} for federated.
+// Dispatches transparently: local handles use the DB follow, remote handles use ActivityPub.
+func (h *FollowHandler) FollowHandle(w http.ResponseWriter, r *http.Request) {
+	followerID := middleware.GetUserIDFromContext(r.Context())
+	if followerID == (primitive.NilObjectID) {
+		respondError(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var body struct {
+		Handle string `json:"handle"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Handle == "" {
+		respondError(w, "handle is required", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.followService.FollowByHandle(r.Context(), followerID, body.Handle); err != nil {
+		log.Printf("[FollowHandle] error: %v", err)
+		status := http.StatusInternalServerError
+		if err.Error() == "local user not found: "+strings.TrimPrefix(body.Handle, "@") ||
+			err.Error() == "federation is not enabled" {
+			status = http.StatusBadRequest
+		}
+		respondError(w, err.Error(), status)
+		return
+	}
+
+	respondSuccess(w, "Follow request sent for "+body.Handle, nil, http.StatusOK)
 }
