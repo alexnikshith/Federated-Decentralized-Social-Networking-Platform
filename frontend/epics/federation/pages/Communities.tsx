@@ -1,325 +1,387 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Users, Globe, Shield, ChevronRight } from "lucide-react";
-import { useState, useEffect } from "react";
-import axios from "axios";
-import { COMMUNITIES, DEFAULT_COMMUNITY } from "../../../src/config/communities";
+import {
+  Search, Globe, Users, Loader2, AlertCircle,
+  UserPlus, UserCheck, AtSign, Hash
+} from "lucide-react";
+import { useState, useRef, useCallback } from "react";
 import { toast } from "sonner";
-import { JoinCommunityModal } from "../../../src/components/auth/JoinCommunityModal";
+import { cn } from "@/lib/utils";
+import { api } from "../../identity/api/client";
 import { useAuthStore } from "../../identity/store/authStore";
 
-import { api } from "../../identity/api/client";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface FederatedUser {
+  actor_id?: string;
+  username: string;
+  display_name?: string;
+  displayName?: string;
+  handle?: string;
+  domain?: string;
+  instance?: string;
+  avatar_url?: string;
+  bio?: string;
+  is_following?: boolean;
+}
+
+interface FederatedInstance {
+  id?: string;
+  name?: string;
+  instance_id?: string;
+  url?: string;
+  description?: string;
+  user_count?: number;
+  is_trusted?: boolean;
+}
+
+const TABS = [
+  { id: "people", label: "People", icon: Users },
+  { id: "communities", label: "Communities", icon: Globe },
+] as const;
+type Tab = typeof TABS[number]["id"];
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const isFederatedHandle = (q: string) =>
+  /^@?[a-zA-Z0-9_.-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(q.trim());
+
+const avatarLetter = (u: FederatedUser) =>
+  (u.display_name || u.displayName || u.username || "?")[0].toUpperCase();
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 const Communities = () => {
-  const [searchQuery, setSearchQuery] = useState("");
-  // Modal State
-  // Modal State
-  const [joinModalOpen, setJoinModalOpen] = useState(false);
-  const [targetCommunity, setTargetCommunity] = useState<typeof COMMUNITIES[0] | null>(null);
-  const [leaveCommunity, setLeaveCommunity] = useState<typeof COMMUNITIES[0] | null>(null);
-  const [password, setPassword] = useState("");
+  const [activeTab, setActiveTab] = useState<Tab>("people");
+  const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [people, setPeople] = useState<FederatedUser[]>([]);
+  const [instances, setInstances] = useState<FederatedInstance[]>([]);
+  const [following, setFollowing] = useState<Set<string>>(new Set());
+  const [followLoading, setFollowLoading] = useState<Set<string>>(new Set());
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
-  const { user, sessions } = useAuthStore();
+  const { user } = useAuthStore();
 
-  // Self-heal: Sync local sessions to backend profile
-  useEffect(() => {
-    if (user && sessions.length > 0) {
-      sessions.forEach(s => {
-        // If we have a session for a community, but backend doesn't know about it
-        if (s.communityId && !user.joined_communities?.includes(s.communityId)) {
-          // Skip if it's the current community ID (implied)
-          const activeId = localStorage.getItem('active_community_id');
-          if (s.communityId !== activeId) {
-            api.post('/api/profile/me/communities', { community_id: s.communityId })
-              .catch(err => console.error("Auto-sync failed", err));
-          }
-        }
-      });
-    }
-  }, [user?.id, sessions.length]);
-  // Real-time validation state: null = unknown, true = valid linked account, false = remote account missing/invalid
-  const [validations, setValidations] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    const verifyConnections = async () => {
-      if (!user?.email) return;
-
-      const results: Record<string, boolean> = {};
-
-      await Promise.all(COMMUNITIES.map(async (community) => {
-        const communityId = community.id;
-        const session = sessions.find(s => s.communityId === communityId && s.user.email === user.email);
-
-        // 1. Try Token
-        if (session?.token) {
-          try {
-            await axios.get(`${community.url}/api/auth/me`, {
-              headers: { Authorization: `Bearer ${session.token}` }
-            });
-            results[communityId] = true;
-            return;
-          } catch (e) {
-            // Token failed, fall through to email check
-          }
-        }
-
-        // 2. Try Email Check (Public Endpoint)
-        try {
-          const res = await axios.post(`${community.url}/api/auth/check-email`, { email: user.email });
-          results[communityId] = res.data.exists;
-        } catch (e) {
-          // Offline or error, fallback to local Profile knowledge if available
-          results[communityId] = user.joined_communities?.includes(communityId) ?? false;
-        }
-      }));
-
-      setValidations(results);
-    };
-
-    verifyConnections();
-  }, [user?.joined_communities, sessions, user?.email]);
-
-  const handleJoinClick = (community: typeof COMMUNITIES[0]) => {
-    // Open Modal to Register/Login to the target community
-    setTargetCommunity(community);
-    setJoinModalOpen(true);
-  };
-
-  const handleJoinSuccess = () => {
-    // Logic after successful Auth on new community
-    if (targetCommunity) {
-      toast.success(`Joined ${targetCommunity.name} successfully!`);
-      // Update validations immediately for visual feedback
-      setValidations(prev => ({ ...prev, [targetCommunity.id]: true }));
-    }
-    setJoinModalOpen(false);
-  };
-
-  const handleLeaveClick = (community: typeof COMMUNITIES[0]) => {
-    setLeaveCommunity(community);
-  };
-
-  const handleLeaveConfirm = async () => {
-    if (!leaveCommunity) return;
-
+  // ── Search people ──────────────────────────────────────────────────────────
+  const searchPeople = useCallback(async (q: string) => {
+    if (!q.trim()) { setPeople([]); return; }
+    setLoading(true);
+    setError("");
     try {
-      if (!password) {
-        toast.error("Please enter your password to confirm.");
-        return;
-      }
-
-      // Login to verify and get token
-      let deleteToken = null;
-      try {
-        const res = await axios.post(`${leaveCommunity.url}/api/auth/login`, {
-          email: user?.email,
-          password: password
-        });
-        deleteToken = res.data.token;
-      } catch (e) {
-        console.error("Verification failed", e);
-        toast.error("Incorrect password or unable to connect to community.");
-        return;
-      }
-
-      // Delete Account
-      if (deleteToken) {
-        try {
-          await axios.delete(`${leaveCommunity.url}/api/profile/me`, {
-            headers: { Authorization: `Bearer ${deleteToken}` }
-          });
-          toast.success(`Account deleted from ${leaveCommunity.name}`);
-
-          const targetSession = user?.email ? sessions.find(s => s.communityId === leaveCommunity.id && s.user.email === user.email) : null;
-          if (targetSession) {
-            useAuthStore.getState().removeAccount(targetSession.user.id);
-          }
-        } catch (e) {
-          console.error("Deletion failed", e);
-          toast.error("Failed to delete account data.");
-          return;
+      if (isFederatedHandle(q)) {
+        // Exact federated actor resolution
+        const res = await api.get(`/api/activitypub/resolve?handle=${encodeURIComponent(q)}`);
+        const data = res.data?.data || res.data;
+        if (data) {
+          setPeople(Array.isArray(data) ? data : [data]);
+        } else {
+          setPeople([]);
         }
+      } else {
+        // Regular user search (local + remote cache)
+        const res = await api.get(`/api/users/search?q=${encodeURIComponent(q)}&limit=20`);
+        const data = res.data?.data || res.data || [];
+        setPeople(Array.isArray(data) ? data : []);
       }
-
-      await api.delete(`/api/profile/me/communities/${leaveCommunity.id}`);
-      toast.success(`Left ${leaveCommunity.name}`);
-
-      // Auto-update UI without reload
-      setValidations(prev => ({ ...prev, [leaveCommunity.id]: false }));
-
-      const state = useAuthStore.getState();
-      if (state.user) {
-        const updatedUser = {
-          ...state.user,
-          joined_communities: (state.user.joined_communities || []).filter(id => id !== leaveCommunity.id)
-        };
-        state.setAuth(updatedUser, state.token);
-      }
-
-      setLeaveCommunity(null);
-      setPassword("");
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to leave community");
+    } catch {
+      setError("Could not search for people. Try again.");
+      setPeople([]);
+    } finally {
+      setLoading(false);
     }
-    setLeaveCommunity(null);
-    setPassword("");
+  }, []);
+
+  // ── Search communities ─────────────────────────────────────────────────────
+  const searchCommunities = useCallback(async (q: string) => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await api.get("/api/federation/instances");
+      const list: FederatedInstance[] = res.data?.data || res.data || [];
+      const filtered = q.trim()
+        ? list.filter(c =>
+          (c.name || "").toLowerCase().includes(q.toLowerCase()) ||
+          (c.instance_id || c.url || "").toLowerCase().includes(q.toLowerCase()) ||
+          (c.description || "").toLowerCase().includes(q.toLowerCase())
+        )
+        : list;
+      setInstances(filtered);
+    } catch {
+      setError("Could not load communities. Try again.");
+      setInstances([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // ── Debounced search dispatch ──────────────────────────────────────────────
+  const handleQueryChange = (val: string) => {
+    setQuery(val);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      if (activeTab === "people") searchPeople(val);
+      else searchCommunities(val);
+    }, 400);
   };
 
-  const filteredCommunities = COMMUNITIES.filter((community) => {
-    return community.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      community.description?.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    setPeople([]);
+    setInstances([]);
+    setError("");
+    if (tab === "communities") searchCommunities(query);
+    else if (query.trim()) searchPeople(query);
+  };
 
+  // ── Follow ─────────────────────────────────────────────────────────────────
+  const handleFollow = async (person: FederatedUser) => {
+    const key = person.handle || person.actor_id || person.username;
+    if (!key) return;
+    setFollowLoading(s => new Set(s).add(key));
+    try {
+      await api.post("/api/follow", { handle: person.handle || person.username });
+      setFollowing(s => new Set(s).add(key));
+      toast.success(`Following ${person.handle || person.username}`);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || "Could not follow user.");
+    } finally {
+      setFollowLoading(s => { const n = new Set(s); n.delete(key); return n; });
+    }
+  };
+
+  const isFollowing = (pu: FederatedUser) =>
+    pu.is_following || following.has(pu.handle || pu.actor_id || pu.username || "");
+
+  // ─── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen">
       <main className="pb-16">
-        <div className="container mx-auto px-4 lg:px-8">
+        <div className="container mx-auto px-4 lg:px-8 max-w-3xl">
+
           {/* Header */}
-          <div className="max-w-3xl mb-12">
-            <h1 className="font-display text-4xl md:text-5xl font-bold mb-4">
+          <div className="mb-8">
+            <h1 className="font-display text-4xl md:text-5xl font-bold mb-3">
               Explore <span className="text-gradient-gold">Federation</span>
             </h1>
-            <p className="text-lg text-muted-foreground">
-              Find your people. Each community is independently operated. Join one to create an account there.
+            <p className="text-muted-foreground text-lg">
+              Discover people and communities across the federated social network.
             </p>
           </div>
 
-          {/* Search */}
-          <div className="flex flex-col md:flex-row gap-4 mb-8">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          {/* Search bar */}
+          <div className="mb-6">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
+                id="federation-search-input"
                 type="text"
-                placeholder="Search communities..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-11 bg-secondary border-border"
+                placeholder={
+                  activeTab === "people"
+                    ? "Search by name, username, or @user@domain…"
+                    : "Search communities…"
+                }
+                value={query}
+                onChange={e => handleQueryChange(e.target.value)}
+                className="pl-12 h-12 text-base bg-secondary border-border rounded-xl focus-visible:ring-2 focus-visible:ring-primary/50"
+                autoComplete="off"
               />
+              {loading && (
+                <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 animate-spin text-muted-foreground" />
+              )}
             </div>
+            {activeTab === "people" && (
+              <p className="text-xs text-muted-foreground mt-2 ml-1 flex items-center gap-1">
+                <AtSign className="w-3 h-3" />
+                To search Mastodon users, type{" "}
+                <code className="px-1 rounded bg-muted">@username@mastodon.social</code>
+              </p>
+            )}
           </div>
 
-          {/* Communities Grid */}
-          <div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredCommunities.map((community, index) => {
-                const activeId = localStorage.getItem('active_community_id');
-                const hasSession = user?.email
-                  ? sessions.some(s => s.communityId === community.id && s.token && s.user.email === user.email)
-                  : false;
+          {/* Tabs */}
+          <div className="flex gap-1 p-1 bg-secondary rounded-xl mb-8 w-fit">
+            {TABS.map(t => (
+              <button
+                key={t.id}
+                id={`federation-tab-${t.id}`}
+                onClick={() => handleTabChange(t.id)}
+                className={cn(
+                  "flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all",
+                  activeTab === t.id
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <t.icon className="w-4 h-4" />
+                {t.label}
+              </button>
+            ))}
+          </div>
 
-                const inProfile = user?.joined_communities?.includes(community.id);
-                const isCurrent = activeId === community.id;
-                const validation = validations[community.id];
-                // Trust real-time validation if available, else fallback to local hints
-                const isJoined = validation !== undefined
-                  ? validation
-                  : (inProfile || (user?.email && sessions.some(s => s.communityId === community.id && s.token && s.user.email === user.email)));
+          {/* Error */}
+          {error && (
+            <div className="flex items-center gap-2 text-destructive mb-6 p-3 rounded-lg bg-destructive/10">
+              <AlertCircle className="w-5 h-5 shrink-0" />
+              <span className="text-sm">{error}</span>
+            </div>
+          )}
 
-                return (
-                  <div
-                    key={community.id}
-                    className="glass-card rounded-xl p-6 flex flex-col justify-between"
-                  >
-                    <div>
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <h3 className="font-display font-semibold text-lg">
-                            {community.name}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">{community.url.replace('http://', '')}</p>
-                        </div>
-                        <div className="px-2 py-1 text-xs font-medium rounded-full text-success bg-success/15">
-                          <span className="capitalize">Verified</span>
-                        </div>
-                      </div>
-
-                      <p className="text-sm text-muted-foreground mb-6 line-clamp-3">
-                        {community.description}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between mt-auto">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Users className="w-4 h-4" />
-                        <span>Active</span>
-                      </div>
-
-                      {isCurrent ? (
-                        <Button variant="outline" disabled className="opacity-50 cursor-not-allowed">
-                          Current
-                        </Button>
-                      ) : isJoined ? (
-                        <Button
-                          variant="destructive"
-                          onClick={() => handleLeaveClick(community)}
-                          className="bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20"
-                        >
-                          Leave
-                        </Button>
-                      ) : (
-                        <Button
-                          onClick={() => handleJoinClick(community)}
-                          className="gap-2"
-                        >
-                          Join Now
-                          <ChevronRight className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
+          {/* ── People results ────────────────────────────────────── */}
+          {activeTab === "people" && (
+            <div>
+              {!query.trim() ? (
+                <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-4">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Search className="w-7 h-7 text-primary" />
                   </div>
-                );
-              })}
+                  <div className="text-center">
+                    <p className="font-medium text-foreground mb-1">Search for people</p>
+                    <p className="text-sm">Find local users or discover people across the Mastodon network</p>
+                  </div>
+                </div>
+              ) : loading ? (
+                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  <p className="text-sm">Searching the federation…</p>
+                </div>
+              ) : people.length === 0 ? (
+                <div className="text-center py-16 text-muted-foreground">
+                  <Users className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                  <p className="font-medium text-foreground">No results found</p>
+                  <p className="text-sm mt-1">
+                    Try a full handle like <code className="px-1 rounded bg-muted">@name@mastodon.social</code>
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {people.map((pu, i) => {
+                    const displayName = pu.display_name || pu.displayName || pu.username;
+                    const handle = pu.handle ||
+                      (pu.username && pu.domain ? `@${pu.username}@${pu.domain}` :
+                        pu.username && pu.instance ? `@${pu.username}@${pu.instance}` :
+                          `@${pu.username}`);
+                    const key = pu.actor_id || pu.handle || `${i}-${pu.username}`;
+                    const isMe = user?.username === pu.username && !pu.domain;
+                    const alreadyFollowing = isFollowing(pu);
+                    const fLoading = followLoading.has(pu.handle || pu.actor_id || pu.username || "");
+
+                    return (
+                      <div
+                        key={key}
+                        className="glass-card rounded-xl p-4 flex items-center gap-4 group"
+                      >
+                        {/* Avatar */}
+                        <div className="shrink-0">
+                          {pu.avatar_url ? (
+                            <img
+                              src={pu.avatar_url}
+                              alt={displayName}
+                              className="w-12 h-12 rounded-full object-cover ring-2 ring-border"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-lg font-bold text-primary">
+                              {avatarLetter(pu)}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold truncate">{displayName}</p>
+                          <p className="text-sm text-muted-foreground truncate">{handle}</p>
+                          {pu.bio && (
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{pu.bio}</p>
+                          )}
+                        </div>
+
+                        {/* Follow button */}
+                        {!isMe && (
+                          <Button
+                            id={`follow-btn-${key}`}
+                            size="sm"
+                            variant={alreadyFollowing ? "outline" : "default"}
+                            disabled={fLoading || alreadyFollowing}
+                            onClick={() => handleFollow(pu)}
+                            className="shrink-0 gap-1.5"
+                          >
+                            {fLoading ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : alreadyFollowing ? (
+                              <><UserCheck className="w-4 h-4" /> Following</>
+                            ) : (
+                              <><UserPlus className="w-4 h-4" /> Follow</>
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          </div>
+          )}
+
+          {/* ── Communities results ───────────────────────────────── */}
+          {activeTab === "communities" && (
+            <div>
+              {loading ? (
+                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  <p className="text-sm">Loading communities…</p>
+                </div>
+              ) : instances.length === 0 ? (
+                <div className="text-center py-16 text-muted-foreground">
+                  <Hash className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                  <p className="font-medium text-foreground">No communities found</p>
+                  <p className="text-sm mt-1">Try a different search term</p>
+                </div>
+              ) : (
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {instances.map((c, i) => {
+                    const name = c.name || c.instance_id || c.url || `Community ${i + 1}`;
+                    const domain = c.url || c.instance_id || "";
+                    const key = c.id || c.instance_id || `inst-${i}`;
+
+                    return (
+                      <div key={key} className="glass-card rounded-xl p-5 flex flex-col gap-3">
+                        {/* Icon + Name */}
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-indigo-500/15 flex items-center justify-center shrink-0">
+                            <Globe className="w-5 h-5 text-indigo-400" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-semibold truncate">{name}</p>
+                            <p className="text-xs text-muted-foreground truncate">{domain.replace(/^https?:\/\//, "")}</p>
+                          </div>
+                          {c.is_trusted && (
+                            <span className="ml-auto px-2 py-0.5 text-xs font-medium rounded-full text-emerald-400 bg-emerald-400/15 shrink-0">
+                              Trusted
+                            </span>
+                          )}
+                        </div>
+
+                        {c.description && (
+                          <p className="text-sm text-muted-foreground line-clamp-2">{c.description}</p>
+                        )}
+
+                        {c.user_count != null && (
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Users className="w-3.5 h-3.5" />
+                            {c.user_count.toLocaleString()} members
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
       </main>
-
-      <JoinCommunityModal
-        isOpen={joinModalOpen}
-        onClose={() => setJoinModalOpen(false)}
-        targetCommunity={targetCommunity}
-        currentUserEmail={user?.email || ""}
-        onSuccess={handleJoinSuccess}
-      />
-
-      <AlertDialog open={!!leaveCommunity} onOpenChange={() => { setLeaveCommunity(null); setPassword(""); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Leave {leaveCommunity?.name}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to leave {leaveCommunity?.name}?
-              This will <strong>permanently delete your account and data</strong> on {leaveCommunity?.name}.
-              <br /><br />
-              Please enter your password for <strong>{leaveCommunity?.name}</strong> to confirm:
-            </AlertDialogDescription>
-            <div className="py-4">
-              <Input
-                type="password"
-                placeholder="Enter Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleLeaveConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Confirm & Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };
