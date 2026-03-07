@@ -54,6 +54,9 @@ func (r *RemoteUserRepository) UpsertRemoteUser(ctx context.Context, remoteUser 
 			"avatar_url":         remoteUser.AvatarURL,
 			"bio":                remoteUser.Bio,
 			"profile_visibility": remoteUser.ProfileVisibility,
+			"inbox_url":          remoteUser.InboxURL,
+			"shared_inbox_url":   remoteUser.SharedInboxURL,
+			"public_key_pem":     remoteUser.PublicKeyPem,
 			"fetched_at":         remoteUser.FetchedAt,
 		},
 		"$setOnInsert": bson.M{
