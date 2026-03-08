@@ -8,6 +8,7 @@ import { NotificationList } from '../components/NotificationList';
 import { StoriesRow } from '../components/StoriesRow';
 import { RightSidebar } from '../components/RightSidebar';
 import { Button } from '@/components/ui/button';
+import { PostCardSkeleton } from '@/components/skeletons/page-skeletons';
 import {
     Rss,
     Bell,
@@ -16,9 +17,10 @@ import {
     Search,
     X
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TransitionState } from '../../../epics/identity/store/authStore';
+import { DashboardSkeleton } from '@/components/skeletons/page-skeletons';
+import { cn } from '@/lib/utils';
 import './Dashboard.css';
 
 export const DashboardPage: React.FC = () => {
@@ -102,9 +104,11 @@ export const DashboardPage: React.FC = () => {
                             className="space-y-4"
                         >
                             {loading && (!posts || posts.length === 0) && (
-                                <div className="feed-loading">
-                                    <div className="animate-pulse">Loading your feed...</div>
-                                </div>
+                                <>
+                                    <PostCardSkeleton />
+                                    <PostCardSkeleton />
+                                    <PostCardSkeleton />
+                                </>
                             )}
 
                             {error && (

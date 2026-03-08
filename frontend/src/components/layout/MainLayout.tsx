@@ -12,7 +12,8 @@ import {
     IconX,
     IconChartBar,
     IconBell,
-    IconShieldLock
+    IconShieldLock,
+    IconDeviceLaptop
 } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
@@ -45,7 +46,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
     const { unreadMessageCount, refreshUnreadCount } = useMessagingStore();
     const navigate = useNavigate();
     const location = useLocation();
-    const { theme, toggleTheme } = useTheme();
+    const { theme, setTheme } = useTheme();
     const [open, setOpen] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -274,21 +275,56 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                             onClick={() => navigate("/settings")}
                             className={location.pathname === "/settings" ? "bg-orange-500/10 dark:bg-orange-500/20 text-black dark:text-white rounded-md" : ""}
                         />
-                        <SidebarLink
-                            link={{
-                                label: theme === "dark" ? "Dark" : "Light",
-                                href: "#",
-                                icon: theme === "dark" ? (
-                                    <IconMoon className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
-                                ) : (
-                                    <IconSun className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
-                                ),
-                            }}
-                            onClick={(e) => {
-                                e.preventDefault();
-                                toggleTheme();
-                            }}
-                        />
+                        {/* Segmented theme toggle */}
+                        <div className="px-2">
+                            {(open || isDropdownOpen) ? (
+                                /* Expanded: icon-only pill */
+                                <div className="flex items-center justify-between rounded-full border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 p-1 gap-0.5">
+                                    {([
+                                        { value: 'light', icon: <IconSun className="h-4 w-4" />, label: 'Light' },
+                                        { value: 'dark', icon: <IconMoon className="h-4 w-4" />, label: 'Dark' },
+                                        { value: 'system', icon: <IconDeviceLaptop className="h-4 w-4" />, label: 'System' },
+                                    ] as const).map(({ value, icon, label }) => (
+                                        <button
+                                            key={value}
+                                            onClick={() => setTheme(value)}
+                                            title={label}
+                                            className={cn(
+                                                "flex flex-1 items-center justify-center rounded-full py-1.5 px-3 transition-all duration-200 cursor-pointer",
+                                                theme === value
+                                                    ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white shadow-sm"
+                                                    : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
+                                            )}
+                                        >
+                                            {icon}
+                                        </button>
+                                    ))}
+                                </div>
+                            ) : (
+                                /* Collapsed: only the active theme icon */
+                                <div className="flex justify-center">
+                                    {([
+                                        { value: 'light', icon: <IconSun className="h-5 w-5" />, label: 'Light' },
+                                        { value: 'dark', icon: <IconMoon className="h-5 w-5" />, label: 'Dark' },
+                                        { value: 'system', icon: <IconDeviceLaptop className="h-5 w-5" />, label: 'System' },
+                                    ] as const).filter(({ value }) => value === theme).map(({ value, icon, label }) => (
+                                        <button
+                                            key={value}
+                                            onClick={() => {
+                                                // Cycle through themes on click when collapsed
+                                                const order = ['light', 'dark', 'system'] as const;
+                                                const next = order[(order.indexOf(value) + 1) % order.length];
+                                                setTheme(next);
+                                            }}
+                                            title={`Theme: ${label} (click to cycle)`}
+                                            className="p-1.5 rounded-full transition-all duration-200 cursor-pointer text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                                        >
+                                            {icon}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
 
                         <DropdownMenu onOpenChange={setIsDropdownOpen}>
                             <DropdownMenuTrigger asChild>

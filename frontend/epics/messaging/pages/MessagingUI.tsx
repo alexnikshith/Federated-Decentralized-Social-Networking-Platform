@@ -32,6 +32,7 @@ import { Trash2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog';
 import { useMessagingStore } from '../store/messagingStore';
+import { MessagingSkeleton } from '@/components/skeletons/page-skeletons';
 
 // MessagingUI handles the full chat interface
 // Features: Real-time messaging (WebSocket), Media uploads, Conversation management
@@ -392,7 +393,7 @@ const MessagingUI: React.FC = () => {
                 // Flag to suppress the loadMessages that fires when selectedConversation changes
                 // because messages are already in state (optimistically added above)
                 skipNextMessageLoad.current = true;
-                await loadConversations();
+                const updatedConvs = await loadConversations();
                 setIsNewChat(false);
                 setNewChatUser(null);
                 const newConv = updatedConvs.find(c => c.participants.some(p => p.id === receiverId));
@@ -487,11 +488,7 @@ const MessagingUI: React.FC = () => {
     };
 
     if (loading) {
-        return (
-            <div className="h-[calc(100vh-64px)] flex items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            </div>
-        );
+        return <MessagingSkeleton />;
     }
 
     return (
