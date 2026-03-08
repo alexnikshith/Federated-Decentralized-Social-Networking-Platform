@@ -88,7 +88,7 @@ func TestRecommendations_Integration(t *testing.T) {
 		Password: "SecurePassword123!",
 	})
 
-	pService := contentService.NewPostService()
+	pService := contentService.NewPostService(nil)
 
 	// Create posts about different topics
 	_, _ = pService.CreatePost(ctx, user.ID, contentDto.CreatePostRequest{Content: "I like Docker"})

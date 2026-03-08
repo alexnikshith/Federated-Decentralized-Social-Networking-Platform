@@ -34,7 +34,7 @@ func TestPostFlow_Integration(t *testing.T) {
 
 	// --- Step 2: Initialize Post Service ---
 	// Using NewPostService() which initializes all real repositories
-	postService := contentService.NewPostService()
+	postService := contentService.NewPostService(nil)
 
 	// --- Step 3: Create a Post ---
 	postReq := contentDto.CreatePostRequest{

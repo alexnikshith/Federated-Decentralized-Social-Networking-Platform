@@ -96,7 +96,7 @@ func TestCommunity_Integration(t *testing.T) {
 		Password: "TestPass123!",
 	})
 
-	profileService := identityService.NewProfileService()
+	profileService := identityService.NewProfileService(nil)
 
 	// --- Step 1: Join a Community ---
 	commID := "community-magic-123"

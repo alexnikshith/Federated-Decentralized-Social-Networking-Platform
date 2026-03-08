@@ -39,6 +39,7 @@ import { AuthModal } from "@/components/auth/AuthModal";
 import { CommunitySwitcher } from "../CommunitySwitcher";
 import { COMMUNITIES } from "../../config/communities";
 import { JoinCommunityModal } from "@/components/auth/JoinCommunityModal";
+import ModerationWarningModal from "../../../epics/safety/components/ModerationWarningModal";
 
 export const MainLayout = ({ children }: { children: React.ReactNode }) => {
     const { user, clearAuth, sessions, switchAccount, pauseSession, clearAllSessions } = useAuthStore();
@@ -499,6 +500,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                 onSuccess={handleJoinSuccess}
                 initialStep="login"
             />
+            <ModerationWarningModal />
         </div >
     );
 };
