@@ -15,6 +15,7 @@ import {
     X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { FeedSkeleton } from '@/components/skeletons/page-skeletons';
 import './Feed.css';
 
 // FeedPage is the main content stream
@@ -68,7 +69,11 @@ export const FeedPage: React.FC = () => {
                         </header>
 
                         <div className="create-post-container mb-8">
-                            <CreatePost />
+                            {loading ? (
+                                <FeedSkeleton />
+                            ) : (
+                                <CreatePost />
+                            )}
                         </div>
 
                         {/* Posting Tools */}

@@ -36,6 +36,8 @@ import {
   unfollowUser,
   followRemoteUser,
   unfollowRemoteUser,
+  followMastodonUser,
+  unfollowMastodonUser,
   getFollowers,
   getFollowing,
   getSavedPosts
@@ -52,6 +54,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ProfileSkeleton } from "@/components/skeletons/page-skeletons";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -609,11 +612,7 @@ const ProfileUI = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
+    return <ProfileSkeleton />;
   }
 
   if (error || !profileUser) {
@@ -739,10 +738,14 @@ const ProfileUI = () => {
                             const currentInstanceDomain = currentInstanceUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
                             const profileInstance = (profileUser.instance || targetCommunityUrl || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
 
-                            // Check for local aliases (Docker/Dev environment)
+                            // Check for local aliases (Docker/Dev environment) and production identical domains
+                            const isCommunity1 = currentInstanceDomain.includes('localhost:8080') || currentInstanceDomain.includes('federated-decentralized-social.onrender.com');
+                            const isCommunity2 = currentInstanceDomain.includes('localhost:8081') || currentInstanceDomain.includes('community-2');
+
                             const isLocalAlias = (
-                              (currentInstanceDomain.includes('localhost:8080') && (profileInstance === 'default-instance' || profileInstance === 'default')) ||
-                              (currentInstanceDomain.includes('localhost:8081') && profileInstance === 'community-2')
+                              (isCommunity1 && (profileInstance === 'localhost:8080' || profileInstance === 'default-instance' || profileInstance === 'default' || profileInstance === '')) ||
+                              (isCommunity2 && (profileInstance === 'localhost:8081' || profileInstance === 'community-2')) ||
+                              (profileInstance === currentInstanceDomain)
                             );
 
                             // It is remote if:
@@ -754,8 +757,19 @@ const ProfileUI = () => {
                               !isLocalAlias
                             );
 
+                            const isMastodonNode = isRemoteUser && !(
+                              profileInstance.includes('localhost') ||
+                              profileInstance.includes('community-2') ||
+                              profileInstance.includes('federated-decentralized-social.onrender.com') ||
+                              profileInstance === '' ||
+                              profileInstance === 'default'
+                            );
+
                             if (isFollowing) {
-                              if (isRemoteUser) {
+                              if (isMastodonNode) {
+                                const handle = `@${profileUser.username}@${profileInstance || currentInstanceDomain}`;
+                                await unfollowMastodonUser(handle);
+                              } else if (isRemoteUser) {
                                 const handle = `${profileUser.username}@${profileInstance || currentInstanceDomain}`;
                                 await unfollowRemoteUser(handle);
                               } else {
@@ -765,7 +779,10 @@ const ProfileUI = () => {
                               setProfileUser(prev => prev ? { ...prev, followers_count: (prev.followers_count || 0) - 1 } : null);
                               setTimeout(() => loadProfileData(false), 500);
                             } else {
-                              if (isRemoteUser) {
+                              if (isMastodonNode) {
+                                const handle = `@${profileUser.username}@${profileInstance || currentInstanceDomain}`;
+                                await followMastodonUser(handle);
+                              } else if (isRemoteUser) {
                                 const handle = `${profileUser.username}@${profileInstance || currentInstanceDomain}`;
                                 await followRemoteUser(handle);
                               } else {

@@ -52,14 +52,28 @@ export const UserSearch: React.FC<{
             const flatResults = allResults.flat();
 
             // Deduplicate by username, preferring the user's home community over cached remote versions
+            const currentInstanceUrl = localStorage.getItem('active_community_url') || import.meta.env.VITE_API_URL || import.meta.env.VITE_COMMUNITY1_URL || 'http://localhost:8080';
+            const currentInstanceDomain = currentInstanceUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+            const isCommunity1 = currentInstanceDomain.includes('localhost:8080') || currentInstanceDomain.includes('federated-decentralized-social.onrender.com');
+            const isCommunity2 = currentInstanceDomain.includes('localhost:8081') || currentInstanceDomain.includes('community-2');
+
+            const isLocal = (instance: string | undefined | null) => {
+                if (!instance) return true;
+                const cleanInstance = instance.replace(/^https?:\/\//, '').replace(/\/$/, '');
+                if (cleanInstance === currentInstanceDomain) return true;
+                if (isCommunity1 && (cleanInstance === 'localhost:8080' || cleanInstance === 'default' || cleanInstance === 'default-instance')) return true;
+                if (isCommunity2 && (cleanInstance === 'localhost:8081' || cleanInstance === 'community-2')) return true;
+                return false;
+            };
+
             const uniqueResults = flatResults.reduce((acc: PublicUser[], current) => {
                 const existing = acc.find(item => item.username === current.username);
                 if (!existing) {
                     return acc.concat([current]);
                 } else {
-                    // Prefer the version where user is local (instance is empty, "default", or doesn't have "community-" prefix)
-                    const currentIsLocal = !current.instance || current.instance === 'default' || current.instance === '';
-                    const existingIsLocal = !existing.instance || existing.instance === 'default' || existing.instance === '';
+                    const currentIsLocal = isLocal(current.instance);
+                    const existingIsLocal = isLocal(existing.instance);
 
                     if (currentIsLocal && !existingIsLocal) {
                         // Replace remote version with local version
