@@ -97,7 +97,7 @@ export const HologramProjector = React.memo(({ children, className, isActive = t
                     } as React.CSSProperties}
                 >
                     {/* Subtle scanline pattern internal to the panel - Retained for texture */}
-                    <div className="absolute inset-0 opacity-[0.04]" style={{
+                    <div className="absolute inset-0 opacity-[0.12]" style={{
                         backgroundImage: `linear-gradient(${currentTheme.scanline} 1px, transparent 1px)`,
                         backgroundSize: '100% 3px'
                     }} />

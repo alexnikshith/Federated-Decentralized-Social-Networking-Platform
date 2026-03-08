@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"federated-social/backend/epics/content-sharing/dto"
 	"federated-social/backend/epics/content-sharing/service"
+	safetyService "federated-social/backend/epics/safety/service"
 	"federated-social/backend/middleware"
 	"log"
 	"net/http"
@@ -17,9 +18,9 @@ type PostHandler struct {
 	postService *service.PostService
 }
 
-func NewPostHandler() *PostHandler {
+func NewPostHandler(enforcement *safetyService.EnforcementService) *PostHandler {
 	return &PostHandler{
-		postService: service.NewPostService(),
+		postService: service.NewPostService(enforcement),
 	}
 }
 

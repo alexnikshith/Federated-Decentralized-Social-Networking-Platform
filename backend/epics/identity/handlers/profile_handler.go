@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"federated-social/backend/epics/identity/dto"
 	"federated-social/backend/epics/identity/service"
+	safetyService "federated-social/backend/epics/safety/service"
 	"federated-social/backend/middleware"
 	"net/http"
 	"strconv"
@@ -16,9 +17,9 @@ type ProfileHandler struct {
 	profileService *service.ProfileService
 }
 
-func NewProfileHandler() *ProfileHandler {
+func NewProfileHandler(enforcement *safetyService.EnforcementService) *ProfileHandler {
 	return &ProfileHandler{
-		profileService: service.NewProfileService(),
+		profileService: service.NewProfileService(enforcement),
 	}
 }
 

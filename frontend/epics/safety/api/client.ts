@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Block, BlockResponse } from '../types';
+import type { Block, BlockResponse, CommunityGuideline, ModerationLog } from '../types';
 
 import { useAuthStore } from '../../identity/store/authStore';
 
@@ -45,10 +45,46 @@ export const unblockUser = async (userId: string): Promise<BlockResponse> => {
 
 export const getBlockedUsers = async (): Promise<Block[]> => {
     const response = await api.get('/api/users/blocked');
-    return response.data || [];
+    return response.data?.data || [];
+};
+
+export const getGuidelines = async (): Promise<CommunityGuideline[]> => {
+    const response = await api.get('/api/moderation/guidelines');
+    return response.data?.data || [];
+};
+
+export const getMyModerationLogs = async (): Promise<ModerationLog[]> => {
+    const response = await api.get('/api/moderation/my-logs');
+    return response.data?.data || [];
 };
 
 export const reportUser = async (userId: string, reason: string): Promise<any> => {
     const response = await api.post(`/api/users/${userId}/report`, { reason });
     return response.data;
+};
+
+// Admin Moderation CRUD
+export const createGuideline = async (data: any): Promise<any> => {
+    const response = await api.post('/api/admin/moderation/guidelines', data);
+    return response.data?.data;
+};
+
+export const updateGuideline = async (id: string, data: any): Promise<any> => {
+    const response = await api.put(`/api/admin/moderation/guidelines/${id}`, data);
+    return response.data?.data;
+};
+
+export const deleteGuideline = async (id: string): Promise<any> => {
+    const response = await api.delete(`/api/admin/moderation/guidelines/${id}`);
+    return response.data?.data;
+};
+
+export const runRetroactiveScan = async (): Promise<any> => {
+    const response = await api.post('/api/admin/moderation/scan');
+    return response.data?.data;
+};
+
+export const getAllModerationLogs = async (): Promise<ModerationLog[]> => {
+    const response = await api.get('/api/admin/moderation/logs');
+    return response.data?.data || [];
 };

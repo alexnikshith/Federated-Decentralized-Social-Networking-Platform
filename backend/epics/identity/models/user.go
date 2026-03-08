@@ -27,6 +27,10 @@ type User struct {
 	IsDiscoverable bool   `json:"is_discoverable" bson:"is_discoverable"` // True if user opts-in to global directory
 	Role           string `json:"role" bson:"role"`                       // "user" or "admin" - determines access privileges
 
+	// Moderation fields
+	Strikes       int    `json:"strikes" bson:"strikes"`
+	AccountStatus string `json:"account_status" bson:"account_status"` // "active", "warned", "suspended"
+
 	// Timestamps
 	CreatedAt interface{} `json:"created_at" bson:"created_at"`
 	UpdatedAt interface{} `json:"updated_at" bson:"updated_at"`
@@ -77,6 +81,8 @@ type PrivateUser struct {
 	InstanceID        string   `json:"instance_id"`
 	JoinedCommunities []string `json:"joined_communities"`
 	IsDiscoverable    bool     `json:"is_discoverable"`
+	Strikes           int      `json:"strikes"`
+	AccountStatus     string   `json:"account_status"`
 }
 
 // Session represents an active user session
@@ -122,5 +128,7 @@ func (u *User) ToPrivateUser() PrivateUser {
 		InstanceID:        u.InstanceID,
 		JoinedCommunities: u.JoinedCommunities,
 		IsDiscoverable:    u.IsDiscoverable,
+		Strikes:           u.Strikes,
+		AccountStatus:     u.AccountStatus,
 	}
 }
