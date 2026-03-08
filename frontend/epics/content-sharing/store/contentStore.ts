@@ -60,7 +60,9 @@ export const useContentStore = create<ContentState>((set, get) => ({
             // Refresh the entire feed to get the enriched post with author data
             await get().fetchFeed();
         } catch (error) {
-            set({ error: error.response?.data?.message || 'Failed to create post', loading: false });
+            const message = error.response?.data?.message || 'Failed to create post';
+            set({ error: message, loading: false });
+            throw new Error(message);
         }
     },
 

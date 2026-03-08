@@ -27,7 +27,7 @@ func TestStoriesAndNotifications_Integration(t *testing.T) {
 
 	sService := contentService.NewStoryService()
 	nService := contentService.NewNotificationService()
-	pService := contentService.NewPostService()
+	pService := contentService.NewPostService(nil)
 	fService := contentService.NewFollowService()
 
 	// --- Step 1: Create two Users (Author and Reactor) ---

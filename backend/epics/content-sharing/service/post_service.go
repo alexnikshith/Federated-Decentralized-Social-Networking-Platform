@@ -56,17 +56,18 @@ type PostRepositoryInterface interface {
 }
 
 type PostService struct {
-	postRepo          PostRepositoryInterface
-	followRepo        *repository.FollowRepository
-	searchRepo        *repository.SearchRepository
-	notificationRepo  *repository.NotificationRepository
-	reportRepo        *reportRepo.ReportRepository
-	blockService      *safetyService.BlockService
-	federationService *federationService.FederationService
-	recService        *recService.RecommenderService
+	postRepo           PostRepositoryInterface
+	followRepo         *repository.FollowRepository
+	searchRepo         *repository.SearchRepository
+	notificationRepo   *repository.NotificationRepository
+	reportRepo         *reportRepo.ReportRepository
+	blockService       *safetyService.BlockService
+	enforcementService *safetyService.EnforcementService
+	federationService  *federationService.FederationService
+	recService         *recService.RecommenderService
 }
 
-func NewPostService() *PostService {
+func NewPostService(enforcement *safetyService.EnforcementService) *PostService {
 	var fedService *federationService.FederationService
 	if config.AppConfig.FederationEnabled {
 		fedService = federationService.NewFederationService()
@@ -75,14 +76,15 @@ func NewPostService() *PostService {
 	postRepo := repository.NewPostRepository()
 
 	return &PostService{
-		postRepo:          postRepo,
-		followRepo:        repository.NewFollowRepository(),
-		searchRepo:        repository.NewSearchRepository(),
-		notificationRepo:  repository.NewNotificationRepository(),
-		reportRepo:        reportRepo.NewReportRepository(),
-		blockService:      safetyService.NewBlockService(safetyRepo.NewBlockRepository()),
-		federationService: fedService,
-		recService:        recService.NewRecommenderService(postRepo),
+		postRepo:           postRepo,
+		followRepo:         repository.NewFollowRepository(),
+		searchRepo:         repository.NewSearchRepository(),
+		notificationRepo:   repository.NewNotificationRepository(),
+		reportRepo:         reportRepo.NewReportRepository(),
+		blockService:       safetyService.NewBlockService(safetyRepo.NewBlockRepository()),
+		enforcementService: enforcement,
+		federationService:  fedService,
+		recService:         recService.NewRecommenderService(postRepo),
 	}
 }
 
@@ -118,6 +120,11 @@ func (s *PostService) CreatePost(ctx context.Context, userID primitive.ObjectID,
 
 	if err := s.postRepo.CreatePost(ctx, post); err != nil {
 		return nil, err
+	}
+
+	// Trigger AI Moderation Asynchronously
+	if s.enforcementService != nil {
+		s.enforcementService.ModeratePostAsync(post.ID)
 	}
 
 	// Handle Mentions: @username
@@ -533,6 +540,11 @@ func (s *PostService) CreateComment(ctx context.Context, postID, userID primitiv
 
 	if err := s.postRepo.CreateComment(ctx, comment); err != nil {
 		return nil, err
+	}
+
+	// Trigger AI Moderation Asynchronously
+	if s.enforcementService != nil {
+		s.enforcementService.ModerateCommentAsync(comment.ID)
 	}
 
 	// Create notification for post author (if not commenting on own post)

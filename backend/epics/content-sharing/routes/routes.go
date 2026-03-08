@@ -2,6 +2,7 @@ package routes
 
 import (
 	"federated-social/backend/epics/content-sharing/handlers"
+	safetyService "federated-social/backend/epics/safety/service"
 	"federated-social/backend/middleware"
 	"net/http"
 
@@ -15,8 +16,8 @@ import (
 // - Follows: Follow, unfollow, get followers/following
 // - Notifications: Get, mark read
 // - Search: User search
-func RegisterContentSharingRoutes(router *mux.Router) {
-	postHandler := handlers.NewPostHandler()
+func RegisterContentSharingRoutes(router *mux.Router, enforcement *safetyService.EnforcementService) {
+	postHandler := handlers.NewPostHandler(enforcement)
 	followHandler := handlers.NewFollowHandler()
 	notificationHandler := handlers.NewNotificationHandler()
 	searchHandler := handlers.NewSearchHandler()

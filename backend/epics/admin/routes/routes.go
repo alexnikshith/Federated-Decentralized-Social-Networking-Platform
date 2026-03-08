@@ -4,6 +4,8 @@ import (
 	"federated-social/backend/epics/admin/handlers"
 	"federated-social/backend/middleware"
 
+	safetyService "federated-social/backend/epics/safety/service"
+
 	"github.com/gorilla/mux"
 )
 
@@ -11,8 +13,8 @@ import (
 // All routes are protected by Authentication AND Admin Authorization middleware.
 // Includes endpoints for dashboard stats, user management (list, status, role, delete),
 // post moderation, and handling user reports.
-func RegisterAdminRoutes(router *mux.Router) {
-	h := handlers.NewAdminHandler()
+func RegisterAdminRoutes(router *mux.Router, enforcement *safetyService.EnforcementService) {
+	h := handlers.NewAdminHandler(enforcement)
 
 	adminSubrouter := router.PathPrefix("/api/admin").Subrouter()
 	adminSubrouter.Use(middleware.AuthMiddleware)
