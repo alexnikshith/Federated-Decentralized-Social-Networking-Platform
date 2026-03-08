@@ -50,8 +50,8 @@ export const IdentityLayout: React.FC<IdentityLayoutProps> = ({
 
     // Theme color mappings
     const themeClasses = {
-        border: isEmerald ? 'border-emerald-500/30' : 'border-amber-500/30',
-        bg: isEmerald ? 'bg-emerald-950/[0.80]' : 'bg-amber-950/[0.80]',
+        border: isEmerald ? 'border-emerald-500/45' : 'border-amber-500/45',
+        bg: isEmerald ? 'bg-emerald-950/[0.85]' : 'bg-amber-950/[0.85]',
         glow: isEmerald ? 'bg-emerald-500/30' : 'bg-amber-500/30',
         icon: isEmerald ? 'text-emerald-100' : 'text-amber-100',
         shadow: isEmerald ? 'drop-shadow-[0_0_20px_rgba(16,185,129,0.8)]' : 'drop-shadow-[0_0_20px_rgba(255,146,0,0.8)]'

@@ -222,7 +222,7 @@ export const SignupPage: React.FC = () => {
                 </div>
             ) : (
                 <>
-                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'linear-gradient(rgba(16,185,129,0.5) 1px, transparent 1px)', backgroundSize: '100% 3px' }} />
+                    <div className="absolute inset-0 opacity-[0.10] pointer-events-none" style={{ backgroundImage: 'linear-gradient(rgba(16,185,129,0.5) 1px, transparent 1px)', backgroundSize: '100% 3px' }} />
 
                     <div className="absolute top-0 left-0 w-8 h-8 border-l-2 border-t-2 border-amber-500/40 rounded-tl-2xl" />
                     <div className="absolute top-0 right-0 w-8 h-8 border-r-2 border-t-2 border-amber-500/40 rounded-tr-2xl" />

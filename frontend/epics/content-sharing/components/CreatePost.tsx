@@ -250,12 +250,18 @@ export const CreatePost: React.FC = () => {
             }
         }
 
-        await createPost(content, mediaUrl, mediaType);
-        setContent('');
-        clearMedia();
-        setIsUploading(false);
-        setShowHashtags(false);
-        setShowMentions(false);
+        try {
+            await createPost(content, mediaUrl, mediaType);
+            showToast.success("Post published successfully");
+            setContent('');
+            clearMedia();
+            setIsUploading(false);
+            setShowHashtags(false);
+            setShowMentions(false);
+        } catch (error: any) {
+            showToast.error(error.message || "Failed to publish post");
+            setIsUploading(false);
+        }
     };
 
     const filteredSuggestions = mentionSuggestions; // Backend already filtered based on search query

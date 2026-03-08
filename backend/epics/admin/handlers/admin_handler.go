@@ -13,6 +13,7 @@ import (
 
 	reportRepo "federated-social/backend/epics/reports/repository"
 	reportService "federated-social/backend/epics/reports/service"
+	safetyService "federated-social/backend/epics/safety/service"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -29,10 +30,11 @@ type AdminHandler struct {
 	notificationRepo *contentRepo.NotificationRepository
 	postService      *service.PostService
 	reportService    reportService.ReportService
+	enforcementService *safetyService.EnforcementService
 	emailSender      *email.EmailSender
 }
 
-func NewAdminHandler() *AdminHandler {
+func NewAdminHandler(enforcement *safetyService.EnforcementService) *AdminHandler {
 	return &AdminHandler{
 		userRepo:         identityRepo.NewUserRepository(),
 		postRepo:         contentRepo.NewPostRepository(),
@@ -42,8 +44,9 @@ func NewAdminHandler() *AdminHandler {
 		sessionRepo:      identityRepo.NewSessionRepository(),
 		followRepo:       contentRepo.NewFollowRepository(),
 		notificationRepo: contentRepo.NewNotificationRepository(),
-		postService:      service.NewPostService(),
+		postService:      service.NewPostService(enforcement),
 		reportService:    reportService.NewReportService(reportRepo.NewReportRepository()),
+		enforcementService: enforcement,
 		emailSender:      email.NewEmailSender(),
 	}
 }

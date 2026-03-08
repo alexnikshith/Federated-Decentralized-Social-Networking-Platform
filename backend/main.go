@@ -17,8 +17,10 @@ import (
 	messagingRoutes "federated-social/backend/epics/messaging/routes"
 	reportRepo "federated-social/backend/epics/reports/repository"
 	reportRoutes "federated-social/backend/epics/reports/routes"
+	safetyHandlers "federated-social/backend/epics/safety/handlers"
 	safetyRepo "federated-social/backend/epics/safety/repository"
 	safetyRoutes "federated-social/backend/epics/safety/routes"
+	safetyService "federated-social/backend/epics/safety/service"
 	"federated-social/backend/middleware"
 	"federated-social/backend/pkg/websocket"
 	"log"
@@ -149,10 +151,18 @@ func main() {
 		log.Printf("Warning: Failed to create messaging indexes: %v", err)
 	}
 
-	// Create safety indexes (Blocking)
+	// Create safety indexes (Blocking, Moderation)
 	blockRepo := safetyRepo.NewBlockRepository()
 	if err := blockRepo.CreateIndexes(ctx); err != nil {
 		log.Printf("Warning: Failed to create block indexes: %v", err)
+	}
+
+	moderationRepo := safetyRepo.NewModerationRepository()
+	if err := moderationRepo.CreateIndexes(ctx); err != nil {
+		log.Printf("Warning: Failed to create moderation indexes: %v", err)
+	}
+	if err := moderationRepo.SeedInitialGuidelines(ctx); err != nil {
+		log.Printf("Warning: Failed to seed community guidelines: %v", err)
 	}
 
 	// Create report indexes (User Reports)
@@ -160,6 +170,21 @@ func main() {
 	if err := userReportRepo.CreateIndexes(ctx); err != nil {
 		log.Printf("Warning: Failed to create report indexes: %v", err)
 	}
+
+	// Initialize AI Moderation
+	aiModerator, err := safetyService.NewAIModeratorService(ctx)
+	if err != nil {
+		log.Printf("Warning: Failed to initialize AI Moderator: %v", err)
+	}
+
+	enforcementService := safetyService.NewEnforcementService(
+		moderationRepo,
+		postRepo,
+		userRepo,
+		aiModerator,
+	)
+
+	modHandler := safetyHandlers.NewModerationHandler(moderationRepo, enforcementService)
 
 	// Create federation indexes
 	if config.AppConfig.FederationEnabled {
@@ -201,11 +226,11 @@ func main() {
 	router.Use(middleware.Logging)
 
 	// Register module routes
-	routes.RegisterIdentityRoutes(router)
-	contentRoutes.RegisterContentSharingRoutes(router)
+	routes.RegisterIdentityRoutes(router, enforcementService)
+	contentRoutes.RegisterContentSharingRoutes(router, enforcementService)
 	reportRoutes.RegisterReportRoutes(router)
-	safetyRoutes.RegisterSafetyRoutes(router)
-	adminRoutes.RegisterAdminRoutes(router)
+	safetyRoutes.RegisterSafetyRoutes(router, modHandler)
+	adminRoutes.RegisterAdminRoutes(router, enforcementService)
 	messagingRoutes.RegisterMessagingRoutes(router)
 
 	// Register federation routes
