@@ -736,10 +736,12 @@ const ProfileUI = () => {
                             const currentInstanceDomain = currentInstanceUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
                             const profileInstance = (profileUser.instance || targetCommunityUrl || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
 
-                            // Check for local aliases (Docker/Dev environment)
+                            // Check for local aliases (Docker/Dev environment) and production identical domains
                             const isLocalAlias = (
                               (currentInstanceDomain.includes('localhost:8080') && (profileInstance === 'default-instance' || profileInstance === 'default')) ||
-                              (currentInstanceDomain.includes('localhost:8081') && profileInstance === 'community-2')
+                              (currentInstanceDomain.includes('localhost:8081') && profileInstance === 'community-2') ||
+                              (profileInstance === currentInstanceDomain) ||
+                              (profileInstance === 'default' || profileInstance === 'default-instance' || profileInstance === '')
                             );
 
                             // It is remote if:
