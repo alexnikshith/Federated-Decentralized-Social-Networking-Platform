@@ -14,8 +14,8 @@ import { useReportsApi } from '../../reports/api/reportsApi';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useQueryClient } from '@tanstack/react-query';
-
 import { useSearchParams } from 'react-router-dom';
+import { AdminSkeleton } from '@/components/skeletons/page-skeletons';
 
 // AdminDashboard provides a comprehensive view for platform administrators
 // Features: User Management, Content Moderation (Reports), Statistics
@@ -125,6 +125,10 @@ const AdminDashboard: React.FC = () => {
             toast.error('Failed to delete post');
         }
     };
+
+    if (loading && !stats) {
+        return <AdminSkeleton />;
+    }
 
     return (
         <div className="container mx-auto p-6 space-y-8 min-h-screen bg-transparent">

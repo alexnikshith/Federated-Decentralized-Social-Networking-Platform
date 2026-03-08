@@ -107,11 +107,12 @@ export const useContentStore = create<ContentState>((set, get) => ({
     },
 
     fetchNotifications: async () => {
+        set({ loading: true });
         try {
             const notifications = await api.getNotifications();
-            set({ notifications });
+            set({ notifications, loading: false });
         } catch (error) {
-            set({ error: error.response?.data?.message || 'Failed to fetch notifications' });
+            set({ error: error.response?.data?.message || 'Failed to fetch notifications', loading: false });
         }
     },
 
