@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { api } from "../../identity/api/client";
 import { useAuthStore } from "../../identity/store/authStore";
+import { CommunitiesSkeleton } from "@/components/skeletons/page-skeletons";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -252,11 +253,8 @@ const Communities = () => {
                     <p className="text-sm">Find local users or discover people across the Mastodon network</p>
                   </div>
                 </div>
-              ) : loading ? (
-                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3">
-                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                  <p className="text-sm">Searching the federation…</p>
-                </div>
+              ) : loading && people.length === 0 ? (
+                <CommunitiesSkeleton />
               ) : people.length === 0 ? (
                 <div className="text-center py-16 text-muted-foreground">
                   <Users className="w-10 h-10 mx-auto mb-3 opacity-40" />
@@ -337,11 +335,8 @@ const Communities = () => {
           {/* ── Communities results ───────────────────────────────── */}
           {activeTab === "communities" && (
             <div>
-              {loading ? (
-                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3">
-                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                  <p className="text-sm">Loading communities…</p>
-                </div>
+              {loading && instances.length === 0 ? (
+                <CommunitiesSkeleton />
               ) : instances.length === 0 ? (
                 <div className="text-center py-16 text-muted-foreground">
                   <Hash className="w-10 h-10 mx-auto mb-3 opacity-40" />

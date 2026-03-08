@@ -52,6 +52,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ProfileSkeleton } from "@/components/skeletons/page-skeletons";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -609,11 +610,7 @@ const ProfileUI = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
+    return <ProfileSkeleton />;
   }
 
   if (error || !profileUser) {

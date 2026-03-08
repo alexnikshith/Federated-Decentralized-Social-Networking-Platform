@@ -19,6 +19,7 @@ import type { User as UserType, ActivityLog } from "../types";
 import { useToast } from "@/hooks/use-toast";
 import { useSettingsStore } from "../store/settingsStore";
 import { useReportsApi } from "../../reports/api/reportsApi";
+import { SettingsSkeleton } from "@/components/skeletons/page-skeletons";
 
 // SettingsPage manages user account preferences
 // It includes tabs for:
@@ -431,6 +432,8 @@ export const SettingsPage = () => {
         { id: "time_management", label: "Time Management", icon: Clock, disabled: false },
         { id: "privacy", label: "Privacy & Security", icon: Shield, disabled: false },
     ];
+
+    if (!currentUser) return <SettingsSkeleton />;
 
     return (
         <div className="min-h-screen bg-background pb-12">
