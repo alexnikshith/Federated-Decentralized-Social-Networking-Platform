@@ -65,6 +65,9 @@ func RegisterFederationRoutes(router *mux.Router) {
 		router.Handle("/api/activitypub/follow",
 			middleware.AuthMiddleware(http.HandlerFunc(apHandler.FollowMastodonHandle))).Methods("POST", "OPTIONS")
 
+		router.Handle("/api/activitypub/unfollow",
+			middleware.AuthMiddleware(http.HandlerFunc(apHandler.UnfollowMastodonHandle))).Methods("POST", "OPTIONS")
+
 		// Part 8: Resolve a federated handle (public)
 		router.HandleFunc("/api/activitypub/resolve", apHandler.ResolveHandle).Methods("GET", "OPTIONS")
 	}

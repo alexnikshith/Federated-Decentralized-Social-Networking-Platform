@@ -19,6 +19,7 @@ import (
 	"crypto/rsa"
 	"encoding/json"
 	"federated-social/backend/config"
+	"federated-social/backend/epics/federation/models"
 	"federated-social/backend/epics/federation/service"
 	"federated-social/backend/middleware"
 	"fmt"
@@ -384,6 +385,62 @@ func (h *ActivityPubHandler) FollowMastodonHandle(w http.ResponseWriter, r *http
 	json.NewEncoder(w).Encode(map[string]string{
 		"status":  "success",
 		"message": fmt.Sprintf("Follow request sent to %s", body.Handle),
+	})
+}
+
+// UnfollowMastodonHandle handles POST /api/activitypub/unfollow
+// Body: {"handle": "@alice@mastodon.social"}
+func (h *ActivityPubHandler) UnfollowMastodonHandle(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Handle string `json:"handle"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Handle == "" {
+		http.Error(w, "handle is required", http.StatusBadRequest)
+		return
+	}
+
+	userIDVal := r.Context().Value(middleware.UserIDKey)
+	if userIDVal == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	userIDStr, ok := userIDVal.(string)
+	if !ok {
+		http.Error(w, "invalid user id in context", http.StatusInternalServerError)
+		return
+	}
+	localUserID, err := primitive.ObjectIDFromHex(userIDStr)
+	if err != nil {
+		http.Error(w, "invalid user id format", http.StatusBadRequest)
+		return
+	}
+
+	// Resolve the handle via WebFinger
+	actor, err := h.svc.WebFingerResolveHandle(r.Context(), body.Handle)
+	if err != nil {
+		log.Printf("UnfollowMastodonHandle: failed to resolve handle %s: %v", body.Handle, err)
+		http.Error(w, fmt.Sprintf("failed to resolve user: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	// Build RemoteUser stub
+	remoteUser := &models.RemoteUser{
+		ActorID:  actor.ID,
+		Username: actor.PreferredUsername,
+		Instance: extractFQDN(actor.ID),
+		InboxURL: actor.Inbox,
+	}
+
+	if err := h.svc.UnfollowRemoteUser(r.Context(), localUserID, remoteUser); err != nil {
+		log.Printf("UnfollowMastodonHandle: %v", err)
+		http.Error(w, fmt.Sprintf("failed to unfollow: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":  "success",
+		"message": fmt.Sprintf("Unfollow request sent to %s", body.Handle),
 	})
 }
 

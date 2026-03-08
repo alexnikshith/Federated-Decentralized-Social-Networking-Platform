@@ -55,12 +55,16 @@ export const UserSearch: React.FC<{
             const currentInstanceUrl = localStorage.getItem('active_community_url') || import.meta.env.VITE_API_URL || import.meta.env.VITE_COMMUNITY1_URL || 'http://localhost:8080';
             const currentInstanceDomain = currentInstanceUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
 
+            const isCommunity1 = currentInstanceDomain.includes('localhost:8080') || currentInstanceDomain.includes('federated-decentralized-social.onrender.com');
+            const isCommunity2 = currentInstanceDomain.includes('localhost:8081') || currentInstanceDomain.includes('community-2');
+
             const isLocal = (instance: string | undefined | null) => {
-                if (!instance || instance === 'default' || instance === 'default-instance' || instance === '') return true;
+                if (!instance) return true;
                 const cleanInstance = instance.replace(/^https?:\/\//, '').replace(/\/$/, '');
-                return cleanInstance === currentInstanceDomain ||
-                    (currentInstanceDomain.includes('localhost:8080') && cleanInstance === 'default-instance') ||
-                    (currentInstanceDomain.includes('localhost:8081') && cleanInstance === 'community-2');
+                if (cleanInstance === currentInstanceDomain) return true;
+                if (isCommunity1 && (cleanInstance === 'localhost:8080' || cleanInstance === 'default' || cleanInstance === 'default-instance')) return true;
+                if (isCommunity2 && (cleanInstance === 'localhost:8081' || cleanInstance === 'community-2')) return true;
+                return false;
             };
 
             const uniqueResults = flatResults.reduce((acc: PublicUser[], current) => {
