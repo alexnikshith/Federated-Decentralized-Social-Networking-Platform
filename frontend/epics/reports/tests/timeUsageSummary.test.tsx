@@ -41,6 +41,7 @@ describe('TimeUsageSummary', () => {
 
     it('renders total period time', () => {
         render(<TimeUsageChart {...mockProps} periodTotal={5.5} />); // 5.5 hours
-        expect(screen.getByText('5h 30m')).toBeInTheDocument();
+        expect(screen.getByText('05')).toBeInTheDocument();
+        expect(screen.getByText('30')).toBeInTheDocument();
     });
 });
