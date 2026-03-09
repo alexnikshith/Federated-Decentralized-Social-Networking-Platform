@@ -98,7 +98,7 @@ func (s *AuthService) Signup(ctx context.Context, req dto.SignupRequest) (*model
 		PasswordHash:      string(hashedPassword),
 		DisplayName:       req.DisplayName,
 		ProfileVisibility: "public",
-		InstanceID:        "default",
+		InstanceID:        config.AppConfig.InstanceDomain,
 		Is2FAEnabled:      true,
 		IsActive:          true,
 		Role:              "user",

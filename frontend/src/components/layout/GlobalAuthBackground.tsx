@@ -43,7 +43,7 @@ export function GlobalAuthBackground() {
                 animationDelay={delay}
             />
             {/* Glassy Overlay */}
-            <div className="absolute inset-0 z-10 bg-background/10 backdrop-blur-[2px] pointer-events-none" />
+            <div className="absolute inset-0 z-10 bg-background/25 backdrop-blur-[4px] pointer-events-none" />
         </div>
     );
 }

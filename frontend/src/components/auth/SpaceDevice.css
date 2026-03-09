@@ -112,7 +112,7 @@
 /* fade the screen in flat mode */
 .device-frame.flat-mode .face-screen,
 .device-frame.flat-mode .screen {
-  opacity: 0.15;
+  opacity: 0.25;
   transition: opacity 0.8s ease;
 }
 

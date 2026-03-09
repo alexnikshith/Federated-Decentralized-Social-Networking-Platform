@@ -44,6 +44,9 @@ type RemoteRelationshipsRepositoryInterface interface {
 	GetFollowerInstances(ctx context.Context, userID primitive.ObjectID) ([]string, error)
 	GetRemoteFollowing(ctx context.Context, localUserID primitive.ObjectID) ([]models.RemoteFollow, error)
 	GetRemoteFollowers(ctx context.Context, localUserID primitive.ObjectID) ([]models.RemoteFollower, error)
+	GetAcceptedFollowers(ctx context.Context, localUserID primitive.ObjectID) ([]models.RemoteFollower, error)
+	RemoveRemoteFollowerByActorID(ctx context.Context, remoteActorID string) error
+	UpdateRemoteFollowStatus(ctx context.Context, remoteActorID, status string) error
 	CountRemoteFollowers(ctx context.Context, localUserID primitive.ObjectID) (int64, error)
 	CountRemoteFollowing(ctx context.Context, localUserID primitive.ObjectID) (int64, error)
 }

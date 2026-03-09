@@ -16,7 +16,8 @@ type Post struct {
 	MediaType          string             `json:"media_type,omitempty" bson:"media_type,omitempty"` // Type of media: "image", "video"
 	LikeCount          int                `json:"like_count" bson:"like_count"`
 	CommentCount       int                `json:"comment_count" bson:"comment_count"`
-	Status             string             `json:"status,omitempty" bson:"status,omitempty"` // "active", "under_review", "deleted"
+	Status             string             `json:"status,omitempty" bson:"status,omitempty"`   // "active", "under_review", "deleted"
+	ModerationStatus   string             `json:"moderation_status" bson:"moderation_status"` // "pending", "approved", "flagged"
 	MentionedUsernames []string           `json:"mentioned_usernames,omitempty" bson:"mentioned_usernames,omitempty"`
 	CreatedAt          time.Time          `json:"created_at" bson:"created_at"`
 	UpdatedAt          time.Time          `json:"updated_at" bson:"updated_at"`

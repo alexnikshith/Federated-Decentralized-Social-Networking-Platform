@@ -47,6 +47,9 @@ import { RefinedReportsPage } from '../epics/reports/pages/RefinedReportsPage';
 // Admin Epic
 import AdminDashboard from '../epics/admin/pages/AdminDashboard';
 
+// Safety Epic
+import GuidelinesPage from '../epics/safety/pages/GuidelinesPage';
+
 // Global pages
 import Index from './pages/Index';
 import NotFound from './pages/NotFound';
@@ -331,6 +334,7 @@ const AppContent: React.FC = () => {
                             </AdminRoute>
                         }
                     />
+                    <Route path="/guidelines" element={<GuidelinesPage />} />
                     <Route path="/about" element={<About />} />
                     <Route path="*" element={<NotFound />} />
                 </Routes>

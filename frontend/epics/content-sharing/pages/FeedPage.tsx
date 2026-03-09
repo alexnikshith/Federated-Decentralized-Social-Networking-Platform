@@ -5,6 +5,8 @@ import { CreatePost } from '../components/CreatePost';
 import { UserSearch } from '../components/UserSearch';
 import { NotificationList } from '../components/NotificationList';
 import { Button } from '@/components/ui/button';
+import { getGuidelines } from '../../safety/api/client';
+import { CommunityGuideline } from '../../safety/types';
 import {
     Search,
     Bell,
@@ -15,6 +17,7 @@ import {
     X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { FeedSkeleton } from '@/components/skeletons/page-skeletons';
 import './Feed.css';
 
 // FeedPage is the main content stream
@@ -26,6 +29,8 @@ export const FeedPage: React.FC = () => {
     const [sidebarType, setSidebarType] = useState<'notifications' | 'search' | null>(null);
     const [showGuidelines, setShowGuidelines] = useState(false);
     const [showDrafts, setShowDrafts] = useState(false);
+    const [communityGuidelines, setCommunityGuidelines] = useState<CommunityGuideline[]>([]);
+    const [isLoadingGuidelines, setIsLoadingGuidelines] = useState(false);
 
     useEffect(() => {
         // Initial Fetch
@@ -50,6 +55,24 @@ export const FeedPage: React.FC = () => {
         };
     }, [fetchFeed, fetchUnreadCount, user?.id, activeCommunityId]);
 
+    // Fetch guidelines when needed
+    useEffect(() => {
+        if (showGuidelines && communityGuidelines.length === 0) {
+            const fetchRules = async () => {
+                setIsLoadingGuidelines(true);
+                try {
+                    const rules = await getGuidelines();
+                    setCommunityGuidelines(rules);
+                } catch (error) {
+                    console.error("Failed to fetch guidelines", error);
+                } finally {
+                    setIsLoadingGuidelines(false);
+                }
+            };
+            fetchRules();
+        }
+    }, [showGuidelines, communityGuidelines.length]);
+
     const toggleSidebar = (type: 'notifications' | 'search') => {
         setSidebarType(prev => prev === type ? null : type);
     };
@@ -68,7 +91,11 @@ export const FeedPage: React.FC = () => {
                         </header>
 
                         <div className="create-post-container mb-8">
-                            <CreatePost />
+                            {loading ? (
+                                <FeedSkeleton />
+                            ) : (
+                                <CreatePost />
+                            )}
                         </div>
 
                         {/* Posting Tools */}
@@ -118,24 +145,25 @@ export const FeedPage: React.FC = () => {
                                         <AlertCircle className="w-4 h-4 text-primary" />
                                         Community Standards
                                     </h3>
-                                    <ul className="space-y-2 text-sm text-muted-foreground">
-                                        <li className="flex gap-2">
-                                            <span className="font-bold text-foreground">1.</span>
-                                            Be respectful and constructive in your discussions.
-                                        </li>
-                                        <li className="flex gap-2">
-                                            <span className="font-bold text-foreground">2.</span>
-                                            No hate speech, harassment, or illegal content.
-                                        </li>
-                                        <li className="flex gap-2">
-                                            <span className="font-bold text-foreground">3.</span>
-                                            Use appropriate credentials for sensitive claims.
-                                        </li>
-                                        <li className="flex gap-2">
-                                            <span className="font-bold text-foreground">4.</span>
-                                            Keep personal information private.
-                                        </li>
-                                    </ul>
+                                    {isLoadingGuidelines ? (
+                                        <div className="flex justify-center py-4">
+                                            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                                        </div>
+                                    ) : communityGuidelines.length > 0 ? (
+                                        <ul className="space-y-4 text-sm text-muted-foreground">
+                                            {communityGuidelines.map((guideline, index) => (
+                                                <li key={guideline.id} className="flex gap-2">
+                                                    <span className="font-bold text-foreground min-w-[20px]">{index + 1}.</span>
+                                                    <div>
+                                                        <div className="font-bold text-foreground mb-0.5">{guideline.title}</div>
+                                                        <div className="text-xs">{guideline.description}</div>
+                                                    </div>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground italic">No specific guidelines found for this community.</p>
+                                    )}
                                 </div>
                             )}
                         </div>

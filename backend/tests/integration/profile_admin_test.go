@@ -27,7 +27,7 @@ func TestProfileVisibility_Integration(t *testing.T) {
 		identityRepo.NewVerificationRepository(),
 		&mockEmailSender{},
 	)
-	profileService := identityService.NewProfileService()
+	profileService := identityService.NewProfileService(nil)
 	followService := contentService.NewFollowService()
 
 	// --- Step 1: Create two Users ---
@@ -87,8 +87,8 @@ func TestAccountDeletion_Integration(t *testing.T) {
 		identityRepo.NewVerificationRepository(),
 		&mockEmailSender{},
 	)
-	profileService := identityService.NewProfileService()
-	pService := contentService.NewPostService()
+	profileService := identityService.NewProfileService(nil)
+	pService := contentService.NewPostService(nil)
 
 	// 1. Create User
 	user, _ := authService.Signup(ctx, identityDto.SignupRequest{

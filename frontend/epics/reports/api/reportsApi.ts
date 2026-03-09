@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useAuthStore } from '../../identity/store/authStore';
 
 const API_URL = localStorage.getItem('active_community_url') || import.meta.env.VITE_API_URL || import.meta.env.VITE_COMMUNITY1_URL || 'http://localhost:8080';
@@ -86,7 +86,8 @@ export const useReportsApi = () => {
         useActivityReport: (startDate?: string, endDate?: string) => useQuery({
             queryKey: ['activity-report', startDate, endDate],
             queryFn: () => fetchActivity(startDate, endDate),
-            enabled: !!token
+            enabled: !!token,
+            placeholderData: keepPreviousData
         }),
         useSubmitReport: () => useMutation({
             mutationFn: submitReport,
@@ -102,7 +103,8 @@ export const useReportsApi = () => {
         useInteractionReport: (startDate?: string, endDate?: string) => useQuery({
             queryKey: ['interaction-report', startDate, endDate],
             queryFn: () => fetchInteractions(startDate, endDate),
-            enabled: !!token
+            enabled: !!token,
+            placeholderData: keepPreviousData
         }),
         useInteractionMadeReport: (startDate?: string, endDate?: string) => useQuery({
             queryKey: ['interaction-made-report', startDate, endDate],
@@ -113,7 +115,8 @@ export const useReportsApi = () => {
                 const response = await api.get('/api/reports/interactions-made', { params });
                 return response.data;
             },
-            enabled: !!token
+            enabled: !!token,
+            placeholderData: keepPreviousData
         })
     };
 };

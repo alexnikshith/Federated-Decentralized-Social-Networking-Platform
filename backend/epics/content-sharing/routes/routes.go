@@ -2,6 +2,7 @@ package routes
 
 import (
 	"federated-social/backend/epics/content-sharing/handlers"
+	safetyService "federated-social/backend/epics/safety/service"
 	"federated-social/backend/middleware"
 	"net/http"
 
@@ -15,8 +16,8 @@ import (
 // - Follows: Follow, unfollow, get followers/following
 // - Notifications: Get, mark read
 // - Search: User search
-func RegisterContentSharingRoutes(router *mux.Router) {
-	postHandler := handlers.NewPostHandler()
+func RegisterContentSharingRoutes(router *mux.Router, enforcement *safetyService.EnforcementService) {
+	postHandler := handlers.NewPostHandler(enforcement)
 	followHandler := handlers.NewFollowHandler()
 	notificationHandler := handlers.NewNotificationHandler()
 	searchHandler := handlers.NewSearchHandler()
@@ -67,6 +68,8 @@ func RegisterContentSharingRoutes(router *mux.Router) {
 	router.Handle("/api/users/{id}/following", middleware.OptionalAuth(http.HandlerFunc(followHandler.GetFollowing))).Methods("GET", "OPTIONS")
 	router.Handle("/api/users/{id}/requests/accept", middleware.AuthMiddleware(http.HandlerFunc(followHandler.AcceptRequest))).Methods("POST", "OPTIONS")
 	router.Handle("/api/users/{id}/requests/reject", middleware.AuthMiddleware(http.HandlerFunc(followHandler.RejectRequest))).Methods("POST", "OPTIONS")
+	// Unified follow endpoint — supports both local and remote handles
+	router.Handle("/api/follow", middleware.AuthMiddleware(http.HandlerFunc(followHandler.FollowHandle))).Methods("POST", "OPTIONS")
 
 	// Notification routes
 	router.Handle("/api/notifications", middleware.AuthMiddleware(http.HandlerFunc(notificationHandler.GetNotifications))).Methods("GET", "OPTIONS")

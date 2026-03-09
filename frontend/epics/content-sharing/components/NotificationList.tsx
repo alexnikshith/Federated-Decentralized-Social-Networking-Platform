@@ -23,17 +23,12 @@ import { cn } from '@/lib/utils';
 // 3. Rich interaction (click user, click notification to view post)
 export const NotificationList: React.FC = () => {
     const navigate = useNavigate();
-    const { notifications, fetchNotifications, markAsRead, fetchUnreadCount } =
+    const { notifications, markAsRead } =
         useContentStore();
     const { user: currentUser } = useAuthStore();
     const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
     const [showPostDialog, setShowPostDialog] = useState(false);
     const [openCommentsOnPost, setOpenCommentsOnPost] = useState(false);
-
-    useEffect(() => {
-        fetchNotifications();
-        fetchUnreadCount();
-    }, []);
 
     const handleMarkAsRead = (notificationId: string) => {
         markAsRead(notificationId);
