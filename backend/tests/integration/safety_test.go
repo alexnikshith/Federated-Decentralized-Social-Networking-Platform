@@ -31,7 +31,7 @@ func TestSafetyModeration_Integration(t *testing.T) {
 	)
 
 	bService := safetyService.NewBlockService(safetyRepo.NewBlockRepository())
-	pService := contentService.NewPostService()
+	pService := contentService.NewPostService(nil)
 	rRepo := reportRepo.NewReportRepository()
 	rService := reportService.NewReportService(rRepo)
 

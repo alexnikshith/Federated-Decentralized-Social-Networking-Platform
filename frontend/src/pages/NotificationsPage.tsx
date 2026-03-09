@@ -1,11 +1,21 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NotificationList } from '../../epics/content-sharing/components/NotificationList';
 import { Button } from '@/components/ui/button';
 import { useContentStore } from '../../epics/content-sharing/store/contentStore';
 import { CheckCheck } from 'lucide-react';
+import { NotificationsSkeleton } from '@/components/skeletons/page-skeletons';
 
 export const NotificationsPage = () => {
-    const { markAllAsRead, unreadCount } = useContentStore();
+    const { fetchNotifications, fetchUnreadCount, markAllAsRead, unreadCount, loading, error, markAsRead } = useContentStore();
+
+    useEffect(() => {
+        fetchNotifications();
+        fetchUnreadCount();
+    }, []);
+
+    const handleMarkAsRead = (notificationId: string) => {
+        markAsRead(notificationId);
+    };
 
     return (
         <div className='container mx-auto py-8 max-w-2xl'>
@@ -24,7 +34,11 @@ export const NotificationsPage = () => {
                 )}
             </div>
             <div className='glass-card rounded-xl p-0 md:p-2'>
-                <NotificationList />
+                {error ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-destructive">
+                        <p>{error}</p>
+                    </div>
+                ) : loading ? <NotificationsSkeleton /> : <NotificationList />}
             </div>
         </div>
     );

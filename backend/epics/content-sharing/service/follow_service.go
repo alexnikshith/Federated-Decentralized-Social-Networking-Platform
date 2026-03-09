@@ -10,6 +10,8 @@ import (
 	federationService "federated-social/backend/epics/federation/service"
 	identityModels "federated-social/backend/epics/identity/models"
 	identityRepo "federated-social/backend/epics/identity/repository"
+	"log"
+	"strings"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
@@ -24,13 +26,16 @@ type FollowService struct {
 	blockService      BlockService
 	federationService FederationService
 	remoteUserRepo    RemoteUserRepository
+	concreteFedSvc    *federationService.FederationService // concrete ref for FollowMastodonUser
 }
 
 // NewFollowService creates a new FollowService with default (concrete) dependencies
 func NewFollowService() *FollowService {
 	var fedService FederationService
+	var concreteFed *federationService.FederationService
 	if config.AppConfig.FederationEnabled {
-		fedService = federationService.NewFederationService()
+		concreteFed = federationService.NewFederationService()
+		fedService = concreteFed
 	}
 
 	return &FollowService{
@@ -39,6 +44,7 @@ func NewFollowService() *FollowService {
 		notificationRepo:  repository.NewNotificationRepository(),
 		blockService:      safetyService.NewBlockService(safetyRepo.NewBlockRepository()),
 		federationService: fedService,
+		concreteFedSvc:    concreteFed,
 		remoteUserRepo:    federationRepo.NewRemoteUserRepository(),
 	}
 }
@@ -229,6 +235,36 @@ func (s *FollowService) Follow(ctx context.Context, followerID, followingID prim
 	}
 
 	return errors.New("user not found")
+}
+
+// FollowByHandle follows a user by handle ("username" or "@user@domain").
+// Local handles get a direct DB follow. Remote handles use FollowMastodonUser.
+func (s *FollowService) FollowByHandle(ctx context.Context, followerID primitive.ObjectID, handle string) error {
+	clean := strings.TrimPrefix(handle, "@")
+	parts := strings.SplitN(clean, "@", 2)
+	username := parts[0]
+	domain := ""
+	if len(parts) == 2 {
+		domain = parts[1]
+	}
+
+	// Local follow: no domain, or domain is this instance
+	if domain == "" || domain == config.AppConfig.InstanceDomain {
+		log.Printf("[Follow Local] %s → %s (local instance)", followerID.Hex(), username)
+		target, err := s.userRepo.FindByUsername(ctx, username)
+		if err != nil || target == nil {
+			return errors.New("local user not found: " + username)
+		}
+		return s.Follow(ctx, followerID, target.ID)
+	}
+
+	// Remote follow
+	if s.concreteFedSvc == nil {
+		return errors.New("federation is not enabled")
+	}
+	fullHandle := "@" + username + "@" + domain
+	log.Printf("[Follow Remote] %s → %s", followerID.Hex(), fullHandle)
+	return s.concreteFedSvc.FollowMastodonUser(ctx, followerID, fullHandle)
 }
 
 // Unfollow removes a follow relationship or request

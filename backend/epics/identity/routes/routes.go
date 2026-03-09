@@ -2,6 +2,7 @@ package routes
 
 import (
 	"federated-social/backend/epics/identity/handlers"
+	safetyService "federated-social/backend/epics/safety/service"
 	"federated-social/backend/middleware"
 	"net/http"
 
@@ -11,9 +12,9 @@ import (
 // RegisterIdentityRoutes registers all identity-related routes
 // It defines endpoints for authentication (signup, login, OTP) and profile management.
 // Routes are categorized into Public, Protected (requiring Auth Middleware), and Optional Auth.
-func RegisterIdentityRoutes(router *mux.Router) {
+func RegisterIdentityRoutes(router *mux.Router, enforcement *safetyService.EnforcementService) {
 	authHandler := handlers.NewAuthHandler()
-	profileHandler := handlers.NewProfileHandler()
+	profileHandler := handlers.NewProfileHandler(enforcement)
 	avatarHandler := handlers.NewAvatarHandler()
 
 	// Public routes (no authentication required)

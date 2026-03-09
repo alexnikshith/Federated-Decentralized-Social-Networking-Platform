@@ -25,6 +25,7 @@ type FollowRepository interface {
 type UserRepository interface {
 	FindByID(ctx context.Context, id primitive.ObjectID) (*identityModels.User, error)
 	FindByIDs(ctx context.Context, ids []primitive.ObjectID) ([]identityModels.User, error)
+	FindByUsername(ctx context.Context, username string) (*identityModels.User, error)
 }
 
 type NotificationRepository interface {

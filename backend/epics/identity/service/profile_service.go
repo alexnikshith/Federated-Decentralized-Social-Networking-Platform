@@ -11,6 +11,7 @@ import (
 	"federated-social/backend/epics/identity/dto"
 	"federated-social/backend/epics/identity/models"
 	"federated-social/backend/epics/identity/repository"
+	safetyService "federated-social/backend/epics/safety/service"
 	"log"
 	"strings"
 
@@ -19,28 +20,30 @@ import (
 )
 
 type ProfileService struct {
-	userRepo         UserRepository
-	activityRepo     ActivityRepository
-	sessionRepo      SessionRepository
-	verificationRepo VerificationRepository
-	followRepo       FollowRepository
-	followService    FollowService
-	postRepo         PostRepository
-	notificationRepo NotificationRepository
-	remoteUserRepo   RemoteUserRepository
+	userRepo           UserRepository
+	activityRepo       ActivityRepository
+	sessionRepo        SessionRepository
+	verificationRepo   VerificationRepository
+	followRepo         FollowRepository
+	followService      FollowService
+	postRepo           PostRepository
+	notificationRepo   NotificationRepository
+	remoteUserRepo     RemoteUserRepository
+	enforcementService *safetyService.EnforcementService
 }
 
-func NewProfileService() *ProfileService {
+func NewProfileService(enforcement *safetyService.EnforcementService) *ProfileService {
 	return &ProfileService{
-		userRepo:         repository.NewUserRepository(),
-		activityRepo:     repository.NewActivityRepository(),
-		sessionRepo:      repository.NewSessionRepository(),
-		verificationRepo: repository.NewVerificationRepository(),
-		followRepo:       followRepo.NewFollowRepository(),
-		followService:    followService.NewFollowService(),
-		postRepo:         followRepo.NewPostRepository(),
-		notificationRepo: followRepo.NewNotificationRepository(),
-		remoteUserRepo:   federationRepo.NewRemoteUserRepository(),
+		userRepo:           repository.NewUserRepository(),
+		activityRepo:       repository.NewActivityRepository(),
+		sessionRepo:        repository.NewSessionRepository(),
+		verificationRepo:   repository.NewVerificationRepository(),
+		followRepo:         followRepo.NewFollowRepository(),
+		followService:      followService.NewFollowService(),
+		postRepo:           followRepo.NewPostRepository(),
+		notificationRepo:   followRepo.NewNotificationRepository(),
+		remoteUserRepo:     federationRepo.NewRemoteUserRepository(),
+		enforcementService: enforcement,
 	}
 }
 
@@ -168,6 +171,19 @@ func (s *ProfileService) UpdateProfile(ctx context.Context, userID primitive.Obj
 
 	if err := s.userRepo.UpdateUser(ctx, userID, update); err != nil {
 		return nil, err
+	}
+
+	// Trigger AI Moderation Asynchronously
+	if s.enforcementService != nil {
+		if req.DisplayName != nil {
+			s.enforcementService.ModerateUserAsync(userID, "display_name")
+		}
+		if req.Bio != nil {
+			s.enforcementService.ModerateUserAsync(userID, "bio")
+		}
+		if req.Username != nil {
+			s.enforcementService.ModerateUserAsync(userID, "username")
+		}
 	}
 
 	// Log activity

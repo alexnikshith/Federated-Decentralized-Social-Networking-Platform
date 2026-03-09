@@ -52,6 +52,9 @@ func RegisterFederationRoutes(router *mux.Router) {
 		// Outbox stub — required by AP spec (Mastodon checks it exists)
 		router.HandleFunc("/users/{username}/outbox", apHandler.GetOutbox).Methods("GET", "OPTIONS")
 
+		// Part 6: Followers collection
+		router.HandleFunc("/users/{username}/followers", apHandler.GetFollowers).Methods("GET", "OPTIONS")
+
 		// Part 5: Per-user AP inbox
 		router.HandleFunc("/users/{username}/inbox", apHandler.ReceiveAPActivity).Methods("POST", "OPTIONS")
 
@@ -61,5 +64,11 @@ func RegisterFederationRoutes(router *mux.Router) {
 		// Part 3: Follow a remote Mastodon handle (protected)
 		router.Handle("/api/activitypub/follow",
 			middleware.AuthMiddleware(http.HandlerFunc(apHandler.FollowMastodonHandle))).Methods("POST", "OPTIONS")
+
+		router.Handle("/api/activitypub/unfollow",
+			middleware.AuthMiddleware(http.HandlerFunc(apHandler.UnfollowMastodonHandle))).Methods("POST", "OPTIONS")
+
+		// Part 8: Resolve a federated handle (public)
+		router.HandleFunc("/api/activitypub/resolve", apHandler.ResolveHandle).Methods("GET", "OPTIONS")
 	}
 }

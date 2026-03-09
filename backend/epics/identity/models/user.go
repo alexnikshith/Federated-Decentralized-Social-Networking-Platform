@@ -18,7 +18,7 @@ type User struct {
 	AvatarURL    string             `json:"avatar_url" bson:"avatar_url"`
 
 	// Privacy settings
-	ProfileVisibility string `json:"profile_visibility" bson:"profile_visibility"` // "public" or "followers" - controls who can see detailed profile info
+	ProfileVisibility string `json:"profile_visibility" bson:"profile_visibility"` // "public" or "followers" // "public" or "followers" - controls who can see detailed profile info
 
 	// Account status
 	IsActive       bool   `json:"is_active" bson:"is_active"`             // True if the user has verified email/is approved
@@ -26,6 +26,10 @@ type User struct {
 	Is2FAEnabled   bool   `json:"is_2fa_enabled" bson:"is_2fa_enabled"`   // True if Two-Factor Authentication is enabled
 	IsDiscoverable bool   `json:"is_discoverable" bson:"is_discoverable"` // True if user opts-in to global directory
 	Role           string `json:"role" bson:"role"`                       // "user" or "admin" - determines access privileges
+
+	// Moderation fields
+	Strikes       int    `json:"strikes" bson:"strikes"`
+	AccountStatus string `json:"account_status" bson:"account_status"` // "active", "warned", "suspended"
 
 	// Timestamps
 	CreatedAt interface{} `json:"created_at" bson:"created_at"`
@@ -77,6 +81,8 @@ type PrivateUser struct {
 	InstanceID        string   `json:"instance_id"`
 	JoinedCommunities []string `json:"joined_communities"`
 	IsDiscoverable    bool     `json:"is_discoverable"`
+	Strikes           int      `json:"strikes"`
+	AccountStatus     string   `json:"account_status"`
 }
 
 // Session represents an active user session
@@ -122,5 +128,7 @@ func (u *User) ToPrivateUser() PrivateUser {
 		InstanceID:        u.InstanceID,
 		JoinedCommunities: u.JoinedCommunities,
 		IsDiscoverable:    u.IsDiscoverable,
+		Strikes:           u.Strikes,
+		AccountStatus:     u.AccountStatus,
 	}
 }

@@ -12,6 +12,7 @@ import (
 	reportRepo "federated-social/backend/epics/reports/repository"
 	safetyRepo "federated-social/backend/epics/safety/repository"
 	safetyService "federated-social/backend/epics/safety/service"
+	"fmt"
 	"log"
 	"regexp"
 	"sort"
@@ -55,17 +56,18 @@ type PostRepositoryInterface interface {
 }
 
 type PostService struct {
-	postRepo          PostRepositoryInterface
-	followRepo        *repository.FollowRepository
-	searchRepo        *repository.SearchRepository
-	notificationRepo  *repository.NotificationRepository
-	reportRepo        *reportRepo.ReportRepository
-	blockService      *safetyService.BlockService
-	federationService *federationService.FederationService
-	recService        *recService.RecommenderService
+	postRepo           PostRepositoryInterface
+	followRepo         *repository.FollowRepository
+	searchRepo         *repository.SearchRepository
+	notificationRepo   *repository.NotificationRepository
+	reportRepo         *reportRepo.ReportRepository
+	blockService       *safetyService.BlockService
+	enforcementService *safetyService.EnforcementService
+	federationService  *federationService.FederationService
+	recService         *recService.RecommenderService
 }
 
-func NewPostService() *PostService {
+func NewPostService(enforcement *safetyService.EnforcementService) *PostService {
 	var fedService *federationService.FederationService
 	if config.AppConfig.FederationEnabled {
 		fedService = federationService.NewFederationService()
@@ -74,14 +76,15 @@ func NewPostService() *PostService {
 	postRepo := repository.NewPostRepository()
 
 	return &PostService{
-		postRepo:          postRepo,
-		followRepo:        repository.NewFollowRepository(),
-		searchRepo:        repository.NewSearchRepository(),
-		notificationRepo:  repository.NewNotificationRepository(),
-		reportRepo:        reportRepo.NewReportRepository(),
-		blockService:      safetyService.NewBlockService(safetyRepo.NewBlockRepository()),
-		federationService: fedService,
-		recService:        recService.NewRecommenderService(postRepo),
+		postRepo:           postRepo,
+		followRepo:         repository.NewFollowRepository(),
+		searchRepo:         repository.NewSearchRepository(),
+		notificationRepo:   repository.NewNotificationRepository(),
+		reportRepo:         reportRepo.NewReportRepository(),
+		blockService:       safetyService.NewBlockService(safetyRepo.NewBlockRepository()),
+		enforcementService: enforcement,
+		federationService:  fedService,
+		recService:         recService.NewRecommenderService(postRepo),
 	}
 }
 
@@ -119,6 +122,11 @@ func (s *PostService) CreatePost(ctx context.Context, userID primitive.ObjectID,
 		return nil, err
 	}
 
+	// Trigger AI Moderation Asynchronously
+	if s.enforcementService != nil {
+		s.enforcementService.ModeratePostAsync(post.ID)
+	}
+
 	// Handle Mentions: @username
 	validMentions := s.parseAndNotifyMentions(ctx, req.Content, userID, post.ID)
 	if len(validMentions) > 0 {
@@ -133,30 +141,44 @@ func (s *PostService) CreatePost(ctx context.Context, userID primitive.ObjectID,
 		if err == nil && users[userID] != nil {
 			user := users[userID]
 
-			// Broadcast to instances with followers asynchronously
+			// Broadcast ActivityPub Create activity to all remote followers
 			go func() {
-				// Get unique instances where this user has followers
-				instances, err := s.federationService.GetFollowerInstances(context.Background(), userID)
-				if err != nil {
-					log.Printf("Failed to get follower instances for federation: %v", err)
+				bgCtx := context.Background()
+
+				// Ensure the user has an RSA keypair for signing
+				fullUser, err := s.federationService.GetUserWithKeyPair(bgCtx, userID)
+				if err != nil || fullUser == nil {
+					log.Printf("[AP Post] Could not load user keypair for %s: %v", user.Username, err)
 					return
 				}
 
-				if len(instances) == 0 {
-					log.Printf("No remote followers found for user %s, skipping federation", user.Username)
-					return
+				base := config.AppConfig.BaseURL()
+				actorURL := fmt.Sprintf("%s/users/%s", base, fullUser.Username)
+				postID := post.ID.Hex()
+				noteID := fmt.Sprintf("%s/users/%s/posts/%s", base, fullUser.Username, postID)
+				createID := fmt.Sprintf("%s/activities/create-%s", base, postID)
+				keyID := actorURL + "#main-key"
+
+				note := map[string]interface{}{
+					"type":         "Note",
+					"id":           noteID,
+					"attributedTo": actorURL,
+					"content":      post.Content,
+					"published":    post.CreatedAt.UTC().Format(time.RFC3339),
+					"to":           []string{"https://www.w3.org/ns/activitystreams#Public"},
+				}
+				createActivity := map[string]interface{}{
+					"@context":  "https://www.w3.org/ns/activitystreams",
+					"type":      "Create",
+					"id":        createID,
+					"actor":     actorURL,
+					"published": post.CreatedAt.UTC().Format(time.RFC3339),
+					"to":        []string{"https://www.w3.org/ns/activitystreams#Public"},
+					"object":    note,
 				}
 
-				for _, domain := range instances {
-					// Validate instance is trusted/known before sending?
-					// Ideally yes, but GetFollowerInstances comes from our DB of accepted followers.
-
-					if err := s.federationService.SendCreatePost(context.Background(), post, user, domain); err != nil {
-						log.Printf("Federation to %s failed for post %s: %v", domain, post.ID.Hex(), err)
-					} else {
-						log.Printf("Federation to %s succeeded for post %s", domain, post.ID.Hex())
-					}
-				}
+				log.Printf("[AP Post] Delivering Create for post %s by %s", postID, fullUser.Username)
+				s.federationService.DeliverActivityToFollowers(bgCtx, fullUser.Username, fullUser.PrivateKeyPem, keyID, userID, createActivity)
 			}()
 		}
 	}
@@ -518,6 +540,11 @@ func (s *PostService) CreateComment(ctx context.Context, postID, userID primitiv
 
 	if err := s.postRepo.CreateComment(ctx, comment); err != nil {
 		return nil, err
+	}
+
+	// Trigger AI Moderation Asynchronously
+	if s.enforcementService != nil {
+		s.enforcementService.ModerateCommentAsync(comment.ID)
 	}
 
 	// Create notification for post author (if not commenting on own post)

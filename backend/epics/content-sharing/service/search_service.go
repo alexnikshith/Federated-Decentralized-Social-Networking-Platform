@@ -2,10 +2,13 @@ package service
 
 import (
 	"context"
+	"federated-social/backend/config"
 	"federated-social/backend/database"
 	"federated-social/backend/epics/content-sharing/repository"
 	federationRepo "federated-social/backend/epics/federation/repository"
+	federationSvc "federated-social/backend/epics/federation/service"
 	identityModels "federated-social/backend/epics/identity/models"
+	"log"
 	"regexp"
 	"strings"
 
@@ -13,19 +16,28 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// federatedHandleRe matches @user@domain or user@domain
+var federatedHandleRe = regexp.MustCompile(`^@?([a-zA-Z0-9_.-]+)@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})$`)
+
 type SearchService struct {
 	searchRepo             *repository.SearchRepository
 	followRepo             *repository.FollowRepository
 	remoteRelationshipRepo *federationRepo.RemoteRelationshipsRepository
 	remoteUserRepo         *federationRepo.RemoteUserRepository
+	apService              *federationSvc.FederationService // nil if AP disabled
 }
 
 func NewSearchService() *SearchService {
+	var apSvc *federationSvc.FederationService
+	if config.AppConfig != nil && config.AppConfig.ActivityPubEnabled {
+		apSvc = federationSvc.NewFederationService()
+	}
 	return &SearchService{
 		searchRepo:             repository.NewSearchRepository(),
 		followRepo:             repository.NewFollowRepository(),
 		remoteRelationshipRepo: federationRepo.NewRemoteRelationshipsRepository(),
 		remoteUserRepo:         federationRepo.NewRemoteUserRepository(),
+		apService:              apSvc,
 	}
 }
 
@@ -55,8 +67,38 @@ func (s *SearchService) mapInstanceToName(url string) string {
 	return url
 }
 
-// SearchUsers searches for users by username with prioritization for followed users
+// SearchUsers searches for users by username with prioritization for followed users.
+// If query is a federated handle (@user@domain), performs a live WebFinger resolve first.
 func (s *SearchService) SearchUsers(ctx context.Context, query string, limit int64, requestingUserID *primitive.ObjectID) ([]identityModels.PublicUser, error) {
+	// 0. Federated handle resolution — auto-resolve @user@domain via WebFinger
+	if s.apService != nil && federatedHandleRe.MatchString(query) {
+		log.Printf("[Search] Federated handle detected: %s — calling ResolveAPHandle", query)
+		result, err := s.apService.ResolveAPHandle(ctx, query)
+		if err != nil {
+			log.Printf("[Search] ResolveAPHandle failed for %s: %v", query, err)
+		} else {
+			log.Printf("[Search] ResolveAPHandle succeeded for %s", query)
+			// Build a PublicUser from the resolve result
+			usernameStr, _ := result["username"].(string)
+			displayStr, _ := result["displayName"].(string)
+			instanceStr, _ := result["domain"].(string)
+			avatarStr, _ := result["avatar_url"].(string)
+			handleStr, _ := result["handle"].(string)
+			_ = handleStr
+			resolvedUser := identityModels.PublicUser{
+				ID:             primitive.NilObjectID,
+				Username:       usernameStr,
+				DisplayName:    displayStr,
+				InstanceID:     instanceStr,
+				AvatarURL:      avatarStr,
+				IsFollowing:    false,
+				CanViewDetails: false,
+			}
+			// Return immediately — exact handle match has no local results to merge
+			return []identityModels.PublicUser{resolvedUser}, nil
+		}
+	}
+
 	// 1. Get initial local matches from searchRepo
 	users, err := s.searchRepo.SearchUsers(ctx, query, limit)
 	if err != nil {

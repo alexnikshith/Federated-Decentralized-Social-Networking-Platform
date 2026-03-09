@@ -77,4 +77,5 @@ frontend/*.json
 !frontend/package.json
 !frontend/tsconfig*.json
 !frontend/components.json
+!frontend/vercel.json
 frontend/vite.config.ts.timestamp-*

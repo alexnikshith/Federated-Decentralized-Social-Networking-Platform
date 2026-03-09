@@ -100,5 +100,5 @@ func (h *BlockHandler) GetBlockedUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondJSON(w, blocks, http.StatusOK)
+	respondSuccess(w, "Blocked users retrieved successfully", blocks, http.StatusOK)
 }
