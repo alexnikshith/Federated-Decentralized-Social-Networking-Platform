@@ -137,6 +137,7 @@ const ProfileUI = () => {
   // Relationship State
   const [isFollowing, setIsFollowing] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
+  const [isRequested, setIsRequested] = useState(false);
 
   // Data State
   const [profileUser, setProfileUser] = useState<User | null>(null);
@@ -726,7 +727,7 @@ const ProfileUI = () => {
                       </Button>
                     ) : (
                       <Button
-                        variant={isFollowing ? "outline" : "hero"}
+                        variant={isFollowing || isRequested ? "outline" : "hero"}
                         className="rounded-full px-8 h-11 shadow-lg shadow-primary/20"
                         onClick={async () => {
                           if (!profileUser) return;
@@ -754,7 +755,7 @@ const ProfileUI = () => {
                               !isLocalAlias
                             );
 
-                            if (isFollowing) {
+                            if (isFollowing || isRequested) {
                               if (isRemoteUser) {
                                 const handle = `${profileUser.username}@${profileInstance || currentInstanceDomain}`;
                                 await unfollowRemoteUser(handle);
@@ -762,17 +763,23 @@ const ProfileUI = () => {
                                 await unfollowUser(profileUser.id);
                               }
                               setIsFollowing(false);
-                              setProfileUser(prev => prev ? { ...prev, followers_count: (prev.followers_count || 0) - 1 } : null);
+                              setIsRequested(false);
+                              setProfileUser(prev => prev ? { ...prev, followers_count: Math.max(0, (prev.followers_count || 0) - 1) } : null);
                               setTimeout(() => loadProfileData(false), 500);
                             } else {
                               if (isRemoteUser) {
                                 const handle = `${profileUser.username}@${profileInstance || currentInstanceDomain}`;
                                 await followRemoteUser(handle);
+                                setIsFollowing(true);
                               } else {
-                                await followUser(profileUser.id);
+                                const res = await followUser(profileUser.id);
+                                if (res && (res.status === 'requested' || (res.data && res.data.status === 'requested'))) {
+                                  setIsRequested(true);
+                                } else {
+                                  setIsFollowing(true);
+                                  setProfileUser(prev => prev ? { ...prev, followers_count: (prev.followers_count || 0) + 1 } : null);
+                                }
                               }
-                              setIsFollowing(true);
-                              setProfileUser(prev => prev ? { ...prev, followers_count: (prev.followers_count || 0) + 1 } : null);
                               setTimeout(() => loadProfileData(false), 500);
                             }
                           } catch (err) {
@@ -785,7 +792,7 @@ const ProfileUI = () => {
                           }
                         }}
                       >
-                        {isFollowing ? "Following" : (
+                        {isFollowing ? "Following" : isRequested ? "Requested" : (
                           <span className="flex items-center gap-2">
                             <UserPlus className="w-4 h-4" />
                             Follow

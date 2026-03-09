@@ -172,7 +172,7 @@ func (s *FollowService) Follow(ctx context.Context, followerID, followingID prim
 	}
 
 	// 1. Try local user first
-	_, err := s.userRepo.FindByID(ctx, followingID)
+	targetUser, err := s.userRepo.FindByID(ctx, followingID)
 	if err == nil {
 		// Local Follow Logic
 		isBlocked, _ := s.blockService.IsBlocked(ctx, followerID, followingID)
@@ -182,6 +182,27 @@ func (s *FollowService) Follow(ctx context.Context, followerID, followingID prim
 
 		if isFollowing, _ := s.followRepo.IsFollowing(ctx, followerID, followingID); isFollowing {
 			return nil
+		}
+
+		if targetUser.ProfileVisibility == "followers" {
+			// Check if request already exists
+			hasReq, _ := s.followRepo.HasFollowRequest(ctx, followerID, followingID)
+			if hasReq {
+				return errors.New("request already sent")
+			}
+
+			if err := s.followRepo.CreateFollowRequest(ctx, followerID, followingID); err != nil {
+				return err
+			}
+
+			// Local Notification for request
+			notification := &models.Notification{
+				UserID:        followingID,
+				Type:          "follow_request",
+				RelatedUserID: followerID,
+			}
+			s.notificationRepo.CreateNotification(ctx, notification)
+			return errors.New("requested")
 		}
 
 		if err := s.followRepo.Follow(ctx, followerID, followingID); err != nil {
@@ -210,8 +231,11 @@ func (s *FollowService) Follow(ctx context.Context, followerID, followingID prim
 	return errors.New("user not found")
 }
 
-// Unfollow removes a follow relationship
+// Unfollow removes a follow relationship or request
 func (s *FollowService) Unfollow(ctx context.Context, followerID, followingID primitive.ObjectID) error {
+	// First delete any follow request
+	s.followRepo.DeleteFollowRequest(ctx, followerID, followingID)
+
 	// 1. Try local unfollow first
 	err := s.followRepo.Unfollow(ctx, followerID, followingID)
 
@@ -226,6 +250,38 @@ func (s *FollowService) Unfollow(ctx context.Context, followerID, followingID pr
 	}
 
 	return err
+}
+
+// AcceptFollowRequest accepts a pending follow request
+func (s *FollowService) AcceptFollowRequest(ctx context.Context, followerID, followingID primitive.ObjectID) error {
+	hasReq, err := s.followRepo.HasFollowRequest(ctx, followerID, followingID)
+	if err != nil || !hasReq {
+		return errors.New("follow request not found")
+	}
+
+	if err := s.followRepo.Follow(ctx, followerID, followingID); err != nil {
+		return err
+	}
+
+	s.followRepo.DeleteFollowRequest(ctx, followerID, followingID)
+
+	// Update the existing request notification to "follow" so it shows as a standard follow.
+	s.notificationRepo.UpdateNotificationType(ctx, followingID, followerID, "follow_request", "follow")
+
+	notification := &models.Notification{
+		UserID:        followerID,
+		Type:          "follow_accept",
+		RelatedUserID: followingID, // User B accepted user A
+	}
+	s.notificationRepo.CreateNotification(ctx, notification)
+	return nil
+}
+
+// RejectFollowRequest rejects a pending follow request
+func (s *FollowService) RejectFollowRequest(ctx context.Context, followerID, followingID primitive.ObjectID) error {
+	// Delete the follow request notification
+	s.notificationRepo.DeleteNotificationByParams(ctx, followingID, followerID, "follow_request")
+	return s.followRepo.DeleteFollowRequest(ctx, followerID, followingID)
 }
 
 // IsFollowing checks if a user follows another

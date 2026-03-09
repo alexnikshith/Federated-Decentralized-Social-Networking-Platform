@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { useContentStore } from '../store/contentStore';
 import { useAuthStore } from '../../identity/store/authStore';
+import * as api from '../api/client';
 import { Notification as AppNotification } from '../types';
 import { PostDetailDialog } from './PostDetailDialog';
 import {
@@ -36,6 +37,26 @@ export const NotificationList: React.FC = () => {
 
     const handleMarkAsRead = (notificationId: string) => {
         markAsRead(notificationId);
+    };
+
+    const handleAcceptRequest = async (notif: AppNotification) => {
+        try {
+            await api.acceptFollowRequest(notif.related_user_id);
+            markAsRead(notif.id);
+            fetchNotifications(); // Reload to remove request or to show updated
+        } catch (e) {
+            console.error('Failed to accept request:', e);
+        }
+    };
+
+    const handleRejectRequest = async (notif: AppNotification) => {
+        try {
+            await api.rejectFollowRequest(notif.related_user_id);
+            markAsRead(notif.id);
+            fetchNotifications();
+        } catch (e) {
+            console.error('Failed to reject request:', e);
+        }
     };
 
     // Helper to get icon based on notification type
@@ -124,6 +145,28 @@ export const NotificationList: React.FC = () => {
                 return <span>{usernameElement} commented on your post</span>;
             case 'follow':
                 return <span>{usernameElement} followed you</span>;
+            case 'follow_request':
+                return (
+                    <div className="flex flex-col gap-2">
+                        <span>{usernameElement} requested to follow you</span>
+                        <div className="flex gap-2 mt-1">
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handleAcceptRequest(notif); }}
+                                className="px-3 py-1 bg-primary text-primary-foreground text-xs rounded-md shadow-sm hover:bg-primary/90"
+                            >
+                                Accept
+                            </button>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handleRejectRequest(notif); }}
+                                className="px-3 py-1 bg-secondary text-secondary-foreground text-xs rounded-md hover:bg-secondary/80"
+                            >
+                                Decline
+                            </button>
+                        </div>
+                    </div>
+                );
+            case 'follow_accept':
+                return <span>{usernameElement} accepted your follow request</span>;
             case 'mention':
                 return <span>{usernameElement} mentioned you in their post</span>;
             case 'message':

@@ -142,3 +142,35 @@ func (r *FollowRepository) CountFollowers(ctx context.Context, userID primitive.
 func (r *FollowRepository) CountFollowing(ctx context.Context, userID primitive.ObjectID) (int64, error) {
 	return r.collection.CountDocuments(ctx, bson.M{"follower_id": userID})
 }
+
+// CreateFollowRequest creates a follow request
+func (r *FollowRepository) CreateFollowRequest(ctx context.Context, followerID, followingID primitive.ObjectID) error {
+	req := models.FollowRequest{
+		FollowerID:  followerID,
+		FollowingID: followingID,
+		CreatedAt:   time.Now(),
+	}
+	_, err := database.GetCollection("follow_requests").InsertOne(ctx, req)
+	return err
+}
+
+// DeleteFollowRequest removes a follow request
+func (r *FollowRepository) DeleteFollowRequest(ctx context.Context, followerID, followingID primitive.ObjectID) error {
+	_, err := database.GetCollection("follow_requests").DeleteOne(ctx, bson.M{
+		"follower_id":  followerID,
+		"following_id": followingID,
+	})
+	return err
+}
+
+// HasFollowRequest checks if a follow request exists
+func (r *FollowRepository) HasFollowRequest(ctx context.Context, followerID, followingID primitive.ObjectID) (bool, error) {
+	count, err := database.GetCollection("follow_requests").CountDocuments(ctx, bson.M{
+		"follower_id":  followerID,
+		"following_id": followingID,
+	})
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
