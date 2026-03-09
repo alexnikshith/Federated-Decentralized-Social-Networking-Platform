@@ -26,6 +26,7 @@ func NewPostHandler(enforcement *safetyService.EnforcementService) *PostHandler 
 
 // CreatePost handles POST /api/posts
 func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
+	log.Printf("[PostHandler] CreatePost REQUEST RECEIVED from %s", r.RemoteAddr)
 	userID := middleware.GetUserIDFromContext(r.Context())
 
 	var req dto.CreatePostRequest

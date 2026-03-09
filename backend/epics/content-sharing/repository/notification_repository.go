@@ -114,21 +114,29 @@ func (r *NotificationRepository) DeleteUserNotifications(ctx context.Context, us
 	return err
 }
 
-// UpdateNotificationType modifies the type of an existing notification
+// UpdateNotificationType changes the type of an existing notification
 func (r *NotificationRepository) UpdateNotificationType(ctx context.Context, userID, relatedUserID primitive.ObjectID, oldType, newType string) error {
-	_, err := r.collection.UpdateMany(
+	_, err := r.collection.UpdateOne(
 		ctx,
-		bson.M{"user_id": userID, "related_user_id": relatedUserID, "type": oldType},
-		bson.M{"$set": bson.M{"type": newType}},
+		bson.M{
+			"user_id":         userID,
+			"related_user_id": relatedUserID,
+			"type":            oldType,
+		},
+		bson.M{"$set": bson.M{"type": newType, "created_at": time.Now(), "is_read": false}},
 	)
 	return err
 }
 
-// DeleteNotificationByParams removes a specific notification based on matching params
-func (r *NotificationRepository) DeleteNotificationByParams(ctx context.Context, userID, relatedUserID primitive.ObjectID, nType string) error {
-	_, err := r.collection.DeleteMany(
+// DeleteNotificationByParams removes a notification matching specific criteria
+func (r *NotificationRepository) DeleteNotificationByParams(ctx context.Context, userID, relatedUserID primitive.ObjectID, notifType string) error {
+	_, err := r.collection.DeleteOne(
 		ctx,
-		bson.M{"user_id": userID, "related_user_id": relatedUserID, "type": nType},
+		bson.M{
+			"user_id":         userID,
+			"related_user_id": relatedUserID,
+			"type":            notifType,
+		},
 	)
 	return err
 }

@@ -139,8 +139,8 @@ const ProfileUI = () => {
 
   // Relationship State
   const [isFollowing, setIsFollowing] = useState(false);
-  const [isBlocked, setIsBlocked] = useState(false);
   const [isRequested, setIsRequested] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
 
   // Data State
   const [profileUser, setProfileUser] = useState<User | null>(null);
@@ -249,6 +249,7 @@ const ProfileUI = () => {
 
       setProfileUser(userToDisplay);
       setIsFollowing(!!userToDisplay.is_following);
+      setIsRequested(!!userToDisplay.is_follow_requested);
 
       // Fetch posts for this user from the CORRECT community
       const postsUrl = foundUrl || ""; // Empty means local base
@@ -777,43 +778,68 @@ const ProfileUI = () => {
                                 await unfollowUser(profileUser.id);
                               }
                               setIsFollowing(false);
+                              setIsFollowing(false);
                               setIsRequested(false);
                               setProfileUser(prev => prev ? { ...prev, followers_count: Math.max(0, (prev.followers_count || 0) - 1) } : null);
-                              setTimeout(() => loadProfileData(false), 500);
                             } else {
+                              let res: any;
                               if (isMastodonNode) {
                                 const handle = `@${profileUser.username}@${profileInstance || currentInstanceDomain}`;
-                                await followMastodonUser(handle);
+                                res = await followMastodonUser(handle);
                               } else if (isRemoteUser) {
                                 const handle = `${profileUser.username}@${profileInstance || currentInstanceDomain}`;
-                                await followRemoteUser(handle);
-                                setIsFollowing(true);
+                                res = await followRemoteUser(handle);
                               } else {
-                                const res = await followUser(profileUser.id);
-                                if (res && (res.status === 'requested' || (res.data && res.data.status === 'requested'))) {
-                                  setIsRequested(true);
-                                } else {
-                                  setIsFollowing(true);
-                                  setProfileUser(prev => prev ? { ...prev, followers_count: (prev.followers_count || 0) + 1 } : null);
-                                }
+                                // This might return a message like "Follow request sent"
+                                const response = await api.post(`/api/users/${profileUser.id}/follow`);
+                                res = response.data;
                               }
-                              setTimeout(() => loadProfileData(false), 500);
+
+                              if (res?.message?.toLowerCase().includes("request sent") || res?.message?.toLowerCase().includes("requested")) {
+                                setIsRequested(true);
+                                toast({
+                                  title: "Request Sent",
+                                  description: "Follow request sent. Waiting for approval.",
+                                });
+                              } else {
+                                setIsFollowing(true);
+                                setIsRequested(false);
+                                setProfileUser(prev => prev ? { ...prev, followers_count: (prev.followers_count || 0) + 1 } : null);
+                                toast({
+                                  title: "Success",
+                                  description: `You are now following ${profileUser.display_name || profileUser.username}`,
+                                });
+                              }
                             }
-                          } catch (err) {
+                            // Soft reload data after a delay
+                            setTimeout(() => loadProfileData(false), 800);
+                          } catch (err: any) {
                             console.error("Follow/unfollow failed:", err);
-                            toast({
-                              title: "Error",
-                              description: "Action failed. Please try again.",
-                              variant: "destructive"
-                            });
+                            const errorMsg = err.response?.data?.message || err.message || "Action failed. Please try again.";
+
+                            if (errorMsg.toLowerCase().includes("request already sent")) {
+                              setIsRequested(true);
+                              toast({
+                                title: "Request Pending",
+                                description: "Follow request already sent. Waiting for approval.",
+                              });
+                            } else {
+                              toast({
+                                title: "Error",
+                                description: errorMsg,
+                                variant: "destructive"
+                              });
+                            }
                           }
                         }}
                       >
-                        {isFollowing ? "Following" : isRequested ? "Requested" : (
-                          <span className="flex items-center gap-2">
-                            <UserPlus className="w-4 h-4" />
-                            Follow
-                          </span>
+                        {isFollowing ? "Following" : (
+                          isRequested ? "Requested" : (
+                            <span className="flex items-center gap-2">
+                              <UserPlus className="w-4 h-4" />
+                              Follow
+                            </span>
+                          )
                         )}
                       </Button>
                     )}

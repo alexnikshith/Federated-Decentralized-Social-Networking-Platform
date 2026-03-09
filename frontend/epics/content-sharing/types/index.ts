@@ -87,6 +87,7 @@ export interface PublicUser {
     following_count?: number;
     posts_count?: number;
     is_following?: boolean;
+    is_follow_requested?: boolean;
     instance?: string;
 }
 

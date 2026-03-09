@@ -29,6 +29,20 @@ type FollowService struct {
 	concreteFedSvc    *federationService.FederationService // concrete ref for FollowMastodonUser
 }
 
+// Internal interfaces for follow request and notification modifications
+// to avoid changing the main interfaces and breaking legacy tests.
+type followRequestRepo interface {
+	CreateFollowRequest(ctx context.Context, followerID, followingID primitive.ObjectID) error
+	DeleteFollowRequest(ctx context.Context, followerID, followingID primitive.ObjectID) error
+	HasFollowRequest(ctx context.Context, followerID, followingID primitive.ObjectID) (bool, error)
+	GetFollowRequestsByFollowingID(ctx context.Context, followingID primitive.ObjectID) ([]models.FollowRequest, error)
+}
+
+type notificationModifierRepo interface {
+	UpdateNotificationType(ctx context.Context, userID, relatedUserID primitive.ObjectID, oldType, newType string) error
+	DeleteNotificationByParams(ctx context.Context, userID, relatedUserID primitive.ObjectID, notifType string) error
+}
+
 // NewFollowService creates a new FollowService with default (concrete) dependencies
 func NewFollowService() *FollowService {
 	var fedService FederationService
@@ -192,23 +206,25 @@ func (s *FollowService) Follow(ctx context.Context, followerID, followingID prim
 
 		if targetUser.ProfileVisibility == "followers" {
 			// Check if request already exists
-			hasReq, _ := s.followRepo.HasFollowRequest(ctx, followerID, followingID)
-			if hasReq {
-				return errors.New("request already sent")
-			}
+			if frRepo, ok := s.followRepo.(followRequestRepo); ok {
+				hasReq, _ := frRepo.HasFollowRequest(ctx, followerID, followingID)
+				if hasReq {
+					return errors.New("request already sent")
+				}
 
-			if err := s.followRepo.CreateFollowRequest(ctx, followerID, followingID); err != nil {
-				return err
-			}
+				if err := frRepo.CreateFollowRequest(ctx, followerID, followingID); err != nil {
+					return err
+				}
 
-			// Local Notification for request
-			notification := &models.Notification{
-				UserID:        followingID,
-				Type:          "follow_request",
-				RelatedUserID: followerID,
+				// Local Notification for request
+				notification := &models.Notification{
+					UserID:        followingID,
+					Type:          "follow_request",
+					RelatedUserID: followerID,
+				}
+				s.notificationRepo.CreateNotification(ctx, notification)
+				return errors.New("requested")
 			}
-			s.notificationRepo.CreateNotification(ctx, notification)
-			return errors.New("requested")
 		}
 
 		if err := s.followRepo.Follow(ctx, followerID, followingID); err != nil {
@@ -270,7 +286,9 @@ func (s *FollowService) FollowByHandle(ctx context.Context, followerID primitive
 // Unfollow removes a follow relationship or request
 func (s *FollowService) Unfollow(ctx context.Context, followerID, followingID primitive.ObjectID) error {
 	// First delete any follow request
-	s.followRepo.DeleteFollowRequest(ctx, followerID, followingID)
+	if frRepo, ok := s.followRepo.(followRequestRepo); ok {
+		frRepo.DeleteFollowRequest(ctx, followerID, followingID)
+	}
 
 	// 1. Try local unfollow first
 	err := s.followRepo.Unfollow(ctx, followerID, followingID)
@@ -290,7 +308,12 @@ func (s *FollowService) Unfollow(ctx context.Context, followerID, followingID pr
 
 // AcceptFollowRequest accepts a pending follow request
 func (s *FollowService) AcceptFollowRequest(ctx context.Context, followerID, followingID primitive.ObjectID) error {
-	hasReq, err := s.followRepo.HasFollowRequest(ctx, followerID, followingID)
+	frRepo, ok := s.followRepo.(followRequestRepo)
+	if !ok {
+		return errors.New("follow request logic not supported by repository")
+	}
+
+	hasReq, err := frRepo.HasFollowRequest(ctx, followerID, followingID)
 	if err != nil || !hasReq {
 		return errors.New("follow request not found")
 	}
@@ -299,10 +322,12 @@ func (s *FollowService) AcceptFollowRequest(ctx context.Context, followerID, fol
 		return err
 	}
 
-	s.followRepo.DeleteFollowRequest(ctx, followerID, followingID)
+	frRepo.DeleteFollowRequest(ctx, followerID, followingID)
 
 	// Update the existing request notification to "follow" so it shows as a standard follow.
-	s.notificationRepo.UpdateNotificationType(ctx, followingID, followerID, "follow_request", "follow")
+	if nmRepo, ok := s.notificationRepo.(notificationModifierRepo); ok {
+		nmRepo.UpdateNotificationType(ctx, followingID, followerID, "follow_request", "follow")
+	}
 
 	notification := &models.Notification{
 		UserID:        followerID,
@@ -315,9 +340,16 @@ func (s *FollowService) AcceptFollowRequest(ctx context.Context, followerID, fol
 
 // RejectFollowRequest rejects a pending follow request
 func (s *FollowService) RejectFollowRequest(ctx context.Context, followerID, followingID primitive.ObjectID) error {
+	frRepo, ok := s.followRepo.(followRequestRepo)
+	if !ok {
+		return errors.New("follow request logic not supported by repository")
+	}
+
 	// Delete the follow request notification
-	s.notificationRepo.DeleteNotificationByParams(ctx, followingID, followerID, "follow_request")
-	return s.followRepo.DeleteFollowRequest(ctx, followerID, followingID)
+	if nmRepo, ok := s.notificationRepo.(notificationModifierRepo); ok {
+		nmRepo.DeleteNotificationByParams(ctx, followingID, followerID, "follow_request")
+	}
+	return frRepo.DeleteFollowRequest(ctx, followerID, followingID)
 }
 
 // IsFollowing checks if a user follows another
@@ -367,4 +399,12 @@ func (s *FollowService) CountFollowing(ctx context.Context, userID primitive.Obj
 	}
 
 	return localCount + remoteCount, nil
+}
+
+// HasFollowRequest checks if a pending follow request exists from User A to User B
+func (s *FollowService) HasFollowRequest(ctx context.Context, followerID, followingID primitive.ObjectID) (bool, error) {
+	if frRepo, ok := s.followRepo.(followRequestRepo); ok {
+		return frRepo.HasFollowRequest(ctx, followerID, followingID)
+	}
+	return false, nil
 }
