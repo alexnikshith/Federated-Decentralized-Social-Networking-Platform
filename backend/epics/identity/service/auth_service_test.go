@@ -15,6 +15,11 @@ import (
 )
 
 func TestAuthService_Signup(t *testing.T) {
+	// Initialize config to avoid nil pointers during test
+	config.AppConfig = &config.Config{
+		InstanceDomain: "test.local",
+	}
+
 	tests := []struct {
 		name          string
 		req           dto.SignupRequest
