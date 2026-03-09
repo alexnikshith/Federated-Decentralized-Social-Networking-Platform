@@ -147,13 +147,24 @@ export const deleteComment = async (commentId: string): Promise<void> => {
 };
 
 // Follow/Relationship API
-export const followUser = async (userId: string): Promise<void> => {
-    await api.post(`/api/users/${userId}/follow`);
+export const followUser = async (userId: string): Promise<any> => {
+    const response = await api.post(`/api/users/${userId}/follow`);
+    return response.data;
 };
 
 export const unfollowUser = async (userId: string): Promise<void> => {
     await api.delete(`/api/users/${userId}/unfollow`);
 };
+
+export const acceptFollowRequest = async (userId: string): Promise<void> => {
+    await api.post(`/api/users/${userId}/requests/accept`);
+};
+
+export const rejectFollowRequest = async (userId: string): Promise<void> => {
+    await api.post(`/api/users/${userId}/requests/reject`);
+};
+
+
 
 export const getFollowers = async (userId: string): Promise<PublicUser[]> => {
     const response = await api.get(`/api/users/${userId}/followers`);

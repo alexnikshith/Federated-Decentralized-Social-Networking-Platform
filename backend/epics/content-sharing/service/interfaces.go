@@ -17,6 +17,9 @@ type FollowRepository interface {
 	GetFollowerIDs(ctx context.Context, userID primitive.ObjectID) ([]primitive.ObjectID, error)
 	CountFollowers(ctx context.Context, userID primitive.ObjectID) (int64, error)
 	CountFollowing(ctx context.Context, userID primitive.ObjectID) (int64, error)
+	CreateFollowRequest(ctx context.Context, followerID, followingID primitive.ObjectID) error
+	DeleteFollowRequest(ctx context.Context, followerID, followingID primitive.ObjectID) error
+	HasFollowRequest(ctx context.Context, followerID, followingID primitive.ObjectID) (bool, error)
 }
 
 type UserRepository interface {
@@ -26,6 +29,8 @@ type UserRepository interface {
 
 type NotificationRepository interface {
 	CreateNotification(ctx context.Context, notification *models.Notification) error
+	UpdateNotificationType(ctx context.Context, userID, relatedUserID primitive.ObjectID, oldType, newType string) error
+	DeleteNotificationByParams(ctx context.Context, userID, relatedUserID primitive.ObjectID, nType string) error
 }
 
 type BlockService interface {

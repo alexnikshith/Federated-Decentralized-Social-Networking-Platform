@@ -54,6 +54,21 @@ func (m *MockFollowRepository) CountFollowing(ctx context.Context, userID primit
 	return args.Get(0).(int64), args.Error(1)
 }
 
+func (m *MockFollowRepository) CreateFollowRequest(ctx context.Context, followerID, followingID primitive.ObjectID) error {
+	args := m.Called(ctx, followerID, followingID)
+	return args.Error(0)
+}
+
+func (m *MockFollowRepository) DeleteFollowRequest(ctx context.Context, followerID, followingID primitive.ObjectID) error {
+	args := m.Called(ctx, followerID, followingID)
+	return args.Error(0)
+}
+
+func (m *MockFollowRepository) HasFollowRequest(ctx context.Context, followerID, followingID primitive.ObjectID) (bool, error) {
+	args := m.Called(ctx, followerID, followingID)
+	return args.Bool(0), args.Error(1)
+}
+
 type MockUserRepository struct {
 	mock.Mock
 }
@@ -77,6 +92,16 @@ type MockNotificationRepository struct {
 
 func (m *MockNotificationRepository) CreateNotification(ctx context.Context, notification *models.Notification) error {
 	args := m.Called(ctx, notification)
+	return args.Error(0)
+}
+
+func (m *MockNotificationRepository) UpdateNotificationType(ctx context.Context, userID, relatedUserID primitive.ObjectID, oldType, newType string) error {
+	args := m.Called(ctx, userID, relatedUserID, oldType, newType)
+	return args.Error(0)
+}
+
+func (m *MockNotificationRepository) DeleteNotificationByParams(ctx context.Context, userID, relatedUserID primitive.ObjectID, nType string) error {
+	args := m.Called(ctx, userID, relatedUserID, nType)
 	return args.Error(0)
 }
 

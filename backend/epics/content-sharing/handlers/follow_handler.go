@@ -33,6 +33,14 @@ func (h *FollowHandler) Follow(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.followService.Follow(r.Context(), followerID, followingID); err != nil {
+		if err.Error() == "requested" {
+			respondSuccess(w, "Follow requested successfully", map[string]string{"status": "requested"}, http.StatusOK)
+			return
+		}
+		if err.Error() == "request already sent" {
+			respondSuccess(w, "Request already sent", map[string]string{"status": "requested"}, http.StatusOK)
+			return
+		}
 		log.Printf("Follow Service Error: %v", err)
 		status := http.StatusInternalServerError
 		if err.Error() == "user not found" {
@@ -42,7 +50,45 @@ func (h *FollowHandler) Follow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondSuccess(w, "User followed successfully", nil, http.StatusOK)
+	respondSuccess(w, "User followed successfully", map[string]string{"status": "following"}, http.StatusOK)
+}
+
+// AcceptRequest handles POST /api/users/:id/requests/accept
+func (h *FollowHandler) AcceptRequest(w http.ResponseWriter, r *http.Request) {
+	followingID := middleware.GetUserIDFromContext(r.Context())
+	vars := mux.Vars(r)
+
+	followerID, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		respondError(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.followService.AcceptFollowRequest(r.Context(), followerID, followingID); err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondSuccess(w, "Request accepted successfully", nil, http.StatusOK)
+}
+
+// RejectRequest handles POST /api/users/:id/requests/reject
+func (h *FollowHandler) RejectRequest(w http.ResponseWriter, r *http.Request) {
+	followingID := middleware.GetUserIDFromContext(r.Context())
+	vars := mux.Vars(r)
+
+	followerID, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		respondError(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.followService.RejectFollowRequest(r.Context(), followerID, followingID); err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondSuccess(w, "Request rejected successfully", nil, http.StatusOK)
 }
 
 // Unfollow handles DELETE /api/users/:id/unfollow
