@@ -12,9 +12,14 @@ import {
     UserPlus,
     Circle,
     BellOff,
-    AtSign
+    AtSign,
+    Check,
+    X,
+    UserCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { acceptFollowRequest, declineFollowRequest } from '../api/client';
+import { toast } from 'sonner';
 
 // NotificationList displays user notifications (Likes, Comments, Follows)
 // It supports:
@@ -23,7 +28,7 @@ import { cn } from '@/lib/utils';
 // 3. Rich interaction (click user, click notification to view post)
 export const NotificationList: React.FC = () => {
     const navigate = useNavigate();
-    const { notifications, markAsRead } =
+    const { notifications, markAsRead, fetchNotifications } =
         useContentStore();
     const { user: currentUser } = useAuthStore();
     const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
@@ -67,6 +72,10 @@ export const NotificationList: React.FC = () => {
                 return <MessageSquare className="w-4 h-4 text-primary" />;
             case 'follow':
                 return <UserPlus className="w-4 h-4 text-accent fill-current" />;
+            case 'follow_request':
+                return <UserPlus className="w-4 h-4 text-primary fill-current animate-pulse" />;
+            case 'follow_accept':
+                return <UserCheck className="w-4 h-4 text-green-500 fill-current" />;
             case 'mention':
                 return <AtSign className="w-4 h-4 text-orange-500" />;
             default:
@@ -141,25 +150,7 @@ export const NotificationList: React.FC = () => {
             case 'follow':
                 return <span>{usernameElement} followed you</span>;
             case 'follow_request':
-                return (
-                    <div className="flex flex-col gap-2">
-                        <span>{usernameElement} requested to follow you</span>
-                        <div className="flex gap-2 mt-1">
-                            <button
-                                onClick={(e) => { e.stopPropagation(); handleAcceptRequest(notif); }}
-                                className="px-3 py-1 bg-primary text-primary-foreground text-xs rounded-md shadow-sm hover:bg-primary/90"
-                            >
-                                Accept
-                            </button>
-                            <button
-                                onClick={(e) => { e.stopPropagation(); handleRejectRequest(notif); }}
-                                className="px-3 py-1 bg-secondary text-secondary-foreground text-xs rounded-md hover:bg-secondary/80"
-                            >
-                                Decline
-                            </button>
-                        </div>
-                    </div>
-                );
+                return <span>{usernameElement} requested to follow you</span>;
             case 'follow_accept':
                 return <span>{usernameElement} accepted your follow request</span>;
             case 'mention':
@@ -249,7 +240,44 @@ export const NotificationList: React.FC = () => {
                                     </span>
                                 </div>
 
-                                {!notif.is_read && (
+                                {notif.type === 'follow_request' && !notif.is_read && (
+                                    <div className="flex gap-1 items-center" onClick={(e) => e.stopPropagation()}>
+                                        <button
+                                            onClick={async () => {
+                                                try {
+                                                    await acceptFollowRequest(notif.related_user_id);
+                                                    toast.success("Accepted follow request");
+                                                    useContentStore.getState().removeNotification(notif.id);
+                                                    useContentStore.getState().fetchUnreadCount();
+                                                } catch (err) {
+                                                    toast.error("Failed to accept request");
+                                                }
+                                            }}
+                                            className="p-1.5 rounded-full bg-primary/20 text-primary hover:bg-primary hover:text-white transition-colors"
+                                            title="Accept"
+                                        >
+                                            <Check className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                            onClick={async () => {
+                                                try {
+                                                    await declineFollowRequest(notif.related_user_id);
+                                                    toast.success("Declined follow request");
+                                                    useContentStore.getState().removeNotification(notif.id);
+                                                    useContentStore.getState().fetchUnreadCount();
+                                                } catch (err) {
+                                                    toast.error("Failed to decline request");
+                                                }
+                                            }}
+                                            className="p-1.5 rounded-full bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-colors"
+                                            title="Decline"
+                                        >
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                )}
+
+                                {!notif.is_read && notif.type !== 'follow_request' && (
                                     <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0" />
                                 )}
                             </div>
@@ -265,6 +293,6 @@ export const NotificationList: React.FC = () => {
                 onOpenChange={setShowPostDialog}
                 initialShowComments={openCommentsOnPost}
             />
-        </div>
+        </div >
     );
 };

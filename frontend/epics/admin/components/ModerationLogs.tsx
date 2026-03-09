@@ -27,9 +27,26 @@ const ModerationLogs: React.FC = () => {
         fetchLogs();
     }, []);
 
-    const getStatusIcon = (isViolation: boolean) => {
-        if (isViolation) return <XCircle className="h-4 w-4 text-destructive" />;
-        return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+    const getStatusInfo = (log: ModerationLog) => {
+        if (log.reason?.includes("AI Evaluation Error")) {
+            return {
+                icon: <AlertCircle className="h-4 w-4 text-warning" />,
+                text: "Error",
+                className: "text-amber-500 font-medium"
+            };
+        }
+        if (log.is_violation) {
+            return {
+                icon: <XCircle className="h-4 w-4 text-destructive" />,
+                text: "Violation",
+                className: "text-destructive font-medium"
+            };
+        }
+        return {
+            icon: <CheckCircle2 className="h-4 w-4 text-green-500" />,
+            text: "Approved",
+            className: "text-green-500"
+        };
     };
 
     const getTargetBadge = (type: string) => {
@@ -87,9 +104,9 @@ const ModerationLogs: React.FC = () => {
                                 <TableRow key={log.id} className="group hover:bg-muted/30 transition-colors">
                                     <TableCell>
                                         <div className="flex items-center gap-2">
-                                            {getStatusIcon(log.is_violation)}
-                                            <span className={log.is_violation ? "text-destructive font-medium" : "text-green-500"}>
-                                                {log.is_violation ? "Violation" : "Approved"}
+                                            {getStatusInfo(log).icon}
+                                            <span className={getStatusInfo(log).className}>
+                                                {getStatusInfo(log).text}
                                             </span>
                                         </div>
                                     </TableCell>
@@ -104,6 +121,15 @@ const ModerationLogs: React.FC = () => {
                                             <p className="text-xs text-muted-foreground leading-relaxed italic line-clamp-2">
                                                 {log.reason || "No automated reason provided"}
                                             </p>
+                                            {log.bad_words_found && log.bad_words_found.length > 0 && (
+                                                <div className="flex flex-wrap gap-1 mt-1">
+                                                    {log.bad_words_found.map((word, i) => (
+                                                        <span key={i} className="px-1.5 py-0.5 rounded text-[9px] bg-red-500/10 text-red-500 border border-red-500/20 font-bold uppercase">
+                                                            {word}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     </TableCell>
                                     <TableCell>

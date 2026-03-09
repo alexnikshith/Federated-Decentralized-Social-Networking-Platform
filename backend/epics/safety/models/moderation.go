@@ -26,9 +26,12 @@ type ModerationLog struct {
 	UserID        primitive.ObjectID   `json:"user_id" bson:"user_id"`         // ID of the User who owns the content
 	Content       string               `json:"content" bson:"content"`         // The content that was checked
 	IsViolation   bool                 `json:"is_violation" bson:"is_violation"`
-	Reason        string               `json:"reason" bson:"reason"`               // AI's explanation
-	GuidelineIDs  []primitive.ObjectID `json:"guideline_ids" bson:"guideline_ids"` // Guidelines breached
-	ActionTaken   string               `json:"action_taken" bson:"action_taken"`   // "none", "warning", "deletion", "suspension"
+	Reason        string               `json:"reason" bson:"reason"`                   // AI's explanation
+	Score         int                  `json:"score" bson:"score"`                     // Severity 1-10
+	BreachedRules []string             `json:"breached_rules" bson:"breached_rules"`   // Guideline titles
+	BadWordsFound []string             `json:"bad_words_found" bson:"bad_words_found"` // Specific bad words found
+	GuidelineIDs  []primitive.ObjectID `json:"guideline_ids" bson:"guideline_ids"`     // Guidelines breached
+	ActionTaken   string               `json:"action_taken" bson:"action_taken"`       // "none", "warning", "deletion", "suspension"
 	RawAIResponse string               `json:"raw_ai_response" bson:"raw_ai_response"`
 	CreatedAt     time.Time            `json:"created_at" bson:"created_at"`
 }

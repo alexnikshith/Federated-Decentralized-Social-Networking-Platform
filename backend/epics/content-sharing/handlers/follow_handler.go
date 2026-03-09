@@ -44,6 +44,14 @@ func (h *FollowHandler) Follow(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		log.Printf("Follow Service Error: %v", err)
+		if err.Error() == "requested" {
+			respondSuccess(w, "Follow request sent", nil, http.StatusOK)
+			return
+		}
+		if err.Error() == "request already sent" {
+			respondError(w, "Follow request already sent", http.StatusBadRequest)
+			return
+		}
 		status := http.StatusInternalServerError
 		if err.Error() == "user not found" {
 			status = http.StatusNotFound
@@ -168,6 +176,14 @@ func (h *FollowHandler) FollowHandle(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.followService.FollowByHandle(r.Context(), followerID, body.Handle); err != nil {
 		log.Printf("[FollowHandle] error: %v", err)
+		if err.Error() == "requested" {
+			respondSuccess(w, "Follow request sent for "+body.Handle, nil, http.StatusOK)
+			return
+		}
+		if err.Error() == "request already sent" {
+			respondError(w, "Follow request already sent", http.StatusBadRequest)
+			return
+		}
 		status := http.StatusInternalServerError
 		if err.Error() == "local user not found: "+strings.TrimPrefix(body.Handle, "@") ||
 			err.Error() == "federation is not enabled" {
@@ -178,4 +194,42 @@ func (h *FollowHandler) FollowHandle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondSuccess(w, "Follow request sent for "+body.Handle, nil, http.StatusOK)
+}
+
+// AcceptFollowRequest handles POST /api/users/:id/follow/accept
+func (h *FollowHandler) AcceptFollowRequest(w http.ResponseWriter, r *http.Request) {
+	currentUserID := middleware.GetUserIDFromContext(r.Context())
+	vars := mux.Vars(r)
+
+	followerID, err := primitive.ObjectIDFromHex(vars["id"]) // The user who sent the request
+	if err != nil {
+		respondError(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.followService.AcceptFollowRequest(r.Context(), followerID, currentUserID); err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondSuccess(w, "Follow request accepted", nil, http.StatusOK)
+}
+
+// RejectFollowRequest handles POST /api/users/:id/follow/decline
+func (h *FollowHandler) RejectFollowRequest(w http.ResponseWriter, r *http.Request) {
+	currentUserID := middleware.GetUserIDFromContext(r.Context())
+	vars := mux.Vars(r)
+
+	followerID, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		respondError(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.followService.RejectFollowRequest(r.Context(), followerID, currentUserID); err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondSuccess(w, "Follow request rejected", nil, http.StatusOK)
 }

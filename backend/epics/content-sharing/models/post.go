@@ -49,6 +49,14 @@ type Follow struct {
 	CreatedAt   time.Time          `json:"created_at" bson:"created_at"`
 }
 
+// FollowRequest represents a pending request to follow a private user
+type FollowRequest struct {
+	ID          primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	FollowerID  primitive.ObjectID `json:"follower_id" bson:"follower_id"`
+	FollowingID primitive.ObjectID `json:"following_id" bson:"following_id"`
+	CreatedAt   time.Time          `json:"created_at" bson:"created_at"`
+}
+
 // Notification represents a user notification
 type Notification struct {
 	ID                   primitive.ObjectID  `json:"id" bson:"_id,omitempty"`
