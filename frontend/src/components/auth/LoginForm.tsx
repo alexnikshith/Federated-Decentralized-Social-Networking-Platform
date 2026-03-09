@@ -394,6 +394,8 @@ export const LoginForm = ({
                                         <div className="relative">
                                             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600/40 w-4 h-4" />
                                             <input
+                                                id="email"
+                                                aria-label="Email"
                                                 type="email" placeholder="you@nebula.net" value={email}
                                                 onChange={(e) => {
                                                     setEmail(e.target.value);
@@ -427,6 +429,8 @@ export const LoginForm = ({
                                         </div>
                                         <div className="relative">
                                             <input
+                                                id="password"
+                                                aria-label="Password"
                                                 type={showPassword ? "text" : "password"}
                                                 placeholder="••••••••"
                                                 value={password}
