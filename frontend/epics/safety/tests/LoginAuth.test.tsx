@@ -8,22 +8,22 @@ import * as identityApi from '../../identity/api/client';
 
 // Mock Identity API
 vi.mock('../../identity/api/client', () => ({
-  authApi: {
-    login: vi.fn(),
-    verifyOTP: vi.fn(),
-  },
-  profileApi: {
-    getProfile: vi.fn(),
-    getMyProfile: vi.fn(),
-  },
-  api: {
-    get: vi.fn(),
-    post: vi.fn(),
-    interceptors: {
-        request: { use: vi.fn() },
-        response: { use: vi.fn() }
+    authApi: {
+        login: vi.fn(),
+        verifyOTP: vi.fn(),
+    },
+    profileApi: {
+        getProfile: vi.fn(),
+        getMyProfile: vi.fn(),
+    },
+    api: {
+        get: vi.fn(),
+        post: vi.fn(),
+        interceptors: {
+            request: { use: vi.fn() },
+            response: { use: vi.fn() }
+        }
     }
-  }
 }));
 
 // Mock useNavigate
@@ -65,7 +65,8 @@ describe('US4.0.1 & US4.0.2 Login Interface', () => {
         const loginMock = vi.mocked(identityApi.authApi.login);
         loginMock.mockResolvedValue({
             token: 'fake-jwt-token',
-            user: { id: '1', email: 'test@example.com' }
+            expires_at: '2050-01-01T00:00:00Z',
+            user: { id: '1', email: 'test@example.com', username: 'test', display_name: 'Test', bio: '', profile_visibility: 'public', is_discoverable: true, is_2fa_enabled: false } as any
         });
 
         const { container } = render(
@@ -78,7 +79,7 @@ describe('US4.0.1 & US4.0.2 Login Interface', () => {
 
         await userEvent.type(screen.getByLabelText(/email/i), 'test@example.com');
         await userEvent.type(screen.getByLabelText(/password/i), 'password123');
-        
+
         fireEvent.submit(container.querySelector('form')!);
 
         await waitFor(() => {
@@ -89,8 +90,8 @@ describe('US4.0.1 & US4.0.2 Login Interface', () => {
     it('handles OTP requirement (US4.0.1)', async () => {
         const loginMock = vi.mocked(identityApi.authApi.login);
         loginMock.mockResolvedValue({
-            message: "OTP Sent" 
-        });
+            message: "OTP Sent"
+        } as any);
 
         const { container } = render(
             <QueryClientProvider client={queryClient}>
@@ -102,16 +103,16 @@ describe('US4.0.1 & US4.0.2 Login Interface', () => {
 
         await userEvent.type(screen.getByLabelText(/email/i), 'otp@example.com');
         await userEvent.type(screen.getByLabelText(/password/i), 'password123');
-        
+
         fireEvent.submit(container.querySelector('form')!);
 
         await waitFor(() => {
-             expect(loginMock).toHaveBeenCalled();
+            expect(loginMock).toHaveBeenCalled();
         }, { timeout: 3000 });
-        
+
         // Use a looser matcher for the text or check for the OTP input presence
         await waitFor(() => {
-            expect(screen.getByPlaceholderText(/code/i)).toBeInTheDocument();
+            expect(screen.getByPlaceholderText('000000')).toBeInTheDocument();
         });
     });
 });

@@ -4,6 +4,29 @@ import { vi } from 'vitest';
 // Global Mocks for Epic Stores
 // This ensures that all components see the same mocked stores regardless of import order
 
+const localStorageMock = (function () {
+    let store: Record<string, string> = {};
+    return {
+        getItem: function (key: string) {
+            return store[key] || null;
+        },
+        setItem: function (key: string, value: string) {
+            store[key] = value.toString();
+        },
+        removeItem: function (key: string) {
+            delete store[key];
+        },
+        clear: function () {
+            store = {};
+        }
+    };
+})();
+
+Object.defineProperty(window, 'localStorage', {
+    value: localStorageMock,
+    writable: true
+});
+
 const mockState = {
     auth: {
         user: { id: 'user-1', username: 'testuser', displayName: 'Test User' },
