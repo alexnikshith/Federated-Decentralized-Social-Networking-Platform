@@ -13,6 +13,11 @@ jobs:
   backend:
     name: Backend CI
     runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:latest
+        ports:
+          - 27017:27017
     defaults:
       run:
         working-directory: ./backend
@@ -73,6 +78,11 @@ jobs:
   e2e:
     name: E2E Playwright Tests
     runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:latest
+        ports:
+          - 27017:27017
     defaults:
       run:
         working-directory: ./frontend
@@ -80,6 +90,20 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Setup Go for Backend
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          cache: true
+          cache-dependency-path: ./backend/go.sum
+
+      - name: Start Backend
+        working-directory: ./backend
+        run: |
+          go mod download
+          go run main.go &
+          sleep 5
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
