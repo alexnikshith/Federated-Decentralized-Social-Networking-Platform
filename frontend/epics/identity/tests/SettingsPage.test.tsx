@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SettingsPage } from '../pages/SettingsPage';
 import { useAuthStore } from '../store/authStore';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { profileApi, authApi } from '../api/client';
 
 // Mock dependencies
@@ -50,15 +51,17 @@ describe('SettingsPage', () => {
         });
     });
 
+    const queryClient = new QueryClient();
+
     it('renders profile settings by default', () => {
-        render(<SettingsPage />);
+        render(<QueryClientProvider client={queryClient}><SettingsPage /></QueryClientProvider>);
         expect(screen.getByText('Profile Details')).toBeInTheDocument();
         expect(screen.getByDisplayValue('Test User')).toBeInTheDocument();
         expect(screen.getByDisplayValue('testuser')).toBeInTheDocument();
     });
 
     it('switches to account settings tab', () => {
-        render(<SettingsPage />);
+        render(<QueryClientProvider client={queryClient}><SettingsPage /></QueryClientProvider>);
         const accountTab = screen.getByText('Account');
         fireEvent.click(accountTab);
         expect(screen.getByText('Account Settings')).toBeInTheDocument();
@@ -68,7 +71,7 @@ describe('SettingsPage', () => {
     it('handles profile update submission', async () => {
         (profileApi.updateProfile as any).mockResolvedValue({ data: { ...mockUser, display_name: 'Updated Name' } });
 
-        render(<SettingsPage />);
+        render(<QueryClientProvider client={queryClient}><SettingsPage /></QueryClientProvider>);
 
         // Click edit profile
         const editButton = screen.getByText('Edit Profile');
@@ -99,7 +102,7 @@ describe('SettingsPage', () => {
             value: { href: '' },
         });
 
-        render(<SettingsPage />);
+        render(<QueryClientProvider client={queryClient}><SettingsPage /></QueryClientProvider>);
 
         fireEvent.click(screen.getByText('Account'));
 
@@ -122,7 +125,7 @@ describe('SettingsPage', () => {
         ];
         (profileApi.getActivity as any).mockResolvedValue(mockActivities);
 
-        render(<SettingsPage />);
+        render(<QueryClientProvider client={queryClient}><SettingsPage /></QueryClientProvider>);
 
         // Switch to account tab
         fireEvent.click(screen.getByText('Account'));
