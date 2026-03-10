@@ -1278,15 +1278,20 @@ func (s *PostService) GetSavedPosts(ctx context.Context, userID primitive.Object
 
 // ReportPost logic
 func (s *PostService) ReportPost(ctx context.Context, postID, userID primitive.ObjectID, req dto.ReportPostRequest) error {
-	// Verify post exists
+	// Verify post exists (local first)
 	post, err := s.postRepo.GetPostByID(ctx, postID)
 	if err != nil {
-		return errors.New("post not found")
-	}
-
-	// Prevent reporting own posts
-	if post.AuthorID == userID {
-		return errors.New("you cannot report your own post")
+		// Try remote posts
+		remotePost, remoteErr := s.federationService.GetRemotePostByObjectID(ctx, postID)
+		if remoteErr != nil || remotePost == nil {
+			return errors.New("post not found")
+		}
+		// Note: A local user (ObjectID) cannot be the author of a RemotePost (Actor URI), so no self-report check is needed.
+	} else {
+		// Prevent reporting own local posts
+		if post.AuthorID == userID {
+			return errors.New("you cannot report your own post")
+		}
 	}
 
 	report := &models.ReportedPost{
