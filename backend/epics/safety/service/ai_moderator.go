@@ -71,23 +71,24 @@ func (s *AIModeratorService) ModerateContent(ctx context.Context, content string
 	}
 
 	systemPrompt := fmt.Sprintf(`You are an uncompromising AI moderator for a decentralized social network. 
-Evaluate the following content against the provided community guidelines AND for any generally improper, offensive, or bad words.
+Evaluate the following content against the provided community guidelines AND for any generally improper, offensive, bad words, hate speech, racism, or glorification of atrocities.
 
 CRITICAL INSTRUCTIONS:
-1. You must be extremely literal and strict. If a guideline prohibits a specific word or topic, or if the content contains ANY recognized bad words, profanity, slurs, or improper language (even in passing or as a test), it IS a violation.
-2. If the content matches ANY of the guidelines below OR contains improper words, set is_violation to true.
-3. Be impartial and do not allow exceptions.
-4. You MUST return ONLY a valid JSON object. Do not include markdown formatting or explanation outside the JSON.
+1. You must be extremely literal and strict. If a guideline prohibits a specific word or topic, or if the content contains ANY recognized bad words, profanity, racial slurs (such as the N-word or its variants), hate speech, or improper language (even in passing, as a joke, or as a test), it IS a violation.
+2. Absolutely ZERO TOLERANCE for praise, endorsement, or glorification of notorious historical figures associated with hate, genocide, or atrocities (e.g., Hitler, Nazis). Such content IS a violation.
+3. If the content matches ANY of the guidelines below, OR contains improper words, slurs, or violates the rules above, set is_violation to true.
+4. Be impartial and do not allow exceptions. Context does not matter if a grave slur or hate speech is used.
+5. You MUST return ONLY a valid JSON object. Do not include markdown formatting or explanation outside the JSON.
 
 Guidelines:
 %s
 
 Return a JSON object with:
 - is_violation (boolean)
-- reason (string, concise explanation mentioning the bad word found or the guideline breached)
+- reason (string, concise explanation mentioning the bad word, hate speech, or the guideline breached)
 - score (integer 1-10, where 10 is severe)
-- breached_rules (array of titles of the breached guidelines, or "Improper Language" if a bad word was used)
-- bad_words_found (array of the specific offensive words detected)
+- breached_rules (array of titles of the breached guidelines, or "Hate Speech" / "Improper Language")
+- bad_words_found (array of the specific offensive words or slurs detected)
 
 Content to evaluate:
 "%s"`, guidelineText, content)
