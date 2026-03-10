@@ -14,6 +14,16 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Loader2, User, Settings, Shield, Bell, Lock, AlertTriangle, Edit, Clock, Upload, Eye, EyeOff, ShieldCheck, Check } from "lucide-react";
+import { IconAlertTriangle, IconGavel } from '@tabler/icons-react';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import type { User as UserType, ActivityLog } from "../types";
 import { useToast } from "@/hooks/use-toast";
@@ -35,6 +45,10 @@ export const SettingsPage = () => {
     const { toast } = useToast();
     const { timeLimitMinutes, setTimeLimit, dailyUsageMinutes, setDailyUsage } = useSettingsStore();
     const { useActivityReport } = useReportsApi();
+
+    // Moderation alert modal state (shown when profile update is blocked by AI)
+    const [profileModerationOpen, setProfileModerationOpen] = useState(false);
+    const [profileModerationMessage, setProfileModerationMessage] = useState("");
 
     // Fetch today's activity report to sync usage (use local date to match Reports page)
     const getLocalDate = () => {
@@ -329,12 +343,18 @@ export const SettingsPage = () => {
                 setIsEditing(false);
             }
         } catch (error) {
-            console.error(error);
-            toast({
-                title: "Error",
-                description: error.response?.data?.message || "Failed to update profile",
-                variant: "destructive",
-            });
+            const msg: string = error?.response?.data?.message || "Failed to update profile";
+            // If the backend rejected due to community guidelines, show the moderation modal
+            if (msg.toLowerCase().includes("community guidelines") || msg.toLowerCase().includes("offensive words")) {
+                setProfileModerationMessage(msg);
+                setProfileModerationOpen(true);
+            } else {
+                toast({
+                    title: "Error",
+                    description: msg,
+                    variant: "destructive",
+                });
+            }
         } finally {
             setLoading(false);
         }
@@ -437,6 +457,46 @@ export const SettingsPage = () => {
 
     return (
         <div className="min-h-screen bg-background pb-12">
+
+            {/* ── AI Moderation Block Modal ── */}
+            <AlertDialog open={profileModerationOpen} onOpenChange={setProfileModerationOpen}>
+                <AlertDialogContent className="max-w-md bg-gray-900 border-red-500/30 text-white">
+                    <AlertDialogHeader>
+                        <div className="flex items-center gap-3 mb-2 text-red-400">
+                            <IconGavel size={32} />
+                            <AlertDialogTitle className="text-2xl font-bold">Profile Update Blocked</AlertDialogTitle>
+                        </div>
+                        <AlertDialogDescription className="text-gray-300 text-lg">
+                            Our AI Moderator has detected a violation of our community guidelines in your profile update.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+
+                    <div className="my-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+                        <div className="flex items-start gap-3">
+                            <IconAlertTriangle className="text-red-500 mt-1 shrink-0" size={20} />
+                            <div>
+                                <p className="font-semibold text-red-200">Action: Update Rejected</p>
+                                <p className="text-sm text-red-300 mt-2 font-medium">
+                                    {profileModerationMessage}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-3 text-sm text-gray-400">
+                        <p>Your profile was not changed. Please edit your content to comply with community standards.</p>
+                    </div>
+
+                    <AlertDialogFooter>
+                        <AlertDialogAction
+                            onClick={() => setProfileModerationOpen(false)}
+                            className="bg-red-600 hover:bg-red-700 text-white rounded-lg px-8"
+                        >
+                            I Understand
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
             {/* Header */}
             <div className="h-48 bg-gradient-to-br from-primary/10 via-secondary/10 to-background border-b border-border/50 relative overflow-hidden">
                 <div className="absolute inset-0 grid-pattern opacity-10" />
