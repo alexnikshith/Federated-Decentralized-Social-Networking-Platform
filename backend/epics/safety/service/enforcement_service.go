@@ -91,7 +91,7 @@ func (s *EnforcementService) processPostModeration(postID primitive.ObjectID) {
 	}
 
 	if s.aiService == nil {
-		log.Printf("[Moderation] Skipping moderation for post %s: AI Service not initialized (check GEMINI_API_KEY)", postID.Hex())
+		log.Printf("[Moderation] Skipping moderation for post %s: AI Service not initialized (check GROQ_API_KEY)", postID.Hex())
 		return
 	}
 
