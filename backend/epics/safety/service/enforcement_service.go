@@ -23,12 +23,13 @@ type moderationTask struct {
 }
 
 type EnforcementService struct {
-	moderationRepo *repository.ModerationRepository
-	postRepo       *contentRepo.PostRepository
-	userRepo       *identityRepo.UserRepository
-	aiService      *AIModeratorService
-	isScanning     bool
-	taskChan       chan moderationTask // Global queue
+	moderationRepo   *repository.ModerationRepository
+	postRepo         *contentRepo.PostRepository
+	userRepo         *identityRepo.UserRepository
+	aiService        *AIModeratorService
+	isScanning       bool
+	highPriorityChan chan moderationTask // Queue for user actions (posts, comments)
+	lowPriorityChan  chan moderationTask // Queue for retroactive scans
 }
 
 func NewEnforcementService(
@@ -38,11 +39,12 @@ func NewEnforcementService(
 	aiService *AIModeratorService,
 ) *EnforcementService {
 	s := &EnforcementService{
-		moderationRepo: modRepo,
-		postRepo:       postRepo,
-		userRepo:       userRepo,
-		aiService:      aiService,
-		taskChan:       make(chan moderationTask, 1000),
+		moderationRepo:   modRepo,
+		postRepo:         postRepo,
+		userRepo:         userRepo,
+		aiService:        aiService,
+		highPriorityChan: make(chan moderationTask, 1000),
+		lowPriorityChan:  make(chan moderationTask, 5000),
 	}
 
 	// Start the background worker
@@ -52,8 +54,24 @@ func NewEnforcementService(
 }
 
 func (s *EnforcementService) startWorker() {
-	log.Println("[Moderation] Background worker started")
-	for task := range s.taskChan {
+	log.Println("[Moderation] Background worker started with priority queues")
+	for {
+		var task moderationTask
+
+		// Try to fetch from high priority queue first
+		select {
+		case task = <-s.highPriorityChan:
+			// High priority task received
+		default:
+			// If high priority is empty, block and wait for either queue
+			select {
+			case task = <-s.highPriorityChan:
+				// High priority task received while waiting
+			case task = <-s.lowPriorityChan:
+				// Low priority task received
+			}
+		}
+
 		// Process task based on type
 		switch task.targetType {
 		case "post":
@@ -69,9 +87,14 @@ func (s *EnforcementService) startWorker() {
 	}
 }
 
-// ModeratePostAsync adds a post to the moderation queue
+// ModeratePostAsync adds a post to the high priority moderation queue
 func (s *EnforcementService) ModeratePostAsync(postID primitive.ObjectID) {
-	s.taskChan <- moderationTask{targetID: postID, targetType: "post"}
+	s.highPriorityChan <- moderationTask{targetID: postID, targetType: "post"}
+}
+
+// ModeratePostLowPriority adds a post to the low priority moderation queue (used for scans)
+func (s *EnforcementService) ModeratePostLowPriority(postID primitive.ObjectID) {
+	s.lowPriorityChan <- moderationTask{targetID: postID, targetType: "post"}
 }
 
 func (s *EnforcementService) processPostModeration(postID primitive.ObjectID) {
@@ -180,9 +203,9 @@ func (s *EnforcementService) processPostModeration(postID primitive.ObjectID) {
 	s.moderationRepo.CreateLog(ctx, logEntry)
 }
 
-// ModerateCommentAsync adds a comment to the moderation queue
+// ModerateCommentAsync adds a comment to the high priority moderation queue
 func (s *EnforcementService) ModerateCommentAsync(commentID primitive.ObjectID) {
-	s.taskChan <- moderationTask{targetID: commentID, targetType: "comment"}
+	s.highPriorityChan <- moderationTask{targetID: commentID, targetType: "comment"}
 }
 
 func (s *EnforcementService) processCommentModeration(commentID primitive.ObjectID) {
@@ -265,9 +288,9 @@ func (s *EnforcementService) processCommentModeration(commentID primitive.Object
 	s.moderationRepo.CreateLog(ctx, logEntry)
 }
 
-// ModerateUserAsync adds a profile field to the moderation queue
+// ModerateUserAsync adds a profile field to the high priority moderation queue
 func (s *EnforcementService) ModerateUserAsync(userID primitive.ObjectID, fieldType string) {
-	s.taskChan <- moderationTask{targetID: userID, targetType: fieldType}
+	s.highPriorityChan <- moderationTask{targetID: userID, targetType: fieldType}
 }
 
 func (s *EnforcementService) processUserModeration(userID primitive.ObjectID, fieldType string) {
@@ -375,10 +398,9 @@ func (s *EnforcementService) RunRetroactiveScan(ctx context.Context) error {
 	s.isScanning = true
 	defer func() { s.isScanning = false }()
 
-	log.Println("[Moderation] Starting retroactive scan...")
-
-	// 1. Scan all posts
-	posts, err := s.postRepo.FindAll(ctx)
+	// 1. Scan recent posts (limit to last 10 to reduce backlog)
+	// Passing empty slice for excludeIDs and 10 for limit
+	posts, err := s.postRepo.GetAllPosts(ctx, []primitive.ObjectID{}, 10)
 	if err != nil {
 		return err
 	}
@@ -388,7 +410,7 @@ func (s *EnforcementService) RunRetroactiveScan(ctx context.Context) error {
 		if post.Status == "deleted" && post.ModerationStatus == "flagged" {
 			continue
 		}
-		s.ModeratePostAsync(post.ID)
+		s.ModeratePostLowPriority(post.ID)
 		// No manual sleep needed here, the worker handles it!
 	}
 
