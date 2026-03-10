@@ -53,6 +53,18 @@ func NewEnforcementService(
 	return s
 }
 
+// GetAIService exposes the underlying AI moderator so callers can do
+// synchronous pre-save moderation checks (e.g. profile field updates).
+func (s *EnforcementService) GetAIService() *AIModeratorService {
+	return s.aiService
+}
+
+// GetActiveGuidelines fetches the current community guidelines from the DB.
+// Used by callers that need to run a synchronous moderation check.
+func (s *EnforcementService) GetActiveGuidelines(ctx context.Context) ([]models.CommunityGuideline, error) {
+	return s.moderationRepo.GetActiveGuidelines(ctx)
+}
+
 func (s *EnforcementService) startWorker() {
 	log.Println("[Moderation] Background worker started with priority queues")
 	for {

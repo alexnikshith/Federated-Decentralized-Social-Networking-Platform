@@ -12,6 +12,7 @@ import (
 	"federated-social/backend/epics/identity/models"
 	"federated-social/backend/epics/identity/repository"
 	safetyService "federated-social/backend/epics/safety/service"
+	"fmt"
 	"log"
 	"strings"
 
@@ -141,6 +142,51 @@ func (s *ProfileService) GetProfile(ctx context.Context, userID primitive.Object
 
 // UpdateProfile updates user profile information (US1.3)
 func (s *ProfileService) UpdateProfile(ctx context.Context, userID primitive.ObjectID, req dto.UpdateProfileRequest) (*models.PublicUser, error) {
+
+	// --- Synchronous AI Moderation BEFORE saving ---
+	// Check username, display_name, and bio for guideline violations.
+	// If a violation is found, reject the request immediately — DB is never touched.
+	if s.enforcementService != nil {
+		aiService := s.enforcementService.GetAIService()
+		if aiService != nil {
+			guidelines, err := s.enforcementService.GetActiveGuidelines(ctx)
+			if err != nil {
+				log.Printf("[Profile] Warning: could not fetch guidelines for moderation: %v", err)
+			}
+
+			type fieldCheck struct {
+				label string
+				value *string
+			}
+			fields := []fieldCheck{
+				{"display name", req.DisplayName},
+				{"username", req.Username},
+				{"bio", req.Bio},
+			}
+
+			for _, f := range fields {
+				if f.value == nil || *f.value == "" {
+					continue
+				}
+				result, err := aiService.ModerateContent(ctx, *f.value, guidelines)
+				if err != nil {
+					// AI unavailable — log and allow (fail-open to not block UX)
+					log.Printf("[Profile] AI moderation unavailable for %s, allowing update: %v", f.label, err)
+					continue
+				}
+				if result.IsViolation {
+					reason := result.Reason
+					if len(result.BadWordsFound) > 0 {
+						reason = fmt.Sprintf("offensive words detected: %s", strings.Join(result.BadWordsFound, ", "))
+					}
+					log.Printf("[Profile] Blocked update for user %s: %s violates guidelines. Reason: %s", userID.Hex(), f.label, reason)
+					return nil, fmt.Errorf("your %s violates our community guidelines — %s", f.label, reason)
+				}
+			}
+		}
+	}
+	// --- End moderation check ---
+
 	update := bson.M{}
 
 	if req.Username != nil {
@@ -179,19 +225,6 @@ func (s *ProfileService) UpdateProfile(ctx context.Context, userID primitive.Obj
 
 	if err := s.userRepo.UpdateUser(ctx, userID, update); err != nil {
 		return nil, err
-	}
-
-	// Trigger AI Moderation Asynchronously
-	if s.enforcementService != nil {
-		if req.DisplayName != nil {
-			s.enforcementService.ModerateUserAsync(userID, "display_name")
-		}
-		if req.Bio != nil {
-			s.enforcementService.ModerateUserAsync(userID, "bio")
-		}
-		if req.Username != nil {
-			s.enforcementService.ModerateUserAsync(userID, "username")
-		}
 	}
 
 	// Log activity
