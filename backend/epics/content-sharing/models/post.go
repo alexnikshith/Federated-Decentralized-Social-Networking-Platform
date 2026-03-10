@@ -100,11 +100,3 @@ type PostInteraction struct {
 	Type      string             `json:"type" bson:"type"` // "interested", "not_interested"
 	CreatedAt time.Time          `json:"created_at" bson:"created_at"`
 }
-
-// FollowRequest represents a pending follow request for private accounts
-type FollowRequest struct {
-	ID          primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	FollowerID  primitive.ObjectID `json:"follower_id" bson:"follower_id"`
-	FollowingID primitive.ObjectID `json:"following_id" bson:"following_id"`
-	CreatedAt   time.Time          `json:"created_at" bson:"created_at"`
-}
