@@ -168,6 +168,7 @@ func TestPostService_LikePost(t *testing.T) {
 
 	t.Run("LikePost_Success", func(t *testing.T) {
 		mPR.On("GetPostByID", ctx, postID).Return(&models.Post{ID: postID, AuthorID: userID}, nil)
+		mPR.On("CheckIfLiked", ctx, postID, userID).Return(false, nil) // not yet liked — proceed
 		mPR.On("CreateLike", ctx, mock.Anything).Return(nil)
 		err := s.LikePost(ctx, postID, userID)
 		assert.NoError(t, err)

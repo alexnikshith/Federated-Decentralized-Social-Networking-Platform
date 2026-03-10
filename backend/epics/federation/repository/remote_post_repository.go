@@ -154,6 +154,38 @@ func (r *RemotePostRepository) DeleteRemotePost(ctx context.Context, remotePostI
 	return err
 }
 
+// GetRemotePostByObjectID retrieves a remote post by its MongoDB _id (ObjectID).
+// This is used when the frontend sends the MongoDB id of a cached remote post
+// for actions like liking or commenting.
+func (r *RemotePostRepository) GetRemotePostByObjectID(ctx context.Context, id primitive.ObjectID) (*models.RemotePost, error) {
+	var remotePost models.RemotePost
+	err := r.remotePosts.FindOne(ctx, bson.M{"_id": id}).Decode(&remotePost)
+	if err != nil {
+		return nil, err
+	}
+	return &remotePost, nil
+}
+
+// IncrementLikeCount atomically increments the cached like_count for a remote post.
+func (r *RemotePostRepository) IncrementLikeCount(ctx context.Context, remotePostID string) error {
+	_, err := r.remotePosts.UpdateOne(
+		ctx,
+		bson.M{"remote_post_id": remotePostID},
+		bson.M{"$inc": bson.M{"like_count": 1}},
+	)
+	return err
+}
+
+// DecrementLikeCount atomically decrements the cached like_count for a remote post.
+func (r *RemotePostRepository) DecrementLikeCount(ctx context.Context, remotePostID string) error {
+	_, err := r.remotePosts.UpdateOne(
+		ctx,
+		bson.M{"remote_post_id": remotePostID},
+		bson.M{"$inc": bson.M{"like_count": -1}},
+	)
+	return err
+}
+
 // DeleteRemotePostsByInstance deletes all remote posts from a specific instance
 func (r *RemotePostRepository) DeleteRemotePostsByInstance(ctx context.Context, instance string) error {
 	_, err := r.remotePosts.DeleteMany(ctx, bson.M{"origin_instance": instance})

@@ -811,8 +811,12 @@ const ProfileUI = () => {
                                 });
                               }
                             }
-                            // Soft reload data after a delay
-                            setTimeout(() => loadProfileData(false), 800);
+                            // Soft reload data after a delay — but NOT for Mastodon users,
+                            // because their followers_count in our DB isn't live-updated by the AP handshake,
+                            // so reloading would reset the optimistic +1 we just showed.
+                            if (!isMastodonNode) {
+                              setTimeout(() => loadProfileData(false), 800);
+                            }
                           } catch (err: any) {
                             console.error("Follow/unfollow failed:", err);
                             const errorMsg = err.response?.data?.message || err.message || "Action failed. Please try again.";

@@ -29,11 +29,18 @@ type RemotePostRepositoryInterface interface {
 	UpsertRemotePost(ctx context.Context, remotePost *models.RemotePost) error
 	DeleteRemotePost(ctx context.Context, remotePostID string) error
 	GetRemotePostsByAuthors(ctx context.Context, actorIDs []string, limit int64) ([]models.RemotePost, error)
+	GetRemotePostByObjectID(ctx context.Context, id primitive.ObjectID) (*models.RemotePost, error)
+	IncrementLikeCount(ctx context.Context, remotePostID string) error
+	DecrementLikeCount(ctx context.Context, remotePostID string) error
 }
 
 // FederationEventRepositoryInterface defines methods for interacting with federation events
 type FederationEventRepositoryInterface interface {
 	CreateEvent(ctx context.Context, event *models.FederationEvent) error
+	GetPendingEvents(ctx context.Context) ([]models.FederationEvent, error)
+	GetFailedEvents(ctx context.Context, maxRetries int) ([]models.FederationEvent, error)
+	MarkEventSent(ctx context.Context, eventID primitive.ObjectID) error
+	MarkEventFailed(ctx context.Context, eventID primitive.ObjectID, errorMessage string) error
 }
 
 // RemoteRelationshipsRepositoryInterface defines methods for interacting with remote relationships

@@ -42,6 +42,9 @@ type User struct {
 	// ActivityPub RSA keypair — never exposed in JSON, stored in DB only
 	PublicKeyPem  string `json:"-" bson:"public_key_pem,omitempty"`
 	PrivateKeyPem string `json:"-" bson:"private_key_pem,omitempty"`
+
+	// Federation preferences (US3.8)
+	FederationEnabled bool `json:"federation_enabled" bson:"federation_enabled"` // true = broadcast posts to federated network
 }
 
 // ActivityLog represents user activity tracking
@@ -84,6 +87,7 @@ type PrivateUser struct {
 	IsDiscoverable    bool     `json:"is_discoverable"`
 	Strikes           int      `json:"strikes"`
 	AccountStatus     string   `json:"account_status"`
+	FederationEnabled bool     `json:"federation_enabled"`
 }
 
 // Session represents an active user session
@@ -123,6 +127,12 @@ func (u *User) ToPublicUser() PublicUser {
 
 // ToPrivateUser converts User to PrivateUser (for owner)
 func (u *User) ToPrivateUser() PrivateUser {
+	// Default federation to enabled for existing users (zero value = disabled would break them)
+	fedEnabled := u.FederationEnabled
+	if !fedEnabled && u.InstanceID == "" {
+		// Brand-new users without an instance domain should still default to true
+		fedEnabled = true
+	}
 	return PrivateUser{
 		PublicUser:        u.ToPublicUser(),
 		Email:             u.Email,
@@ -131,5 +141,6 @@ func (u *User) ToPrivateUser() PrivateUser {
 		IsDiscoverable:    u.IsDiscoverable,
 		Strikes:           u.Strikes,
 		AccountStatus:     u.AccountStatus,
+		FederationEnabled: fedEnabled,
 	}
 }
