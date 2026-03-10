@@ -50,6 +50,7 @@ type PostRepositoryInterface interface {
 	SavePost(ctx context.Context, savedPost *models.SavedPost) error
 	UnsavePost(ctx context.Context, userID, postID primitive.ObjectID) error
 	GetSavedPostIDsByUser(ctx context.Context, userID primitive.ObjectID) ([]primitive.ObjectID, error)
+	CheckIfReported(ctx context.Context, postID, userID primitive.ObjectID) (bool, error)
 	CreateReport(ctx context.Context, report *models.ReportedPost) error
 	UpsertInteraction(ctx context.Context, interaction *models.PostInteraction) error
 	GetAllReports(ctx context.Context) ([]models.ReportedPost, error)
@@ -832,6 +833,58 @@ func (s *PostService) DeletePost(ctx context.Context, postID, userID primitive.O
 			s.federationService.DeliverActivityToFollowers(bgCtx, fullUser.Username, fullUser.PrivateKeyPem, keyID, userID, deleteActivity)
 		}()
 	}
+
+	return nil
+}
+
+// DeletePostAsAdmin deletes any post (bypassing ownership checks) and sends an AP Delete
+// activity to all remote followers using the original author's keys.
+func (s *PostService) DeletePostAsAdmin(ctx context.Context, postID primitive.ObjectID) error {
+	post, err := s.postRepo.GetPostByIDAdmin(ctx, postID)
+	if err != nil {
+		// Try remote posts
+		if s.federationService != nil {
+			remotePost, remoteErr := s.federationService.GetRemotePostByObjectID(ctx, postID)
+			if remoteErr == nil && remotePost != nil {
+				// It's a remote post, just delete it from our local cache.
+				// We cannot send an AP Delete because we do not own the author's keys.
+				log.Printf("[AP Delete Admin] Deleting remote post %s from local cache", postID.Hex())
+				return s.federationService.DeleteRemotePostByLocalID(ctx, postID)
+			}
+		}
+		return err
+	}
+
+	if err := s.postRepo.DeletePost(ctx, postID); err != nil {
+		return err
+	}
+
+	// Broadcast AP Delete activity to remote followers (best-effort)
+	if s.federationService != nil {
+		go func() {
+			bgCtx := context.Background()
+			fullUser, keyErr := s.federationService.GetUserWithKeyPair(bgCtx, post.AuthorID)
+			if keyErr != nil || fullUser == nil {
+				log.Printf("[AP Delete Admin] Could not load keypair for author %s: %v", post.AuthorID.Hex(), keyErr)
+				return
+			}
+			base := config.AppConfig.BaseURL()
+			actorURL := fmt.Sprintf("%s/users/%s", base, fullUser.Username)
+			noteID := fmt.Sprintf("%s/users/%s/posts/%s", base, fullUser.Username, postID.Hex())
+			deleteID := fmt.Sprintf("%s/activities/delete-%s", base, postID.Hex())
+			keyID := actorURL + "#main-key"
+
+			deleteActivity := map[string]interface{}{
+				"@context": "https://www.w3.org/ns/activitystreams",
+				"type":     "Delete",
+				"id":       deleteID,
+				"actor":    actorURL,
+				"object":   noteID,
+			}
+			log.Printf("[AP Delete Admin] Delivering Delete for post %s by %s", postID.Hex(), fullUser.Username)
+			s.federationService.DeliverActivityToFollowers(bgCtx, fullUser.Username, fullUser.PrivateKeyPem, keyID, post.AuthorID, deleteActivity)
+		}()
+	}
 	return nil
 }
 
@@ -1292,6 +1345,15 @@ func (s *PostService) ReportPost(ctx context.Context, postID, userID primitive.O
 		if post.AuthorID == userID {
 			return errors.New("you cannot report your own post")
 		}
+	}
+
+	// Prevent duplicate reports
+	alreadyReported, err := s.postRepo.CheckIfReported(ctx, postID, userID)
+	if err != nil {
+		return err
+	}
+	if alreadyReported {
+		return errors.New("you have already reported this post")
 	}
 
 	report := &models.ReportedPost{

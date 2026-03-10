@@ -154,6 +154,12 @@ func (r *RemotePostRepository) DeleteRemotePost(ctx context.Context, remotePostI
 	return err
 }
 
+// DeleteRemotePostByLocalID deletes a remote post by its local MongoDB ObjectID.
+func (r *RemotePostRepository) DeleteRemotePostByLocalID(ctx context.Context, id primitive.ObjectID) error {
+	_, err := r.remotePosts.DeleteOne(ctx, bson.M{"_id": id})
+	return err
+}
+
 // GetRemotePostByObjectID retrieves a remote post by its MongoDB _id (ObjectID).
 // This is used when the frontend sends the MongoDB id of a cached remote post
 // for actions like liking or commenting.

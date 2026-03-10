@@ -722,6 +722,11 @@ func (s *FederationService) DeleteRemotePostByID(ctx context.Context, postID str
 	}
 }
 
+// DeleteRemotePostByLocalID deletes a remote post from the local cache by its MongoDB ObjectID.
+func (s *FederationService) DeleteRemotePostByLocalID(ctx context.Context, id primitive.ObjectID) error {
+	return s.remotePostRepo.DeleteRemotePostByLocalID(ctx, id)
+}
+
 // SendRemoteLike builds an AP Like activity and delivers it to the remote actor's inbox.
 // Falls back to the retry queue if the inbox is unreachable.
 func (s *FederationService) SendRemoteLike(ctx context.Context, localUsername, privateKeyPem, keyID string, remotePost *models.RemotePost) {
