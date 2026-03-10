@@ -25,24 +25,24 @@ Key goals of this strategy:
 flowchart TD
     Dev["Developer"]
 
-    Dev -->|git push / pull request| GH["GitHub Repository\ngithub.com/RiteeshTM/..."]
+    Dev -->|git push / pull request| GH["GitHub Repository"]
 
-    GH -->|Trigger CI/CD| GA["GitHub Actions\nci.yml"]
+    GH -->|Trigger CI/CD| GA["GitHub Actions"]
 
     subgraph CI ["Continuous Integration Pipeline"]
         direction TB
-        GA --> B_CI["Backend CI Job\n• Checkout code\n• Setup Go (stable)\n• go mod download\n• go build ./...\n• go test ./...\n• Docker image build"]
-        GA --> F_CI["Frontend CI Job\n• Checkout code\n• Setup Node.js 20\n• npm ci\n• npm run lint\n• npm run test\n• npm run build"]
-        GA --> E2E["E2E Job (Playwright)\n• Start Go backend\n• npm ci\n• playwright install\n• playwright test"]
+        GA --> B_CI["Backend CI Job"]
+        GA --> F_CI["Frontend CI Job"]
+        GA --> E2E["E2E Job - Playwright"]
     end
 
-    B_CI -->|CI passes on main| Render["Render.com\n(Auto Deploy)\nDockerized Go Backend"]
-    F_CI -->|CI passes on main| Vercel["▲ Vercel\n(Auto Deploy)\nReact + Vite Frontend"]
+    B_CI -->|CI passes on main| Render["Render.com - Dockerized Go Backend"]
+    F_CI -->|CI passes on main| Vercel["Vercel - React + Vite Frontend"]
 
-    Render -->|Connects via URI| MongoDB["MongoDB\n(Render / Atlas)"]
+    Render -->|Connects via URI| MongoDB["MongoDB Atlas"]
 
     Vercel -->|HTTPS API calls| Render
-    Render -->|ActivityPub federation| Mastodon["Mastodon\n& Other Federated Instances"]
+    Render -->|ActivityPub federation| Mastodon["Mastodon and Other Federated Instances"]
 ```
 
 ---
@@ -101,16 +101,16 @@ Render pulls the GitHub repository, builds the image, and replaces the running c
 | Property | Detail |
 |---|---|
 | **Type** | MongoDB |
-| **Deployment** | Render Managed Database **or** MongoDB Atlas |
+| **Deployment** | MongoDB Atlas (Cloud Managed) |
 | **Schema** | Defined as Go structs in `/backend/epics/*/models/` |
 | **Connection** | Injected via `MONGODB_URI` environment variable |
 
 ### Connection Configuration
-The backend reads the database connection from the `MONGODB_URI` environment variable. No credentials are stored in code. Render and Vercel both provide secret environment variable storage in their dashboards.
+The backend reads the database connection from the `MONGODB_URI` environment variable provided by MongoDB Atlas. No credentials are stored in code. Render and Vercel both provide secret environment variable storage in their dashboards.
 
 | Environment Variable | Purpose |
 |---|---|
-| `MONGODB_URI` | Full MongoDB connection string |
+| `MONGODB_URI` | MongoDB Atlas connection string |
 | `JWT_SECRET` | JWT signing key |
 | `INSTANCE_DOMAIN` | ActivityPub instance domain |
 | `VITE_API_URL` | Backend URL consumed by the frontend |
@@ -248,8 +248,8 @@ jobs:
 
 | Environment | Frontend | Backend | Database |
 |---|---|---|---|
-| **Local Development** | `npm run dev` (Vite dev server) | `go run main.go` or `docker-compose up` | Docker MongoDB container |
-| **Production** | Vercel CDN | Render Docker container | Render / Atlas MongoDB |
+| **Local Development** | `npm run dev` (Vite dev server) | `go run main.go` or `docker-compose up` | Local Docker MongoDB container |
+| **Production** | Vercel CDN | Render Docker container | MongoDB Atlas |
 
 ---
 
