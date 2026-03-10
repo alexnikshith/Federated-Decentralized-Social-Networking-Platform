@@ -20,34 +20,34 @@ import (
 )
 
 type AdminHandler struct {
-	userRepo         *identityRepo.UserRepository
-	postRepo         *contentRepo.PostRepository
-	storyRepo        *contentRepo.StoryRepository
-	messageRepo      *messagingRepo.MessageRepository
-	activityRepo     *identityRepo.ActivityRepository
-	sessionRepo      *identityRepo.SessionRepository
-	followRepo       *contentRepo.FollowRepository
-	notificationRepo *contentRepo.NotificationRepository
-	postService      *service.PostService
-	reportService    reportService.ReportService
+	userRepo           *identityRepo.UserRepository
+	postRepo           *contentRepo.PostRepository
+	storyRepo          *contentRepo.StoryRepository
+	messageRepo        *messagingRepo.MessageRepository
+	activityRepo       *identityRepo.ActivityRepository
+	sessionRepo        *identityRepo.SessionRepository
+	followRepo         *contentRepo.FollowRepository
+	notificationRepo   *contentRepo.NotificationRepository
+	postService        *service.PostService
+	reportService      reportService.ReportService
 	enforcementService *safetyService.EnforcementService
-	emailSender      *email.EmailSender
+	emailSender        *email.EmailSender
 }
 
 func NewAdminHandler(enforcement *safetyService.EnforcementService) *AdminHandler {
 	return &AdminHandler{
-		userRepo:         identityRepo.NewUserRepository(),
-		postRepo:         contentRepo.NewPostRepository(),
-		storyRepo:        contentRepo.NewStoryRepository(),
-		messageRepo:      messagingRepo.NewMessageRepository(),
-		activityRepo:     identityRepo.NewActivityRepository(),
-		sessionRepo:      identityRepo.NewSessionRepository(),
-		followRepo:       contentRepo.NewFollowRepository(),
-		notificationRepo: contentRepo.NewNotificationRepository(),
-		postService:      service.NewPostService(enforcement),
-		reportService:    reportService.NewReportService(reportRepo.NewReportRepository()),
+		userRepo:           identityRepo.NewUserRepository(),
+		postRepo:           contentRepo.NewPostRepository(),
+		storyRepo:          contentRepo.NewStoryRepository(),
+		messageRepo:        messagingRepo.NewMessageRepository(),
+		activityRepo:       identityRepo.NewActivityRepository(),
+		sessionRepo:        identityRepo.NewSessionRepository(),
+		followRepo:         contentRepo.NewFollowRepository(),
+		notificationRepo:   contentRepo.NewNotificationRepository(),
+		postService:        service.NewPostService(enforcement),
+		reportService:      reportService.NewReportService(reportRepo.NewReportRepository()),
 		enforcementService: enforcement,
-		emailSender:      email.NewEmailSender(),
+		emailSender:        email.NewEmailSender(),
 	}
 }
 
@@ -204,7 +204,7 @@ func (h *AdminHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	oid, _ := primitive.ObjectIDFromHex(postID)
-	if err := h.postRepo.DeletePost(r.Context(), oid); err != nil {
+	if err := h.postService.DeletePostAsAdmin(r.Context(), oid); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

@@ -113,6 +113,9 @@ func (m *mockRemotePostRepo) UpsertRemotePost(ctx context.Context, remotePost *m
 func (m *mockRemotePostRepo) DeleteRemotePost(ctx context.Context, remotePostID string) error {
 	return nil
 }
+func (m *mockRemotePostRepo) DeleteRemotePostByLocalID(ctx context.Context, id primitive.ObjectID) error {
+	return nil
+}
 func (m *mockRemotePostRepo) GetRemotePostsByAuthors(ctx context.Context, actorIDs []string, limit int64) ([]models.RemotePost, error) {
 	return nil, nil
 }

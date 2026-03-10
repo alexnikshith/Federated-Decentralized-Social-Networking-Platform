@@ -28,6 +28,7 @@ type RemoteUserRepositoryInterface interface {
 type RemotePostRepositoryInterface interface {
 	UpsertRemotePost(ctx context.Context, remotePost *models.RemotePost) error
 	DeleteRemotePost(ctx context.Context, remotePostID string) error
+	DeleteRemotePostByLocalID(ctx context.Context, id primitive.ObjectID) error
 	GetRemotePostsByAuthors(ctx context.Context, actorIDs []string, limit int64) ([]models.RemotePost, error)
 	GetRemotePostByObjectID(ctx context.Context, id primitive.ObjectID) (*models.RemotePost, error)
 	IncrementLikeCount(ctx context.Context, remotePostID string) error
