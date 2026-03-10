@@ -26,6 +26,7 @@ interface ContentState {
     reportUser: (userId: string, reason: string, description?: string) => Promise<void>;
     interactPost: (postId: string, type: 'interested' | 'not_interested') => Promise<void>;
     markAsRead: (notificationId: string) => Promise<void>;
+    removeNotification: (notificationId: string) => void;
 }
 
 // useContentStore manages the state for the feed, posts, and notifications
@@ -251,5 +252,10 @@ export const useContentStore = create<ContentState>((set, get) => ({
         } catch (error) {
             set({ error: error.response?.data?.message || 'Failed to track interaction' });
         }
+    },
+    removeNotification: (notificationId: string) => {
+        set((state) => ({
+            notifications: state.notifications.filter((n) => n.id !== notificationId)
+        }));
     },
 }));

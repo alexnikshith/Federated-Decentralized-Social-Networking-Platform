@@ -1,45 +1,37 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"federated-social/backend/config"
 	"federated-social/backend/epics/safety/models"
 	"fmt"
+	"io"
 	"log"
-
-	"github.com/google/generative-ai-go/genai"
-	"google.golang.org/api/option"
+	"net/http"
+	"strings"
 )
 
+const groqAPIURL = "https://api.groq.com/openai/v1/chat/completions"
+const groqModel = "llama-3.3-70b-versatile"
+
 type AIModeratorService struct {
-	client *genai.Client
-	model  *genai.GenerativeModel
+	apiKey     string
+	httpClient *http.Client
 }
 
 func NewAIModeratorService(ctx context.Context) (*AIModeratorService, error) {
-	apiKey := config.AppConfig.GeminiAPIKey
+	apiKey := config.AppConfig.GroqAPIKey
 	if apiKey == "" {
-		return nil, fmt.Errorf("GEMINI_API_KEY not found in config")
+		return nil, fmt.Errorf("GROQ_API_KEY not found in config")
 	}
 
-	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
-	if err != nil {
-		return nil, err
-	}
-
-	// Using the latest Gemini 2.0 Flash model
-	const modelName = "gemini-2.0-flash"
-	model := client.GenerativeModel(modelName)
-
-	// Configure for structured JSON output
-	model.ResponseMIMEType = "application/json"
-
-	log.Printf("[Moderation] AI Moderator initialized with model: %s", modelName)
+	log.Printf("[Moderation] AI Moderator initialized with Groq model: %s", groqModel)
 
 	return &AIModeratorService{
-		client: client,
-		model:  model,
+		apiKey:     apiKey,
+		httpClient: &http.Client{},
 	}, nil
 }
 
@@ -48,6 +40,27 @@ type ModerationResult struct {
 	Reason        string   `json:"reason"`
 	Score         int      `json:"score"` // 1-10 toxicity or severity
 	BreachedRules []string `json:"breached_rules"`
+	BadWordsFound []string `json:"bad_words_found"`
+}
+
+// groqRequest matches the OpenAI-compatible chat completions request body
+type groqRequest struct {
+	Model    string        `json:"model"`
+	Messages []groqMessage `json:"messages"`
+}
+
+type groqMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+// groqResponse is the subset of the OpenAI-compatible response we need
+type groqResponse struct {
+	Choices []struct {
+		Message struct {
+			Content string `json:"content"`
+		} `json:"message"`
+	} `json:"choices"`
 }
 
 func (s *AIModeratorService) ModerateContent(ctx context.Context, content string, guidelines []models.CommunityGuideline) (*ModerationResult, error) {
@@ -57,52 +70,94 @@ func (s *AIModeratorService) ModerateContent(ctx context.Context, content string
 		guidelineText += fmt.Sprintf("%d. %s: %s\n", i+1, g.Title, g.Description)
 	}
 
-	systemPrompt := fmt.Sprintf(`You are a strict community moderator for a decentralized social network. 
-Evaluate the following content against the provided community guidelines. 
+	systemPrompt := fmt.Sprintf(`You are an uncompromising AI moderator for a decentralized social network. 
+Evaluate the following content against the provided community guidelines AND for any generally improper, offensive, or bad words.
 
 CRITICAL INSTRUCTIONS:
-1. You must be extremely literal and strict. If a guideline prohibits a specific word or topic, any mention of it (even in passing or as a test) is a violation.
-2. If the content matches ANY of the guidelines below, set is_violation to true.
-3. Be impartial and do not allow exceptions unless explicitly stated in the guidelines.
+1. You must be extremely literal and strict. If a guideline prohibits a specific word or topic, or if the content contains ANY recognized bad words, profanity, slurs, or improper language (even in passing or as a test), it IS a violation.
+2. If the content matches ANY of the guidelines below OR contains improper words, set is_violation to true.
+3. Be impartial and do not allow exceptions.
+4. You MUST return ONLY a valid JSON object. Do not include markdown formatting or explanation outside the JSON.
 
 Guidelines:
 %s
 
 Return a JSON object with:
 - is_violation (boolean)
-- reason (string, concise explanation in the language of the content, mentioning which specific guideline was breached)
+- reason (string, concise explanation mentioning the bad word found or the guideline breached)
 - score (integer 1-10, where 10 is severe)
-- breached_rules (array of titles of the breached guidelines)
+- breached_rules (array of titles of the breached guidelines, or "Improper Language" if a bad word was used)
+- bad_words_found (array of the specific offensive words detected)
 
 Content to evaluate:
 "%s"`, guidelineText, content)
 
-	resp, err := s.model.GenerateContent(ctx, genai.Text(systemPrompt))
+	reqBody := groqRequest{
+		Model: groqModel,
+		Messages: []groqMessage{
+			{Role: "user", Content: systemPrompt},
+		},
+	}
+
+	bodyBytes, err := json.Marshal(reqBody)
 	if err != nil {
+		return nil, fmt.Errorf("failed to marshal groq request: %w", err)
+	}
+
+	log.Printf("[Moderation] Sending prompt to Groq AI for content: %.50s...", content)
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, groqAPIURL, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create http request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Authorization", "Bearer "+s.apiKey)
+
+	resp, err := s.httpClient.Do(httpReq)
+	if err != nil {
+		log.Printf("[Moderation] Groq HTTP error: %v", err)
 		return nil, err
 	}
+	defer resp.Body.Close()
 
-	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
-		return nil, fmt.Errorf("empty AI response")
+	respBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read groq response body: %w", err)
 	}
 
-	part := resp.Candidates[0].Content.Parts[0]
-	text, ok := part.(genai.Text)
-	if !ok {
-		return nil, fmt.Errorf("unexpected part type from AI")
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("groq API returned status %d: %s", resp.StatusCode, string(respBytes))
 	}
+
+	var groqResp groqResponse
+	if err := json.Unmarshal(respBytes, &groqResp); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal groq response: %w", err)
+	}
+
+	if len(groqResp.Choices) == 0 {
+		return nil, fmt.Errorf("empty AI response from Groq")
+	}
+
+	rawText := groqResp.Choices[0].Message.Content
+	log.Printf("[Moderation] Groq AI response received for content: %.50s...", content)
+	log.Printf("[Moderation] RAW Groq RESPONSE: %s", rawText)
+
+	rawText = strings.TrimSpace(rawText)
+	rawText = strings.TrimPrefix(rawText, "```json")
+	rawText = strings.TrimPrefix(rawText, "```")
+	rawText = strings.TrimSuffix(rawText, "```")
+	rawText = strings.TrimSpace(rawText)
 
 	var result ModerationResult
-	if err := json.Unmarshal([]byte(text), &result); err != nil {
-		log.Printf("Failed to unmarshal AI response: %v\nRaw: %s", err, text)
+	if err := json.Unmarshal([]byte(rawText), &result); err != nil {
+		log.Printf("[Moderation] Failed to unmarshal AI response: %v\nRaw: %s", err, rawText)
 		return nil, err
 	}
+	log.Printf("[Moderation] AI Evaluation Result: Violation=%v, Reason=%s", result.IsViolation, result.Reason)
 
 	return &result, nil
 }
 
 func (s *AIModeratorService) Close() {
-	if s.client != nil {
-		s.client.Close()
-	}
+	// No persistent connection to close for HTTP client
 }
