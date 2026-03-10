@@ -67,14 +67,20 @@ func TestProfileVisibility_Integration(t *testing.T) {
 	// Bio should still be in the struct but CanViewDetails is the flag the UI uses to mask it
 
 	// --- Step 4: Follower Check ---
-	// User B follows User A
+	// User B sends a follow request to User A (who has "followers" visibility)
+	// Follow() returns "requested" error because User A requires request approval
 	err = followService.Follow(ctx, userB.ID, userA.ID)
-	assert.NoError(t, err)
+	assert.Error(t, err, "Follow on a followers-only profile should return a 'requested' error")
+	assert.Equal(t, "requested", err.Error(), "Expected 'requested' error indicating a follow request was created")
 
-	// User B (follower) views User A
+	// User A accepts the follow request from User B
+	err = followService.AcceptFollowRequest(ctx, userB.ID, userA.ID)
+	assert.NoError(t, err, "Accepting the follow request should succeed")
+
+	// User B (now an accepted follower) views User A
 	profile, err = profileService.GetProfile(ctx, userA.ID, &userB.ID)
 	assert.NoError(t, err)
-	assert.True(t, profile.CanViewDetails, "Followers-only profile should be VISIBLE to followers")
+	assert.True(t, profile.CanViewDetails, "Followers-only profile should be VISIBLE to accepted followers")
 	assert.Equal(t, "Secret Bio", profile.Bio)
 }
 

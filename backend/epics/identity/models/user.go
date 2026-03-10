@@ -69,6 +69,7 @@ type PublicUser struct {
 	FollowingCount    int64              `json:"following_count"`
 	PostsCount        int64              `json:"posts_count"`
 	IsFollowing       bool               `json:"is_following"`
+	IsFollowRequested bool               `json:"is_follow_requested"`
 	CanViewDetails    bool               `json:"can_view_details"`
 	Is2FAEnabled      *bool              `json:"is_2fa_enabled,omitempty"` // Only visible to self
 	InstanceID        string             `json:"instance"`                 // home instance domain

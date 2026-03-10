@@ -101,6 +101,14 @@ func (s *ProfileService) GetProfile(ctx context.Context, userID primitive.Object
 		// Use FollowService to check both local and remote follows
 		isFollowing, _ := s.followService.IsFollowing(ctx, *requestingUserID, userID)
 		publicUser.IsFollowing = isFollowing
+
+		// Check for pending follow request
+		if fs, ok := s.followService.(interface {
+			HasFollowRequest(context.Context, primitive.ObjectID, primitive.ObjectID) (bool, error)
+		}); ok {
+			isRequested, _ := fs.HasFollowRequest(ctx, *requestingUserID, userID)
+			publicUser.IsFollowRequested = isRequested
+		}
 	}
 
 	// Enforce Profile Visibility Rules:

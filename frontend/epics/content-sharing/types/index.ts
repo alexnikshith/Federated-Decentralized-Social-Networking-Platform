@@ -36,7 +36,7 @@ export interface Comment {
 // Notification alerts the user to interactions
 export interface Notification {
     id: string;
-    type: 'like' | 'comment' | 'follow' | 'mention' | 'message' | 'story_like';
+    type: 'like' | 'comment' | 'follow' | 'mention' | 'message' | 'story_like' | 'follow_request' | 'follow_accept';
     related_entity_id: string;
     related_user_id: string;
     related_user_name: string;
@@ -87,6 +87,7 @@ export interface PublicUser {
     following_count?: number;
     posts_count?: number;
     is_following?: boolean;
+    is_follow_requested?: boolean;
     instance?: string;
 }
 

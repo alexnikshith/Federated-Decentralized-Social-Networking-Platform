@@ -111,6 +111,12 @@ func NewPostServiceWithDeps(
 
 // CreatePost creates a new post
 func (s *PostService) CreatePost(ctx context.Context, userID primitive.ObjectID, req dto.CreatePostRequest) (*models.Post, error) {
+	log.Printf("[PostService] CreatePost called by user %s. Content length: %d", userID.Hex(), len(req.Content))
+	if s.enforcementService == nil {
+		log.Printf("[PostService] WARNING: enforcementService is NIL")
+	} else {
+		log.Printf("[PostService] enforcementService is initialized")
+	}
 	post := &models.Post{
 		AuthorID:  userID,
 		Content:   req.Content,

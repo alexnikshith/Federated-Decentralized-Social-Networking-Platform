@@ -206,7 +206,7 @@ const GuidelineManagement: React.FC = () => {
             <div className="flex items-start gap-3 p-4 rounded-lg bg-orange-500/10 border border-orange-500/20 text-orange-200 text-sm">
                 <AlertCircle className="shrink-0 mt-0.5" size={18} />
                 <p>
-                    <strong>Retroactive Scan Note:</strong> Running a scan will use Gemini AI tokens for every existing post.
+                    <strong>Retroactive Scan Note:</strong> Running a scan will use Groq AI tokens for every existing post.
                     Detections will immediately trigger enforcement (deletions and strikes). Refresh the logs after completion.
                 </p>
             </div>
