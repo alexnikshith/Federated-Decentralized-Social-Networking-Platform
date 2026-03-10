@@ -31,7 +31,7 @@ type FederationService struct {
 }
 
 func NewFederationService() *FederationService {
-	return &FederationService{
+	s := &FederationService{
 		instanceRepo:      repository.NewInstanceRepository(),
 		remoteUserRepo:    repository.NewRemoteUserRepository(),
 		remotePostRepo:    repository.NewRemotePostRepository(),
@@ -42,6 +42,9 @@ func NewFederationService() *FederationService {
 			Timeout: 10 * time.Second,
 		},
 	}
+	// Start the retry worker in the background (US3.7)
+	s.StartRetryWorker(context.Background())
+	return s
 }
 
 // DiscoverInstance discovers a remote instance by domain
