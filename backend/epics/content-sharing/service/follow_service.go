@@ -252,6 +252,15 @@ func (s *FollowService) Follow(ctx context.Context, followerID, followingID prim
 				log.Printf("[Follow] Redirecting ID-based follow to Handle-based AP follow for %s", handle)
 				return s.FollowByHandle(ctx, followerID, handle)
 			}
+
+			// If InboxURL is missing but it's a remote user, we should try a handle-based follow anyway
+			// to refresh the cache and see if we can get an Actor/Inbox via WebFinger.
+			if remoteUser.Username != "" && remoteUser.Instance != "" {
+				handle := "@" + remoteUser.Username + "@" + remoteUser.Instance
+				log.Printf("[Follow] Inbox missing for %s - attempting refresh via handle-based follow", handle)
+				return s.FollowByHandle(ctx, followerID, handle)
+			}
+
 			// Federated Follow (Internal protocol fallback)
 			return s.federationService.FollowRemoteUser(ctx, followerID, remoteUser)
 		}
