@@ -142,12 +142,23 @@ func (s *SearchService) SearchUsers(ctx context.Context, query string, limit int
 
 		// Remote Follows
 		remoteFollows, _ := s.remoteRelationshipRepo.GetRemoteFollowing(ctx, *requestingUserID)
+		staleThreshold := time.Now().Add(-30 * 24 * time.Hour)
+
 		for _, f := range remoteFollows {
 			remoteFollowedActorIDs[f.RemoteActorID] = true
 			if query == "" || strings.Contains(strings.ToLower(f.RemoteUsername), strings.ToLower(query)) {
 				// Fetch remote user details from cache
 				ru, _ := s.remoteUserRepo.GetRemoteUserByActorID(ctx, f.RemoteActorID)
 				if ru != nil {
+					// Apply Ghost User filtering even for followed users
+					if (ru.FetchedAt.IsZero() || ru.FetchedAt.Before(staleThreshold)) && ru.InboxURL == "" {
+						log.Printf("[Search] Skipping stale followed remote user: %s", ru.Username)
+						continue
+					}
+					if ru.IsDeactivated {
+						continue
+					}
+
 					explicitFollows = append(explicitFollows, identityModels.PublicUser{
 						ID:             ru.ID,
 						Username:       ru.Username,
@@ -158,15 +169,18 @@ func (s *SearchService) SearchUsers(ctx context.Context, query string, limit int
 						CanViewDetails: false,
 					})
 				} else {
-					// Fallback to basic info if not in cache
-					explicitFollows = append(explicitFollows, identityModels.PublicUser{
-						ID:             primitive.NilObjectID,
-						Username:       f.RemoteUsername,
-						DisplayName:    f.RemoteUsername,
-						InstanceID:     s.mapInstanceToName(f.RemoteInstance),
-						IsFollowing:    true,
-						CanViewDetails: false,
-					})
+					// Fallback if not in cache — but we don't have enough info to show safely if it's a ghost
+					// Allow only if we have a recent follow record?
+					if time.Since(f.CreatedAt) < 30*24*time.Hour {
+						explicitFollows = append(explicitFollows, identityModels.PublicUser{
+							ID:             primitive.NilObjectID,
+							Username:       f.RemoteUsername,
+							DisplayName:    f.RemoteUsername,
+							InstanceID:     s.mapInstanceToName(f.RemoteInstance),
+							IsFollowing:    true,
+							CanViewDetails: false,
+						})
+					}
 				}
 			}
 		}
@@ -212,6 +226,8 @@ func (s *SearchService) SearchUsers(ctx context.Context, query string, limit int
 				},
 				// If fetched_at is missing or older than 30 days, we skip it
 				{"fetched_at": bson.M{"$gt": primitive.NewDateTimeFromTime(staleThreshold)}},
+				// Also skip deactivated remote users
+				{"is_deactivated": bson.M{"$ne": true}},
 			},
 		}
 

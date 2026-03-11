@@ -347,6 +347,14 @@ func (s *FederationService) FollowMastodonUser(ctx context.Context, localUserID 
 		// Not fatal — local record is saved; delivery can be retried
 	}
 
+	// Asynchronously fetch their history to populate feed
+	go func() {
+		bgCtx := context.Background()
+		if err := s.FetchAndIngestOutbox(bgCtx, actor, remoteUser); err != nil {
+			log.Printf("ActivityPub: Warning - failed to fetch outbox for %s: %v", actor.PreferredUsername, err)
+		}
+	}()
+
 	log.Printf("ActivityPub: Sent Follow activity to %s (inbox: %s)", actor.ID, actor.Inbox)
 	return nil
 }
