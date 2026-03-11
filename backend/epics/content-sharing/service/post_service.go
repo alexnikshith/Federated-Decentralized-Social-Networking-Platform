@@ -50,6 +50,7 @@ type PostRepositoryInterface interface {
 	SavePost(ctx context.Context, savedPost *models.SavedPost) error
 	UnsavePost(ctx context.Context, userID, postID primitive.ObjectID) error
 	GetSavedPostIDsByUser(ctx context.Context, userID primitive.ObjectID) ([]primitive.ObjectID, error)
+	CheckIfReported(ctx context.Context, postID, userID primitive.ObjectID) (bool, error)
 	CreateReport(ctx context.Context, report *models.ReportedPost) error
 	UpsertInteraction(ctx context.Context, interaction *models.PostInteraction) error
 	GetAllReports(ctx context.Context) ([]models.ReportedPost, error)
@@ -140,12 +141,18 @@ func (s *PostService) CreatePost(ctx context.Context, userID primitive.ObjectID,
 		s.postRepo.UpdatePost(ctx, post)
 	}
 
-	// Trigger federation if enabled
+	// Trigger federation if enabled globally AND user has federation opted in (US3.8)
 	if s.federationService != nil {
 		// Get user info for federation
 		users, err := s.searchRepo.GetUsersByIDs(ctx, []primitive.ObjectID{userID})
 		if err == nil && users[userID] != nil {
 			user := users[userID]
+
+			// Respect the user's personal federation toggle (US3.8)
+			if !user.FederationEnabled {
+				log.Printf("[AP Post] User %s has federation disabled — skipping broadcast", user.Username)
+				return post, nil
+			}
 
 			// Broadcast ActivityPub Create activity to all remote followers
 			go func() {
@@ -484,24 +491,58 @@ func (s *PostService) GetPostByID(ctx context.Context, postID, requestingUserID 
 	return &enrichedPosts[0], nil
 }
 
-// LikePost likes a post and creates a notification
+// LikePost likes a post and creates a notification.
+// For remote (Mastodon) posts the like is stored locally and an AP Like activity
+// is delivered to the remote inbox asynchronously via the retry queue.
 func (s *PostService) LikePost(ctx context.Context, postID, userID primitive.ObjectID) error {
-	// Check if post exists
+	// Try local posts first
 	post, err := s.postRepo.GetPostByID(ctx, postID)
 	if err != nil {
+		// Not found locally — check remote_posts (Mastodon / AP posts)
+		if s.federationService != nil {
+			remotePost, remoteErr := s.federationService.GetRemotePostByObjectID(ctx, postID)
+			if remoteErr == nil && remotePost != nil {
+				// Guard against double-likes (e.g. page reload loses heart state)
+				alreadyLiked, _ := s.postRepo.CheckIfLiked(ctx, postID, userID)
+				if alreadyLiked {
+					return nil // idempotent — already liked, nothing to do
+				}
+				// Store like locally so isLiked persists across reloads
+				like := &models.Like{PostID: postID, UserID: userID}
+				if likeErr := s.postRepo.CreateLike(ctx, like); likeErr != nil {
+					return likeErr
+				}
+				// Update cached like_count on the remote post
+				s.federationService.IncrementRemotePostLike(ctx, remotePost.RemotePostID)
+				// Send AP Like activity to the remote Mastodon inbox
+				go func() {
+					bgCtx := context.Background()
+					fullUser, keyErr := s.federationService.GetUserWithKeyPair(bgCtx, userID)
+					if keyErr != nil || fullUser == nil {
+						log.Printf("[LikePost] Could not load keypair for user %s: %v", userID.Hex(), keyErr)
+						return
+					}
+					base := config.AppConfig.BaseURL()
+					keyID := fmt.Sprintf("%s/users/%s#main-key", base, fullUser.Username)
+					s.federationService.SendRemoteLike(bgCtx, fullUser.Username, fullUser.PrivateKeyPem, keyID, remotePost)
+				}()
+				return nil
+			}
+		}
 		return err
 	}
 
-	like := &models.Like{
-		PostID: postID,
-		UserID: userID,
+	// Local post — guard against double-likes too
+	alreadyLiked, _ := s.postRepo.CheckIfLiked(ctx, postID, userID)
+	if alreadyLiked {
+		return nil
 	}
-
+	like := &models.Like{PostID: postID, UserID: userID}
 	if err := s.postRepo.CreateLike(ctx, like); err != nil {
 		return err
 	}
 
-	// Create notification for post author (if not liking own post)
+	// Notification for local post author
 	if post.AuthorID != userID {
 		notification := &models.Notification{
 			UserID:          post.AuthorID,
@@ -511,21 +552,50 @@ func (s *PostService) LikePost(ctx context.Context, postID, userID primitive.Obj
 		}
 		s.notificationRepo.CreateNotification(ctx, notification)
 	}
-
 	return nil
 }
 
-// UnlikePost removes a like from a post
+// UnlikePost removes a like from a post.
+// Handles both local and remote (Mastodon) posts.
 func (s *PostService) UnlikePost(ctx context.Context, postID, userID primitive.ObjectID) error {
-	return s.postRepo.DeleteLike(ctx, postID, userID)
+	// Always remove the local like record (works for both local and remote posts)
+	if err := s.postRepo.DeleteLike(ctx, postID, userID); err != nil {
+		return err
+	}
+	// If this was a remote post, decrement the cached like_count
+	if s.federationService != nil {
+		go func() {
+			bgCtx := context.Background()
+			remotePost, remoteErr := s.federationService.GetRemotePostByObjectID(bgCtx, postID)
+			if remoteErr == nil && remotePost != nil {
+				s.federationService.DecrementRemotePostLike(bgCtx, remotePost.RemotePostID)
+			}
+		}()
+	}
+	return nil
 }
 
-// CreateComment creates a comment on a post and creates a notification
+// CreateComment creates a comment on a post and creates a notification.
+// For remote (Mastodon) posts the comment is stored locally and an AP
+// Create{Note, inReplyTo} activity is delivered to the remote inbox.
 func (s *PostService) CreateComment(ctx context.Context, postID, userID primitive.ObjectID, req dto.CreateCommentRequest) (*models.Comment, error) {
-	// Check if post exists
+	var isRemotePost bool
+	var remotePostRef *fedModels.RemotePost
+
+	// Try local posts first
 	post, err := s.postRepo.GetPostByID(ctx, postID)
 	if err != nil {
-		return nil, err
+		// Try remote posts
+		if s.federationService != nil {
+			remotePost, remoteErr := s.federationService.GetRemotePostByObjectID(ctx, postID)
+			if remoteErr != nil || remotePost == nil {
+				return nil, err // Neither local nor remote found
+			}
+			isRemotePost = true
+			remotePostRef = remotePost
+		} else {
+			return nil, err
+		}
 	}
 
 	comment := &models.Comment{
@@ -539,7 +609,6 @@ func (s *PostService) CreateComment(ctx context.Context, postID, userID primitiv
 		parentID, err := primitive.ObjectIDFromHex(req.ParentID)
 		if err == nil {
 			comment.ParentID = &parentID
-			// Fetch parent comment for notification
 			parentComment, _ = s.postRepo.GetCommentByID(ctx, parentID)
 		}
 	}
@@ -548,23 +617,35 @@ func (s *PostService) CreateComment(ctx context.Context, postID, userID primitiv
 		return nil, err
 	}
 
-	// Trigger AI Moderation Asynchronously
+	// AI Moderation
 	if s.enforcementService != nil {
 		s.enforcementService.ModerateCommentAsync(comment.ID)
 	}
 
-	// Create notification for post author (if not commenting on own post)
-	// OR for parent comment author (if replying to someone else's comment)
+	if isRemotePost {
+		// Deliver AP Create{Note} to the remote Mastodon inbox
+		go func() {
+			bgCtx := context.Background()
+			fullUser, keyErr := s.federationService.GetUserWithKeyPair(bgCtx, userID)
+			if keyErr != nil || fullUser == nil {
+				log.Printf("[CreateComment] Could not load keypair for user %s: %v", userID.Hex(), keyErr)
+				return
+			}
+			base := config.AppConfig.BaseURL()
+			keyID := fmt.Sprintf("%s/users/%s#main-key", base, fullUser.Username)
+			s.federationService.SendRemoteComment(bgCtx, fullUser.Username, fullUser.PrivateKeyPem, keyID, req.Content, comment.ID.Hex(), remotePostRef)
+		}()
+		return comment, nil
+	}
+
+	// --- Local post notification logic ---
 	var notificationRecipientID primitive.ObjectID
 	if parentComment != nil && parentComment.UserID != userID {
-		// This is a reply to someone else's comment
 		notificationRecipientID = parentComment.UserID
 	} else if post.AuthorID != userID {
-		// This is a comment on someone else's post
 		notificationRecipientID = post.AuthorID
 	}
 
-	// Only create notification if there's a valid recipient
 	if !notificationRecipientID.IsZero() {
 		notification := &models.Notification{
 			UserID:          notificationRecipientID,
@@ -573,23 +654,19 @@ func (s *PostService) CreateComment(ctx context.Context, postID, userID primitiv
 			RelatedUserID:   userID,
 			CommentContent:  req.Content,
 		}
-
-		// If this is a reply, add parent comment info
 		if parentComment != nil {
 			notification.ParentCommentID = comment.ParentID
 			notification.ParentCommentContent = parentComment.Content
-			// Get parent comment author's username
 			if parentUser, err := s.searchRepo.GetUsersByIDs(ctx, []primitive.ObjectID{parentComment.UserID}); err == nil {
 				if user := parentUser[parentComment.UserID]; user != nil {
 					notification.ParentUserName = user.Username
 				}
 			}
 		}
-
 		s.notificationRepo.CreateNotification(ctx, notification)
 	}
 
-	// Handle Mentions in comments: @username
+	// Handle Mentions in comments
 	s.parseAndNotifyMentions(ctx, req.Content, userID, postID)
 
 	return comment, nil
@@ -713,7 +790,8 @@ func (s *PostService) DeleteComment(ctx context.Context, commentID, userID primi
 	return s.postRepo.DeleteComment(ctx, commentID)
 }
 
-// DeletePost deletes a post if the user is the owner
+// DeletePost deletes a post if the user is the owner and sends an AP Delete
+// activity to all remote followers so federated instances (Mastodon) remove it.
 func (s *PostService) DeletePost(ctx context.Context, postID, userID primitive.ObjectID) error {
 	post, err := s.postRepo.GetPostByIDAdmin(ctx, postID)
 	if err != nil {
@@ -725,7 +803,89 @@ func (s *PostService) DeletePost(ctx context.Context, postID, userID primitive.O
 		return errors.New("unauthorized: you can only delete your own posts")
 	}
 
-	return s.postRepo.DeletePost(ctx, postID)
+	if err := s.postRepo.DeletePost(ctx, postID); err != nil {
+		return err
+	}
+
+	// Broadcast AP Delete activity to remote followers (best-effort)
+	if s.federationService != nil {
+		go func() {
+			bgCtx := context.Background()
+			fullUser, keyErr := s.federationService.GetUserWithKeyPair(bgCtx, userID)
+			if keyErr != nil || fullUser == nil {
+				log.Printf("[AP Delete] Could not load keypair for user %s: %v", userID.Hex(), keyErr)
+				return
+			}
+			base := config.AppConfig.BaseURL()
+			actorURL := fmt.Sprintf("%s/users/%s", base, fullUser.Username)
+			noteID := fmt.Sprintf("%s/users/%s/posts/%s", base, fullUser.Username, postID.Hex())
+			deleteID := fmt.Sprintf("%s/activities/delete-%s", base, postID.Hex())
+			keyID := actorURL + "#main-key"
+
+			deleteActivity := map[string]interface{}{
+				"@context": "https://www.w3.org/ns/activitystreams",
+				"type":     "Delete",
+				"id":       deleteID,
+				"actor":    actorURL,
+				"object":   noteID,
+			}
+			log.Printf("[AP Delete] Delivering Delete for post %s by %s", postID.Hex(), fullUser.Username)
+			s.federationService.DeliverActivityToFollowers(bgCtx, fullUser.Username, fullUser.PrivateKeyPem, keyID, userID, deleteActivity)
+		}()
+	}
+
+	return nil
+}
+
+// DeletePostAsAdmin deletes any post (bypassing ownership checks) and sends an AP Delete
+// activity to all remote followers using the original author's keys.
+func (s *PostService) DeletePostAsAdmin(ctx context.Context, postID primitive.ObjectID) error {
+	post, err := s.postRepo.GetPostByIDAdmin(ctx, postID)
+	if err != nil {
+		// Try remote posts
+		if s.federationService != nil {
+			remotePost, remoteErr := s.federationService.GetRemotePostByObjectID(ctx, postID)
+			if remoteErr == nil && remotePost != nil {
+				// It's a remote post, just delete it from our local cache.
+				// We cannot send an AP Delete because we do not own the author's keys.
+				log.Printf("[AP Delete Admin] Deleting remote post %s from local cache", postID.Hex())
+				return s.federationService.DeleteRemotePostByLocalID(ctx, postID)
+			}
+		}
+		return err
+	}
+
+	if err := s.postRepo.DeletePost(ctx, postID); err != nil {
+		return err
+	}
+
+	// Broadcast AP Delete activity to remote followers (best-effort)
+	if s.federationService != nil {
+		go func() {
+			bgCtx := context.Background()
+			fullUser, keyErr := s.federationService.GetUserWithKeyPair(bgCtx, post.AuthorID)
+			if keyErr != nil || fullUser == nil {
+				log.Printf("[AP Delete Admin] Could not load keypair for author %s: %v", post.AuthorID.Hex(), keyErr)
+				return
+			}
+			base := config.AppConfig.BaseURL()
+			actorURL := fmt.Sprintf("%s/users/%s", base, fullUser.Username)
+			noteID := fmt.Sprintf("%s/users/%s/posts/%s", base, fullUser.Username, postID.Hex())
+			deleteID := fmt.Sprintf("%s/activities/delete-%s", base, postID.Hex())
+			keyID := actorURL + "#main-key"
+
+			deleteActivity := map[string]interface{}{
+				"@context": "https://www.w3.org/ns/activitystreams",
+				"type":     "Delete",
+				"id":       deleteID,
+				"actor":    actorURL,
+				"object":   noteID,
+			}
+			log.Printf("[AP Delete Admin] Delivering Delete for post %s by %s", postID.Hex(), fullUser.Username)
+			s.federationService.DeliverActivityToFollowers(bgCtx, fullUser.Username, fullUser.PrivateKeyPem, keyID, post.AuthorID, deleteActivity)
+		}()
+	}
+	return nil
 }
 
 // getValidUsernamesFromContent extracts @mentions and returns only those that belong to existing users
@@ -1171,15 +1331,29 @@ func (s *PostService) GetSavedPosts(ctx context.Context, userID primitive.Object
 
 // ReportPost logic
 func (s *PostService) ReportPost(ctx context.Context, postID, userID primitive.ObjectID, req dto.ReportPostRequest) error {
-	// Verify post exists
+	// Verify post exists (local first)
 	post, err := s.postRepo.GetPostByID(ctx, postID)
 	if err != nil {
-		return errors.New("post not found")
+		// Try remote posts
+		remotePost, remoteErr := s.federationService.GetRemotePostByObjectID(ctx, postID)
+		if remoteErr != nil || remotePost == nil {
+			return errors.New("post not found")
+		}
+		// Note: A local user (ObjectID) cannot be the author of a RemotePost (Actor URI), so no self-report check is needed.
+	} else {
+		// Prevent reporting own local posts
+		if post.AuthorID == userID {
+			return errors.New("you cannot report your own post")
+		}
 	}
 
-	// Prevent reporting own posts
-	if post.AuthorID == userID {
-		return errors.New("you cannot report your own post")
+	// Prevent duplicate reports
+	alreadyReported, err := s.postRepo.CheckIfReported(ctx, postID, userID)
+	if err != nil {
+		return err
+	}
+	if alreadyReported {
+		return errors.New("you have already reported this post")
 	}
 
 	report := &models.ReportedPost{

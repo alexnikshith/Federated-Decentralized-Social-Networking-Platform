@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"strings"
 
-	reportRepo "federated-social/backend/epics/reports/repository"
 	reportService "federated-social/backend/epics/reports/service"
 	safetyService "federated-social/backend/epics/safety/service"
 
@@ -20,34 +19,47 @@ import (
 )
 
 type AdminHandler struct {
-	userRepo         *identityRepo.UserRepository
-	postRepo         *contentRepo.PostRepository
-	storyRepo        *contentRepo.StoryRepository
-	messageRepo      *messagingRepo.MessageRepository
-	activityRepo     *identityRepo.ActivityRepository
-	sessionRepo      *identityRepo.SessionRepository
-	followRepo       *contentRepo.FollowRepository
-	notificationRepo *contentRepo.NotificationRepository
-	postService      *service.PostService
-	reportService    reportService.ReportService
+	userRepo           identityRepo.UserRepositoryInterface
+	postRepo           contentRepo.PostRepositoryInterface
+	storyRepo          contentRepo.StoryRepositoryInterface
+	messageRepo        messagingRepo.MessageRepositoryInterface
+	activityRepo       identityRepo.ActivityRepositoryInterface
+	sessionRepo        identityRepo.SessionRepositoryInterface
+	followRepo         contentRepo.FollowRepositoryInterface
+	notificationRepo   contentRepo.NotificationRepositoryInterface
+	reportRepo         reportService.ReportRepository
+	postService        *service.PostService
+	reportService      reportService.ReportService
 	enforcementService *safetyService.EnforcementService
-	emailSender      *email.EmailSender
+	emailSender        email.EmailSenderInterface
 }
 
-func NewAdminHandler(enforcement *safetyService.EnforcementService) *AdminHandler {
+func NewAdminHandler(
+	userRepo identityRepo.UserRepositoryInterface,
+	postRepo contentRepo.PostRepositoryInterface,
+	storyRepo contentRepo.StoryRepositoryInterface,
+	messageRepo messagingRepo.MessageRepositoryInterface,
+	activityRepo identityRepo.ActivityRepositoryInterface,
+	sessionRepo identityRepo.SessionRepositoryInterface,
+	followRepo contentRepo.FollowRepositoryInterface,
+	notificationRepo contentRepo.NotificationRepositoryInterface,
+	reportRepo reportService.ReportRepository,
+	enforcement *safetyService.EnforcementService,
+) *AdminHandler {
 	return &AdminHandler{
-		userRepo:         identityRepo.NewUserRepository(),
-		postRepo:         contentRepo.NewPostRepository(),
-		storyRepo:        contentRepo.NewStoryRepository(),
-		messageRepo:      messagingRepo.NewMessageRepository(),
-		activityRepo:     identityRepo.NewActivityRepository(),
-		sessionRepo:      identityRepo.NewSessionRepository(),
-		followRepo:       contentRepo.NewFollowRepository(),
-		notificationRepo: contentRepo.NewNotificationRepository(),
-		postService:      service.NewPostService(enforcement),
-		reportService:    reportService.NewReportService(reportRepo.NewReportRepository()),
+		userRepo:           userRepo,
+		postRepo:           postRepo,
+		storyRepo:          storyRepo,
+		messageRepo:        messageRepo,
+		activityRepo:       activityRepo,
+		sessionRepo:        sessionRepo,
+		followRepo:         followRepo,
+		notificationRepo:   notificationRepo,
+		reportRepo:         reportRepo,
+		postService:        service.NewPostService(enforcement),
+		reportService:      reportService.NewReportService(reportRepo),
 		enforcementService: enforcement,
-		emailSender:      email.NewEmailSender(),
+		emailSender:        email.NewEmailSender(),
 	}
 }
 
@@ -153,7 +165,10 @@ func (h *AdminHandler) ToggleUserStatus(w http.ResponseWriter, r *http.Request) 
 		h.sessionRepo.InvalidateAllUserSessions(r.Context(), oid)
 	}
 
-	update := bson.M{"is_active": req.Status}
+	update := bson.M{
+		"is_active":      req.Status,
+		"is_deactivated": !req.Status,
+	}
 	if err := h.userRepo.UpdateUser(r.Context(), oid, update); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -204,7 +219,7 @@ func (h *AdminHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	oid, _ := primitive.ObjectIDFromHex(postID)
-	if err := h.postRepo.DeletePost(r.Context(), oid); err != nil {
+	if err := h.postService.DeletePostAsAdmin(r.Context(), oid); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

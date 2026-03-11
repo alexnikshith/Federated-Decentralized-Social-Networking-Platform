@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Orbit, ChevronLeft, Globe, ArrowRight, Eye, EyeOff, Shield, KeyRound, Mail, CheckCircle2, Loader2, Info, AlertCircle, Check, ShieldCheck } from "lucide-react";
+import { Orbit, ChevronLeft, Globe, ArrowRight, Eye, EyeOff, Shield, KeyRound, Mail, CheckCircle2, Loader2, Info, AlertCircle, Check, ShieldCheck, Search, Circle, Ban } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Select,
@@ -39,7 +39,8 @@ export const LoginForm = ({
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [view, setView] = useState<'login' | 'login_otp' | 'forgot_email' | 'forgot_otp' | 'forgot_reset'>('login');
-    const [instance, setInstance] = useState(localStorage.getItem('active_community_url') || DEFAULT_COMMUNITY.url);
+    const [instance, setInstance] = useState("");
+    const [communitySearchQuery, setCommunitySearchQuery] = useState("");
     const [otp, setOtp] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
@@ -59,7 +60,7 @@ export const LoginForm = ({
         hasUpper: /[A-Z]/.test(newPassword),
         hasLower: /[a-z]/.test(newPassword),
         hasNumber: /\d/.test(newPassword),
-        hasSpecial: /[@$!%*?&]/.test(newPassword),
+        hasSpecial: /[@$!%*?&#^}{()]/.test(newPassword),
     };
 
     const isPasswordValid = Object.values(passwordRequirements).every(Boolean);
@@ -330,7 +331,10 @@ export const LoginForm = ({
                     initial={{ opacity: 1, y: 0 }}
                     animate={isLoginExiting ? { opacity: 0, y: 200 } : { opacity: 1, y: 0 }}
                     transition={{ duration: 0.8, ease: "anticipate" }}
-                    className="relative w-full max-w-[440px] mx-auto z-10 space-y-4 flex-1 flex flex-col justify-center"
+                    className={cn(
+                        "relative z-10 space-y-4 flex-1 flex flex-col justify-center transition-all duration-500",
+                        (view === 'login' || view === 'login_otp') ? "w-full max-w-[800px] mx-auto" : "w-full max-w-[440px] mx-auto"
+                    )}
                 >
                     <AnimatePresence mode="popLayout">
                         {error && (
@@ -339,7 +343,7 @@ export const LoginForm = ({
                                 animate={{ opacity: 1, height: 'auto', marginBottom: 8 }}
                                 exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                                 transition={{ duration: 0.3 }}
-                                className="px-3 py-2 border border-red-500/40 bg-red-950/30 text-red-300 text-[10px] font-mono flex items-center gap-2 overflow-hidden"
+                                className="px-3 py-2 border border-red-500/40 bg-red-950/30 text-red-300 text-[10px] font-mono flex items-center gap-2 overflow-hidden mx-auto w-full max-w-[440px]"
                             >
                                 <Info className="w-4 h-4 shrink-0" />{error}
                             </motion.div>
@@ -350,7 +354,7 @@ export const LoginForm = ({
                                 animate={{ opacity: 1, height: 'auto', marginBottom: 8 }}
                                 exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                                 transition={{ duration: 0.3 }}
-                                className="px-3 py-2 border border-red-500/40 bg-red-950/30 text-red-300 text-[10px] font-mono flex items-center gap-2 overflow-hidden"
+                                className="px-3 py-2 border border-red-500/40 bg-red-950/30 text-red-300 text-[10px] font-mono flex items-center gap-2 overflow-hidden mx-auto w-full max-w-[440px]"
                             >
                                 <AlertCircle className="w-4 h-4 shrink-0" />{emailCheckError}
                             </motion.div>
@@ -359,160 +363,260 @@ export const LoginForm = ({
 
                     {/* -- LOGIN VIEWS -- */}
                     {(view === 'login' || view === 'login_otp') && (
-                        <form onSubmit={handleLoginSubmit} className="space-y-4">
-                            {view === 'login' ? (
-                                <>
-                                    <div className="space-y-1.5">
-                                        <div className="flex items-center gap-2 font-mono mb-2">
-                                            <div className="w-1.5 h-[1px] bg-emerald-500/80" />
-                                            <span className="text-[10px] font-bold text-emerald-300/80 tracking-[0.2em] uppercase">SELECT COMMUNITY</span>
-                                            <div className="flex-1 h-[1px] bg-gradient-to-r from-emerald-500/20 to-transparent" />
-                                        </div>
-                                        <Select value={instance} onValueChange={setInstance}>
-                                            <SelectTrigger className="w-full bg-emerald-500/[0.03] border-emerald-500/20 h-10 text-emerald-50 font-mono text-sm focus:ring-0 focus:ring-offset-0 focus:border-emerald-400">
-                                                <div className="flex items-center gap-2">
-                                                    <Orbit size={14} className="text-emerald-500" />
-                                                    <SelectValue placeholder="Select Neural Node" />
-                                                </div>
-                                            </SelectTrigger>
-                                            <SelectContent className="bg-emerald-950/95 border-emerald-500/20 backdrop-blur-xl">
-                                                {COMMUNITIES.map((comm) => (
-                                                    <SelectItem key={comm.id} value={comm.url} className="text-emerald-300/80 font-mono focus:bg-emerald-500/10 focus:text-emerald-100">
-                                                        {comm.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                        <div className={cn("w-full transition-all duration-500 relative flex items-start gap-12", (view !== 'login' && view !== 'login_otp') && "justify-center")}>
+                            {view === 'login' && (
+                                <div className="flex-[1.2] w-full hidden md:flex flex-col max-h-[400px]">
+                                    <div className="flex items-center gap-2 font-mono mb-2">
+                                        <div className="w-1.5 h-[1px] bg-emerald-500/80" />
+                                        <span className="text-[10px] font-bold text-emerald-300/80 tracking-[0.2em] uppercase">SELECT COMMUNITY</span>
+                                        <div className="flex-1 h-[1px] bg-gradient-to-r from-emerald-500/20 to-transparent" />
+                                    </div>
+                                    <div className="mb-3 flex-shrink-0 relative">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500/40" />
+                                        <input
+                                            type="text"
+                                            placeholder="SEARCH COMMUNITIES..."
+                                            value={communitySearchQuery}
+                                            onChange={(e) => setCommunitySearchQuery(e.target.value)}
+                                            className="w-full bg-emerald-500/[0.03] border border-emerald-500/20 rounded-lg py-2 pl-9 pr-3 text-emerald-50 text-xs font-mono tracking-wider focus:outline-none focus:border-emerald-400 focus:bg-emerald-500/[0.08] transition-all placeholder:text-emerald-800/30"
+                                        />
                                     </div>
 
-                                    <div className="space-y-1.5 ">
-                                        <div className="flex items-center gap-2 font-mono mb-2">
-                                            <div className="w-1.5 h-[1px] bg-emerald-500/80" />
-                                            <span className="text-[10px] font-bold text-emerald-300/80 tracking-[0.2em] uppercase">EMAIL_ADDR</span>
-                                            <div className="flex-1 h-[1px] bg-gradient-to-r from-emerald-500/20 to-transparent" />
-                                        </div>
-                                        <div className="relative">
-                                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600/40 w-4 h-4" />
-                                            <input
-                                                id="email"
-                                                aria-label="Email"
-                                                type="email" placeholder="you@nebula.net" value={email}
-                                                onChange={(e) => {
-                                                    setEmail(e.target.value);
-                                                    setError(null);
-                                                    setEmailCheckError(null);
-                                                }}
-                                                required
-                                                className={cn(
-                                                    "w-full bg-emerald-500/[0.03] border rounded-lg py-2 pl-10 pr-10 text-emerald-50 text-sm font-mono tracking-wider focus:outline-none focus:bg-emerald-500/[0.08] transition-all placeholder:text-emerald-800/30",
-                                                    emailCheckError ? "border-red-500/40" : "border-emerald-500/20 focus:border-emerald-400"
-                                                )}
-                                            />
-                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                                                {isCheckingEmail && <Loader2 className="w-3 h-3 text-emerald-500/50 animate-spin" />}
-                                                {emailRegistered === true && <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" />}
-                                                {emailRegistered === false && <AlertCircle className="w-3 h-3 text-red-500/60" />}
+                                    <div className="flex-1 overflow-y-auto custom-scrollbar pr-3 space-y-3">
+                                        {COMMUNITIES.filter(c => c.name.toLowerCase().includes(communitySearchQuery.toLowerCase())).map((community) => {
+                                            const isDisabled = community.id === 'community-2';
+
+                                            return (
+                                                <button
+                                                    key={community.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (!isDisabled) setInstance(community.url);
+                                                    }}
+                                                    disabled={isDisabled}
+                                                    className={cn(
+                                                        "w-full p-4 border rounded-xl transition-all flex items-center justify-between group relative overflow-hidden",
+                                                        "bg-emerald-500/[0.05] backdrop-blur-md",
+                                                        isDisabled && "opacity-40 cursor-not-allowed grayscale",
+                                                        !isDisabled && instance === community.url
+                                                            ? "border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.2),inset_0_0_15px_rgba(16,185,129,0.05)] bg-emerald-500/[0.12]"
+                                                            : !isDisabled && "border-emerald-500/30 hover:border-emerald-400/60 hover:bg-emerald-500/[0.1]"
+                                                    )}
+                                                >
+                                                    <div className="flex items-center gap-3 relative z-10 w-full">
+                                                        <div className={cn(
+                                                            "w-10 h-10 rounded-lg flex items-center justify-center border transition-colors shrink-0",
+                                                            instance === community.url ? "bg-emerald-500/20 border-emerald-400/50" : "bg-black/40 border-emerald-500/10"
+                                                        )}>
+                                                            <Globe className={cn("w-5 h-5", instance === community.url ? "text-emerald-200" : "text-emerald-600/40")} />
+                                                        </div>
+                                                        <div className="text-left flex-1 min-w-0">
+                                                            <div className="flex items-center justify-between gap-2">
+                                                                <span className={cn("font-mono font-bold block text-sm tracking-wider truncate", instance === community.url ? "text-emerald-100" : "text-emerald-500/60")}>{community.name}</span>
+                                                                {isDisabled && (
+                                                                    <span className="text-[9px] font-mono tracking-widest text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded uppercase shrink-0">Coming Soon</span>
+                                                                )}
+                                                            </div>
+                                                            <span className="text-[10px] text-emerald-600/40 font-mono block mt-0.5 uppercase tracking-widest truncate">{community.url}</span>
+                                                        </div>
+                                                    </div>
+                                                    {instance === community.url && !isDisabled ? (
+                                                        <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center shadow-[0_0_10px_rgba(16,185,129,0.5)] shrink-0 ml-3">
+                                                            <Check className="w-3 h-3 text-emerald-950 stroke-[3]" />
+                                                        </div>
+                                                    ) : isDisabled ? (
+                                                        <div className="w-5 h-5 flex items-center justify-center shrink-0 ml-3 opacity-40">
+                                                            <Ban className="w-4 h-4 text-emerald-500" />
+                                                        </div>
+                                                    ) : (
+                                                        <div className="w-5 h-5 rounded-full border-2 border-emerald-500/40 flex items-center justify-center shrink-0 ml-3" />
+                                                    )}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {view === 'login_otp' && (
+                                <div className="flex-[1.2] w-full hidden md:flex flex-col justify-center">
+                                    <div className="glass-card rounded-2xl p-6 border border-emerald-500/10 bg-emerald-500/[0.03] backdrop-blur-xl">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/20">
+                                                <ShieldCheck className="w-5 h-5 text-emerald-500" />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-[0.2em] font-mono">Security Note</h3>
+                                                <p className="text-[10px] text-emerald-100/40 leading-relaxed font-mono uppercase tracking-wider font-bold">
+                                                    Multi Factor Authentication is active. You can disable it in your Privacy and Security settings.
+                                                </p>
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+                            )}
 
-                                    <div className="space-y-1.5 ">
-                                        <div className="flex items-center justify-between ml-1">
-                                            <label className="text-xs font-bold text-emerald-300 uppercase tracking-widest font-mono">PASSWORD</label>
-                                            <button
-                                                type="button"
-                                                onClick={() => setView('forgot_email')}
-                                                className="text-[10px] font-mono text-emerald-200 hover:text-emerald-400 transition-colors uppercase tracking-widest"
-                                            >
-                                                FORGOT PASSWORD?
-                                            </button>
-                                        </div>
-                                        <div className="relative">
+                            <div className="flex-1 w-full max-w-[440px]">
+                                <form onSubmit={handleLoginSubmit} className="space-y-4">
+                                    {view === 'login' ? (
+                                        <>
+                                            {/* Mobile Community Selection (Fallback) */}
+                                            <div className="space-y-1.5 md:hidden">
+                                                <div className="flex items-center gap-2 font-mono mb-2">
+                                                    <div className="w-1.5 h-[1px] bg-emerald-500/80" />
+                                                    <span className="text-[10px] font-bold text-emerald-300/80 tracking-[0.2em] uppercase">SELECT COMMUNITY</span>
+                                                    <div className="flex-1 h-[1px] bg-gradient-to-r from-emerald-500/20 to-transparent" />
+                                                </div>
+                                                <Select value={instance} onValueChange={setInstance}>
+                                                    <SelectTrigger className="w-full bg-emerald-500/[0.03] border-emerald-500/20 h-10 text-emerald-50 font-mono text-sm focus:ring-0 focus:ring-offset-0 focus:border-emerald-400">
+                                                        <div className="flex items-center gap-2">
+                                                            <Orbit size={14} className="text-emerald-500" />
+                                                            <SelectValue placeholder="Select Neural Node" />
+                                                        </div>
+                                                    </SelectTrigger>
+                                                    <SelectContent className="bg-emerald-950/95 border-emerald-500/20 backdrop-blur-xl">
+                                                        {COMMUNITIES.map((comm) => (
+                                                            <SelectItem key={comm.id} value={comm.url} className="text-emerald-300/80 font-mono focus:bg-emerald-500/10 focus:text-emerald-100">
+                                                                {comm.name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+
+                                            <div className="space-y-1.5 ">
+                                                <div className="flex items-center gap-2 font-mono mb-2">
+                                                    <div className="w-1.5 h-[1px] bg-emerald-500/80" />
+                                                    <span className="text-[10px] font-bold text-emerald-300/80 tracking-[0.2em] uppercase">CREDENTIALS</span>
+                                                    <div className="flex-1 h-[1px] bg-gradient-to-r from-emerald-500/20 to-transparent" />
+                                                </div>
+                                                <div className="flex items-center justify-between ml-1 mb-1.5">
+                                                    <label className="text-xs font-bold text-emerald-300 uppercase tracking-widest font-mono">EMAIL</label>
+                                                </div>
+                                                <div className="relative">
+                                                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600/40 w-4 h-4" />
+                                                    <input
+                                                        id="email"
+                                                        aria-label="Email"
+                                                        type="email" placeholder="you@nebula.net" value={email}
+                                                        onChange={(e) => {
+                                                            setEmail(e.target.value);
+                                                            setError(null);
+                                                            setEmailCheckError(null);
+                                                        }}
+                                                        required
+                                                        className={cn(
+                                                            "w-full bg-emerald-500/[0.03] border rounded-lg py-2 pl-10 pr-10 text-emerald-50 text-sm font-mono tracking-wider focus:outline-none focus:bg-emerald-500/[0.08] transition-all placeholder:text-emerald-800/30",
+                                                            emailCheckError ? "border-red-500/40" : "border-emerald-500/20 focus:border-emerald-400"
+                                                        )}
+                                                    />
+                                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                                        {isCheckingEmail && <Loader2 className="w-3 h-3 text-emerald-500/50 animate-spin" />}
+                                                        {emailRegistered === true && <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" />}
+                                                        {emailRegistered === false && <AlertCircle className="w-3 h-3 text-red-500/60" />}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-1.5 ">
+                                                <div className="flex items-center justify-between ml-1">
+                                                    <label className="text-xs font-bold text-emerald-300 uppercase tracking-widest font-mono">PASSWORD</label>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setView('forgot_email')}
+                                                        className="text-[10px] font-mono text-emerald-200 hover:text-emerald-400 transition-colors uppercase tracking-widest"
+                                                    >
+                                                        FORGOT PASSWORD?
+                                                    </button>
+                                                </div>
+                                                <div className="relative">
+                                                    <input
+                                                        id="password"
+                                                        aria-label="Password"
+                                                        type={showPassword ? "text" : "password"}
+                                                        placeholder="••••••••"
+                                                        value={password}
+                                                        onChange={(e) => {
+                                                            setPassword(e.target.value);
+                                                            setError(null);
+                                                        }}
+                                                        className="w-full bg-emerald-500/[0.03] border border-emerald-500/20 rounded-lg py-2 pl-3 pr-10 text-emerald-50 text-sm font-mono tracking-wider focus:outline-none focus:border-emerald-400 focus:bg-emerald-500/[0.08] transition-all placeholder:text-emerald-800/30"
+                                                        required
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowPassword(!showPassword)}
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500/40 hover:text-emerald-400 transition-colors"
+                                                    >
+                                                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            <div className="flex items-center gap-2 font-mono mb-2">
+                                                <div className="w-1.5 h-[1px] bg-emerald-500/80" />
+                                                <span className="text-[10px] font-bold text-emerald-300/80 tracking-[0.2em] uppercase">VERIFICATION_CODE</span>
+                                                <div className="flex-1 h-[1px] bg-gradient-to-r from-emerald-500/20 to-transparent" />
+                                            </div>
                                             <input
-                                                id="password"
-                                                aria-label="Password"
-                                                type={showPassword ? "text" : "password"}
-                                                placeholder="••••••••"
-                                                value={password}
+                                                type="text"
+                                                placeholder="000000"
+                                                value={otp}
                                                 onChange={(e) => {
-                                                    setPassword(e.target.value);
+                                                    setOtp(e.target.value);
                                                     setError(null);
                                                 }}
-                                                className="w-full bg-emerald-500/[0.03] border border-emerald-500/20 rounded-lg py-2 pl-3 pr-10 text-emerald-50 text-sm font-mono tracking-wider focus:outline-none focus:border-emerald-400 focus:bg-emerald-500/[0.08] transition-all placeholder:text-emerald-800/30"
+                                                className="w-full bg-emerald-500/[0.03] border border-emerald-500/20 rounded-lg py-4 text-center text-3xl tracking-[0.5em] font-mono text-emerald-100 focus:outline-none focus:border-emerald-400 focus:bg-emerald-500/[0.08] transition-all placeholder:text-emerald-800/30"
+                                                maxLength={6}
                                                 required
+                                                autoFocus
                                             />
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowPassword(!showPassword)}
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500/40 hover:text-emerald-400 transition-colors"
-                                            >
-                                                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                            </button>
+                                            <div className="text-center">
+                                                <button
+                                                    type="button"
+                                                    className="text-[10px] font-mono text-emerald-500/40 hover:text-emerald-400 transition-colors uppercase tracking-widest"
+                                                    onClick={() => setView('login')}
+                                                >
+                                                    RESTART_HANDSHAKE
+                                                </button>
+                                            </div>
                                         </div>
-                                    </div>
-                                </>
-                            ) : (
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-2 font-mono mb-2">
-                                        <div className="w-1.5 h-[1px] bg-emerald-500/80" />
-                                        <span className="text-[10px] font-bold text-emerald-300/80 tracking-[0.2em] uppercase">VERIFICATION_CODE</span>
-                                        <div className="flex-1 h-[1px] bg-gradient-to-r from-emerald-500/20 to-transparent" />
-                                    </div>
-                                    <input
-                                        type="text"
-                                        placeholder="000000"
-                                        value={otp}
-                                        onChange={(e) => {
-                                            setOtp(e.target.value);
-                                            setError(null);
-                                        }}
-                                        className="w-full bg-emerald-500/[0.03] border border-emerald-500/20 rounded-lg py-4 text-center text-3xl tracking-[0.5em] font-mono text-emerald-100 focus:outline-none focus:border-emerald-400 focus:bg-emerald-500/[0.08] transition-all placeholder:text-emerald-800/30"
-                                        maxLength={6}
-                                        required
-                                        autoFocus
-                                    />
-                                    <div className="text-center">
+                                    )}
+
+                                    <div className="pt-2">
                                         <button
-                                            type="button"
-                                            className="text-[10px] font-mono text-emerald-500/40 hover:text-emerald-400 transition-colors uppercase tracking-widest"
-                                            onClick={() => setView('login')}
+                                            type="submit"
+                                            disabled={isLoading || (view === 'login' && (emailRegistered === false || !instance || !email || !password))}
+                                            className="w-full relative group/btn py-3 overflow-hidden text-center disabled:opacity-40"
                                         >
-                                            RESTART_HANDSHAKE
+                                            <span className="relative z-10 font-mono text-sm font-bold tracking-[0.4em] text-emerald-100 flex items-center justify-center gap-3">
+                                                {isLoading ? "PROCESSING..." : (
+                                                    <>
+                                                        {view === 'login' ? "LOGIN" : "VERIFY_CODE"}
+                                                        <ArrowRight className="w-4 h-4" />
+                                                    </>
+                                                )}
+                                            </span>
+                                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[90%] h-[1px] bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_15px_rgba(16,185,129,1)]" />
                                         </button>
                                     </div>
-                                </div>
-                            )}
 
-                            <div className="pt-2">
-                                <button
-                                    type="submit"
-                                    disabled={isLoading || (view === 'login' && emailRegistered === false)}
-                                    className="w-full relative group/btn py-3 overflow-hidden text-center disabled:opacity-40"
-                                >
-                                    <span className="relative z-10 font-mono text-sm font-bold tracking-[0.4em] text-emerald-100 flex items-center justify-center gap-3">
-                                        {isLoading ? "PROCESSING..." : (
-                                            <>
-                                                {view === 'login' ? "LOGIN" : "VERIFY_CODE"}
-                                                <ArrowRight className="w-4 h-4" />
-                                            </>
-                                        )}
-                                    </span>
-                                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[90%] h-[1px] bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_15px_rgba(16,185,129,1)]" />
-                                </button>
+                                    {view === 'login' && (
+                                        <div className="pt-2">
+                                            <p className="text-center text-[10px] text-emerald-500/40 font-mono tracking-[0.2em] uppercase">
+                                                UNAUTHORIZED? {onSwitchToRegister ? (
+                                                    <button onClick={(e) => { e.preventDefault(); onSwitchToRegister(); }} className="text-emerald-400 font-bold hover:text-emerald-200 transition-colors">REGISTER</button>
+                                                ) : (
+                                                    <Link to="/register" className="text-emerald-400 font-bold hover:text-emerald-200 transition-colors">REGISTER</Link>
+                                                )}
+                                            </p>
+                                        </div>
+                                    )}
+                                </form>
                             </div>
-
-                            {view === 'login' && (
-                                <div className="pt-2">
-                                    <p className="text-center text-[10px] text-emerald-500/40 font-mono tracking-[0.2em] uppercase">
-                                        UNAUTHORIZED? {onSwitchToRegister ? (
-                                            <button onClick={(e) => { e.preventDefault(); onSwitchToRegister(); }} className="text-emerald-400 font-bold hover:text-emerald-200 transition-colors">REGISTER</button>
-                                        ) : (
-                                            <Link to="/register" className="text-emerald-400 font-bold hover:text-emerald-200 transition-colors">REGISTER</Link>
-                                        )}
-                                    </p>
-                                </div>
-                            )}
-                        </form>
+                        </div>
                     )}
 
                     {/* -- FORGOT PASSWORD VIEWS -- */}

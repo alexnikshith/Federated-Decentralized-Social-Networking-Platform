@@ -2,375 +2,261 @@
 
 ## Federated Decentralized Social Networking Platform
 
-Reference:
-
-* Problem Statement – 
-* EPICS & Design – 
+**GitHub Repository:** https://github.com/RiteeshTM/Federated-Decentralized-Social-Networking-Platform
 
 ---
 
-# 1. DevOps Vision
+# 1. DevOps Overview
 
-The DevOps strategy for this project ensures:
+The DevOps strategy for this platform automates testing, building, and deployment through a continuous integration and continuous deployment (CI/CD) pipeline powered by **GitHub Actions**. Every push to the `main` branch triggers the pipeline, which validates code quality, runs all tests, verifies the production build, and automatically deploys each component to its respective cloud platform.
 
-* Automated build, test, and deployment
-* Secure and scalable multi-instance federation
-* High availability and monitoring
-* Data protection and backup automation
-* Continuous integration and delivery (CI/CD)
+Key goals of this strategy:
 
-Since the platform is federated, each instance must:
-
-* Be independently deployable
-* Maintain local autonomy
-* Interoperate securely with other instances
+- **Automated quality gates** — No broken build reaches production
+- **Zero-touch deployment** — Merging to `main` is sufficient to ship to production
+- **Independent component delivery** — Frontend (Vercel) and Backend (Render) deploy separately, minimising blast radius
+- **Federation readiness** — Each instance is self-contained and can operate autonomously while interoperating via ActivityPub
 
 ---
 
-# 2. High-Level DevOps Architecture
-
-The following diagram illustrates the CI/CD pipeline and deployment flow:
+# 2. System Architecture
 
 ```mermaid
-graph TD
+flowchart TD
+    Dev["Developer"]
 
-    Developer["Developer"] -->|Push Code| GitHub["GitHub Repository"]
-    GitHub -->|Trigger CI| Actions["GitHub Actions"]
+    Dev -->|git push / pull request| GH["GitHub Repository"]
 
-    subgraph CI_Process
-        Actions --> Checkout["Checkout Code"]
-        Checkout --> Tests["Run Tests - Unit and Integration"]
-        Tests --> Security["Security Audit - Go and npm"]
-        Security --> Build["Build Docker Images"]
+    GH -->|Trigger CI/CD| GA["GitHub Actions"]
+
+    subgraph CI ["Continuous Integration Pipeline"]
+        direction TB
+        GA --> B_CI["Backend CI Job"]
+        GA --> F_CI["Frontend CI Job"]
+        GA --> E2E["E2E Job - Playwright"]
     end
 
-    Build -->|Push Image| DockerHub["Docker Hub"]
+    B_CI -->|CI passes on main| Render["Render.com - Dockerized Go Backend"]
+    F_CI -->|CI passes on main| Vercel["Vercel - React + Vite Frontend"]
 
-    subgraph CD_Process
-        DockerHub -->|Pull Image| EC2["AWS EC2 Server"]
-        EC2 --> Deploy["Docker Compose Deployment"]
-    end
+    Render -->|Connects via URI| MongoDB["MongoDB Atlas"]
 
-    subgraph Production_Environment
-        Deploy --> Frontend["Frontend Container - React and Nginx"]
-        Deploy --> Backend["Backend Container - Go Application"]
-        Deploy --> Mongo["MongoDB Container"]
-
-        Backend -->|Read Write| Mongo
-        Frontend -->|API Calls| Backend
-    end
-
-    Production_Environment --> Monitoring["Monitoring - Prometheus and Grafana"]
-    Production_Environment --> S3["AWS S3 Backups"]
+    Vercel -->|HTTPS API calls| Render
+    Render -->|ActivityPub federation| Mastodon["Mastodon and Other Federated Instances"]
 ```
 
-
 ---
 
-# 3. Component-Wise DevOps Mapping
-
----
+# 3. System Components
 
 ## 3.1 Frontend (React + Vite)
 
-### Source Code Repository
+| Property | Detail |
+|---|---|
+| **Source Repository** | `/frontend` on GitHub |
+| **Framework** | React 18, TypeScript, Vite |
+| **Deployment Platform** | Vercel |
+| **Containerisation** | None — Vercel builds directly from source |
+| **Deployment Trigger** | Automatic on push to `main` |
 
-```
-/frontend
-```
+### Build Process
+Vercel runs `npm run build` (Vite production build) from the `/frontend` directory. The output is a set of static assets served via Vercel's global CDN.
 
-### Deployment Location
-
-* AWS EC2 (Docker container)
-* Nginx (serving static build)
-
-### Pre-Deployment Tests
-
-* Unit tests (Vitest / React Testing Library)
-* ESLint checks
-* TypeScript compilation check
-* Production build validation
-
-### Tools & Platforms
-
-* Vite
-* React
-* Docker (Multi-stage build)
-* Nginx
-* GitHub Actions
+### Pre-Deployment Checks (CI)
+1. `npm ci` — Install exact dependency versions
+2. `npm run lint` — ESLint code quality checks
+3. `npm run test` — Vitest unit tests + React Testing Library
+4. `npm run build` — TypeScript compilation + Vite production bundle
 
 ---
 
-## 3.2 Backend (Go)
+## 3.2 Backend (Go / Golang)
 
-### Source Code Repository
+| Property | Detail |
+|---|---|
+| **Source Repository** | `/backend` on GitHub |
+| **Language** | Go (Golang) |
+| **Router** | Gorilla Mux |
+| **Deployment Platform** | Render.com |
+| **Containerisation** | Docker (Alpine-based multi-stage build) |
+| **Deployment Trigger** | Automatic on push to `main` |
 
-```
-/backend
-```
+### Docker Build Process
+The backend `Dockerfile` uses a two-stage build:
+1. **Builder stage** — `golang:alpine` compiles a static binary (`CGO_ENABLED=0`)
+2. **Runtime stage** — `alpine:latest` runs the minimal binary
 
-### Deployment Location
+Render pulls the GitHub repository, builds the image, and replaces the running container with zero-downtime.
 
-* AWS EC2 (Docker container)
-* Native Go binary execution
-
-### Pre-Deployment Tests
-
-* Unit tests (`go test ./...`)
-* Integration tests
-* API endpoint validation
-* Security audit (`govulncheck`)
-
-### Tools & Platforms
-
-* Go (Golang)
-* Gorilla Mux (Router)
-* Docker (Alpine based)
-* GitHub Actions
+### Pre-Deployment Checks (CI)
+1. `go mod download` — Fetch all declared dependencies
+2. `go build ./...` — Verify the entire codebase compiles
+3. `go test ./...` — Unit tests + integration tests (with a live MongoDB service container)
+4. `docker build -t backend-test .` — Confirm the Docker image builds successfully
 
 ---
 
 ## 3.3 Database (MongoDB)
 
-### Source Code Repository
+| Property | Detail |
+|---|---|
+| **Type** | MongoDB |
+| **Deployment** | MongoDB Atlas (Cloud Managed) |
+| **Schema** | Defined as Go structs in `/backend/epics/*/models/` |
+| **Connection** | Injected via `MONGODB_URI` environment variable |
 
-* Schema definitions inside backend repository (Go structs)
+### Connection Configuration
+The backend reads the database connection from the `MONGODB_URI` environment variable provided by MongoDB Atlas. No credentials are stored in code. Render and Vercel both provide secret environment variable storage in their dashboards.
 
-### Deployment Location
-
-Option A: MongoDB Atlas (Cloud Managed)
-Option B: Dockerized MongoDB on EC2 (Current Configuration)
-
-### Pre-Deployment Tests
-
-* Connection check
-* Index verification
-* Data persistence validation
-
-### Tools & Platforms
-
-* MongoDB 7.0
-* MongoDB Drivers (Go)
-* MongoDB Dump/Restore
+| Environment Variable | Purpose |
+|---|---|
+| `MONGODB_URI` | MongoDB Atlas connection string |
+| `JWT_SECRET` | JWT signing key |
+| `INSTANCE_DOMAIN` | ActivityPub instance domain |
+| `VITE_API_URL` | Backend URL consumed by the frontend |
 
 ---
 
 ## 3.4 Federation Service
 
-Handles:
+The federation layer is implemented as Go goroutines inside the backend container. It implements the **ActivityPub** protocol for cross-instance operations:
 
-* Cross-instance follow
-* Post forwarding
-* Comment synchronization
-* Async activity processing
+- Follow/Unfollow remote users
+- Deliver posts to remote inboxes (Create, Delete activities)
+- Process incoming activities (Accept, Like, Create)
+- Retry queue with exponential back-off (US3.7)
+- User-controlled federation toggle (US3.8)
 
-### Source Code Repository
-
-```
-/backend/epics/federation
-```
-
-### Deployment Location
-
-* Integrated into Backend Docker container (runs as Goroutines)
-
-### Pre-Deployment Tests
-
-* Federation protocol validation
-* ActivityPub simulation
-* Inter-instance connectivity tests
-
-### Tools & Platforms
-
-* Go Concurrency (Goroutines/Channels)
-* HTTP Client
-* JSON Activity Streams
+No separate deployment is required — it starts automatically with the backend.
 
 ---
 
-## 3.5 AI Moderation Service (Planned)
+# 4. Continuous Integration (CI)
 
-Responsible for:
+CI is handled by **GitHub Actions** (`.github/workflows/ci.yml`) and runs on every push to `main` or `dev`, and on all pull requests targeting `main`.
 
-* Spam detection
-* Offensive content detection
-* Trust scoring
+## Pipeline Jobs
 
-### Source Code Repository
+```yaml
+# Simplified view of ci.yml
 
-* *To be created*
+jobs:
 
-### Deployment Location
+  backend:                          # Go backend validation
+    - Checkout code
+    - Setup Go (stable)
+    - go mod download
+    - go build ./...                # Compile check
+    - go test ./...                 # Unit + integration tests
+    - docker build -t backend-test . # Docker image smoke test
 
-* Separate Docker container or Microservice
+  frontend:                         # React frontend validation
+    - Checkout code
+    - Setup Node.js 20
+    - npm ci
+    - npm run lint                  # ESLint
+    - npm run test                  # Vitest
+    - npm run build                 # TypeScript + Vite bundle
 
-### Pre-Deployment Tests
-
-* Model accuracy testing
-* Latency checks
-
-### Tools & Platforms
-
-* Python (Likely FastAPI)
-* Machine Learning Models
-* Docker
-
----
-
-## 3.6 Monitoring & Logging
-
-### Deployment Location
-
-* Prometheus + Grafana (EC2)
-* Docker Logs
-
-### Checks Performed
-
-* Container health status
-* Resource usage (CPU/Memory)
-* Application error rates
-* Federation queue depth
-
-### Tools
-
-* Prometheus
-* Grafana
-* Go `log` package / Structured Logger
-
----
-
-## 3.7 Backup & Security
-
-### Deployment Location
-
-* AWS S3 for backups
-* Encrypted Secrets (Env vars)
-
-### Pre-Deployment Checks
-
-* Environment variable presence
-* SSL/TLS Certificate validity
-* Backup script execution test
-
-### Tools
-
-* AWS CLI / S3
-* Cron Jobs
-* Let's Encrypt (Certbot)
-
----
-
-# 4. CI/CD Pipeline Strategy
-
-## Continuous Integration (CI)
-
-Triggered on:
-
-* Pull Request
-* Push to main branch
-
-Steps:
-
-1. **Checkout Code**
-2. **Backend Validation**:
-    - Setup Go environment
-    - `go mod tidy`
-    - `go test ./...`
-    - `go build`
-3. **Frontend Validation**:
-    - Setup Node.js
-    - `npm install`
-    - `npm run build`
-4. **Docker Build**:
-    - Build backend image
-    - Build frontend image
-
----
-
-## Continuous Deployment (CD)
-
-Triggered after successful CI (on main branch):
-
-1. **Push Images**: Push tagged Docker images to registry.
-2. **Deploy**:
-    - SSH into Production EC2
-    - `git pull` (for docker-compose updates)
-    - `docker-compose pull`
-    - `docker-compose up -d --remove-orphans`
-3. **Verify**:
-    - Check container status (`docker ps`)
-    - Curl health endpoints
-
----
-
-# 5. Environments
-
-| Environment | Purpose                     | Configuration |
-| ----------- | --------------------------- | ------------- |
-| Development | Local Docker setup          | `docker-compose.yml` (Local) |
-| Staging     | Pre-production EC2 instance | `docker-compose.prod.yml` (Remote) |
-| Production  | AWS EC2 + Domain + SSL      | `docker-compose.prod.yml` (Remote + SSL) |
-
----
-
-# 6. Pre-Deployment Checklist
-
-* [ ] Code reviewed and merged
-* [ ] All tests passed (CI green)
-* [ ] Docker images built and pushed
-* [ ] Environment variables configured (.env)
-* [ ] Database backups verified
-* [ ] Domain DNS propagated
-* [ ] SSL Certificates valid
-
----
-
-# 7. DevOps Tools Summary
-
-| Layer                | Tool                 |
-| -------------------- | -------------------- |
-| Version Control      | Git + GitHub         |
-| CI/CD                | GitHub Actions       |
-| Containerization     | Docker + Compose     |
-| Cloud Infrastructure | AWS EC2              |
-| Database             | MongoDB (Docker/Atlas)|
-| Backend Runtime      | Go (Golang)          |
-| Frontend Runtime     | Node.js / Nginx      |
-| Monitoring           | Prometheus + Grafana |
-| Security             | JWT + SSL/TLS        |
-| Backup               | AWS S3               |
-
----
-
-# 8. Deployment Architecture Diagram
-
-```mermaid
-graph TD
-
-    User["User"] -->|HTTPS| Nginx["Nginx Reverse Proxy"]
-
-    subgraph EC2_Instance
-        Nginx -->|API| Backend["Go Backend Container"]
-        Nginx -->|Static| Frontend["React Frontend Container"]
-
-        Backend -->|Database Access| MongoDB["MongoDB Container"]
-        Backend -->|Federation| Internet["Other Federated Instances"]
-
-        Prometheus -->|Scrape Metrics| Backend
-        Grafana -->|Query Metrics| Prometheus
-    end
-
-    Backup["Backup Script"] -->|Dump| MongoDB
-    Backup -->|Upload| S3["AWS S3 Bucket"]
+  e2e:                              # End-to-end Playwright tests
+    - Checkout code
+    - Start Go backend (go run main.go &)
+    - npm ci
+    - playwright install --with-deps
+    - playwright test
 ```
 
+> **Note:** The backend CI job spins up a real MongoDB service container (`mongo:latest` on port 27017) so integration tests run against an actual database engine.
 
 ---
 
-# 9. Why This DevOps Strategy Fits a Federated System
+# 5. Continuous Deployment (CD)
 
-* **Modularity**: Separation of Frontend, Backend, and Database in Docker containers allows independent scaling and updates.
-* **Autonomy**: Each instance runs its own full stack, ensuring data sovereignty.
-* **Resilience**: Docker restart policies and automated backups minimize downtime and data loss.
-* **Standardization**: Docker Compose ensures consistent environments across development and production.
-* **Performance**: Go backend provides high-performance concurrency essential for handling federation activities.
+## Frontend CD — GitHub → Vercel
+
+1. Developer merges to `main`
+2. GitHub Actions **Frontend CI** job runs and passes
+3. Vercel detects the push via GitHub integration and **automatically triggers a deployment**
+4. Vercel runs `npm run build` and publishes static assets to its CDN
+5. New version is live on the Vercel URL
+
+## Backend CD — GitHub → Docker → Render
+
+1. Developer merges to `main`
+2. GitHub Actions **Backend CI** job runs and passes (including Docker build check)
+3. Render detects the push via GitHub integration and **automatically triggers a deployment**
+4. Render builds the Docker image from the repository's `Dockerfile`
+5. The new container replaces the old one with zero-downtime deployment
+6. Backend is live on the Render service URL
+
+---
+
+# 6. Deployment Workflow — Step by Step
+
+```
+1. Developer writes code locally
+2. Developer opens a Pull Request → CI runs on the PR branch
+3. Reviewer approves and merges to main
+4. GitHub Actions automatically starts:
+   ├── Backend CI job (Go build, tests, Docker build)
+   ├── Frontend CI job (lint, tests, Vite build)
+   └── E2E job (Playwright tests against live backend)
+5. IF all jobs pass:
+   ├── Vercel auto-deploys the updated frontend
+   └── Render auto-deploys the updated backend Docker container
+6. Application is live and available to users
+```
+
+---
+
+# 7. Pre-Deployment Checks Summary
+
+| Check | Tool | Component |
+|---|---|---|
+| Dependency resolution | `go mod download` / `npm ci` | Backend / Frontend |
+| Code compilation | `go build ./...` | Backend |
+| TypeScript type checking | Vite build | Frontend |
+| Code linting | ESLint (`npm run lint`) | Frontend |
+| Unit tests | `go test ./...` / Vitest | Backend / Frontend |
+| Integration tests | `go test ./...` + MongoDB service | Backend |
+| Docker image builds | `docker build` | Backend |
+| End-to-end tests | Playwright | Full stack |
+| Environment variable presence | Render / Vercel dashboard | Both |
+
+---
+
+# 8. DevOps Tools and Platforms
+
+| Tool / Platform | Purpose |
+|---|---|
+| **GitHub** | Version control and source of truth |
+| **GitHub Actions** | CI/CD pipeline automation |
+| **Docker** | Containerisation of the Go backend |
+| **Render.com** | Dockerized backend deployment and managed MongoDB |
+| **Vercel** | Frontend static hosting and CDN |
+| **MongoDB** | Primary database (Atlas or Render managed) |
+| **Go (Golang)** | Backend language and runtime |
+| **Vite + React** | Frontend build tooling and framework |
+| **Playwright** | End-to-end browser test automation |
+| **Vitest** | Frontend unit test runner |
+| **Gorilla Mux** | HTTP router for the Go backend |
+| **ActivityPub** | Federation protocol for cross-instance communication |
+
+---
+
+# 9. Environments
+
+| Environment | Frontend | Backend | Database |
+|---|---|---|---|
+| **Local Development** | `npm run dev` (Vite dev server) | `go run main.go` or `docker-compose up` | Local Docker MongoDB container |
+| **Production** | Vercel CDN | Render Docker container | MongoDB Atlas |
+
+---
+
+# 10. Why This DevOps Strategy Fits a Federated System
+
+- **Independent deployability** — Frontend and backend deploy separately; a frontend change never blocks a backend fix.
+- **Containerisation** — Docker ensures the Go backend behaves identically in local development and on Render, eliminating environment drift.
+- **Automated quality gates** — No code reaches production without passing compilation, unit tests, and a successful Docker build.
+- **Scalability** — Multiple platform instances can be deployed identically from the same repository, each connecting to its own MongoDB, enabling true federation.
+- **Protocol compliance** — The ActivityPub federation layer deployed inside every backend instance allows interoperability with Mastodon and other fediverse platforms.

@@ -13,7 +13,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Loader2, User, Settings, Shield, Bell, Lock, AlertTriangle, Edit, Clock, Upload, Eye, EyeOff, ShieldCheck, Check } from "lucide-react";
+import { Loader2, User, Settings, Shield, Bell, Lock, AlertTriangle, Edit, Clock, Upload, Eye, EyeOff, ShieldCheck, Check, Globe } from "lucide-react";
 import { IconAlertTriangle, IconGavel } from '@tabler/icons-react';
 import {
     AlertDialog,
@@ -100,6 +100,7 @@ export const SettingsPage = () => {
 
     const [passwordLoading, setPasswordLoading] = useState(false);
     const [is2FAEnabled, setIs2FAEnabled] = useState(false);
+    const [federationEnabled, setFederationEnabled] = useState(true); // US3.8 — default true
     const [showOldPassword, setShowOldPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -110,7 +111,7 @@ export const SettingsPage = () => {
         hasUpper: /[A-Z]/.test(passwordData.new_password),
         hasLower: /[a-z]/.test(passwordData.new_password),
         hasNumber: /\d/.test(passwordData.new_password),
-        hasSpecial: /[@$!%*?&]/.test(passwordData.new_password),
+        hasSpecial: /[@$!%*?&#^}{()]/.test(passwordData.new_password),
     };
 
     const isPasswordValid = Object.values(passwordRequirements).every(Boolean);
@@ -130,7 +131,6 @@ export const SettingsPage = () => {
                     ? "Two-factor authentication has been enabled for your account."
                     : "Two-factor authentication has been disabled.",
             });
-            // Update local user state if needed
             if (currentUser) {
                 updateUser({ ...currentUser, is_2fa_enabled: checked } as UserType);
             }
@@ -141,10 +141,45 @@ export const SettingsPage = () => {
                 description: "Failed to update 2FA settings",
                 variant: "destructive",
             });
-            // Revert switch state on error (optional, but good UX)
             setIs2FAEnabled(!checked);
         }
     };
+
+    // US3.8 — load federation preference on mount
+    useEffect(() => {
+        const loadFedPref = async () => {
+            try {
+                const data = await profileApi.getFederationPreference();
+                setFederationEnabled(data.federation_enabled ?? true);
+            } catch (e) {
+                console.error("Failed to load federation preference", e);
+            }
+        };
+        loadFedPref();
+    }, []);
+
+    const handleToggleFederation = async (checked: boolean) => {
+        const prev = federationEnabled;
+        setFederationEnabled(checked); // optimistic update
+        try {
+            await profileApi.updateFederationPreference(checked);
+            toast({
+                title: checked ? "Federation Enabled" : "Federation Disabled",
+                description: checked
+                    ? "Your posts will now be shared to the federated network."
+                    : "Your posts will no longer be shared to other federated instances.",
+            });
+        } catch (error: any) {
+            console.error(error);
+            setFederationEnabled(prev); // revert on error
+            toast({
+                title: "Error",
+                description: "Failed to update federation settings",
+                variant: "destructive",
+            });
+        }
+    };
+
 
     const handleToggleDiscovery = async (checked: boolean) => {
         const message = checked
@@ -1031,19 +1066,46 @@ export const SettingsPage = () => {
                                                 <Shield className="w-5 h-5 text-primary" />
                                                 Security Preferences
                                             </h3>
-                                            <div className="p-6 rounded-2xl border border-border/50 bg-secondary/10 flex items-center justify-between">
-                                                <div>
-                                                    <h4 className="font-bold mb-1">Two-Factor Authentication</h4>
-                                                    <p className="text-sm text-muted-foreground">Add an extra layer of security to your account.</p>
+                                            <div className="space-y-4">
+                                                {/* 2FA Toggle */}
+                                                <div className="p-6 rounded-2xl border border-border/50 bg-secondary/10 flex items-center justify-between">
+                                                    <div>
+                                                        <h4 className="font-bold mb-1">Two-Factor Authentication</h4>
+                                                        <p className="text-sm text-muted-foreground">Add an extra layer of security to your account.</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <span className={cn("text-sm font-medium transition-colors", is2FAEnabled ? "text-primary" : "text-muted-foreground")}>
+                                                            {is2FAEnabled ? "Enabled" : "Disabled"}
+                                                        </span>
+                                                        <Switch
+                                                            checked={is2FAEnabled}
+                                                            onCheckedChange={handleToggle2FA}
+                                                        />
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center gap-3">
-                                                    <span className={cn("text-sm font-medium transition-colors", is2FAEnabled ? "text-primary" : "text-muted-foreground")}>
-                                                        {is2FAEnabled ? "Enabled" : "Disabled"}
-                                                    </span>
-                                                    <Switch
-                                                        checked={is2FAEnabled}
-                                                        onCheckedChange={handleToggle2FA}
-                                                    />
+
+                                                {/* Federation Toggle (US3.8) */}
+                                                <div className="p-6 rounded-2xl border border-border/50 bg-secondary/10 flex items-center justify-between">
+                                                    <div>
+                                                        <h4 className="font-bold mb-1 flex items-center gap-2">
+                                                            <Globe className="w-4 h-4 text-primary" />
+                                                            Federation
+                                                        </h4>
+                                                        <p className="text-sm text-muted-foreground">
+                                                            Share your posts with users on other federated instances (e.g. Mastodon).
+                                                            Disable to keep your posts within this platform only.
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex items-center gap-3 ml-6 shrink-0">
+                                                        <span className={cn("text-sm font-medium transition-colors", federationEnabled ? "text-primary" : "text-muted-foreground")}>
+                                                            {federationEnabled ? "Enabled" : "Disabled"}
+                                                        </span>
+                                                        <Switch
+                                                            id="federation-toggle"
+                                                            checked={federationEnabled}
+                                                            onCheckedChange={handleToggleFederation}
+                                                        />
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

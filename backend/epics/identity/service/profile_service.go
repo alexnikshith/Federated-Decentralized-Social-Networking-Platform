@@ -399,3 +399,26 @@ func (s *ProfileService) logActivity(ctx context.Context, userID primitive.Objec
 	}
 	s.activityRepo.LogActivity(ctx, log)
 }
+
+// UpdateFederationPreference sets whether the user's posts are broadcast to the
+// federated network (US3.8). Pass enabled=true to opt-in, false to opt-out.
+func (s *ProfileService) UpdateFederationPreference(ctx context.Context, userID primitive.ObjectID, enabled bool) error {
+	update := bson.M{"federation_enabled": enabled}
+	if err := s.userRepo.UpdateUser(ctx, userID, update); err != nil {
+		return fmt.Errorf("failed to update federation preference: %w", err)
+	}
+	s.logActivity(ctx, userID, "federation_preference_update", fmt.Sprintf("federation_enabled set to %v", enabled))
+	log.Printf("[ProfileService] User %s set federation_enabled=%v", userID.Hex(), enabled)
+	return nil
+}
+
+// GetPrivateProfile returns the full private user record for the authenticated user,
+// including federation preferences.
+func (s *ProfileService) GetPrivateProfile(ctx context.Context, userID primitive.ObjectID) (*models.PrivateUser, error) {
+	user, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	privateUser := user.ToPrivateUser()
+	return &privateUser, nil
+}

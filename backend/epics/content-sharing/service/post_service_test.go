@@ -130,6 +130,10 @@ func (m *MockPostRepository) UpsertInteraction(ctx context.Context, interaction 
 	args := m.Called(ctx, interaction)
 	return args.Error(0)
 }
+func (m *MockPostRepository) CheckIfReported(ctx context.Context, postID, userID primitive.ObjectID) (bool, error) {
+	args := m.Called(ctx, postID, userID)
+	return args.Bool(0), args.Error(1)
+}
 func (m *MockPostRepository) GetAllReports(ctx context.Context) ([]models.ReportedPost, error) {
 	args := m.Called(ctx)
 	return args.Get(0).([]models.ReportedPost), args.Error(1)
@@ -168,6 +172,7 @@ func TestPostService_LikePost(t *testing.T) {
 
 	t.Run("LikePost_Success", func(t *testing.T) {
 		mPR.On("GetPostByID", ctx, postID).Return(&models.Post{ID: postID, AuthorID: userID}, nil)
+		mPR.On("CheckIfLiked", ctx, postID, userID).Return(false, nil) // not yet liked — proceed
 		mPR.On("CreateLike", ctx, mock.Anything).Return(nil)
 		err := s.LikePost(ctx, postID, userID)
 		assert.NoError(t, err)

@@ -140,10 +140,10 @@ Federated-Decentralized-Social-Networking-Platform/
 │   ├── middleware/          # Auth, CORS, logging
 │   ├── epics/
 │   │   ├── identity/        # ✅ Epic 1: Identity (DONE)
-│   │   ├── content_sharing/ # 🔄 Epic 2: Content Sharing
-│   │   ├── federation/      # 🔄 Epic 3: Federation
-│   │   ├── safety/          # 🔄 Epic 4: Safety
-│   │   └── reports/         # 🔄 Epic 5: Reports
+│   │   ├── content_sharing/ # ✅ Epic 2: Content Sharing (DONE)
+│   │   ├── federation/      # 🔄 Epic 3: Federation (IN PROGRESS)
+│   │   ├── safety/          # ✅ Epic 4: Safety (DONE)
+│   │   └── reports/         # ✅ Epic 5: Moderation & Reports (DONE)
 │   └── main.go
 │
 ├── frontend/
@@ -172,23 +172,13 @@ Federated-Decentralized-Social-Networking-Platform/
 
 ---
 
-## API Endpoints (Epic 1)
+## 🔌 API Documentation
 
-### Public Endpoints
-- `POST /api/auth/signup` - Create account
-- `POST /api/auth/login` - User login
-- `GET /api/profile/{id}` - View profile (with privacy check)
-
-### Protected Endpoints
-- `POST /api/auth/logout` - Logout
-- `POST /api/auth/change-password` - Change password
-- `GET /api/profile/me` - Get own profile
-- `PUT /api/profile/me` - Update profile
-- `POST /api/profile/me/deactivate` - Deactivate account
-- `GET /api/profile/me/activity` - View activity logs
+For a comprehensive list of all available REST API endpoints across all epics (Auth, Feed, Federation, Moderation), please refer to the [**API Documentation**](API.md).
 
 ### System
 - `GET /health` - Health check
+- `WS /ws` - Synchronized real-time events via WebSocket
 
 
 ## Frontend Features & Components
