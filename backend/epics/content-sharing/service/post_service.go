@@ -375,7 +375,7 @@ func (s *PostService) enrichRemotePosts(ctx context.Context, posts []fedModels.R
 			UpdatedAt:      p.UpdatedAt,
 			LikeCount:      p.LikeCount,
 			CommentCount:   p.CommentCount,
-			AuthorInstance: p.OriginInstance,
+			AuthorInstance: s.mapInstanceToName(p.OriginInstance),
 			IsRemote:       true,
 			IsLiked:        false, // Default
 			IsSaved:        false,
@@ -1176,6 +1176,8 @@ func (s *PostService) enrichPosts(ctx context.Context, posts []models.Post, curr
 			IsLiked:            isLiked,
 			IsSaved:            isSaved,
 			MentionedUsernames: mentionedUsernames,
+			AuthorInstance:     "Nexus.Social", // All local posts are Nexus.Social
+			IsRemote:           false,
 			CreatedAt:          post.CreatedAt,
 			UpdatedAt:          post.UpdatedAt,
 		})
@@ -1454,4 +1456,21 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+func (s *PostService) mapInstanceToName(url string) string {
+	if url == "" {
+		return ""
+	}
+	// Map local and production URLs for Community 1 to Nexus.Social
+	if strings.Contains(url, "localhost:8080") ||
+		strings.Contains(url, "backend:8080") ||
+		strings.Contains(url, "federated-decentralized-social.onrender.com") ||
+		strings.Contains(url, "community-1") {
+		return "Nexus.Social"
+	}
+	// Map local and community-2 aliases to Nexus Community 2
+	if strings.Contains(url, "localhost:8081") || strings.Contains(url, "backend2:8080") || strings.Contains(url, "community-2") {
+		return "Nexus Community 2"
+	}
+	return url
 }

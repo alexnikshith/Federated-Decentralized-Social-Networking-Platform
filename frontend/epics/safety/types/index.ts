@@ -19,6 +19,9 @@ export interface ModerationLog {
     breached_rules?: string[];
     bad_words_found?: string[];
     action_taken: string;
+    user_id?: string;
+    username?: string;
+    display_name?: string;
     created_at: string;
 }
 

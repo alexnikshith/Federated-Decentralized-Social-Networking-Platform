@@ -140,7 +140,8 @@ export const UserSearch: React.FC<{
                                     if ((user as any).community_url) {
                                         params.set('community', (user as any).community_url);
                                     }
-                                    navigate(`/profile/${user.username}${params.toString() ? '?' + params.toString() : ''}`);
+                                    const identifier = (user as any).handle || user.username;
+                                    navigate(`/profile/${identifier}${params.toString() ? '?' + params.toString() : ''}`);
                                 }
                                 if (onClose) onClose();
                             }}
@@ -171,7 +172,7 @@ export const UserSearch: React.FC<{
                                         let displayDomain = "";
 
                                         if (!instance || instance === "default-instance" || instance === "default" || instance.includes("localhost:8080") || instance.includes("federated-decentralized-social.onrender.com")) {
-                                            displayDomain = "nexus.social";
+                                            displayDomain = "Nexus.Social";
                                         } else {
                                             // Extract domain from URL and remove protocol
                                             displayDomain = instance.replace(/^https?:\/\//, '').replace(/\/$/, '');

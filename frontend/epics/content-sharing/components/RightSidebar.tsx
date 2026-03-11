@@ -128,33 +128,37 @@ export const RightSidebar: React.FC = () => {
             </div>
 
             {/* Informational Box */}
-            <div className="glass-card rounded-2xl p-5 border border-amber-500/10 shadow-sm bg-amber-500/[0.03] backdrop-blur-xl space-y-5">
-                <div className="flex items-start gap-4">
-                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0 border border-amber-500/20">
-                        <Info className="w-4 h-4 text-amber-500" />
-                    </div>
-                    <div className="space-y-1">
-                        <h3 className="text-[13px] font-bold text-amber-500 uppercase tracking-widest">Federation</h3>
-                        <p className="text-[11px] text-muted-foreground leading-relaxed font-bold uppercase tracking-wide">
-                            is <span className="text-amber-500/80">Disabled</span> by default. You can enable it in <span className="underline text-amber-400 cursor-pointer hover:text-amber-500 transition-colors">Privacy and Security</span> settings.
-                        </p>
-                    </div>
-                </div>
+            {(currentUser?.federation_enabled === false || currentUser?.is_2fa_enabled) && (
+                <div className="glass-card rounded-2xl p-5 border border-amber-500/10 shadow-sm bg-amber-500/[0.03] backdrop-blur-xl space-y-5">
+                    {currentUser?.federation_enabled === false && (
+                        <div className="flex items-start gap-4">
+                            <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0 border border-amber-500/20">
+                                <Info className="w-4 h-4 text-amber-500" />
+                            </div>
+                            <div className="space-y-1">
+                                <h3 className="text-[13px] font-bold text-amber-500 uppercase tracking-widest">Federation</h3>
+                                <p className="text-[11px] text-muted-foreground leading-relaxed font-bold uppercase tracking-wide">
+                                    is <span className="text-amber-500/80">Disabled</span> by default. You can enable it in <span className="underline text-amber-400 cursor-pointer hover:text-amber-500 transition-colors" onClick={() => window.location.href='/settings?tab=privacy'}>Privacy and Security</span> settings.
+                                </p>
+                            </div>
+                        </div>
+                    )}
 
-                {currentUser?.is_2fa_enabled && (
-                    <div className="flex items-start gap-4">
-                        <div className="w-8 h-8 rounded-lg bg-teal-500/10 flex items-center justify-center shrink-0 border border-teal-500/20">
-                            <ShieldCheck className="w-4 h-4 text-teal-500" />
+                    {currentUser?.is_2fa_enabled && (
+                        <div className="flex items-start gap-4">
+                            <div className="w-8 h-8 rounded-lg bg-teal-500/10 flex items-center justify-center shrink-0 border border-teal-500/20">
+                                <ShieldCheck className="w-4 h-4 text-teal-500" />
+                            </div>
+                            <div className="space-y-1">
+                                <h3 className="text-[13px] font-bold text-teal-500 uppercase tracking-widest">Multi-Factor Authentication</h3>
+                                <p className="text-[11px] text-muted-foreground leading-relaxed font-bold uppercase tracking-wide">
+                                    can be disabled in <span className="underline text-teal-400 cursor-pointer hover:text-teal-500 transition-colors" onClick={() => window.location.href='/settings?tab=privacy'}>Privacy and Security</span> settings.
+                                </p>
+                            </div>
                         </div>
-                        <div className="space-y-1">
-                            <h3 className="text-[13px] font-bold text-teal-500 uppercase tracking-widest">Multi-Factor Authentication</h3>
-                            <p className="text-[11px] text-muted-foreground leading-relaxed font-bold uppercase tracking-wide">
-                                can be disabled in <span className="underline text-teal-400 cursor-pointer hover:text-teal-500 transition-colors">Privacy and Security</span> settings.
-                            </p>
-                        </div>
-                    </div>
-                )}
-            </div>
+                    )}
+                </div>
+            )}
 
         </div>
     );

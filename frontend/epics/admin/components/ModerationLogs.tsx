@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { ShieldAlert, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { ModerationLog } from '../../safety/types';
 import { getAllModerationLogs } from '../../safety/api/client';
 import { format } from 'date-fns';
@@ -11,6 +12,7 @@ import { format } from 'date-fns';
 const ModerationLogs: React.FC = () => {
     const [logs, setLogs] = useState<ModerationLog[]>([]);
     const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
 
     const fetchLogs = async () => {
         try {
@@ -76,6 +78,7 @@ const ModerationLogs: React.FC = () => {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Status</TableHead>
+                            <TableHead>User</TableHead>
                             <TableHead>Type</TableHead>
                             <TableHead>Content Snippet</TableHead>
                             <TableHead>Reason / Decision</TableHead>
@@ -86,7 +89,7 @@ const ModerationLogs: React.FC = () => {
                     <TableBody>
                         {loading ? (
                             <TableRow>
-                                <TableCell colSpan={6} className="text-center py-10">
+                                <TableCell colSpan={7} className="text-center py-10">
                                     <div className="flex flex-col items-center gap-2">
                                         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                                         <p className="text-sm text-muted-foreground">Loading logs...</p>
@@ -95,7 +98,7 @@ const ModerationLogs: React.FC = () => {
                             </TableRow>
                         ) : logs.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                                <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
                                     No moderation logs found.
                                 </TableCell>
                             </TableRow>
@@ -107,6 +110,19 @@ const ModerationLogs: React.FC = () => {
                                             {getStatusInfo(log).icon}
                                             <span className={getStatusInfo(log).className}>
                                                 {getStatusInfo(log).text}
+                                            </span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div 
+                                            className="flex flex-col cursor-pointer group/user"
+                                            onClick={() => navigate(`/profile/${log.username}`)}
+                                        >
+                                            <span className="font-medium text-sm text-foreground group-hover/user:text-primary transition-colors">
+                                                {log.display_name || "System"}
+                                            </span>
+                                            <span className="text-[10px] text-muted-foreground font-mono">
+                                                @{log.username || "unknown"}
                                             </span>
                                         </div>
                                     </TableCell>
