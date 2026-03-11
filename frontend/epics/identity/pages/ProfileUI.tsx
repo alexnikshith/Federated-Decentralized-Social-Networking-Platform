@@ -166,7 +166,8 @@ const ProfileUI = () => {
   const [endDate, setEndDate] = useState<Date | undefined>();
 
 
-  const isOwnProfile = !username || username === currentUser?.username || username === currentUser?.id;
+  const cleanUsername = username?.startsWith('@') ? username.split('@')[1] : username;
+  const isOwnProfile = !username || cleanUsername === currentUser?.username || username === currentUser?.id;
 
   const loadProfileData = async (showLoading = true) => {
     if (showLoading) setLoading(true);
@@ -669,7 +670,14 @@ const ProfileUI = () => {
                         const instance = profileUser.instance || targetCommunityUrl;
                         if (instance) {
                           const known = COMMUNITIES.find(c => c.url === instance || (instance && c.url.includes(instance)) || c.name === instance);
-                          return known ? known.name : instance.replace(/^https?:\/\//, '');
+                          if (known) return known.name;
+                          
+                          // Explicit fallbacks for local and production environment aliases
+                          const clean = instance.replace(/^https?:\/\//, '').replace(/\/$/, '');
+                          if (clean === 'localhost:8080' || clean === 'backend:8080' || clean.includes('federated-decentralized-social.onrender.com')) {
+                            return 'Nexus.Social';
+                          }
+                          return clean;
                         }
                         const savedCommId = localStorage.getItem('active_community_id');
                         const currentComm = COMMUNITIES.find(c => c.id === savedCommId) || DEFAULT_COMMUNITY;

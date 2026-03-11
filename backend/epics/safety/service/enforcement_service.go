@@ -159,6 +159,12 @@ func (s *EnforcementService) processPostModeration(postID primitive.ObjectID) {
 		CreatedAt:  time.Now(),
 	}
 
+	// Fetch author details for the log
+	if author, err := s.userRepo.FindByID(ctx, post.AuthorID); err == nil {
+		logEntry.Username = author.Username
+		logEntry.DisplayName = author.DisplayName
+	}
+
 	if err != nil {
 		log.Printf("[Moderation] AI evaluation failed for post %s after retries: %v", postID.Hex(), err)
 		logEntry.IsViolation = false
@@ -267,6 +273,12 @@ func (s *EnforcementService) processCommentModeration(commentID primitive.Object
 		CreatedAt:  time.Now(),
 	}
 
+	// Fetch author details for the log
+	if author, err := s.userRepo.FindByID(ctx, comment.UserID); err == nil {
+		logEntry.Username = author.Username
+		logEntry.DisplayName = author.DisplayName
+	}
+
 	if err != nil {
 		log.Printf("[Moderation] AI evaluation failed for comment %s: %v", commentID.Hex(), err)
 		logEntry.IsViolation = false
@@ -356,11 +368,13 @@ func (s *EnforcementService) processUserModeration(userID primitive.ObjectID, fi
 	}
 
 	logEntry := &models.ModerationLog{
-		TargetID:   user.ID,
-		TargetType: fieldType,
-		Content:    content,
-		UserID:     user.ID,
-		CreatedAt:  time.Now(),
+		TargetID:    user.ID,
+		TargetType:  fieldType,
+		Content:     content,
+		UserID:      user.ID,
+		Username:    user.Username,
+		DisplayName: user.DisplayName,
+		CreatedAt:   time.Now(),
 	}
 
 	if err != nil {

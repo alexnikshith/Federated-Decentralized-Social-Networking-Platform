@@ -8,6 +8,7 @@ import (
 	followService "federated-social/backend/epics/content-sharing/service"
 	federationModels "federated-social/backend/epics/federation/models"
 	federationRepo "federated-social/backend/epics/federation/repository"
+	federationSvc "federated-social/backend/epics/federation/service"
 	"federated-social/backend/epics/identity/dto"
 	"federated-social/backend/epics/identity/models"
 	"federated-social/backend/epics/identity/repository"
@@ -30,6 +31,7 @@ type ProfileService struct {
 	postRepo           PostRepository
 	notificationRepo   NotificationRepository
 	remoteUserRepo     RemoteUserRepository
+	apService          *federationSvc.FederationService // for handle resolution
 	enforcementService *safetyService.EnforcementService
 }
 
@@ -44,6 +46,7 @@ func NewProfileService(enforcement *safetyService.EnforcementService) *ProfileSe
 		postRepo:           followRepo.NewPostRepository(),
 		notificationRepo:   followRepo.NewNotificationRepository(),
 		remoteUserRepo:     federationRepo.NewRemoteUserRepository(),
+		apService:          federationSvc.NewFederationService(),
 		enforcementService: enforcement,
 	}
 }
@@ -339,25 +342,57 @@ func (s *ProfileService) GetProfileByIdOrUsername(ctx context.Context, identifie
 		return s.GetProfile(ctx, user.ID, requestingUserID)
 	}
 
-	// Still not found? Try remote user cache by username
-	remoteUser, remoteErr := s.remoteUserRepo.GetRemoteUserByUsername(ctx, identifier)
-	if remoteErr == nil {
-		publicUser := s.RemoteUserToPublicUser(remoteUser)
-		if requestingUserID != nil {
-			isFollowing, _ := s.followService.IsFollowing(ctx, *requestingUserID, remoteUser.ID)
-			publicUser.IsFollowing = isFollowing
-		}
+	// Still not found? Try as federated handle (@user@domain)
+	if strings.HasPrefix(identifier, "@") || strings.Contains(identifier, "@") {
+		cleanHandle := strings.TrimPrefix(identifier, "@")
+		parts := strings.Split(cleanHandle, "@")
+		if len(parts) == 2 {
+			username, instance := parts[0], parts[1]
+			// Try cache first
+			remoteUser, err := s.remoteUserRepo.GetRemoteUserByUsernameAndInstance(ctx, username, instance)
+			if err == nil {
+				return s.enrichRemoteProfile(ctx, remoteUser, requestingUserID), nil
+			}
 
-		// Enforce visibility
-		if publicUser.ProfileVisibility == "followers" || publicUser.ProfileVisibility == "private" {
-			if !publicUser.IsFollowing {
-				publicUser.CanViewDetails = false
+			// If ActivityPub enabled, try to resolve on the fly
+			if s.apService != nil {
+				log.Printf("[Profile] Resolving handle on the fly: %s", identifier)
+				_, err := s.apService.ResolveAPHandle(ctx, identifier)
+				if err == nil {
+					// The resolve call caches it, so we can fetch it again or use result
+					// Fetch from repo to get proper ID and model
+					if ru, err := s.remoteUserRepo.GetRemoteUserByUsernameAndInstance(ctx, username, instance); err == nil {
+						return s.enrichRemoteProfile(ctx, ru, requestingUserID), nil
+					}
+				}
 			}
 		}
-		return publicUser, nil
+	}
+
+	// Still not found? Try remote user cache by username (fallback for ambiguous local-name lookups)
+	remoteUser, remoteErr := s.remoteUserRepo.GetRemoteUserByUsername(ctx, identifier)
+	if remoteErr == nil {
+		return s.enrichRemoteProfile(ctx, remoteUser, requestingUserID), nil
 	}
 
 	return nil, errors.New("user not found")
+}
+
+// enrichRemoteProfile is a helper to convert and add relationship context to a remote user result
+func (s *ProfileService) enrichRemoteProfile(ctx context.Context, ru *federationModels.RemoteUser, requestingUserID *primitive.ObjectID) *models.PublicUser {
+	publicUser := s.RemoteUserToPublicUser(ru)
+	if requestingUserID != nil {
+		isFollowing, _ := s.followService.IsFollowing(ctx, *requestingUserID, ru.ID)
+		publicUser.IsFollowing = isFollowing
+	}
+
+	// Enforce visibility
+	if publicUser.ProfileVisibility == "followers" || publicUser.ProfileVisibility == "private" {
+		if !publicUser.IsFollowing {
+			publicUser.CanViewDetails = false
+		}
+	}
+	return publicUser
 }
 
 func (s *ProfileService) RemoteUserToPublicUser(ru *federationModels.RemoteUser) *models.PublicUser {

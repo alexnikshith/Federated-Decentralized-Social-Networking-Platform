@@ -8,6 +8,7 @@ import { useState, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { api } from "../../identity/api/client";
+import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../identity/store/authStore";
 import { CommunitiesSkeleton } from "@/components/skeletons/page-skeletons";
 
@@ -64,6 +65,7 @@ const Communities = () => {
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   const { user } = useAuthStore();
+  const navigate = useNavigate();
 
   // ── Search people ──────────────────────────────────────────────────────────
   const searchPeople = useCallback(async (q: string) => {
@@ -287,7 +289,7 @@ const Communities = () => {
                         <div className="flex-1 min-w-0">
                           <p
                             className="font-semibold truncate cursor-pointer hover:text-cyan-500 transition-colors"
-                            onClick={() => window.location.href = `/profile/${pu.actor_id || (pu as any).id || pu.username}`}
+                            onClick={() => navigate(`/profile/${handle}`)}
                           >
                             {displayName}
                           </p>

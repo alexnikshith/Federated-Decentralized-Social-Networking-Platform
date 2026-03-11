@@ -76,6 +76,8 @@ type PublicUser struct {
 	CanViewDetails    bool               `json:"can_view_details"`
 	Is2FAEnabled      *bool              `json:"is_2fa_enabled,omitempty"` // Only visible to self
 	InstanceID        string             `json:"instance"`                 // home instance domain
+	Handle            string             `json:"handle,omitempty"`         // @user@domain
+	ActorID           string             `json:"actor_id,omitempty"`       // full ActivityPub URL
 }
 
 // PrivateUser represents user data visible to the owner (includes email)
@@ -107,7 +109,7 @@ func (u *User) ToPublicUser() PublicUser {
 	if role == "" {
 		role = "user"
 	}
-	return PublicUser{
+	p := PublicUser{
 		ID:                u.ID,
 		Username:          u.Username,
 		DisplayName:       u.DisplayName,
@@ -123,6 +125,14 @@ func (u *User) ToPublicUser() PublicUser {
 		CanViewDetails:    true,
 		InstanceID:        u.InstanceID,
 	}
+
+	if u.Username != "" && u.InstanceID != "" {
+		p.Handle = "@" + u.Username + "@" + u.InstanceID
+	} else if u.Username != "" {
+		p.Handle = "@" + u.Username
+	}
+
+	return p
 }
 
 // ToPrivateUser converts User to PrivateUser (for owner)

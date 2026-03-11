@@ -7,6 +7,8 @@ import (
 	identityRepo "federated-social/backend/epics/identity/repository"
 	messagingRepo "federated-social/backend/epics/messaging/repository"
 	"federated-social/backend/pkg/email"
+	"federated-social/backend/config"
+	"federated-social/backend/database"
 	"log"
 	"net/http"
 	"strings"
@@ -242,6 +244,13 @@ func (h *AdminHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
+	// Get user details first so we can purge caches by username
+	user, _ := h.userRepo.FindByID(ctx, oid)
+	var username string
+	if user != nil {
+		username = user.Username
+	}
+
 	// Full cascade wipe:
 
 	// 1. Posts, Likes, Comments, Saved Posts, Reports, Interactions
@@ -275,7 +284,17 @@ func (h *AdminHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Admin: fully deleted user %s and all associated data", userID)
+	// 8. ALSO purge from remote_users cache if they were accidentally filed there (e.g. via federated search)
+	if username != "" {
+		remoteUsersCol := database.GetCollection("remote_users")
+		localInstances := []string{"local", config.AppConfig.InstanceDomain, "localhost:8080", "localhost:8081", "backend:8080", "backend2:8080"}
+		_, _ = remoteUsersCol.DeleteMany(ctx, bson.M{
+			"username": username,
+			"instance": bson.M{"$in": localInstances},
+		})
+	}
+
+	log.Printf("Admin: fully deleted user %s (@%s) and all associated data", userID, username)
 	w.WriteHeader(http.StatusOK)
 }
 

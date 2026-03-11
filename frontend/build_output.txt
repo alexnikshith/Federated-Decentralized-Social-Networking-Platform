@@ -1,0 +1,30 @@
+
+> federated-social-frontend@1.0.0 build
+> tsc && vite build
+
+[36mvite v5.4.21 [32mbuilding for production...[36m[39m
+transforming...
+
+[1m[33mwarn[39m[22m - The class `duration-[12s]` is ambiguous and matches multiple utilities.
+[1m[33mwarn[39m[22m - If this is content and not a class, replace it with `duration-&lsqb;12s&rsqb;` to silence this warning.
+
+[1m[33mwarn[39m[22m - The class `duration-[18s]` is ambiguous and matches multiple utilities.
+[1m[33mwarn[39m[22m - If this is content and not a class, replace it with `duration-&lsqb;18s&rsqb;` to silence this warning.
+
+[1m[33mwarn[39m[22m - The class `ease-[cubic-bezier(0.23,1,0.32,1)]` is ambiguous and matches multiple utilities.
+[1m[33mwarn[39m[22m - If this is content and not a class, replace it with `ease-&lsqb;cubic-bezier(0.23,1,0.32,1)&rsqb;` to silence this warning.
+[32m✓[39m 1127 modules transformed.
+[31mx[39m Build failed in 8.06s
+[31merror during build:
+[31m[vite]: Rollup failed to resolve import "dompurify" from "C:/Projects/Federated-Decentralized-Social-Networking-Platform/frontend/epics/content-sharing/components/PostCard.tsx".
+This is most likely unintended because it can break your application at runtime.
+If you do want to externalize this module explicitly add it to
+`build.rollupOptions.external`[31m
+    at viteWarn (file:///C:/Projects/Federated-Decentralized-Social-Networking-Platform/frontend/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:65855:17)
+    at onwarn (file:///C:/Projects/Federated-Decentralized-Social-Networking-Platform/frontend/node_modules/@vitejs/plugin-react-swc/index.js:90:7)
+    at onRollupWarning (file:///C:/Projects/Federated-Decentralized-Social-Networking-Platform/frontend/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:65885:5)
+    at onwarn (file:///C:/Projects/Federated-Decentralized-Social-Networking-Platform/frontend/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:65550:7)
+    at file:///C:/Projects/Federated-Decentralized-Social-Networking-Platform/frontend/node_modules/rollup/dist/es/shared/node-entry.js:20969:13
+    at Object.logger [as onLog] (file:///C:/Projects/Federated-Decentralized-Social-Networking-Platform/frontend/node_modules/rollup/dist/es/shared/node-entry.js:22942:9)
+    at ModuleLoader.handleInvalidResolvedId (file:///C:/Projects/Federated-Decentralized-Social-Networking-Platform/frontend/node_modules/rollup/dist/es/shared/node-entry.js:21686:26)
+    at file:///C:/Projects/Federated-Decentralized-Social-Networking-Platform/frontend/node_modules/rollup/dist/es/shared/node-entry.js:21644:26[39m
