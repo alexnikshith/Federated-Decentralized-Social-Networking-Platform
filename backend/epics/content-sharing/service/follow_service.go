@@ -245,7 +245,14 @@ func (s *FollowService) Follow(ctx context.Context, followerID, followingID prim
 	if s.federationService != nil {
 		remoteUser, remoteErr := s.remoteUserRepo.GetRemoteUserByID(ctx, followingID)
 		if remoteErr == nil {
-			// Federated Follow
+			// If it's an ActivityPub user (has an inbox), we must use the signed AP flow.
+			// The internal federation protocol (FollowRemoteUser) won't work for external Mastodon instances.
+			if remoteUser.InboxURL != "" {
+				handle := "@" + remoteUser.Username + "@" + remoteUser.Instance
+				log.Printf("[Follow] Redirecting ID-based follow to Handle-based AP follow for %s", handle)
+				return s.FollowByHandle(ctx, followerID, handle)
+			}
+			// Federated Follow (Internal protocol fallback)
 			return s.federationService.FollowRemoteUser(ctx, followerID, remoteUser)
 		}
 	}
