@@ -1,0 +1,46 @@
+﻿Analyzing myapp...                                              
+
+warning - Unused import: '../core/theme/app_colors.dart' - lib\app\main_shell.dart:4:8 - unused_import
+warning - The value of the local variable 'unreadNotifications' isn't used - lib\app\main_shell.dart:23:11 - unused_local_variable
+   info - Don't use 'BuildContext's across async gaps - lib\app\router.dart:195:17 - use_build_context_synchronously
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\federation\presentation\screens\federation_screen.dart:105:40 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\federation\presentation\screens\federation_screen.dart:268:55 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\federation\presentation\screens\federation_screen.dart:270:55 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\federation\presentation\screens\federation_screen.dart:271:53 - deprecated_member_use
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\feed\data\datasources\feed_remote_datasource.dart:63:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\feed\data\datasources\feed_remote_datasource.dart:64:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\feed\data\datasources\feed_remote_datasource.dart:87:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\feed\data\datasources\feed_remote_datasource.dart:88:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\feed\data\datasources\feed_remote_datasource.dart:126:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\feed\data\datasources\feed_remote_datasource.dart:127:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\feed\data\datasources\feed_remote_datasource.dart:150:34 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\feed\data\datasources\feed_remote_datasource.dart:178:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\feed\data\datasources\feed_remote_datasource.dart:179:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\feed\data\datasources\feed_remote_datasource.dart:221:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\feed\data\datasources\feed_remote_datasource.dart:222:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\feed\data\datasources\feed_remote_datasource.dart:244:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\feed\data\datasources\feed_remote_datasource.dart:245:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\feed\data\datasources\feed_remote_datasource.dart:274:37 - use_null_aware_elements
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\feed\presentation\widgets\post_card.dart:69:50 - deprecated_member_use
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\messaging\data\datasources\messaging_remote_datasource.dart:56:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\messaging\data\datasources\messaging_remote_datasource.dart:57:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\messaging\data\datasources\messaging_remote_datasource.dart:85:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\messaging\data\datasources\messaging_remote_datasource.dart:86:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\messaging\data\datasources\messaging_remote_datasource.dart:87:9 - use_null_aware_elements
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\messaging\presentation\screens\chat_screen.dart:322:40 - deprecated_member_use
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\notifications\presentation\providers\notifications_provider.dart:22:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\notifications\presentation\providers\notifications_provider.dart:23:9 - use_null_aware_elements
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\notifications\presentation\screens\notifications_screen.dart:168:61 - deprecated_member_use
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\profile\data\datasources\profile_remote_datasource.dart:57:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\profile\data\datasources\profile_remote_datasource.dart:58:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\profile\data\datasources\profile_remote_datasource.dart:59:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\profile\data\datasources\profile_remote_datasource.dart:60:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\profile\data\datasources\profile_remote_datasource.dart:61:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\profile\data\datasources\profile_remote_datasource.dart:86:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\profile\data\datasources\profile_remote_datasource.dart:87:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\profile\data\datasources\profile_remote_datasource.dart:109:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\profile\data\datasources\profile_remote_datasource.dart:110:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\profile\data\datasources\profile_remote_datasource.dart:134:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\profile\data\datasources\profile_remote_datasource.dart:135:9 - use_null_aware_elements
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\profile\presentation\screens\profile_screen.dart:147:51 - deprecated_member_use
+
