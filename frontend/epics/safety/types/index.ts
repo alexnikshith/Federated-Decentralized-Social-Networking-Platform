@@ -11,10 +11,13 @@ export interface CommunityGuideline {
 export interface ModerationLog {
     id: string;
     target_id: string;
-    target_type: 'post' | 'username' | 'display_name' | 'bio';
+    target_type: 'post' | 'comment' | 'username' | 'display_name' | 'bio';
     content: string;
     is_violation: boolean;
     reason: string;
+    score?: number;
+    breached_rules?: string[];
+    bad_words_found?: string[];
     action_taken: string;
     created_at: string;
 }

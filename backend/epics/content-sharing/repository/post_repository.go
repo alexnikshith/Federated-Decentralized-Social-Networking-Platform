@@ -690,6 +690,18 @@ func (r *PostRepository) CheckIfSaved(ctx context.Context, postID, userID primit
 	return count > 0, nil
 }
 
+// CheckIfReported checks if a user has already reported a post
+func (r *PostRepository) CheckIfReported(ctx context.Context, postID, userID primitive.ObjectID) (bool, error) {
+	count, err := r.reports.CountDocuments(ctx, bson.M{
+		"post_id":     postID,
+		"reporter_id": userID,
+	})
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
 // CreateReport submits a report for a post
 func (r *PostRepository) CreateReport(ctx context.Context, report *models.ReportedPost) error {
 	report.CreatedAt = time.Now()

@@ -46,6 +46,10 @@ func RegisterIdentityRoutes(router *mux.Router, enforcement *safetyService.Enfor
 	router.Handle("/api/profile/me/communities/{id}", middleware.AuthMiddleware(http.HandlerFunc(profileHandler.LeaveCommunity))).Methods("DELETE", "OPTIONS")
 	router.Handle("/api/profile/me/activity", middleware.AuthMiddleware(http.HandlerFunc(profileHandler.GetActivity))).Methods("GET", "OPTIONS")
 
+	// Federation preference toggle (US3.8)
+	router.Handle("/api/profile/me/federation", middleware.AuthMiddleware(http.HandlerFunc(profileHandler.GetFederationPreference))).Methods("GET", "OPTIONS")
+	router.Handle("/api/profile/me/federation", middleware.AuthMiddleware(http.HandlerFunc(profileHandler.UpdateFederationPreference))).Methods("PATCH", "OPTIONS")
+
 	// Public profile view (Optional auth to see follow status)
 	// If authenticated, the response includes "is_following" status and potentially more details
 	router.Handle("/api/profile/{id}", middleware.OptionalAuth(http.HandlerFunc(profileHandler.GetProfile))).Methods("GET", "OPTIONS")
