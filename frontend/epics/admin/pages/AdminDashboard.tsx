@@ -8,14 +8,16 @@ import TrafficChart from '../components/TrafficChart';
 import { DailyTraffic } from '../types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { RefreshCcw, ShieldAlert, LayoutDashboard, Users, FileText, Flag } from 'lucide-react';
+import { RefreshCcw, ShieldAlert, LayoutDashboard, Users, FileText, Flag, ScrollText } from 'lucide-react';
 import { toast } from 'sonner';
 import { useReportsApi } from '../../reports/api/reportsApi';
+import GuidelineManagement from '../components/GuidelineManagement';
+import ModerationLogs from '../components/ModerationLogs';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useQueryClient } from '@tanstack/react-query';
-
 import { useSearchParams } from 'react-router-dom';
+import { AdminSkeleton } from '@/components/skeletons/page-skeletons';
 
 // AdminDashboard provides a comprehensive view for platform administrators
 // Features: User Management, Content Moderation (Reports), Statistics
@@ -103,11 +105,23 @@ const AdminDashboard: React.FC = () => {
         }
     };
 
-    // Report Resolution Handler (Just dismiss report)
+    // User Report Resolution Handler (Just dismiss report)
+    const handleResolveUserReport = async (reportId: string) => {
+        try {
+            await adminApi.resolveUserReport(reportId);
+            toast.success('User report dismissed');
+            fetchData();
+            queryClient.invalidateQueries({ queryKey: ['admin-reports'] });
+        } catch (error) {
+            toast.error('Failed to resolve report');
+        }
+    };
+
+    // General Report Resolution Handler (Just dismiss report)
     const handleResolveReport = async (reportId: string) => {
         try {
             await adminApi.resolveReport(reportId);
-            toast.success('Report resolved');
+            toast.success('Report dismissed');
             fetchData();
         } catch (error) {
             toast.error('Failed to resolve report');
@@ -126,6 +140,10 @@ const AdminDashboard: React.FC = () => {
         }
     };
 
+    if (loading && !stats) {
+        return <AdminSkeleton />;
+    }
+
     return (
         <div className="container mx-auto p-6 space-y-8 min-h-screen bg-transparent">
             {/* Header Section */}
@@ -135,16 +153,19 @@ const AdminDashboard: React.FC = () => {
                         {activeTab === 'overview' && <LayoutDashboard className="h-6 w-6 text-primary" />}
                         {activeTab === 'users' && <Users className="h-6 w-6 text-primary" />}
                         {activeTab === 'moderation' && <ShieldAlert className="h-6 w-6 text-primary" />}
+                        {activeTab === 'guidelines' && <ScrollText className="h-6 w-6 text-primary" />}
                         <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-orange-500 bg-clip-text text-transparent">
                             {activeTab === 'overview' && 'Stats Overview'}
                             {activeTab === 'users' && 'User Management'}
                             {activeTab === 'moderation' && 'Moderation'}
+                            {activeTab === 'guidelines' && 'Community Guidelines'}
                         </h1>
                     </div>
                     <p className="text-muted-foreground flex items-center gap-2">
                         {activeTab === 'overview' && 'Monitor platform growth and daily traffic metrics.'}
                         {activeTab === 'users' && 'Manage platform users, roles, and permissions.'}
                         {activeTab === 'moderation' && 'Review reported content and handle policy violations.'}
+                        {activeTab === 'guidelines' && 'Manage AI moderation rules and run retroactive scans.'}
                     </p>
                 </div>
                 <Button onClick={fetchData} variant="outline" className="gap-2 backdrop-blur-sm bg-background/50">
@@ -187,6 +208,14 @@ const AdminDashboard: React.FC = () => {
                                 <TabsTrigger value="users" className="gap-2">
                                     <Flag className="h-4 w-4" />
                                     Users
+                                </TabsTrigger>
+                                <TabsTrigger value="guidelines" className="gap-2">
+                                    <ScrollText className="h-4 w-4" />
+                                    Guidelines
+                                </TabsTrigger>
+                                <TabsTrigger value="logs" className="gap-2">
+                                    <ShieldAlert className="h-4 w-4" />
+                                    AI Logs
                                 </TabsTrigger>
                             </TabsList>
 
@@ -270,38 +299,69 @@ const AdminDashboard: React.FC = () => {
                                                         {format(new Date(report.created_at), 'PPP p')}
                                                     </p>
                                                 </div>
-                                                <div className="flex gap-2">
+                                                <div className="flex flex-wrap gap-2">
                                                     <Button
                                                         size="sm"
                                                         variant="outline"
-                                                        onClick={() => window.open(`/profile/${report.user_details?.username}`, '_blank')}
+                                                        onClick={() => {
+                                                            const username = report.user_details?.username;
+                                                            if (username) {
+                                                                window.open(`/profile/${username}`, '_blank');
+                                                            } else {
+                                                                toast.error('User profile no longer exists');
+                                                            }
+                                                        }}
+                                                        disabled={!report.user_details}
                                                     >
                                                         View Profile
                                                     </Button>
 
-                                                    {report.user_details?.is_active ? (
-                                                        <Button
-                                                            size="sm"
-                                                            variant="destructive"
-                                                            onClick={() => initiateDeactivation(report.reported_id)}
-                                                        >
-                                                            Deactivate User
-                                                        </Button>
+                                                    {report.user_details ? (
+                                                        <>
+                                                            {report.user_details.is_active ? (
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="destructive"
+                                                                    onClick={() => initiateDeactivation(report.reported_id)}
+                                                                >
+                                                                    Deactivate User
+                                                                </Button>
+                                                            ) : (
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="default"
+                                                                    className="bg-green-600 hover:bg-green-700 text-white"
+                                                                    onClick={() => handleToggleStatus(report.reported_id, false)}
+                                                                >
+                                                                    Activate User
+                                                                </Button>
+                                                            )}
+                                                        </>
                                                     ) : (
-                                                        <Button
-                                                            size="sm"
-                                                            variant="default" // or a 'success' variant if available, default is primary
-                                                            className="bg-green-600 hover:bg-green-700"
-                                                            onClick={() => handleToggleStatus(report.reported_id, false)} // status is false (inactive), so !false = true (active)
-                                                        >
-                                                            Activate User
-                                                        </Button>
+                                                        <span className="text-xs text-muted-foreground self-center px-2">Account Deleted</span>
                                                     )}
+
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        className="text-muted-foreground hover:text-foreground"
+                                                        onClick={() => handleResolveUserReport(report.id)}
+                                                    >
+                                                        Dismiss
+                                                    </Button>
                                                 </div>
                                             </div>
                                         ))
                                     )}
                                 </div>
+                            </TabsContent>
+
+                            <TabsContent value="guidelines" className="mt-0">
+                                <GuidelineManagement />
+                            </TabsContent>
+
+                            <TabsContent value="logs" className="mt-0">
+                                <ModerationLogs />
                             </TabsContent>
                         </Tabs>
                     </TabsContent>

@@ -8,6 +8,7 @@ import { NotificationList } from '../components/NotificationList';
 import { StoriesRow } from '../components/StoriesRow';
 import { RightSidebar } from '../components/RightSidebar';
 import { Button } from '@/components/ui/button';
+import { PostCardSkeleton } from '@/components/skeletons/page-skeletons';
 import {
     Rss,
     Bell,
@@ -16,9 +17,10 @@ import {
     Search,
     X
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TransitionState } from '../../../epics/identity/store/authStore';
+import { DashboardSkeleton } from '@/components/skeletons/page-skeletons';
+import { cn } from '@/lib/utils';
 import './Dashboard.css';
 
 export const DashboardPage: React.FC = () => {
@@ -57,7 +59,7 @@ export const DashboardPage: React.FC = () => {
 
     return (
         <div className="dashboard-container">
-            <main className="dashboard-content">
+            <main className="dashboard-content pt-0">
 
 
                 <div className="grid grid-cols-1 xl:grid-cols-[1fr_300px] gap-6 max-w-7xl mx-auto">
@@ -102,9 +104,11 @@ export const DashboardPage: React.FC = () => {
                             className="space-y-4"
                         >
                             {loading && (!posts || posts.length === 0) && (
-                                <div className="feed-loading">
-                                    <div className="animate-pulse">Loading your feed...</div>
-                                </div>
+                                <>
+                                    <PostCardSkeleton />
+                                    <PostCardSkeleton />
+                                    <PostCardSkeleton />
+                                </>
                             )}
 
                             {error && (

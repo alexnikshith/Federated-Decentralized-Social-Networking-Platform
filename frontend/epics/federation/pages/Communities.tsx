@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { api } from "../../identity/api/client";
 import { useAuthStore } from "../../identity/store/authStore";
+import { CommunitiesSkeleton } from "@/components/skeletons/page-skeletons";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -168,13 +169,13 @@ const Communities = () => {
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen">
-      <main className="pb-16">
-        <div className="container mx-auto px-4 lg:px-8 max-w-3xl">
+      <main className="pb-16 pt-8">
+        <div className="px-4 lg:px-8 w-full max-w-6xl">
 
           {/* Header */}
           <div className="mb-8">
             <h1 className="font-display text-4xl md:text-5xl font-bold mb-3">
-              Explore <span className="text-gradient-gold">Federation</span>
+              Connect across the <span className="text-gradient-gold">Federation</span>
             </h1>
             <p className="text-muted-foreground text-lg">
               Discover people and communities across the federated social network.
@@ -211,25 +212,7 @@ const Communities = () => {
             )}
           </div>
 
-          {/* Tabs */}
-          <div className="flex gap-1 p-1 bg-secondary rounded-xl mb-8 w-fit">
-            {TABS.map(t => (
-              <button
-                key={t.id}
-                id={`federation-tab-${t.id}`}
-                onClick={() => handleTabChange(t.id)}
-                className={cn(
-                  "flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all",
-                  activeTab === t.id
-                    ? "bg-card text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <t.icon className="w-4 h-4" />
-                {t.label}
-              </button>
-            ))}
-          </div>
+
 
           {/* Error */}
           {error && (
@@ -252,11 +235,8 @@ const Communities = () => {
                     <p className="text-sm">Find local users or discover people across the Mastodon network</p>
                   </div>
                 </div>
-              ) : loading ? (
-                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3">
-                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                  <p className="text-sm">Searching the federation…</p>
-                </div>
+              ) : loading && people.length === 0 ? (
+                <CommunitiesSkeleton />
               ) : people.length === 0 ? (
                 <div className="text-center py-16 text-muted-foreground">
                   <Users className="w-10 h-10 mx-auto mb-3 opacity-40" />
@@ -269,10 +249,15 @@ const Communities = () => {
                 <div className="space-y-3">
                   {people.map((pu, i) => {
                     const displayName = pu.display_name || pu.displayName || pu.username;
-                    const handle = pu.handle ||
+                    const rawHandle = pu.handle ||
                       (pu.username && pu.domain ? `@${pu.username}@${pu.domain}` :
                         pu.username && pu.instance ? `@${pu.username}@${pu.instance}` :
                           `@${pu.username}`);
+
+                    const handle = rawHandle
+                      .replace(/@localhost(:8080)?$/i, '@nexus.social')
+                      .replace(/@(https?:\/\/)?federated-decentralized-social\.onrender\.com/i, '@nexus.social');
+
                     const key = pu.actor_id || pu.handle || `${i}-${pu.username}`;
                     const isMe = user?.username === pu.username && !pu.domain;
                     const alreadyFollowing = isFollowing(pu);
@@ -300,7 +285,12 @@ const Communities = () => {
 
                         {/* Info */}
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold truncate">{displayName}</p>
+                          <p
+                            className="font-semibold truncate cursor-pointer hover:text-cyan-500 transition-colors"
+                            onClick={() => window.location.href = `/profile/${pu.actor_id || (pu as any).id || pu.username}`}
+                          >
+                            {displayName}
+                          </p>
                           <p className="text-sm text-muted-foreground truncate">{handle}</p>
                           {pu.bio && (
                             <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{pu.bio}</p>
@@ -334,62 +324,7 @@ const Communities = () => {
             </div>
           )}
 
-          {/* ── Communities results ───────────────────────────────── */}
-          {activeTab === "communities" && (
-            <div>
-              {loading ? (
-                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3">
-                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                  <p className="text-sm">Loading communities…</p>
-                </div>
-              ) : instances.length === 0 ? (
-                <div className="text-center py-16 text-muted-foreground">
-                  <Hash className="w-10 h-10 mx-auto mb-3 opacity-40" />
-                  <p className="font-medium text-foreground">No communities found</p>
-                  <p className="text-sm mt-1">Try a different search term</p>
-                </div>
-              ) : (
-                <div className="grid sm:grid-cols-2 gap-4">
-                  {instances.map((c, i) => {
-                    const name = c.name || c.instance_id || c.url || `Community ${i + 1}`;
-                    const domain = c.url || c.instance_id || "";
-                    const key = c.id || c.instance_id || `inst-${i}`;
 
-                    return (
-                      <div key={key} className="glass-card rounded-xl p-5 flex flex-col gap-3">
-                        {/* Icon + Name */}
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-indigo-500/15 flex items-center justify-center shrink-0">
-                            <Globe className="w-5 h-5 text-indigo-400" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-semibold truncate">{name}</p>
-                            <p className="text-xs text-muted-foreground truncate">{domain.replace(/^https?:\/\//, "")}</p>
-                          </div>
-                          {c.is_trusted && (
-                            <span className="ml-auto px-2 py-0.5 text-xs font-medium rounded-full text-emerald-400 bg-emerald-400/15 shrink-0">
-                              Trusted
-                            </span>
-                          )}
-                        </div>
-
-                        {c.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-2">{c.description}</p>
-                        )}
-
-                        {c.user_count != null && (
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <Users className="w-3.5 h-3.5" />
-                            {c.user_count.toLocaleString()} members
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
 
         </div>
       </main>

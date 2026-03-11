@@ -2,6 +2,7 @@ package routes
 
 import (
 	"federated-social/backend/epics/identity/handlers"
+	safetyService "federated-social/backend/epics/safety/service"
 	"federated-social/backend/middleware"
 	"net/http"
 
@@ -11,9 +12,9 @@ import (
 // RegisterIdentityRoutes registers all identity-related routes
 // It defines endpoints for authentication (signup, login, OTP) and profile management.
 // Routes are categorized into Public, Protected (requiring Auth Middleware), and Optional Auth.
-func RegisterIdentityRoutes(router *mux.Router) {
+func RegisterIdentityRoutes(router *mux.Router, enforcement *safetyService.EnforcementService) {
 	authHandler := handlers.NewAuthHandler()
-	profileHandler := handlers.NewProfileHandler()
+	profileHandler := handlers.NewProfileHandler(enforcement)
 	avatarHandler := handlers.NewAvatarHandler()
 
 	// Public routes (no authentication required)
@@ -44,6 +45,10 @@ func RegisterIdentityRoutes(router *mux.Router) {
 	router.Handle("/api/profile/me/communities", middleware.AuthMiddleware(http.HandlerFunc(profileHandler.AddJoinedCommunity))).Methods("POST", "OPTIONS")
 	router.Handle("/api/profile/me/communities/{id}", middleware.AuthMiddleware(http.HandlerFunc(profileHandler.LeaveCommunity))).Methods("DELETE", "OPTIONS")
 	router.Handle("/api/profile/me/activity", middleware.AuthMiddleware(http.HandlerFunc(profileHandler.GetActivity))).Methods("GET", "OPTIONS")
+
+	// Federation preference toggle (US3.8)
+	router.Handle("/api/profile/me/federation", middleware.AuthMiddleware(http.HandlerFunc(profileHandler.GetFederationPreference))).Methods("GET", "OPTIONS")
+	router.Handle("/api/profile/me/federation", middleware.AuthMiddleware(http.HandlerFunc(profileHandler.UpdateFederationPreference))).Methods("PATCH", "OPTIONS")
 
 	// Public profile view (Optional auth to see follow status)
 	// If authenticated, the response includes "is_following" status and potentially more details

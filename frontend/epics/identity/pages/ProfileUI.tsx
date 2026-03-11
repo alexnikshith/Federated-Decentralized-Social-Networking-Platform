@@ -36,6 +36,8 @@ import {
   unfollowUser,
   followRemoteUser,
   unfollowRemoteUser,
+  followMastodonUser,
+  unfollowMastodonUser,
   getFollowers,
   getFollowing,
   getSavedPosts
@@ -52,6 +54,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ProfileSkeleton } from "@/components/skeletons/page-skeletons";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -136,6 +139,7 @@ const ProfileUI = () => {
 
   // Relationship State
   const [isFollowing, setIsFollowing] = useState(false);
+  const [isRequested, setIsRequested] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
 
   // Data State
@@ -245,6 +249,7 @@ const ProfileUI = () => {
 
       setProfileUser(userToDisplay);
       setIsFollowing(!!userToDisplay.is_following);
+      setIsRequested(!!userToDisplay.is_follow_requested);
 
       // Fetch posts for this user from the CORRECT community
       const postsUrl = foundUrl || ""; // Empty means local base
@@ -609,11 +614,7 @@ const ProfileUI = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
+    return <ProfileSkeleton />;
   }
 
   if (error || !profileUser) {
@@ -726,7 +727,7 @@ const ProfileUI = () => {
                       </Button>
                     ) : (
                       <Button
-                        variant={isFollowing ? "outline" : "hero"}
+                        variant={isFollowing || isRequested ? "outline" : "hero"}
                         className="rounded-full px-8 h-11 shadow-lg shadow-primary/20"
                         onClick={async () => {
                           if (!profileUser) return;
@@ -739,10 +740,14 @@ const ProfileUI = () => {
                             const currentInstanceDomain = currentInstanceUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
                             const profileInstance = (profileUser.instance || targetCommunityUrl || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
 
-                            // Check for local aliases (Docker/Dev environment)
+                            // Check for local aliases (Docker/Dev environment) and production identical domains
+                            const isCommunity1 = currentInstanceDomain.includes('localhost:8080') || currentInstanceDomain.includes('federated-decentralized-social.onrender.com');
+                            const isCommunity2 = currentInstanceDomain.includes('localhost:8081') || currentInstanceDomain.includes('community-2');
+
                             const isLocalAlias = (
-                              (currentInstanceDomain.includes('localhost:8080') && (profileInstance === 'default-instance' || profileInstance === 'default')) ||
-                              (currentInstanceDomain.includes('localhost:8081') && profileInstance === 'community-2')
+                              (isCommunity1 && (profileInstance === 'localhost:8080' || profileInstance === 'default-instance' || profileInstance === 'default' || profileInstance === '')) ||
+                              (isCommunity2 && (profileInstance === 'localhost:8081' || profileInstance === 'community-2')) ||
+                              (profileInstance === currentInstanceDomain)
                             );
 
                             // It is remote if:
@@ -754,42 +759,91 @@ const ProfileUI = () => {
                               !isLocalAlias
                             );
 
-                            if (isFollowing) {
-                              if (isRemoteUser) {
+                            const isMastodonNode = isRemoteUser && !(
+                              profileInstance.includes('localhost') ||
+                              profileInstance.includes('community-2') ||
+                              profileInstance.includes('federated-decentralized-social.onrender.com') ||
+                              profileInstance === '' ||
+                              profileInstance === 'default'
+                            );
+
+                            if (isFollowing || isRequested) {
+                              if (isMastodonNode) {
+                                const handle = `@${profileUser.username}@${profileInstance || currentInstanceDomain}`;
+                                await unfollowMastodonUser(handle);
+                              } else if (isRemoteUser) {
                                 const handle = `${profileUser.username}@${profileInstance || currentInstanceDomain}`;
                                 await unfollowRemoteUser(handle);
                               } else {
                                 await unfollowUser(profileUser.id);
                               }
                               setIsFollowing(false);
-                              setProfileUser(prev => prev ? { ...prev, followers_count: (prev.followers_count || 0) - 1 } : null);
-                              setTimeout(() => loadProfileData(false), 500);
+                              setIsFollowing(false);
+                              setIsRequested(false);
+                              setProfileUser(prev => prev ? { ...prev, followers_count: Math.max(0, (prev.followers_count || 0) - 1) } : null);
                             } else {
-                              if (isRemoteUser) {
+                              let res: any;
+                              if (isMastodonNode) {
+                                const handle = `@${profileUser.username}@${profileInstance || currentInstanceDomain}`;
+                                res = await followMastodonUser(handle);
+                              } else if (isRemoteUser) {
                                 const handle = `${profileUser.username}@${profileInstance || currentInstanceDomain}`;
-                                await followRemoteUser(handle);
+                                res = await followRemoteUser(handle);
                               } else {
-                                await followUser(profileUser.id);
+                                // This might return a message like "Follow request sent"
+                                const response = await api.post(`/api/users/${profileUser.id}/follow`);
+                                res = response.data;
                               }
-                              setIsFollowing(true);
-                              setProfileUser(prev => prev ? { ...prev, followers_count: (prev.followers_count || 0) + 1 } : null);
-                              setTimeout(() => loadProfileData(false), 500);
+
+                              if (res?.message?.toLowerCase().includes("request sent") || res?.message?.toLowerCase().includes("requested")) {
+                                setIsRequested(true);
+                                toast({
+                                  title: "Request Sent",
+                                  description: "Follow request sent. Waiting for approval.",
+                                });
+                              } else {
+                                setIsFollowing(true);
+                                setIsRequested(false);
+                                setProfileUser(prev => prev ? { ...prev, followers_count: (prev.followers_count || 0) + 1 } : null);
+                                toast({
+                                  title: "Success",
+                                  description: `You are now following ${profileUser.display_name || profileUser.username}`,
+                                });
+                              }
                             }
-                          } catch (err) {
+                            // Soft reload data after a delay — but NOT for Mastodon users,
+                            // because their followers_count in our DB isn't live-updated by the AP handshake,
+                            // so reloading would reset the optimistic +1 we just showed.
+                            if (!isMastodonNode) {
+                              setTimeout(() => loadProfileData(false), 800);
+                            }
+                          } catch (err: any) {
                             console.error("Follow/unfollow failed:", err);
-                            toast({
-                              title: "Error",
-                              description: "Action failed. Please try again.",
-                              variant: "destructive"
-                            });
+                            const errorMsg = err.response?.data?.message || err.message || "Action failed. Please try again.";
+
+                            if (errorMsg.toLowerCase().includes("request already sent")) {
+                              setIsRequested(true);
+                              toast({
+                                title: "Request Pending",
+                                description: "Follow request already sent. Waiting for approval.",
+                              });
+                            } else {
+                              toast({
+                                title: "Error",
+                                description: errorMsg,
+                                variant: "destructive"
+                              });
+                            }
                           }
                         }}
                       >
                         {isFollowing ? "Following" : (
-                          <span className="flex items-center gap-2">
-                            <UserPlus className="w-4 h-4" />
-                            Follow
-                          </span>
+                          isRequested ? "Requested" : (
+                            <span className="flex items-center gap-2">
+                              <UserPlus className="w-4 h-4" />
+                              Follow
+                            </span>
+                          )
                         )}
                       </Button>
                     )}

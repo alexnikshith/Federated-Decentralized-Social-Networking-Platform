@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"federated-social/backend/epics/identity/dto"
 	"federated-social/backend/epics/identity/service"
+	safetyService "federated-social/backend/epics/safety/service"
 	"federated-social/backend/middleware"
 	"net/http"
 	"strconv"
@@ -16,9 +17,9 @@ type ProfileHandler struct {
 	profileService *service.ProfileService
 }
 
-func NewProfileHandler() *ProfileHandler {
+func NewProfileHandler(enforcement *safetyService.EnforcementService) *ProfileHandler {
 	return &ProfileHandler{
-		profileService: service.NewProfileService(),
+		profileService: service.NewProfileService(enforcement),
 	}
 }
 
@@ -196,4 +197,55 @@ func (h *ProfileHandler) LeaveCommunity(w http.ResponseWriter, r *http.Request) 
 	}
 
 	respondSuccess(w, "Community removed from joined list", nil, http.StatusOK)
+}
+
+// GetFederationPreference returns the current federation toggle value (US3.8).
+// GET /api/profile/me/federation
+func (h *ProfileHandler) GetFederationPreference(w http.ResponseWriter, r *http.Request) {
+	userIDStr := r.Context().Value(middleware.UserIDKey).(string)
+	userID, err := primitive.ObjectIDFromHex(userIDStr)
+	if err != nil {
+		respondError(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	privateProfile, err := h.profileService.GetPrivateProfile(r.Context(), userID)
+	if err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondJSON(w, map[string]interface{}{
+		"federation_enabled": privateProfile.FederationEnabled,
+	}, http.StatusOK)
+}
+
+// UpdateFederationPreference toggles whether the user's posts are shared to the
+// federated network (US3.8).
+// PATCH /api/profile/me/federation
+// Body: { "federation_enabled": true }
+func (h *ProfileHandler) UpdateFederationPreference(w http.ResponseWriter, r *http.Request) {
+	userIDStr := r.Context().Value(middleware.UserIDKey).(string)
+	userID, err := primitive.ObjectIDFromHex(userIDStr)
+	if err != nil {
+		respondError(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		FederationEnabled bool `json:"federation_enabled"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.profileService.UpdateFederationPreference(r.Context(), userID, req.FederationEnabled); err != nil {
+		respondError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondSuccess(w, "Federation preference updated", map[string]bool{
+		"federation_enabled": req.FederationEnabled,
+	}, http.StatusOK)
 }

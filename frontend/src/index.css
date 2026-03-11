@@ -12,7 +12,7 @@
 @layer base {
   :root {
     /* Light Theme (Nexus Gold/Slate) */
-    --background: 45 30% 98%;
+    --background: 40 100% 97%;
     --foreground: 220 20% 7%;
 
     --card: 0 0% 100%;
@@ -291,4 +291,99 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* ── Mastodon / ActivityPub post content ────────────────────────────────────
+   Styles the sanitized HTML that arrives from remote Mastodon/AP instances.
+   Scoped to .post-content so they never leak into the rest of the UI.
+   ─────────────────────────────────────────────────────────────────────────── */
+.post-content {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Paragraphs from Mastodon */
+.post-content p {
+  margin: 0 0 0.65em;
+  line-height: 1.65;
+}
+
+.post-content p:last-child {
+  margin-bottom: 0;
+}
+
+/* All links: mentions, hashtags, plain URLs */
+.post-content a {
+  color: hsl(var(--accent));
+  text-decoration: none;
+  font-weight: 500;
+  border-radius: 3px;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.post-content a:hover {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Mastodon wraps mentions in <span class="h-card"> and hashtags in
+   <span class="tag"> – give them a subtle pill background */
+.post-content .h-card,
+.post-content .mention {
+  display: inline;
+}
+
+.post-content a.mention,
+.post-content a[class*="mention"],
+.post-content .h-card a {
+  background-color: hsl(var(--primary) / 0.08);
+  padding: 0.05em 0.3em;
+  border-radius: 4px;
+}
+
+.post-content a.mention:hover,
+.post-content .h-card a:hover {
+  background-color: hsl(var(--primary) / 0.15);
+}
+
+/* Hashtag links */
+.post-content a[href*="/tags/"],
+.post-content a.hashtag {
+  background-color: hsl(var(--accent) / 0.08);
+  padding: 0.05em 0.3em;
+  border-radius: 4px;
+}
+
+.post-content a[href*="/tags/"]:hover,
+.post-content a.hashtag:hover {
+  background-color: hsl(var(--accent) / 0.15);
+}
+
+/* Inline code / pre */
+.post-content code {
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+  font-size: 0.88em;
+  background-color: hsl(var(--muted));
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+}
+
+.post-content pre {
+  background-color: hsl(var(--muted));
+  padding: 0.75em 1em;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+
+/* Lists */
+.post-content ul,
+.post-content ol {
+  padding-left: 1.4em;
+  margin: 0.4em 0;
+}
+
+.post-content li {
+  margin-bottom: 0.25em;
 }

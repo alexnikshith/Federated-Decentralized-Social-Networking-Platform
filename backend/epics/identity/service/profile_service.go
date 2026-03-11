@@ -11,6 +11,8 @@ import (
 	"federated-social/backend/epics/identity/dto"
 	"federated-social/backend/epics/identity/models"
 	"federated-social/backend/epics/identity/repository"
+	safetyService "federated-social/backend/epics/safety/service"
+	"fmt"
 	"log"
 	"strings"
 
@@ -19,28 +21,30 @@ import (
 )
 
 type ProfileService struct {
-	userRepo         UserRepository
-	activityRepo     ActivityRepository
-	sessionRepo      SessionRepository
-	verificationRepo VerificationRepository
-	followRepo       FollowRepository
-	followService    FollowService
-	postRepo         PostRepository
-	notificationRepo NotificationRepository
-	remoteUserRepo   RemoteUserRepository
+	userRepo           UserRepository
+	activityRepo       ActivityRepository
+	sessionRepo        SessionRepository
+	verificationRepo   VerificationRepository
+	followRepo         FollowRepository
+	followService      FollowService
+	postRepo           PostRepository
+	notificationRepo   NotificationRepository
+	remoteUserRepo     RemoteUserRepository
+	enforcementService *safetyService.EnforcementService
 }
 
-func NewProfileService() *ProfileService {
+func NewProfileService(enforcement *safetyService.EnforcementService) *ProfileService {
 	return &ProfileService{
-		userRepo:         repository.NewUserRepository(),
-		activityRepo:     repository.NewActivityRepository(),
-		sessionRepo:      repository.NewSessionRepository(),
-		verificationRepo: repository.NewVerificationRepository(),
-		followRepo:       followRepo.NewFollowRepository(),
-		followService:    followService.NewFollowService(),
-		postRepo:         followRepo.NewPostRepository(),
-		notificationRepo: followRepo.NewNotificationRepository(),
-		remoteUserRepo:   federationRepo.NewRemoteUserRepository(),
+		userRepo:           repository.NewUserRepository(),
+		activityRepo:       repository.NewActivityRepository(),
+		sessionRepo:        repository.NewSessionRepository(),
+		verificationRepo:   repository.NewVerificationRepository(),
+		followRepo:         followRepo.NewFollowRepository(),
+		followService:      followService.NewFollowService(),
+		postRepo:           followRepo.NewPostRepository(),
+		notificationRepo:   followRepo.NewNotificationRepository(),
+		remoteUserRepo:     federationRepo.NewRemoteUserRepository(),
+		enforcementService: enforcement,
 	}
 }
 
@@ -98,6 +102,14 @@ func (s *ProfileService) GetProfile(ctx context.Context, userID primitive.Object
 		// Use FollowService to check both local and remote follows
 		isFollowing, _ := s.followService.IsFollowing(ctx, *requestingUserID, userID)
 		publicUser.IsFollowing = isFollowing
+
+		// Check for pending follow request
+		if fs, ok := s.followService.(interface {
+			HasFollowRequest(context.Context, primitive.ObjectID, primitive.ObjectID) (bool, error)
+		}); ok {
+			isRequested, _ := fs.HasFollowRequest(ctx, *requestingUserID, userID)
+			publicUser.IsFollowRequested = isRequested
+		}
 	}
 
 	// Enforce Profile Visibility Rules:
@@ -130,6 +142,51 @@ func (s *ProfileService) GetProfile(ctx context.Context, userID primitive.Object
 
 // UpdateProfile updates user profile information (US1.3)
 func (s *ProfileService) UpdateProfile(ctx context.Context, userID primitive.ObjectID, req dto.UpdateProfileRequest) (*models.PublicUser, error) {
+
+	// --- Synchronous AI Moderation BEFORE saving ---
+	// Check username, display_name, and bio for guideline violations.
+	// If a violation is found, reject the request immediately — DB is never touched.
+	if s.enforcementService != nil {
+		aiService := s.enforcementService.GetAIService()
+		if aiService != nil {
+			guidelines, err := s.enforcementService.GetActiveGuidelines(ctx)
+			if err != nil {
+				log.Printf("[Profile] Warning: could not fetch guidelines for moderation: %v", err)
+			}
+
+			type fieldCheck struct {
+				label string
+				value *string
+			}
+			fields := []fieldCheck{
+				{"display name", req.DisplayName},
+				{"username", req.Username},
+				{"bio", req.Bio},
+			}
+
+			for _, f := range fields {
+				if f.value == nil || *f.value == "" {
+					continue
+				}
+				result, err := aiService.ModerateContent(ctx, *f.value, guidelines)
+				if err != nil {
+					// AI unavailable — log and allow (fail-open to not block UX)
+					log.Printf("[Profile] AI moderation unavailable for %s, allowing update: %v", f.label, err)
+					continue
+				}
+				if result.IsViolation {
+					reason := result.Reason
+					if len(result.BadWordsFound) > 0 {
+						reason = fmt.Sprintf("offensive words detected: %s", strings.Join(result.BadWordsFound, ", "))
+					}
+					log.Printf("[Profile] Blocked update for user %s: %s violates guidelines. Reason: %s", userID.Hex(), f.label, reason)
+					return nil, fmt.Errorf("your %s violates our community guidelines — %s", f.label, reason)
+				}
+			}
+		}
+	}
+	// --- End moderation check ---
+
 	update := bson.M{}
 
 	if req.Username != nil {
@@ -341,4 +398,27 @@ func (s *ProfileService) logActivity(ctx context.Context, userID primitive.Objec
 		Details: details,
 	}
 	s.activityRepo.LogActivity(ctx, log)
+}
+
+// UpdateFederationPreference sets whether the user's posts are broadcast to the
+// federated network (US3.8). Pass enabled=true to opt-in, false to opt-out.
+func (s *ProfileService) UpdateFederationPreference(ctx context.Context, userID primitive.ObjectID, enabled bool) error {
+	update := bson.M{"federation_enabled": enabled}
+	if err := s.userRepo.UpdateUser(ctx, userID, update); err != nil {
+		return fmt.Errorf("failed to update federation preference: %w", err)
+	}
+	s.logActivity(ctx, userID, "federation_preference_update", fmt.Sprintf("federation_enabled set to %v", enabled))
+	log.Printf("[ProfileService] User %s set federation_enabled=%v", userID.Hex(), enabled)
+	return nil
+}
+
+// GetPrivateProfile returns the full private user record for the authenticated user,
+// including federation preferences.
+func (s *ProfileService) GetPrivateProfile(ctx context.Context, userID primitive.ObjectID) (*models.PrivateUser, error) {
+	user, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	privateUser := user.ToPrivateUser()
+	return &privateUser, nil
 }

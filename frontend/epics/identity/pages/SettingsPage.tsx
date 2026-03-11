@@ -13,12 +13,23 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Loader2, User, Settings, Shield, Bell, Lock, AlertTriangle, Edit, Clock, Upload, Eye, EyeOff, ShieldCheck, Check } from "lucide-react";
+import { Loader2, User, Settings, Shield, Bell, Lock, AlertTriangle, Edit, Clock, Upload, Eye, EyeOff, ShieldCheck, Check, Globe } from "lucide-react";
+import { IconAlertTriangle, IconGavel } from '@tabler/icons-react';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import type { User as UserType, ActivityLog } from "../types";
 import { useToast } from "@/hooks/use-toast";
 import { useSettingsStore } from "../store/settingsStore";
 import { useReportsApi } from "../../reports/api/reportsApi";
+import { SettingsSkeleton } from "@/components/skeletons/page-skeletons";
 
 // SettingsPage manages user account preferences
 // It includes tabs for:
@@ -34,6 +45,10 @@ export const SettingsPage = () => {
     const { toast } = useToast();
     const { timeLimitMinutes, setTimeLimit, dailyUsageMinutes, setDailyUsage } = useSettingsStore();
     const { useActivityReport } = useReportsApi();
+
+    // Moderation alert modal state (shown when profile update is blocked by AI)
+    const [profileModerationOpen, setProfileModerationOpen] = useState(false);
+    const [profileModerationMessage, setProfileModerationMessage] = useState("");
 
     // Fetch today's activity report to sync usage (use local date to match Reports page)
     const getLocalDate = () => {
@@ -85,6 +100,7 @@ export const SettingsPage = () => {
 
     const [passwordLoading, setPasswordLoading] = useState(false);
     const [is2FAEnabled, setIs2FAEnabled] = useState(false);
+    const [federationEnabled, setFederationEnabled] = useState(true); // US3.8 — default true
     const [showOldPassword, setShowOldPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -95,7 +111,7 @@ export const SettingsPage = () => {
         hasUpper: /[A-Z]/.test(passwordData.new_password),
         hasLower: /[a-z]/.test(passwordData.new_password),
         hasNumber: /\d/.test(passwordData.new_password),
-        hasSpecial: /[@$!%*?&]/.test(passwordData.new_password),
+        hasSpecial: /[@$!%*?&#^}{()]/.test(passwordData.new_password),
     };
 
     const isPasswordValid = Object.values(passwordRequirements).every(Boolean);
@@ -115,7 +131,6 @@ export const SettingsPage = () => {
                     ? "Two-factor authentication has been enabled for your account."
                     : "Two-factor authentication has been disabled.",
             });
-            // Update local user state if needed
             if (currentUser) {
                 updateUser({ ...currentUser, is_2fa_enabled: checked } as UserType);
             }
@@ -126,10 +141,45 @@ export const SettingsPage = () => {
                 description: "Failed to update 2FA settings",
                 variant: "destructive",
             });
-            // Revert switch state on error (optional, but good UX)
             setIs2FAEnabled(!checked);
         }
     };
+
+    // US3.8 — load federation preference on mount
+    useEffect(() => {
+        const loadFedPref = async () => {
+            try {
+                const data = await profileApi.getFederationPreference();
+                setFederationEnabled(data.federation_enabled ?? true);
+            } catch (e) {
+                console.error("Failed to load federation preference", e);
+            }
+        };
+        loadFedPref();
+    }, []);
+
+    const handleToggleFederation = async (checked: boolean) => {
+        const prev = federationEnabled;
+        setFederationEnabled(checked); // optimistic update
+        try {
+            await profileApi.updateFederationPreference(checked);
+            toast({
+                title: checked ? "Federation Enabled" : "Federation Disabled",
+                description: checked
+                    ? "Your posts will now be shared to the federated network."
+                    : "Your posts will no longer be shared to other federated instances.",
+            });
+        } catch (error: any) {
+            console.error(error);
+            setFederationEnabled(prev); // revert on error
+            toast({
+                title: "Error",
+                description: "Failed to update federation settings",
+                variant: "destructive",
+            });
+        }
+    };
+
 
     const handleToggleDiscovery = async (checked: boolean) => {
         const message = checked
@@ -328,12 +378,18 @@ export const SettingsPage = () => {
                 setIsEditing(false);
             }
         } catch (error) {
-            console.error(error);
-            toast({
-                title: "Error",
-                description: error.response?.data?.message || "Failed to update profile",
-                variant: "destructive",
-            });
+            const msg: string = error?.response?.data?.message || "Failed to update profile";
+            // If the backend rejected due to community guidelines, show the moderation modal
+            if (msg.toLowerCase().includes("community guidelines") || msg.toLowerCase().includes("offensive words")) {
+                setProfileModerationMessage(msg);
+                setProfileModerationOpen(true);
+            } else {
+                toast({
+                    title: "Error",
+                    description: msg,
+                    variant: "destructive",
+                });
+            }
         } finally {
             setLoading(false);
         }
@@ -432,8 +488,50 @@ export const SettingsPage = () => {
         { id: "privacy", label: "Privacy & Security", icon: Shield, disabled: false },
     ];
 
+    if (!currentUser) return <SettingsSkeleton />;
+
     return (
         <div className="min-h-screen bg-background pb-12">
+
+            {/* ── AI Moderation Block Modal ── */}
+            <AlertDialog open={profileModerationOpen} onOpenChange={setProfileModerationOpen}>
+                <AlertDialogContent className="max-w-md bg-gray-900 border-red-500/30 text-white">
+                    <AlertDialogHeader>
+                        <div className="flex items-center gap-3 mb-2 text-red-400">
+                            <IconGavel size={32} />
+                            <AlertDialogTitle className="text-2xl font-bold">Profile Update Blocked</AlertDialogTitle>
+                        </div>
+                        <AlertDialogDescription className="text-gray-300 text-lg">
+                            Our AI Moderator has detected a violation of our community guidelines in your profile update.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+
+                    <div className="my-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+                        <div className="flex items-start gap-3">
+                            <IconAlertTriangle className="text-red-500 mt-1 shrink-0" size={20} />
+                            <div>
+                                <p className="font-semibold text-red-200">Action: Update Rejected</p>
+                                <p className="text-sm text-red-300 mt-2 font-medium">
+                                    {profileModerationMessage}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-3 text-sm text-gray-400">
+                        <p>Your profile was not changed. Please edit your content to comply with community standards.</p>
+                    </div>
+
+                    <AlertDialogFooter>
+                        <AlertDialogAction
+                            onClick={() => setProfileModerationOpen(false)}
+                            className="bg-red-600 hover:bg-red-700 text-white rounded-lg px-8"
+                        >
+                            I Understand
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
             {/* Header */}
             <div className="h-48 bg-gradient-to-br from-primary/10 via-secondary/10 to-background border-b border-border/50 relative overflow-hidden">
                 <div className="absolute inset-0 grid-pattern opacity-10" />
@@ -968,19 +1066,46 @@ export const SettingsPage = () => {
                                                 <Shield className="w-5 h-5 text-primary" />
                                                 Security Preferences
                                             </h3>
-                                            <div className="p-6 rounded-2xl border border-border/50 bg-secondary/10 flex items-center justify-between">
-                                                <div>
-                                                    <h4 className="font-bold mb-1">Two-Factor Authentication</h4>
-                                                    <p className="text-sm text-muted-foreground">Add an extra layer of security to your account.</p>
+                                            <div className="space-y-4">
+                                                {/* 2FA Toggle */}
+                                                <div className="p-6 rounded-2xl border border-border/50 bg-secondary/10 flex items-center justify-between">
+                                                    <div>
+                                                        <h4 className="font-bold mb-1">Two-Factor Authentication</h4>
+                                                        <p className="text-sm text-muted-foreground">Add an extra layer of security to your account.</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <span className={cn("text-sm font-medium transition-colors", is2FAEnabled ? "text-primary" : "text-muted-foreground")}>
+                                                            {is2FAEnabled ? "Enabled" : "Disabled"}
+                                                        </span>
+                                                        <Switch
+                                                            checked={is2FAEnabled}
+                                                            onCheckedChange={handleToggle2FA}
+                                                        />
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center gap-3">
-                                                    <span className={cn("text-sm font-medium transition-colors", is2FAEnabled ? "text-primary" : "text-muted-foreground")}>
-                                                        {is2FAEnabled ? "Enabled" : "Disabled"}
-                                                    </span>
-                                                    <Switch
-                                                        checked={is2FAEnabled}
-                                                        onCheckedChange={handleToggle2FA}
-                                                    />
+
+                                                {/* Federation Toggle (US3.8) */}
+                                                <div className="p-6 rounded-2xl border border-border/50 bg-secondary/10 flex items-center justify-between">
+                                                    <div>
+                                                        <h4 className="font-bold mb-1 flex items-center gap-2">
+                                                            <Globe className="w-4 h-4 text-primary" />
+                                                            Federation
+                                                        </h4>
+                                                        <p className="text-sm text-muted-foreground">
+                                                            Share your posts with users on other federated instances (e.g. Mastodon).
+                                                            Disable to keep your posts within this platform only.
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex items-center gap-3 ml-6 shrink-0">
+                                                        <span className={cn("text-sm font-medium transition-colors", federationEnabled ? "text-primary" : "text-muted-foreground")}>
+                                                            {federationEnabled ? "Enabled" : "Disabled"}
+                                                        </span>
+                                                        <Switch
+                                                            id="federation-toggle"
+                                                            checked={federationEnabled}
+                                                            onCheckedChange={handleToggleFederation}
+                                                        />
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

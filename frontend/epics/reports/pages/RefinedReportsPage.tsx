@@ -20,6 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ReportsSkeleton } from '@/components/skeletons/page-skeletons';
 
 export const RefinedReportsPage: React.FC = () => {
     const { useActivityReport, useInteractionReport, useInteractionMadeReport } = useReportsApi();
@@ -102,9 +103,9 @@ export const RefinedReportsPage: React.FC = () => {
     const prevEndDateStr = format(previousRange.end, 'yyyy-MM-dd');
 
     // Fetch current period data
-    const { data: report, isLoading, error } = useActivityReport(startDateStr, endDateStr);
-    const { data: interactionReport, isLoading: interactionLoading, error: interactionError } = useInteractionReport(startDateStr, endDateStr);
-    const { data: interactionMadeReport, isLoading: interactionMadeLoading, error: interactionMadeError } = useInteractionMadeReport(startDateStr, endDateStr);
+    const { data: report, isLoading, isFetching, error } = useActivityReport(startDateStr, endDateStr);
+    const { data: interactionReport, isLoading: interactionLoading, isFetching: interactionFetching, error: interactionError } = useInteractionReport(startDateStr, endDateStr);
+    const { data: interactionMadeReport, isLoading: interactionMadeLoading, isFetching: interactionMadeFetching, error: interactionMadeError } = useInteractionMadeReport(startDateStr, endDateStr);
 
     // Fetch previous period data for comparison
     const { data: prevReport } = useActivityReport(prevStartDateStr, prevEndDateStr);
@@ -159,23 +160,16 @@ export const RefinedReportsPage: React.FC = () => {
             {/* Time Usage Tab Content */}
             {activeTab === 'time-usage' && (
                 <div className="mt-6">
-                    {isLoading ? (
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Loading...</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold animate-pulse bg-gray-200 h-8 w-24 rounded"></div>
-                                </CardContent>
-                            </Card>
+                    {isLoading && !report ? (
+                        <div className="animate-in fade-in duration-300 relative z-10 w-full">
+                            <ReportsSkeleton />
                         </div>
                     ) : error ? (
                         <div className="p-4 rounded-md bg-destructive/10 text-destructive">
                             Error loading report data. Please try again later.
                         </div>
                     ) : (
-                        <div className="space-y-6">
+                        <div className={`space-y-6 transition-opacity duration-200 ${isFetching ? 'opacity-60' : 'opacity-100'}`}>
                             {/* Top Row: Stat Cards */}
                             <div className="grid gap-4 md:grid-cols-2">
                                 {/* Total Time Spent (All Time) */}
@@ -283,15 +277,8 @@ export const RefinedReportsPage: React.FC = () => {
                         {interactionSection === 'received' && (
                             <>
                                 {interactionLoading ? (
-                                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                                        <Card>
-                                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                                <CardTitle className="text-sm font-medium">Loading...</CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <div className="text-2xl font-bold animate-pulse bg-gray-200 h-8 w-24 rounded"></div>
-                                            </CardContent>
-                                        </Card>
+                                    <div className="animate-in fade-in duration-300 relative z-10 w-full">
+                                        <ReportsSkeleton />
                                     </div>
                                 ) : interactionError ? (
                                     <div className="p-4 rounded-md bg-destructive/10 text-destructive">
@@ -365,15 +352,8 @@ export const RefinedReportsPage: React.FC = () => {
                         {interactionSection === 'made' && (
                             <>
                                 {interactionMadeLoading ? (
-                                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                                        <Card>
-                                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                                <CardTitle className="text-sm font-medium">Loading...</CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <div className="text-2xl font-bold animate-pulse bg-gray-200 h-8 w-24 rounded"></div>
-                                            </CardContent>
-                                        </Card>
+                                    <div className="animate-in fade-in duration-300 relative z-10 w-full">
+                                        <ReportsSkeleton />
                                     </div>
                                 ) : interactionMadeError ? (
                                     <div className="p-4 rounded-md bg-destructive/10 text-destructive">
@@ -449,15 +429,8 @@ export const RefinedReportsPage: React.FC = () => {
             {activeTab === 'posts' && (
                 <div className="mt-6 space-y-6">
                     {interactionMadeLoading ? (
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Loading...</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold animate-pulse bg-gray-200 h-8 w-24 rounded"></div>
-                                </CardContent>
-                            </Card>
+                        <div className="animate-in fade-in duration-300 relative z-10 w-full">
+                            <ReportsSkeleton />
                         </div>
                     ) : interactionMadeError ? (
                         <div className="p-4 rounded-md bg-destructive/10 text-destructive">

@@ -29,6 +29,20 @@ type FollowService struct {
 	concreteFedSvc    *federationService.FederationService // concrete ref for FollowMastodonUser
 }
 
+// Internal interfaces for follow request and notification modifications
+// to avoid changing the main interfaces and breaking legacy tests.
+type followRequestRepo interface {
+	CreateFollowRequest(ctx context.Context, followerID, followingID primitive.ObjectID) error
+	DeleteFollowRequest(ctx context.Context, followerID, followingID primitive.ObjectID) error
+	HasFollowRequest(ctx context.Context, followerID, followingID primitive.ObjectID) (bool, error)
+	GetFollowRequestsByFollowingID(ctx context.Context, followingID primitive.ObjectID) ([]models.FollowRequest, error)
+}
+
+type notificationModifierRepo interface {
+	UpdateNotificationType(ctx context.Context, userID, relatedUserID primitive.ObjectID, oldType, newType string) error
+	DeleteNotificationByParams(ctx context.Context, userID, relatedUserID primitive.ObjectID, notifType string) error
+}
+
 // NewFollowService creates a new FollowService with default (concrete) dependencies
 func NewFollowService() *FollowService {
 	var fedService FederationService
@@ -178,7 +192,7 @@ func (s *FollowService) Follow(ctx context.Context, followerID, followingID prim
 	}
 
 	// 1. Try local user first
-	_, err := s.userRepo.FindByID(ctx, followingID)
+	targetUser, err := s.userRepo.FindByID(ctx, followingID)
 	if err == nil {
 		// Local Follow Logic
 		isBlocked, _ := s.blockService.IsBlocked(ctx, followerID, followingID)
@@ -188,6 +202,29 @@ func (s *FollowService) Follow(ctx context.Context, followerID, followingID prim
 
 		if isFollowing, _ := s.followRepo.IsFollowing(ctx, followerID, followingID); isFollowing {
 			return nil
+		}
+
+		if targetUser.ProfileVisibility == "followers" {
+			// Check if request already exists
+			if frRepo, ok := s.followRepo.(followRequestRepo); ok {
+				hasReq, _ := frRepo.HasFollowRequest(ctx, followerID, followingID)
+				if hasReq {
+					return errors.New("request already sent")
+				}
+
+				if err := frRepo.CreateFollowRequest(ctx, followerID, followingID); err != nil {
+					return err
+				}
+
+				// Local Notification for request
+				notification := &models.Notification{
+					UserID:        followingID,
+					Type:          "follow_request",
+					RelatedUserID: followerID,
+				}
+				s.notificationRepo.CreateNotification(ctx, notification)
+				return errors.New("requested")
+			}
 		}
 
 		if err := s.followRepo.Follow(ctx, followerID, followingID); err != nil {
@@ -208,7 +245,14 @@ func (s *FollowService) Follow(ctx context.Context, followerID, followingID prim
 	if s.federationService != nil {
 		remoteUser, remoteErr := s.remoteUserRepo.GetRemoteUserByID(ctx, followingID)
 		if remoteErr == nil {
-			// Federated Follow
+			// If it's an ActivityPub user (has an inbox), we must use the signed AP flow.
+			// The internal federation protocol (FollowRemoteUser) won't work for external Mastodon instances.
+			if remoteUser.InboxURL != "" {
+				handle := "@" + remoteUser.Username + "@" + remoteUser.Instance
+				log.Printf("[Follow] Redirecting ID-based follow to Handle-based AP follow for %s", handle)
+				return s.FollowByHandle(ctx, followerID, handle)
+			}
+			// Federated Follow (Internal protocol fallback)
 			return s.federationService.FollowRemoteUser(ctx, followerID, remoteUser)
 		}
 	}
@@ -246,8 +290,13 @@ func (s *FollowService) FollowByHandle(ctx context.Context, followerID primitive
 	return s.concreteFedSvc.FollowMastodonUser(ctx, followerID, fullHandle)
 }
 
-// Unfollow removes a follow relationship
+// Unfollow removes a follow relationship or request
 func (s *FollowService) Unfollow(ctx context.Context, followerID, followingID primitive.ObjectID) error {
+	// First delete any follow request
+	if frRepo, ok := s.followRepo.(followRequestRepo); ok {
+		frRepo.DeleteFollowRequest(ctx, followerID, followingID)
+	}
+
 	// 1. Try local unfollow first
 	err := s.followRepo.Unfollow(ctx, followerID, followingID)
 
@@ -262,6 +311,52 @@ func (s *FollowService) Unfollow(ctx context.Context, followerID, followingID pr
 	}
 
 	return err
+}
+
+// AcceptFollowRequest accepts a pending follow request
+func (s *FollowService) AcceptFollowRequest(ctx context.Context, followerID, followingID primitive.ObjectID) error {
+	frRepo, ok := s.followRepo.(followRequestRepo)
+	if !ok {
+		return errors.New("follow request logic not supported by repository")
+	}
+
+	hasReq, err := frRepo.HasFollowRequest(ctx, followerID, followingID)
+	if err != nil || !hasReq {
+		return errors.New("follow request not found")
+	}
+
+	if err := s.followRepo.Follow(ctx, followerID, followingID); err != nil {
+		return err
+	}
+
+	frRepo.DeleteFollowRequest(ctx, followerID, followingID)
+
+	// Update the existing request notification to "follow" so it shows as a standard follow.
+	if nmRepo, ok := s.notificationRepo.(notificationModifierRepo); ok {
+		nmRepo.UpdateNotificationType(ctx, followingID, followerID, "follow_request", "follow")
+	}
+
+	notification := &models.Notification{
+		UserID:        followerID,
+		Type:          "follow_accept",
+		RelatedUserID: followingID, // User B accepted user A
+	}
+	s.notificationRepo.CreateNotification(ctx, notification)
+	return nil
+}
+
+// RejectFollowRequest rejects a pending follow request
+func (s *FollowService) RejectFollowRequest(ctx context.Context, followerID, followingID primitive.ObjectID) error {
+	frRepo, ok := s.followRepo.(followRequestRepo)
+	if !ok {
+		return errors.New("follow request logic not supported by repository")
+	}
+
+	// Delete the follow request notification
+	if nmRepo, ok := s.notificationRepo.(notificationModifierRepo); ok {
+		nmRepo.DeleteNotificationByParams(ctx, followingID, followerID, "follow_request")
+	}
+	return frRepo.DeleteFollowRequest(ctx, followerID, followingID)
 }
 
 // IsFollowing checks if a user follows another
@@ -311,4 +406,12 @@ func (s *FollowService) CountFollowing(ctx context.Context, userID primitive.Obj
 	}
 
 	return localCount + remoteCount, nil
+}
+
+// HasFollowRequest checks if a pending follow request exists from User A to User B
+func (s *FollowService) HasFollowRequest(ctx context.Context, followerID, followingID primitive.ObjectID) (bool, error) {
+	if frRepo, ok := s.followRepo.(followRequestRepo); ok {
+		return frRepo.HasFollowRequest(ctx, followerID, followingID)
+	}
+	return false, nil
 }

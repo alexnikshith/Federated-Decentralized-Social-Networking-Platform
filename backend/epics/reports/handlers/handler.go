@@ -132,3 +132,21 @@ func (h *ReportHandler) GetInteractionMadeReport(w http.ResponseWriter, r *http.
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(report)
 }
+
+// ResolveReport handles DELETE /api/reports/admin/resolve?id=...
+func (h *ReportHandler) ResolveReport(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	reportID := r.URL.Query().Get("id")
+	if reportID == "" {
+		http.Error(w, "Report ID required", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.Service.ResolveReport(ctx, reportID); err != nil {
+		http.Error(w, "Failed to resolve report: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Report resolved successfully"})
+}

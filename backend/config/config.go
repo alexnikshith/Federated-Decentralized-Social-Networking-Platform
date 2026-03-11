@@ -16,6 +16,7 @@ type Config struct {
 	JWTSecret    string
 	SMTPFrom     string
 	BrevoAPIKey  string
+	GroqAPIKey string
 
 	// Federation settings
 	InstanceName       string
@@ -45,6 +46,7 @@ func LoadConfig() {
 		JWTSecret:    getEnv("JWT_SECRET", "your-secret-key-change-in-production"),
 		SMTPFrom:     getEnv("SMTP_FROM", "kaushalloya5@gmail.com"),
 		BrevoAPIKey:  getEnv("BREVO_API_KEY", ""),
+		GroqAPIKey: getEnv("GROQ_API_KEY", ""),
 
 		// Federation settings
 		InstanceName:       getEnv("INSTANCE_ID", getEnv("INSTANCE_NAME", "Community 1")),

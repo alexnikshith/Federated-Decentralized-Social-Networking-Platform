@@ -12,14 +12,6 @@ import { motion } from "framer-motion";
 
 const features = [
   {
-    icon: Shield,
-    title: "NEURAL PRIVACY",
-    description: "Your consciousness, your data. No tracking, no profiling, just pure sovereign encryption.",
-    glow: "shadow-cyan-500/20",
-    border: "border-cyan-500/20",
-    text: "text-cyan-400"
-  },
-  {
     icon: Cpu,
     title: "DECENTRALIZED CORE",
     description: "Operate on independent nodes. No central authority, no single point of failure. The network is everywhere.",
@@ -29,7 +21,7 @@ const features = [
   },
   {
     icon: Orbit,
-    title: "COSMIC FEDERATION",
+    title: "FEDERATED NETWORK",
     description: "Seamlessly bridge across diverse communities. A unified galaxy of unique social instances.",
     glow: "shadow-blue-500/20",
     border: "border-blue-500/20",
@@ -42,22 +34,6 @@ const features = [
     glow: "shadow-indigo-500/20",
     border: "border-indigo-500/20",
     text: "text-indigo-400"
-  },
-  {
-    icon: Zap,
-    title: "REAL-TIME SYNC",
-    description: "Instantaneous state propagation across the mesh. Experience the speed of thought in every interaction.",
-    glow: "shadow-white/10",
-    border: "border-white/20",
-    text: "text-white"
-  },
-  {
-    icon: Activity,
-    title: "TRANSPARENT PULSE",
-    description: "Open-source metrics without surveillance. Visualize the network's health in real-time.",
-    glow: "shadow-emerald-500/20",
-    border: "border-emerald-500/20",
-    text: "text-emerald-400"
   },
 ];
 
@@ -73,17 +49,17 @@ export function FeaturesSection() {
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
-            className="text-4xl md:text-5xl font-bold mb-6 tracking-tight text-white uppercase"
+            className="text-4xl md:text-5xl font-bold mb-6 tracking-tight text-foreground dark:text-white uppercase"
           >
-            Universal <span className="text-cyan-400">Architectures</span>
+            Universal <span className="text-cyan-500 dark:text-cyan-400">Architectures</span>
           </motion.h2>
           <motion.p
             initial={{ opacity: 0, y: 10 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-sm text-cyan-100/40 uppercase tracking-[0.3em] font-mono font-bold"
+            className="text-sm text-foreground/40 dark:text-cyan-100/40 uppercase tracking-[0.3em] font-mono font-bold"
           >
-            [ ENGINEERING THE FUTURE OF HUMAN CONNECTIVITY ]
+           ENGINEERING THE FUTURE OF HUMAN CONNECTIVITY 
           </motion.p>
         </div>
 
@@ -110,11 +86,11 @@ export function FeaturesSection() {
                 <feature.icon className="w-7 h-7" />
               </div>
 
-              <h3 className="text-sm font-bold font-mono tracking-widest mb-4 text-white group-hover:text-cyan-400 transition-colors uppercase">
+              <h3 className="text-sm font-bold font-mono tracking-widest mb-4 text-foreground dark:text-white group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors uppercase">
                 {feature.title}
               </h3>
 
-              <p className="text-cyan-100/30 text-sm leading-relaxed font-light group-hover:text-cyan-100/60 transition-colors">
+              <p className="text-foreground/50 dark:text-cyan-100/30 text-sm leading-relaxed font-light group-hover:text-foreground/80 dark:group-hover:text-cyan-100/60 transition-colors">
                 {feature.description}
               </p>
 
@@ -134,4 +110,3 @@ export function FeaturesSection() {
     </section>
   );
 }
-

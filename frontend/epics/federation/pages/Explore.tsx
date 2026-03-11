@@ -7,6 +7,7 @@ import { getFeed } from "../../content-sharing/api/client";
 import { PostCard } from "../../content-sharing/components/PostCard";
 import type { Post } from "../../content-sharing/types";
 import { useAuthStore } from "../../identity/store/authStore";
+import { ExploreSkeleton } from "@/components/skeletons/page-skeletons";
 
 const tabs = [
   { id: "for-you", name: "For You", icon: Sparkles },
@@ -94,9 +95,6 @@ const Explore = () => {
               <h1 className="font-display text-4xl md:text-5xl font-bold mb-3">
                 Explore in <span className="text-gradient-teal">{community.name}</span>
               </h1>
-              <p className="text-muted-foreground">
-                Discover the best content in {community.name}
-              </p>
             </div>
 
             {/* Tabs */}
@@ -120,11 +118,8 @@ const Explore = () => {
 
             {/* Content */}
             <div className="space-y-6">
-              {loading ? (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                  <Loader2 className="w-8 h-8 animate-spin mb-2" />
-                  <p>Loading community content...</p>
-                </div>
+              {loading && posts.length === 0 ? (
+                <ExploreSkeleton />
               ) : error ? (
                 <div className="flex flex-col items-center justify-center py-12 text-destructive">
                   <AlertCircle className="w-8 h-8 mb-2" />

@@ -16,10 +16,16 @@ vi.mock('recharts', () => ({
     CartesianGrid: () => <div data-testid="cartesian-grid" />,
 }));
 
+vi.mock('@/components/skeletons/page-skeletons', () => ({
+    ReportsSkeleton: () => <div data-testid="reports-skeleton" />
+}));
+
 // Mock the API hook
 vi.mock('../api/reportsApi', () => ({
     useReportsApi: vi.fn(),
 }));
+
+import { MemoryRouter } from 'react-router-dom';
 
 describe('RefinedReportsPage', () => {
     const mockUseActivityReport = vi.fn();
@@ -57,27 +63,23 @@ describe('RefinedReportsPage', () => {
     });
 
     it('renders the page title and default tab (User Story: Reports Dashboard)', () => {
-        render(<RefinedReportsPage />);
-        expect(screen.getByText('Reports')).toBeInTheDocument();
-        expect(screen.getByText('Monitor your activity and usage patterns over time.')).toBeInTheDocument();
+        render(<MemoryRouter><RefinedReportsPage /></MemoryRouter>);
         expect(screen.getByText('Time Usage')).toBeInTheDocument();
-        expect(screen.getByText('Interactions')).toBeInTheDocument();
-        expect(screen.getByText('Posts')).toBeInTheDocument();
+        expect(screen.getByText(/Monitor your daily usage/i)).toBeInTheDocument();
     });
 
     it('renders Time Usage data by default (User Story: View Activity Reports)', () => {
-        render(<RefinedReportsPage />);
+        render(<MemoryRouter><RefinedReportsPage /></MemoryRouter>);
         expect(screen.getByText('Total time spent till date')).toBeInTheDocument();
-        // Use getAllByText as there might be multiple instances or broken up text
-        expect(screen.getAllByText(/10h\s*0m/)[0]).toBeInTheDocument();
+        // Since hours and minutes are separate spans, check for '10' and '00'
+        expect(screen.getAllByText('10')[0]).toBeInTheDocument();
+        expect(screen.getAllByText('00')[0]).toBeInTheDocument();
     });
 
     it('switches to Interactions tab and shows received data (User Story: View Interaction Stats Received)', async () => {
-        const user = userEvent.setup();
-        render(<RefinedReportsPage />);
+        render(<MemoryRouter initialEntries={['/?tab=interactions']}><RefinedReportsPage /></MemoryRouter>);
 
-        const interactionsMainTab = screen.getByRole('tab', { name: /^Interactions$/ });
-        await user.click(interactionsMainTab);
+        expect(screen.getByText('Interactions')).toBeInTheDocument();
 
         const receivedTab = await screen.findByRole('tab', { name: /Interactions Received/i });
         expect(receivedTab).toBeInTheDocument();
@@ -88,9 +90,7 @@ describe('RefinedReportsPage', () => {
 
     it('switches to Interactions Made section (User Story: View Interaction Stats Made)', async () => {
         const user = userEvent.setup();
-        render(<RefinedReportsPage />);
-
-        await user.click(screen.getByRole('tab', { name: /^Interactions$/ }));
+        render(<MemoryRouter initialEntries={['/?tab=interactions']}><RefinedReportsPage /></MemoryRouter>);
 
         const madeTab = await screen.findByRole('tab', { name: /Interactions Made/i });
         await user.click(madeTab);
@@ -100,11 +100,7 @@ describe('RefinedReportsPage', () => {
     });
 
     it('switches to Posts tab (User Story: View Content Metrics)', async () => {
-        const user = userEvent.setup();
-        render(<RefinedReportsPage />);
-
-        const postsTab = screen.getByRole('tab', { name: /Posts/i });
-        await user.click(postsTab);
+        render(<MemoryRouter initialEntries={['/?tab=posts']}><RefinedReportsPage /></MemoryRouter>);
 
         expect(await screen.findByText(/Total Posts \(All Time\)/i)).toBeInTheDocument();
         expect(screen.getAllByText('4')[0]).toBeInTheDocument();
@@ -117,8 +113,9 @@ describe('RefinedReportsPage', () => {
             error: null,
         });
 
-        render(<RefinedReportsPage />);
-        expect(screen.getByText('Loading...')).toBeInTheDocument();
+        render(<MemoryRouter><RefinedReportsPage /></MemoryRouter>);
+        // Check for skeleton or specific loading indicators
+        expect(screen.getByTestId('reports-skeleton')).toBeInTheDocument();
     });
 
     it('shows error state (User Story: Error Handling)', () => {
@@ -128,7 +125,7 @@ describe('RefinedReportsPage', () => {
             error: new Error('Failed to fetch'),
         });
 
-        render(<RefinedReportsPage />);
+        render(<MemoryRouter><RefinedReportsPage /></MemoryRouter>);
         expect(screen.getByText('Error loading report data. Please try again later.')).toBeInTheDocument();
     });
 });

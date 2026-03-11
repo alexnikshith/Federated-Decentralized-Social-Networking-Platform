@@ -147,8 +147,9 @@ export const deleteComment = async (commentId: string): Promise<void> => {
 };
 
 // Follow/Relationship API
-export const followUser = async (userId: string): Promise<void> => {
-    await api.post(`/api/users/${userId}/follow`);
+export const followUser = async (userId: string): Promise<any> => {
+    const response = await api.post(`/api/users/${userId}/follow`);
+    return response.data;
 };
 
 export const unfollowUser = async (userId: string): Promise<void> => {
@@ -165,13 +166,28 @@ export const getFollowing = async (userId: string): Promise<PublicUser[]> => {
     return response.data.data;
 };
 
-// Federation Follow API - for following users from other communities
+export const acceptFollowRequest = async (userId: string): Promise<void> => {
+    await api.post(`/api/users/${userId}/follow/accept`);
+};
+
+export const declineFollowRequest = async (userId: string): Promise<void> => {
+    await api.post(`/api/users/${userId}/follow/decline`);
+};
+
 export const followRemoteUser = async (handle: string): Promise<void> => {
     await api.post('/api/federation/users/follow', { handle });
 };
 
 export const unfollowRemoteUser = async (handle: string): Promise<void> => {
     await api.post('/api/federation/users/unfollow', { handle });
+};
+
+export const followMastodonUser = async (handle: string): Promise<void> => {
+    await api.post('/api/activitypub/follow', { handle });
+};
+
+export const unfollowMastodonUser = async (handle: string): Promise<void> => {
+    await api.post('/api/activitypub/unfollow', { handle });
 };
 
 // Notifications API

@@ -33,7 +33,7 @@ export const RegisterForm = ({ onSuccess, onSwitchToLogin, hideBackNav = false }
     const [selectedAvatar, setSelectedAvatar] = useState("/avatars/avatar_1.png");
     // Terms agreement state
     // Checkbox state for discoverability
-    const [isDiscoverable, setIsDiscoverable] = useState(false);
+    const [isDiscoverable, setIsDiscoverable] = useState(true);
     const [agreedToTerms, setAgreedToTerms] = useState(false);
     // Loading state for submission
     const [isLoading, setIsLoading] = useState(false);

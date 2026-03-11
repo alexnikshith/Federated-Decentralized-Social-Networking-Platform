@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"federated-social/backend/epics/content-sharing/dto"
 	"federated-social/backend/epics/content-sharing/service"
+	safetyService "federated-social/backend/epics/safety/service"
 	"federated-social/backend/middleware"
 	"log"
 	"net/http"
@@ -17,14 +18,15 @@ type PostHandler struct {
 	postService *service.PostService
 }
 
-func NewPostHandler() *PostHandler {
+func NewPostHandler(enforcement *safetyService.EnforcementService) *PostHandler {
 	return &PostHandler{
-		postService: service.NewPostService(),
+		postService: service.NewPostService(enforcement),
 	}
 }
 
 // CreatePost handles POST /api/posts
 func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
+	log.Printf("[PostHandler] CreatePost REQUEST RECEIVED from %s", r.RemoteAddr)
 	userID := middleware.GetUserIDFromContext(r.Context())
 
 	var req dto.CreatePostRequest

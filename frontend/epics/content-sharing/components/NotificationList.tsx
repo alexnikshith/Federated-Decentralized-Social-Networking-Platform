@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { useContentStore } from '../store/contentStore';
 import { useAuthStore } from '../../identity/store/authStore';
+import * as api from '../api/client';
 import { Notification as AppNotification } from '../types';
 import { PostDetailDialog } from './PostDetailDialog';
 import {
@@ -11,9 +12,14 @@ import {
     UserPlus,
     Circle,
     BellOff,
-    AtSign
+    AtSign,
+    Check,
+    X,
+    UserCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { acceptFollowRequest, declineFollowRequest } from '../api/client';
+import { toast } from 'sonner';
 
 // NotificationList displays user notifications (Likes, Comments, Follows)
 // It supports:
@@ -22,20 +28,35 @@ import { cn } from '@/lib/utils';
 // 3. Rich interaction (click user, click notification to view post)
 export const NotificationList: React.FC = () => {
     const navigate = useNavigate();
-    const { notifications, fetchNotifications, markAsRead, fetchUnreadCount } =
+    const { notifications, markAsRead, fetchNotifications } =
         useContentStore();
     const { user: currentUser } = useAuthStore();
     const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
     const [showPostDialog, setShowPostDialog] = useState(false);
     const [openCommentsOnPost, setOpenCommentsOnPost] = useState(false);
 
-    useEffect(() => {
-        fetchNotifications();
-        fetchUnreadCount();
-    }, []);
-
     const handleMarkAsRead = (notificationId: string) => {
         markAsRead(notificationId);
+    };
+
+    const handleAcceptRequest = async (notif: AppNotification) => {
+        try {
+            await api.acceptFollowRequest(notif.related_user_id);
+            markAsRead(notif.id);
+            fetchNotifications(); // Reload to remove request or to show updated
+        } catch (e) {
+            console.error('Failed to accept request:', e);
+        }
+    };
+
+    const handleRejectRequest = async (notif: AppNotification) => {
+        try {
+            await api.rejectFollowRequest(notif.related_user_id);
+            markAsRead(notif.id);
+            fetchNotifications();
+        } catch (e) {
+            console.error('Failed to reject request:', e);
+        }
     };
 
     // Helper to get icon based on notification type
@@ -51,6 +72,10 @@ export const NotificationList: React.FC = () => {
                 return <MessageSquare className="w-4 h-4 text-primary" />;
             case 'follow':
                 return <UserPlus className="w-4 h-4 text-accent fill-current" />;
+            case 'follow_request':
+                return <UserPlus className="w-4 h-4 text-primary fill-current animate-pulse" />;
+            case 'follow_accept':
+                return <UserCheck className="w-4 h-4 text-green-500 fill-current" />;
             case 'mention':
                 return <AtSign className="w-4 h-4 text-orange-500" />;
             default:
@@ -124,6 +149,10 @@ export const NotificationList: React.FC = () => {
                 return <span>{usernameElement} commented on your post</span>;
             case 'follow':
                 return <span>{usernameElement} followed you</span>;
+            case 'follow_request':
+                return <span>{usernameElement} requested to follow you</span>;
+            case 'follow_accept':
+                return <span>{usernameElement} accepted your follow request</span>;
             case 'mention':
                 return <span>{usernameElement} mentioned you in their post</span>;
             case 'message':
@@ -211,7 +240,44 @@ export const NotificationList: React.FC = () => {
                                     </span>
                                 </div>
 
-                                {!notif.is_read && (
+                                {notif.type === 'follow_request' && !notif.is_read && (
+                                    <div className="flex gap-1 items-center" onClick={(e) => e.stopPropagation()}>
+                                        <button
+                                            onClick={async () => {
+                                                try {
+                                                    await acceptFollowRequest(notif.related_user_id);
+                                                    toast.success("Accepted follow request");
+                                                    useContentStore.getState().removeNotification(notif.id);
+                                                    useContentStore.getState().fetchUnreadCount();
+                                                } catch (err) {
+                                                    toast.error("Failed to accept request");
+                                                }
+                                            }}
+                                            className="p-1.5 rounded-full bg-primary/20 text-primary hover:bg-primary hover:text-white transition-colors"
+                                            title="Accept"
+                                        >
+                                            <Check className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                            onClick={async () => {
+                                                try {
+                                                    await declineFollowRequest(notif.related_user_id);
+                                                    toast.success("Declined follow request");
+                                                    useContentStore.getState().removeNotification(notif.id);
+                                                    useContentStore.getState().fetchUnreadCount();
+                                                } catch (err) {
+                                                    toast.error("Failed to decline request");
+                                                }
+                                            }}
+                                            className="p-1.5 rounded-full bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-colors"
+                                            title="Decline"
+                                        >
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                )}
+
+                                {!notif.is_read && notif.type !== 'follow_request' && (
                                     <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0" />
                                 )}
                             </div>
@@ -227,6 +293,6 @@ export const NotificationList: React.FC = () => {
                 onOpenChange={setShowPostDialog}
                 initialShowComments={openCommentsOnPost}
             />
-        </div>
+        </div >
     );
 };
