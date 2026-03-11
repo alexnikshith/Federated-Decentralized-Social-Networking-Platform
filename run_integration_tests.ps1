@@ -10,7 +10,8 @@ go test -v ./tests/integration/...
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "`n>>> ALL INTEGRATION TESTS PASSED! <<<" -ForegroundColor Green -Bold
-} else {
+}
+else {
     Write-Host "`n>>> INTEGRATION TESTS FAILED! <<<" -ForegroundColor Red -Bold
 }
 

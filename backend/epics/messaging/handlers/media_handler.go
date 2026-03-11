@@ -76,11 +76,30 @@ func (h *MediaHandler) UploadMedia(w http.ResponseWriter, r *http.Request) {
 }
 
 // DownloadMedia handles GET /api/messages/media/{id}
+// This endpoint is PUBLIC (no auth) so the browser can load images directly
+// via <img src="...">. We must set proper CORS + CORP headers so that the
+// Vercel-hosted frontend (a different origin) can display the image.
 func (h *MediaHandler) DownloadMedia(w http.ResponseWriter, r *http.Request) {
 	if database.GridFS == nil {
 		respondError(w, "Media storage not initialized", http.StatusInternalServerError)
 		return
 	}
+
+	// --- CORS headers for cross-origin image loading ---
+	// "Cross-Origin-Resource-Policy: cross-origin" tells the browser this
+	// resource may be embedded by any origin (needed for <img> tags).
+	// We also set an explicit Allow-Origin so browsers that send an Origin
+	// header (e.g. fetch() requests) are also allowed.
+	w.Header().Set("Cross-Origin-Resource-Policy", "cross-origin")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	// --------------------------------------------------
 
 	vars := mux.Vars(r)
 	fileID, err := primitive.ObjectIDFromHex(vars["id"])

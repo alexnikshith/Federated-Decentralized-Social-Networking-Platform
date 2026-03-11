@@ -207,7 +207,7 @@ func (h *AdminHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	oid, _ := primitive.ObjectIDFromHex(postID)
-	if err := h.postRepo.DeletePost(r.Context(), oid); err != nil {
+	if err := h.postService.DeletePostAsAdmin(r.Context(), oid); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
