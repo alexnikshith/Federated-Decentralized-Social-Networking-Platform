@@ -105,11 +105,23 @@ const AdminDashboard: React.FC = () => {
         }
     };
 
-    // Report Resolution Handler (Just dismiss report)
+    // User Report Resolution Handler (Just dismiss report)
+    const handleResolveUserReport = async (reportId: string) => {
+        try {
+            await adminApi.resolveUserReport(reportId);
+            toast.success('User report dismissed');
+            fetchData();
+            queryClient.invalidateQueries({ queryKey: ['admin-reports'] });
+        } catch (error) {
+            toast.error('Failed to resolve report');
+        }
+    };
+
+    // General Report Resolution Handler (Just dismiss report)
     const handleResolveReport = async (reportId: string) => {
         try {
             await adminApi.resolveReport(reportId);
-            toast.success('Report resolved');
+            toast.success('Report dismissed');
             fetchData();
         } catch (error) {
             toast.error('Failed to resolve report');
@@ -287,33 +299,56 @@ const AdminDashboard: React.FC = () => {
                                                         {format(new Date(report.created_at), 'PPP p')}
                                                     </p>
                                                 </div>
-                                                <div className="flex gap-2">
+                                                <div className="flex flex-wrap gap-2">
                                                     <Button
                                                         size="sm"
                                                         variant="outline"
-                                                        onClick={() => window.open(`/profile/${report.user_details?.username}`, '_blank')}
+                                                        onClick={() => {
+                                                            const username = report.user_details?.username;
+                                                            if (username) {
+                                                                window.open(`/profile/${username}`, '_blank');
+                                                            } else {
+                                                                toast.error('User profile no longer exists');
+                                                            }
+                                                        }}
+                                                        disabled={!report.user_details}
                                                     >
                                                         View Profile
                                                     </Button>
 
-                                                    {report.user_details?.is_active ? (
-                                                        <Button
-                                                            size="sm"
-                                                            variant="destructive"
-                                                            onClick={() => initiateDeactivation(report.reported_id)}
-                                                        >
-                                                            Deactivate User
-                                                        </Button>
+                                                    {report.user_details ? (
+                                                        <>
+                                                            {report.user_details.is_active ? (
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="destructive"
+                                                                    onClick={() => initiateDeactivation(report.reported_id)}
+                                                                >
+                                                                    Deactivate User
+                                                                </Button>
+                                                            ) : (
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="default"
+                                                                    className="bg-green-600 hover:bg-green-700 text-white"
+                                                                    onClick={() => handleToggleStatus(report.reported_id, false)}
+                                                                >
+                                                                    Activate User
+                                                                </Button>
+                                                            )}
+                                                        </>
                                                     ) : (
-                                                        <Button
-                                                            size="sm"
-                                                            variant="default" // or a 'success' variant if available, default is primary
-                                                            className="bg-green-600 hover:bg-green-700"
-                                                            onClick={() => handleToggleStatus(report.reported_id, false)} // status is false (inactive), so !false = true (active)
-                                                        >
-                                                            Activate User
-                                                        </Button>
+                                                        <span className="text-xs text-muted-foreground self-center px-2">Account Deleted</span>
                                                     )}
+
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        className="text-muted-foreground hover:text-foreground"
+                                                        onClick={() => handleResolveUserReport(report.id)}
+                                                    >
+                                                        Dismiss
+                                                    </Button>
                                                 </div>
                                             </div>
                                         ))

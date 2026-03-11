@@ -125,8 +125,8 @@ export const StoriesRow: React.FC = () => {
 
     const getPoint = (x: number) => {
         const period = 500;
-        const amplitude = 25;
-        const yOffset = 75;
+        const amplitude = 15;
+        const yOffset = 85;
         const y = Math.sin(x / (period / Math.PI)) * amplitude + yOffset;
         return { x, y };
     };
@@ -164,8 +164,8 @@ export const StoriesRow: React.FC = () => {
                 className="relative w-full overflow-hidden mb-4 mt-2"
                 style={{ maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)' }}
             >
-                <div className="flex overflow-x-auto scrollbar-hide py-2 relative" style={{ scrollBehavior: 'smooth', minHeight: '200px' }}>
-                    <div className="relative" style={{ width: contentWidth, minHeight: '200px' }}>
+                <div className="flex overflow-x-auto scrollbar-hide py-2 relative" style={{ scrollBehavior: 'smooth', minHeight: '180px' }}>
+                    <div className="relative" style={{ width: contentWidth, minHeight: '180px' }}>
 
                         {/* Constellation Ribbon SVG */}
                         <svg className="absolute left-0 top-0 w-full h-full pointer-events-none" preserveAspectRatio="none">

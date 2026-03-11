@@ -33,6 +33,7 @@ type SessionRepositoryInterface interface {
 	InvalidateAllUserSessions(ctx context.Context, userID primitive.ObjectID) error
 	DeleteAllUserSessions(ctx context.Context, userID primitive.ObjectID) error
 	CleanupExpiredSessions(ctx context.Context) error
+	CreateIndexes(ctx context.Context) error
 }
 
 type ActivityRepositoryInterface interface {
@@ -40,6 +41,7 @@ type ActivityRepositoryInterface interface {
 	GetUserActivity(ctx context.Context, userID primitive.ObjectID, limit int64) ([]models.ActivityLog, error)
 	DeleteUserActivity(ctx context.Context, userID primitive.ObjectID) error
 	CountDailyActivity(ctx context.Context) (int64, error)
+	CreateIndexes(ctx context.Context) error
 }
 
 type VerificationRepositoryInterface interface {

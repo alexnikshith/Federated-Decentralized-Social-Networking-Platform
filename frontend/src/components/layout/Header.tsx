@@ -26,7 +26,7 @@ export function Header() {
     <header className={cn(
       "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
       isLanding
-        ? "bg-black/5 backdrop-blur-xl border-b border-white/[0.05] h-20"
+        ? "bg-amber-50/60 dark:bg-black/5 backdrop-blur-xl border-b border-foreground/[0.05] dark:border-white/[0.05] h-20"
         : "bg-background/80 backdrop-blur-xl border-b border-border/50 h-16"
     )}>
       <nav className="container mx-auto px-4 lg:px-8">
@@ -41,7 +41,7 @@ export function Header() {
             </div>
             <span className={cn(
               "font-bold text-xl tracking-[0.2em] uppercase transition-colors",
-              isLanding ? "text-white" : "text-foreground"
+              isLanding ? "text-foreground dark:text-white" : "text-foreground"
             )}>
               Nexus
             </span>
@@ -95,7 +95,7 @@ export function Header() {
             {!isAuthenticated ? (
               <>
                 <Link to="/login">
-                  <button className="px-6 py-2 text-xs font-bold tracking-[0.2em] uppercase text-white/50 hover:text-white transition-colors">
+                  <button className="px-6 py-2 text-xs font-bold tracking-[0.2em] uppercase text-foreground/50 dark:text-white/50 hover:text-foreground dark:hover:text-white transition-colors">
                     Log In
                   </button>
                 </Link>
