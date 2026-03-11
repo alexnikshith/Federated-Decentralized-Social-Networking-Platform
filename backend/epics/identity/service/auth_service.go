@@ -106,6 +106,7 @@ func (s *AuthService) Signup(ctx context.Context, req dto.SignupRequest) (*model
 		AvatarURL:         avatarURL,
 	}
 
+
 	if err := s.userRepo.CreateUser(ctx, user); err != nil {
 		return nil, err
 	}
