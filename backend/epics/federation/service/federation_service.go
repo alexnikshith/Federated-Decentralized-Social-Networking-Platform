@@ -775,6 +775,25 @@ func (s *FederationService) CountRemoteFollowing(ctx context.Context, localUserI
 	return s.relationshipsRepo.CountRemoteFollowing(ctx, localUserID)
 }
 
+// CountLocalFollowersOfRemoteActor returns count of local users following a remote actor
+func (s *FederationService) CountLocalFollowersOfRemoteActor(ctx context.Context, remoteActorID string) (int64, error) {
+	// relationshipsRepo holds the interface logic, we must ensure it supports this method.
+	// We added it to RemoteRelationshipsRepository implementer, let's type assert or call directly if interface was modified?
+	// Wait, relationshipsRepo is an interface! Let's cast it locally to the concrete struct or add it to interface.
+	if concreteRepo, ok := s.relationshipsRepo.(*repository.RemoteRelationshipsRepository); ok {
+		return concreteRepo.CountLocalFollowersOfRemoteActor(ctx, remoteActorID)
+	}
+	return 0, nil
+}
+
+// CountLocalUsersFollowedByRemoteActor returns count of local users followed by a remote actor
+func (s *FederationService) CountLocalUsersFollowedByRemoteActor(ctx context.Context, remoteActorID string) (int64, error) {
+	if concreteRepo, ok := s.relationshipsRepo.(*repository.RemoteRelationshipsRepository); ok {
+		return concreteRepo.CountLocalUsersFollowedByRemoteActor(ctx, remoteActorID)
+	}
+	return 0, nil
+}
+
 // SendRemoteNotification sends a notification activity to a remote instance
 func (s *FederationService) SendRemoteNotification(ctx context.Context, targetInstance string, notification *contentModels.Notification, author *identityModels.User) error {
 	actorID := fmt.Sprintf("http://%s/users/%s", config.AppConfig.InstanceDomain, author.Username)
