@@ -95,9 +95,6 @@ const Explore = () => {
               <h1 className="font-display text-4xl md:text-5xl font-bold mb-3">
                 Explore in <span className="text-gradient-teal">{community.name}</span>
               </h1>
-              <p className="text-muted-foreground">
-                Discover the best content in {community.name}
-              </p>
             </div>
 
             {/* Tabs */}

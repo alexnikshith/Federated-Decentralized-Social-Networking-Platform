@@ -76,9 +76,12 @@ func (r *SearchRepository) SearchUsers(ctx context.Context, query string, limit 
 		// Escape word for regex to treat characters literally
 		escapedWord := regexp.QuoteMeta(word)
 
-		// Each word must match the username (partially, case-insensitive)
+		// Each word must match the username or display_name (partially, case-insensitive)
 		filters = append(filters, bson.M{
-			"username": bson.M{"$regex": escapedWord, "$options": "i"},
+			"$or": []bson.M{
+				{"username": bson.M{"$regex": escapedWord, "$options": "i"}},
+				{"display_name": bson.M{"$regex": escapedWord, "$options": "i"}},
+			},
 		})
 	}
 

@@ -96,7 +96,7 @@ export const SettingsPage = () => {
         hasUpper: /[A-Z]/.test(passwordData.new_password),
         hasLower: /[a-z]/.test(passwordData.new_password),
         hasNumber: /\d/.test(passwordData.new_password),
-        hasSpecial: /[@$!%*?&]/.test(passwordData.new_password),
+        hasSpecial: /[@$!%*?&#^}{()]/.test(passwordData.new_password),
     };
 
     const isPasswordValid = Object.values(passwordRequirements).every(Boolean);
