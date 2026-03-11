@@ -151,12 +151,15 @@ export const SettingsPage = () => {
             try {
                 const data = await profileApi.getFederationPreference();
                 setFederationEnabled(data.federation_enabled ?? true);
+                if (currentUser) {
+                    updateUser({ ...currentUser, federation_enabled: data.federation_enabled ?? true });
+                }
             } catch (e) {
                 console.error("Failed to load federation preference", e);
             }
         };
         loadFedPref();
-    }, []);
+    }, [currentUser?.id]);
 
     const handleToggleFederation = async (checked: boolean) => {
         const prev = federationEnabled;
@@ -169,6 +172,9 @@ export const SettingsPage = () => {
                     ? "Your posts will now be shared to the federated network."
                     : "Your posts will no longer be shared to other federated instances.",
             });
+            if (currentUser) {
+                updateUser({ ...currentUser, federation_enabled: checked });
+            }
         } catch (error: any) {
             console.error(error);
             setFederationEnabled(prev); // revert on error

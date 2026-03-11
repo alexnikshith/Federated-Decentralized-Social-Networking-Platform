@@ -98,6 +98,7 @@ func (s *ProfileService) GetProfile(ctx context.Context, userID primitive.Object
 	// Populate private fields (like 2FA status) ONLY if viewing own profile
 	if requestingUserID != nil && *requestingUserID == userID {
 		publicUser.Is2FAEnabled = &user.Is2FAEnabled
+		publicUser.FederationEnabled = &user.FederationEnabled
 	}
 
 	// Check and set follow status if a requesting user is provided

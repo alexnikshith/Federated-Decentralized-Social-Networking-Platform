@@ -74,10 +74,11 @@ type PublicUser struct {
 	IsFollowing       bool               `json:"is_following"`
 	IsFollowRequested bool               `json:"is_follow_requested"`
 	CanViewDetails    bool               `json:"can_view_details"`
-	Is2FAEnabled      *bool              `json:"is_2fa_enabled,omitempty"` // Only visible to self
-	InstanceID        string             `json:"instance"`                 // home instance domain
-	Handle            string             `json:"handle,omitempty"`         // @user@domain
-	ActorID           string             `json:"actor_id,omitempty"`       // full ActivityPub URL
+	Is2FAEnabled      *bool              `json:"is_2fa_enabled,omitempty"`     // Only visible to self
+	FederationEnabled *bool              `json:"federation_enabled,omitempty"` // Only visible to self
+	InstanceID        string             `json:"instance"`                     // home instance domain
+	Handle            string             `json:"handle,omitempty"`             // @user@domain
+	ActorID           string             `json:"actor_id,omitempty"`           // full ActivityPub URL
 }
 
 // PrivateUser represents user data visible to the owner (includes email)
@@ -104,7 +105,6 @@ type Session struct {
 
 // ToPublicUser converts User to PublicUser
 func (u *User) ToPublicUser() PublicUser {
-	isEnabled := u.Is2FAEnabled
 	role := u.Role
 	if role == "" {
 		role = "user"
@@ -118,7 +118,8 @@ func (u *User) ToPublicUser() PublicUser {
 		ProfileVisibility: u.ProfileVisibility,
 		CreatedAt:         u.CreatedAt,
 		Role:              role,
-		Is2FAEnabled:      &isEnabled,
+		Is2FAEnabled:      nil, // Set manually for owner visibility
+		FederationEnabled: nil, // Set manually for owner visibility
 		FollowersCount:    0,
 		FollowingCount:    0,
 		PostsCount:        0,
@@ -143,8 +144,12 @@ func (u *User) ToPrivateUser() PrivateUser {
 		// Brand-new users without an instance domain should still default to true
 		fedEnabled = true
 	}
+	p := u.ToPublicUser()
+	p.Is2FAEnabled = &u.Is2FAEnabled
+	p.FederationEnabled = &fedEnabled
+
 	return PrivateUser{
-		PublicUser:        u.ToPublicUser(),
+		PublicUser:        p,
 		Email:             u.Email,
 		InstanceID:        u.InstanceID,
 		JoinedCommunities: u.JoinedCommunities,
