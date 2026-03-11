@@ -356,6 +356,25 @@ func (s *ProfileService) GetProfileByIdOrUsername(ctx context.Context, identifie
 		parts := strings.Split(cleanHandle, "@")
 		if len(parts) == 2 {
 			username, instance := parts[0], parts[1]
+
+			localDomain := config.AppConfig.InstanceDomain
+			if localDomain == "" {
+				localDomain = "localhost:8080"
+			}
+			isLocal := instance == localDomain ||
+				instance == "localhost:8080" ||
+				instance == "nexus.social" ||
+				instance == "default" ||
+				instance == "default-instance" ||
+				strings.Contains(instance, "federated-decentralized-social.onrender.com")
+
+			if isLocal {
+				localUser, err := s.userRepo.FindByUsername(ctx, username)
+				if err == nil {
+					return s.GetProfile(ctx, localUser.ID, requestingUserID)
+				}
+			}
+
 			// Try cache first
 			remoteUser, err := s.remoteUserRepo.GetRemoteUserByUsernameAndInstance(ctx, username, instance)
 			if err == nil {
