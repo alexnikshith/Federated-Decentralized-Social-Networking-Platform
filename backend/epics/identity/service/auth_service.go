@@ -99,7 +99,7 @@ func (s *AuthService) Signup(ctx context.Context, req dto.SignupRequest) (*model
 		DisplayName:       req.DisplayName,
 		ProfileVisibility: "public",
 		InstanceID:        "default",
-		Is2FAEnabled:      true,
+		Is2FAEnabled:      false,
 		IsActive:          true,
 		Role:              "user",
 		IsDiscoverable:    req.IsDiscoverable,
