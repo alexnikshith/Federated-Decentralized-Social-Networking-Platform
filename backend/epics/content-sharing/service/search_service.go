@@ -48,9 +48,9 @@ func getUserKey(user identityModels.PublicUser) string {
 	domain := strings.ToLower(user.InstanceID)
 
 	// Normalize local and internal domains to "local" for consistent matching
-	if domain == "" || domain == strings.ToLower(config.AppConfig.InstanceDomain) ||
+	if domain == "" || domain == "nexus.social" || domain == "default" || domain == "default-instance" || domain == strings.ToLower(config.AppConfig.InstanceDomain) ||
 		strings.Contains(domain, "localhost") || strings.Contains(domain, "backend") ||
-		strings.Contains(domain, "community-1") {
+		strings.Contains(domain, "community-1") || strings.Contains(domain, "federated-decentralized-social") {
 		domain = "local"
 	} else if strings.Contains(domain, "community-2") {
 		// Specific mapping for the other test community if it's treated as "remote" but we want consistency
@@ -65,10 +65,10 @@ func (s *SearchService) mapInstanceToName(url string) string {
 		return ""
 	}
 	// Map local and production URLs for Community 1 to Nexus.Social
-	if strings.Contains(url, "localhost:8080") || 
-	   strings.Contains(url, "backend:8080") || 
-	   strings.Contains(url, "federated-decentralized-social.onrender.com") ||
-	   strings.Contains(url, "community-1") {
+	if strings.Contains(url, "localhost:8080") ||
+		strings.Contains(url, "backend:8080") ||
+		strings.Contains(url, "federated-decentralized-social.onrender.com") ||
+		strings.Contains(url, "community-1") {
 		return "Nexus.Social"
 	}
 	// Map local and community-2 aliases to Nexus Community 2
@@ -140,6 +140,11 @@ func (s *SearchService) SearchUsers(ctx context.Context, query string, limit int
 				if query == "" || strings.Contains(strings.ToLower(user.Username), strings.ToLower(query)) ||
 					strings.Contains(strings.ToLower(user.DisplayName), strings.ToLower(query)) {
 					p := user.ToPublicUser()
+					if p.InstanceID == "" || p.InstanceID == "default" {
+						p.InstanceID = "Nexus.Social"
+					} else {
+						p.InstanceID = s.mapInstanceToName(p.InstanceID)
+					}
 					p.IsFollowing = true
 					explicitFollows = append(explicitFollows, p)
 				}
