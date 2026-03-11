@@ -389,6 +389,16 @@ func (s *FollowService) IsFollowing(ctx context.Context, followerID, followingID
 
 // CountFollowers returns total count of followers (local + remote)
 func (s *FollowService) CountFollowers(ctx context.Context, userID primitive.ObjectID) (int64, error) {
+	// Remote user check
+	if s.federationService != nil {
+		if remoteUser, err := s.remoteUserRepo.GetRemoteUserByID(ctx, userID); err == nil && remoteUser != nil {
+			if s.concreteFedSvc != nil {
+				return s.concreteFedSvc.CountLocalFollowersOfRemoteActor(ctx, remoteUser.ActorID)
+			}
+			return 0, nil
+		}
+	}
+
 	localCount, err := s.followRepo.CountFollowers(ctx, userID)
 	if err != nil {
 		return 0, err
@@ -404,6 +414,16 @@ func (s *FollowService) CountFollowers(ctx context.Context, userID primitive.Obj
 
 // CountFollowing returns total count of following users (local + remote)
 func (s *FollowService) CountFollowing(ctx context.Context, userID primitive.ObjectID) (int64, error) {
+	// Remote user check
+	if s.federationService != nil {
+		if remoteUser, err := s.remoteUserRepo.GetRemoteUserByID(ctx, userID); err == nil && remoteUser != nil {
+			if s.concreteFedSvc != nil {
+				return s.concreteFedSvc.CountLocalUsersFollowedByRemoteActor(ctx, remoteUser.ActorID)
+			}
+			return 0, nil
+		}
+	}
+
 	localCount, err := s.followRepo.CountFollowing(ctx, userID)
 	if err != nil {
 		return 0, err

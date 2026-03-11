@@ -73,6 +73,13 @@ func (s *ProfileService) GetProfile(ctx context.Context, userID primitive.Object
 					publicUser.CanViewDetails = false
 				}
 			}
+
+			followersCount, _ := s.followService.CountFollowers(ctx, remoteUser.ID)
+			followingCount, _ := s.followService.CountFollowing(ctx, remoteUser.ID)
+
+			publicUser.FollowersCount = followersCount
+			publicUser.FollowingCount = followingCount
+
 			return publicUser, nil
 		}
 		// If still not found, try by actor ID (which might be a URL or other identifier)
@@ -393,6 +400,13 @@ func (s *ProfileService) enrichRemoteProfile(ctx context.Context, ru *federation
 			publicUser.CanViewDetails = false
 		}
 	}
+
+	followersCount, _ := s.followService.CountFollowers(ctx, ru.ID)
+	followingCount, _ := s.followService.CountFollowing(ctx, ru.ID)
+
+	publicUser.FollowersCount = followersCount
+	publicUser.FollowingCount = followingCount
+
 	return publicUser
 }
 

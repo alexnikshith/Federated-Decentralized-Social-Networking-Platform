@@ -57,6 +57,8 @@ type RemoteRelationshipsRepositoryInterface interface {
 	UpdateRemoteFollowStatus(ctx context.Context, remoteActorID, status string) error
 	CountRemoteFollowers(ctx context.Context, localUserID primitive.ObjectID) (int64, error)
 	CountRemoteFollowing(ctx context.Context, localUserID primitive.ObjectID) (int64, error)
+	CountLocalFollowersOfRemoteActor(ctx context.Context, remoteActorID string) (int64, error)
+	CountLocalUsersFollowedByRemoteActor(ctx context.Context, remoteActorID string) (int64, error)
 }
 
 // UserRepositoryInterface defines methods for interacting with user data (from identity epic)

@@ -169,6 +169,12 @@ func (m *mockRelationshipsRepo) CountRemoteFollowers(ctx context.Context, localU
 func (m *mockRelationshipsRepo) CountRemoteFollowing(ctx context.Context, localUserID primitive.ObjectID) (int64, error) {
 	return 0, nil
 }
+func (m *mockRelationshipsRepo) CountLocalFollowersOfRemoteActor(ctx context.Context, remoteActorID string) (int64, error) {
+	return 0, nil
+}
+func (m *mockRelationshipsRepo) CountLocalUsersFollowedByRemoteActor(ctx context.Context, remoteActorID string) (int64, error) {
+	return 0, nil
+}
 
 type mockUserRepo struct {
 	findByUsernameFunc func(ctx context.Context, username string) (*identityModels.User, error)
