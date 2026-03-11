@@ -22,6 +22,7 @@ export interface User {
     role?: 'user' | 'admin';
     is_active?: boolean;
     joined_communities?: string[];
+    federation_enabled?: boolean;
 }
 
 // ActivityLog tracks security-relevant user actions (login, updates, etc.)

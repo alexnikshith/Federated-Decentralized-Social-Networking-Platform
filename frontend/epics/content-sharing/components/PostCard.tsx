@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { cn } from '@/lib/utils';
+import { cn, resolveMediaUrl } from '@/lib/utils';
 import { getPostLikers, getFollowers } from '../api/client';
 import { messagingApi } from '../../messaging/api/client';
 import type { PostLiker } from '../types';
@@ -289,7 +289,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
                                         </Link>
                                         <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-accent/10 border border-accent/20">
                                             <span className="text-[10px] font-bold text-accent uppercase tracking-widest whitespace-nowrap">
-                                                {post.author_instance || 'Nexus Social'}
+                                                {post.author_instance || 'Nexus.Social'}
                                             </span>
                                         </div>
                                     </div>
@@ -360,11 +360,11 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
 
                             {/* Media Content */}
                             {post.media_url && (
-                                <div className="mt-4 rounded-xl overflow-hidden border border-border/50 shadow-sm">
+                                <div className="mt-4 rounded-xl overflow-hidden border border-border/50 shadow-sm bg-secondary/10 flex items-center justify-center">
                                     {post.media_type === 'video' ? (
-                                        <video controls src={post.media_url.startsWith('http') ? post.media_url : `${import.meta.env.VITE_API_URL || import.meta.env.VITE_COMMUNITY1_URL || 'http://localhost:8080'}${post.media_url}`} className="w-full max-h-[500px] object-cover bg-black" />
+                                        <video controls src={resolveMediaUrl(post.media_url)} className="w-full max-h-[600px] object-contain bg-black" />
                                     ) : (
-                                        <img src={post.media_url.startsWith('http') ? post.media_url : `${import.meta.env.VITE_API_URL || import.meta.env.VITE_COMMUNITY1_URL || 'http://localhost:8080'}${post.media_url}`} alt="Post content" className="w-full max-h-[500px] object-cover hover:scale-[1.01] transition-transform duration-500" />
+                                        <img src={resolveMediaUrl(post.media_url)} alt="Post content" className="w-full max-h-[600px] object-contain hover:scale-[1.01] transition-transform duration-500" />
                                     )}
                                 </div>
                             )}

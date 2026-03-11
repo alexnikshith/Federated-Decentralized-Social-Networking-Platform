@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	identityModels "federated-social/backend/epics/identity/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -159,6 +160,12 @@ func (s *EnforcementService) processPostModeration(postID primitive.ObjectID) {
 		CreatedAt:  time.Now(),
 	}
 
+	// Fetch author details for the log
+	if author, err := s.userRepo.FindByID(ctx, post.AuthorID); err == nil {
+		logEntry.Username = author.Username
+		logEntry.DisplayName = author.DisplayName
+	}
+
 	if err != nil {
 		log.Printf("[Moderation] AI evaluation failed for post %s after retries: %v", postID.Hex(), err)
 		logEntry.IsViolation = false
@@ -267,6 +274,12 @@ func (s *EnforcementService) processCommentModeration(commentID primitive.Object
 		CreatedAt:  time.Now(),
 	}
 
+	// Fetch author details for the log
+	if author, err := s.userRepo.FindByID(ctx, comment.UserID); err == nil {
+		logEntry.Username = author.Username
+		logEntry.DisplayName = author.DisplayName
+	}
+
 	if err != nil {
 		log.Printf("[Moderation] AI evaluation failed for comment %s: %v", commentID.Hex(), err)
 		logEntry.IsViolation = false
@@ -356,11 +369,13 @@ func (s *EnforcementService) processUserModeration(userID primitive.ObjectID, fi
 	}
 
 	logEntry := &models.ModerationLog{
-		TargetID:   user.ID,
-		TargetType: fieldType,
-		Content:    content,
-		UserID:     user.ID,
-		CreatedAt:  time.Now(),
+		TargetID:    user.ID,
+		TargetType:  fieldType,
+		Content:     content,
+		UserID:      user.ID,
+		Username:    user.Username,
+		DisplayName: user.DisplayName,
+		CreatedAt:   time.Now(),
 	}
 
 	if err != nil {
@@ -471,4 +486,52 @@ func (s *EnforcementService) incrementUserStrikes(ctx context.Context, userID pr
 	}
 
 	log.Printf("[Moderation] User %s now has %d strikes. Status: %s", user.Username, strikes, accountStatus)
+}
+// EnrichModerationLogs populates missing username/displayName for old logs.
+// It also updates the DB in the background for efficiency next time.
+func (s *EnforcementService) EnrichModerationLogs(ctx context.Context, logs []models.ModerationLog) {
+	missingUserIDs := make([]primitive.ObjectID, 0)
+	seen := make(map[primitive.ObjectID]bool)
+
+	for i := range logs {
+		if logs[i].Username == "" && logs[i].UserID != primitive.NilObjectID {
+			if !seen[logs[i].UserID] {
+				missingUserIDs = append(missingUserIDs, logs[i].UserID)
+				seen[logs[i].UserID] = true
+			}
+		}
+	}
+
+	if len(missingUserIDs) == 0 {
+		return
+	}
+
+	// Fetch users in batch
+	users, err := s.userRepo.FindByIDs(ctx, missingUserIDs)
+	if err != nil {
+		log.Printf("[Moderation] Failed to batch fetch users for enrichment: %v", err)
+		return
+	}
+
+	userMap := make(map[primitive.ObjectID]identityModels.User)
+	for _, u := range users {
+		userMap[u.ID] = u
+	}
+
+	// Enrich in-memory and update DB
+	for i := range logs {
+		if logs[i].Username == "" && logs[i].UserID != primitive.NilObjectID {
+			if user, ok := userMap[logs[i].UserID]; ok {
+				logs[i].Username = user.Username
+				logs[i].DisplayName = user.DisplayName
+
+				// Update DB so we don't need to enrich again
+				go func(logID primitive.ObjectID, uname, dname string) {
+					enrichCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+					defer cancel()
+					s.moderationRepo.UpdateLogMetadata(enrichCtx, logID, uname, dname)
+				}(logs[i].ID, user.Username, user.DisplayName)
+			}
+		}
+	}
 }

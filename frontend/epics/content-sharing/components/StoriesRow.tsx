@@ -6,6 +6,7 @@ import { CreateStoryModal } from './CreateStoryModal';
 import { StoryViewerModal } from './StoryViewerModal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'motion/react';
+import { resolveMediaUrl } from '@/lib/utils';
 
 // ─── Viewed-story persistence (localStorage) ──────────────────────────────────
 const viewedKey = (userId?: string) => `viewed_story_ids${userId ? `_${userId}` : ''}`;
@@ -104,13 +105,7 @@ export const StoriesRow: React.FC = () => {
         if (firstIndex !== -1) setViewerIndex(firstIndex);
     };
 
-    const getAvatarSrc = (url: string) => {
-        if (!url) return '';
-        if (url.startsWith('http')) return url;
-        if (url.startsWith('/avatars/')) return url;
-        const apiUrl = localStorage.getItem('active_community_url') || import.meta.env.VITE_API_URL || import.meta.env.VITE_COMMUNITY1_URL || 'http://localhost:8080';
-        return `${apiUrl}${url}`;
-    };
+
 
     const openAuthorId = useMemo(() => {
         if (viewerIndex === null) return undefined;
@@ -126,7 +121,7 @@ export const StoriesRow: React.FC = () => {
     const getPoint = (x: number) => {
         const period = 500;
         const amplitude = 15;
-        const yOffset = 85;
+        const yOffset = 90; // Moved down slightly
         const y = Math.sin(x / (period / Math.PI)) * amplitude + yOffset;
         return { x, y };
     };
@@ -161,11 +156,11 @@ export const StoriesRow: React.FC = () => {
             `}</style>
 
             <div
-                className="relative w-full overflow-hidden mb-4 mt-2"
+                className="relative w-full overflow-hidden mb-6 mt-2"
                 style={{ maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)' }}
             >
-                <div className="flex overflow-x-auto scrollbar-hide py-2 relative" style={{ scrollBehavior: 'smooth', minHeight: '180px' }}>
-                    <div className="relative" style={{ width: contentWidth, minHeight: '180px' }}>
+                <div className="flex overflow-x-auto scrollbar-hide py-6 relative" style={{ scrollBehavior: 'smooth', minHeight: '220px' }}>
+                    <div className="relative" style={{ width: contentWidth, minHeight: '220px' }}>
 
                         {/* Constellation Ribbon SVG */}
                         <svg className="absolute left-0 top-0 w-full h-full pointer-events-none" preserveAspectRatio="none">
@@ -199,7 +194,7 @@ export const StoriesRow: React.FC = () => {
                                 </svg>
                                 <div className="absolute inset-0 rounded-full bg-background/50 backdrop-blur-md border border-white/10 shadow-xl group-hover:scale-110 transition-transform duration-500 overflow-hidden flex items-center justify-center">
                                     {user?.avatar_url ? (
-                                        <img src={user.avatar_url} alt="You" className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
+                                        <img src={resolveMediaUrl(user.avatar_url)} alt="You" className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
                                     ) : (
                                         <span className="font-display font-bold text-xl text-muted-foreground">{user?.username?.[0]?.toUpperCase() || 'U'}</span>
                                     )}
@@ -293,7 +288,7 @@ export const StoriesRow: React.FC = () => {
                                                 style={{ zIndex: 5 }}>
                                                 {latestStory.author_avatar ? (
                                                     <img
-                                                        src={getAvatarSrc(latestStory.author_avatar)}
+                                                        src={resolveMediaUrl(latestStory.author_avatar)}
                                                         alt={latestStory.author_name}
                                                         className={`w-full h-full object-cover transition-all duration-300 ${allViewed ? 'grayscale-[40%] opacity-70' : ''}`}
                                                     />

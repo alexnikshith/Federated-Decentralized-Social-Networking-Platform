@@ -4,6 +4,7 @@ import { useStoryStore } from '../store/storyStore';
 import { useAuthStore } from '../../identity/store/authStore';
 import { Button } from '@/components/ui/button';
 import { AnimatePresence, motion } from 'motion/react';
+import { resolveMediaUrl } from '@/lib/utils';
 
 interface StoryViewerModalProps {
     open: boolean;
@@ -19,18 +20,7 @@ interface LikerInfo {
     avatar_url: string;
 }
 
-const getApiUrl = () =>
-    localStorage.getItem('active_community_url')
-    || import.meta.env.VITE_API_URL
-    || import.meta.env.VITE_COMMUNITY1_URL
-    || 'http://localhost:8080';
 
-const resolveAvatar = (url: string) => {
-    if (!url) return '';
-    if (url.startsWith('http')) return url;
-    if (url.startsWith('/avatars/')) return url; // frontend-served preset
-    return `${getApiUrl()}${url}`;
-};
 
 export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({ open, onClose, initialStoryIndex, viewedIds }) => {
     const { stories, deleteStory, likeStory, unlikeStory } = useStoryStore();
@@ -125,7 +115,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({ open, onClos
         setLikersLoading(true);
         try {
             const token = useAuthStore.getState().token;
-            const res = await fetch(`${getApiUrl()}/api/stories/${currentStory.id}/likes`, {
+            const res = await fetch(resolveMediaUrl(`/api/stories/${currentStory.id}/likes`), {
                 headers: {
                     'Content-Type': 'application/json',
                     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -151,7 +141,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({ open, onClos
         setIsSendingReply(true);
         try {
             const token = useAuthStore.getState().token;
-            await fetch(`${getApiUrl()}/api/messages`, {
+            await fetch(resolveMediaUrl('/api/messages'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -171,9 +161,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({ open, onClos
         }
     };
 
-    const mediaUrl = currentStory.media_url.startsWith('http')
-        ? currentStory.media_url
-        : `${getApiUrl()}${currentStory.media_url}`;
+    const mediaUrl = resolveMediaUrl(currentStory.media_url);
 
     return (
         <div
@@ -228,7 +216,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({ open, onClos
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-primary/80 border-2 border-white/50 overflow-hidden flex items-center justify-center text-white font-bold flex-shrink-0">
                             {currentStory.author_avatar ? (
-                                <img src={resolveAvatar(currentStory.author_avatar)} alt={currentStory.author_name} className="w-full h-full object-cover" />
+                                <img src={resolveMediaUrl(currentStory.author_avatar)} alt={currentStory.author_name} className="w-full h-full object-cover" />
                             ) : (
                                 currentStory.author_name?.[0]?.toUpperCase()
                             )}
@@ -268,18 +256,24 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({ open, onClos
                 </div>
 
                 {/* Media */}
-                <div className="flex-1 flex items-center justify-center relative">
+                <div className="flex-1 flex items-center justify-center relative overflow-hidden bg-black pt-20 pb-32">
+                    {/* Blurred Background for Aspect Ratio Mismatch */}
+                    <div 
+                        className="absolute inset-0 bg-cover bg-center blur-3xl opacity-40 scale-110 pointer-events-none"
+                        style={{ backgroundImage: `url(${mediaUrl})` }}
+                    />
+                    
                     {currentStory.media_type === 'image' ? (
-                        <img src={mediaUrl} alt="Story" className="w-full h-full object-cover" />
+                        <img src={mediaUrl} alt="Story" className="relative z-10 w-full h-full object-contain" />
                     ) : (
-                        <video src={mediaUrl} className="w-full h-full object-cover" autoPlay loop playsInline />
+                        <video src={mediaUrl} className="relative z-10 w-full h-full object-contain" autoPlay loop playsInline />
                     )}
 
                     {/* Caption */}
                     {currentStory.content && (
                         <>
                             <div className="absolute bottom-0 left-0 w-full h-48 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-10 pointer-events-none" />
-                            <div className="absolute bottom-16 left-0 w-full px-6 z-20">
+                            <div className="absolute bottom-24 left-0 w-full px-6 z-20">
                                 <p className="text-white text-sm md:text-base font-medium leading-relaxed text-center drop-shadow-md whitespace-pre-wrap">{currentStory.content}</p>
                             </div>
                         </>
@@ -365,7 +359,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({ open, onClos
                                         <li key={liker.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
                                             <div className="w-9 h-9 rounded-full bg-primary/40 overflow-hidden flex-shrink-0 flex items-center justify-center text-white text-sm font-bold">
                                                 {liker.avatar_url ? (
-                                                    <img src={resolveAvatar(liker.avatar_url)} alt={liker.display_name} className="w-full h-full object-cover" />
+                                                    <img src={resolveMediaUrl(liker.avatar_url)} alt={liker.display_name} className="w-full h-full object-cover" />
                                                 ) : (
                                                     (liker.display_name || liker.username)?.[0]?.toUpperCase()
                                                 )}

@@ -64,13 +64,16 @@ func (s *SearchService) mapInstanceToName(url string) string {
 	if url == "" {
 		return ""
 	}
-	// Map localhost:8080 and Docker internal backend:8080 to community-1
-	if strings.Contains(url, "localhost:8080") || strings.Contains(url, "backend:8080") || strings.Contains(url, "community-1") {
-		return "community-1"
+	// Map local and production URLs for Community 1 to Nexus.Social
+	if strings.Contains(url, "localhost:8080") || 
+	   strings.Contains(url, "backend:8080") || 
+	   strings.Contains(url, "federated-decentralized-social.onrender.com") ||
+	   strings.Contains(url, "community-1") {
+		return "Nexus.Social"
 	}
-	// Map localhost:8081 and Docker internal backend2:8080 to community-2
+	// Map local and community-2 aliases to Nexus Community 2
 	if strings.Contains(url, "localhost:8081") || strings.Contains(url, "backend2:8080") || strings.Contains(url, "community-2") {
-		return "community-2"
+		return "Nexus Community 2"
 	}
 	return url
 }
@@ -92,7 +95,8 @@ func (s *SearchService) SearchUsers(ctx context.Context, query string, limit int
 			instanceStr, _ := result["domain"].(string)
 			avatarStr, _ := result["avatar_url"].(string)
 			handleStr, _ := result["handle"].(string)
-			_ = handleStr
+			actorIDStr, _ := result["actor_id"].(string)
+
 			resolvedUser := identityModels.PublicUser{
 				ID:             primitive.NilObjectID,
 				Username:       usernameStr,
@@ -101,6 +105,8 @@ func (s *SearchService) SearchUsers(ctx context.Context, query string, limit int
 				AvatarURL:      avatarStr,
 				IsFollowing:    false,
 				CanViewDetails: false,
+				Handle:         handleStr,
+				ActorID:        actorIDStr,
 			}
 			// Return immediately — exact handle match has no local results to merge
 			return []identityModels.PublicUser{resolvedUser}, nil
@@ -202,6 +208,11 @@ func (s *SearchService) SearchUsers(ctx context.Context, query string, limit int
 	// Add other local matches
 	for _, user := range users {
 		p := user.ToPublicUser()
+		if p.InstanceID == "" || p.InstanceID == "default" {
+			p.InstanceID = "Nexus.Social"
+		} else {
+			p.InstanceID = s.mapInstanceToName(p.InstanceID)
+		}
 		key := getUserKey(p)
 		if !seen[key] {
 			p.IsFollowing = followedMap[user.ID]
@@ -228,6 +239,15 @@ func (s *SearchService) SearchUsers(ctx context.Context, query string, limit int
 				{"fetched_at": bson.M{"$gt": primitive.NewDateTimeFromTime(staleThreshold)}},
 				// Also skip deactivated remote users
 				{"is_deactivated": bson.M{"$ne": true}},
+				// Skip local users cached in remote_users (should only come from 'users' collection)
+				{"instance": bson.M{"$nin": []string{
+					"local",
+					config.AppConfig.InstanceDomain,
+					"localhost:8080",
+					"localhost:8081",
+					"backend:8080",
+					"backend2:8080",
+				}}},
 			},
 		}
 

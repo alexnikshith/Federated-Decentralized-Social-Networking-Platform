@@ -91,11 +91,7 @@ export const FeedPage: React.FC = () => {
                         </header>
 
                         <div className="create-post-container mb-8">
-                            {loading ? (
-                                <FeedSkeleton />
-                            ) : (
-                                <CreatePost />
-                            )}
+                            <CreatePost />
                         </div>
 
                         {/* Posting Tools */}

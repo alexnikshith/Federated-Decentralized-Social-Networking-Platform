@@ -307,7 +307,8 @@ func (m *MockNotificationRepository) DeleteUserNotifications(ctx context.Context
 type MockRemoteUserRepository struct {
 	GetRemoteUserByIDFunc       func(ctx context.Context, userID primitive.ObjectID) (*federationModels.RemoteUser, error)
 	GetRemoteUserByActorIDFunc  func(ctx context.Context, actorID string) (*federationModels.RemoteUser, error)
-	GetRemoteUserByUsernameFunc func(ctx context.Context, username string) (*federationModels.RemoteUser, error)
+	GetRemoteUserByUsernameFunc            func(ctx context.Context, username string) (*federationModels.RemoteUser, error)
+	GetRemoteUserByUsernameAndInstanceFunc func(ctx context.Context, username, instance string) (*federationModels.RemoteUser, error)
 }
 
 func (m *MockRemoteUserRepository) GetRemoteUserByID(ctx context.Context, userID primitive.ObjectID) (*federationModels.RemoteUser, error) {
@@ -327,6 +328,13 @@ func (m *MockRemoteUserRepository) GetRemoteUserByActorID(ctx context.Context, a
 func (m *MockRemoteUserRepository) GetRemoteUserByUsername(ctx context.Context, username string) (*federationModels.RemoteUser, error) {
 	if m.GetRemoteUserByUsernameFunc != nil {
 		return m.GetRemoteUserByUsernameFunc(ctx, username)
+	}
+	return nil, nil
+}
+
+func (m *MockRemoteUserRepository) GetRemoteUserByUsernameAndInstance(ctx context.Context, username, instance string) (*federationModels.RemoteUser, error) {
+	if m.GetRemoteUserByUsernameAndInstanceFunc != nil {
+		return m.GetRemoteUserByUsernameAndInstanceFunc(ctx, username, instance)
 	}
 	return nil, nil
 }
