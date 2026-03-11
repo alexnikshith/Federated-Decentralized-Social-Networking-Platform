@@ -14,6 +14,8 @@ vi.mock('../api/client', () => ({
         getActivity: vi.fn(),
         deactivateAccount: vi.fn(),
         deleteAccount: vi.fn(),
+        getFederationPreference: vi.fn().mockResolvedValue({ federation_enabled: true }),
+        updateFederationPreference: vi.fn().mockResolvedValue({}),
     },
     authApi: {
         changePassword: vi.fn(),
