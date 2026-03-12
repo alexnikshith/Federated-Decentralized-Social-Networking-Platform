@@ -9,10 +9,8 @@ Welcome to **Federated Social**, a decentralized social networking platform! Thi
 2. [Setup Options](#️-setup-options)
    - [Option 1: Using Docker (Fastest)](#option-1-using-docker-fastest)
    - [Option 2: Local Development](#option-2-local-development)
-3. [Environment Variables](#-environment-variables)
-4. [Using the Platform](#-using-the-platform)
-5. [Project Roadmap](#-project-roadmap)
-6. [Troubleshooting](#-troubleshooting)
+3. [Using the Platform](#-using-the-platform)
+4. [Troubleshooting](#-troubleshooting)
 
 ---
 
@@ -81,25 +79,6 @@ If you want to run the services individually for development:
    npm run dev
    ```
 
----
-
-## 🔑 Environment Variables
-
-The backend requires a `.env` file in the `backend/` directory. Here is a template:
-
-```env
-PORT=8080
-MONGO_URI=your_mongodb_connection_string
-DB_NAME=federated_social
-JWT_SECRET=your_super_secret_key
-
-# Optional: SMTP for OTP Emails
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your_email@gmail.com
-SMTP_PASSWORD=your_app_password
-SMTP_FROM=noreply@federated-social.com
-```
 
 ---
 
@@ -129,16 +108,6 @@ SMTP_FROM=noreply@federated-social.com
 
 ---
 
-## 🗺️ Project Roadmap
-
-- [x] **Epic 1: Identity** - Authentication, Profile, Settings (DONE)
-- [x] **Epic 2: Content Sharing** - Posts, Comments, Likes, Feed (DONE)
-- [x] **Epic 3: Federation** - Connecting multiple server instances (CORE DONE)
-- [x] **Epic 4: Moderation** - Safety, Reporting, and Admin controls (DONE)
-- [x] **Epic 5: Safety** - Advanced Security & Encryption (DONE)
-- [ ] **Next:** Mobile Experience Enhancement & Scale Testing
-
----
 
 ## ❓ Troubleshooting
 
@@ -151,7 +120,3 @@ SMTP_FROM=noreply@federated-social.com
 **Q: My password isn't working.**
 - A: We use Bcrypt for hashing. If you lost your password and haven't set up recovery, you'll need to reset it manually in the database for now.
 
----
-
-### 🌟 Contribution
-We follow an **Epic-Based Architecture**. If you're contributing code, please check the [Architecture Documentation](docs/architecture/system-architecture.md) to understand where things go!
