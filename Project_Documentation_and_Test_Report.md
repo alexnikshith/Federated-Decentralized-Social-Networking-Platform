@@ -65,8 +65,3 @@ To verify the UI behavior against these backend implementations:
 2.  **Privacy Test**: Change your profile to "Followers only" and verify that a new, non-following user cannot see your "Secret Bio".
 3.  **Real-time Push**: Open two browsers side-by-side. Send a message from one and watch the notification bell update in the other without a page refresh.
 4.  **Auto-Mod**: Using test scripts or multiple browser tabs, report a dummy account 9 times. Attempt to log in to that account—it should be denied.
-
----
-
-## 🎯 Conclusion
-The backend infrastructure is now robustly tested against real database interactions. The integration suite provides a safety net for future feature additions, ensuring that changes to the messaging or federation logic do not break existing privacy or safety controls.
