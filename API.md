@@ -8,9 +8,6 @@ Most protected endpoints require a JWT token passed in the `Authorization` heade
 `Authorization: Bearer <your_token>`
 
 ---
-
-## 👤 Epic 1: Identity & Authentication
-
 ### Public Endpoints
 - `POST /api/auth/signup` - Create a new user account
 - `POST /api/auth/login` - Authenticate and receive a JWT token
@@ -35,10 +32,6 @@ Most protected endpoints require a JWT token passed in the `Authorization` heade
 
 ### Profile View
 - `GET /api/profile/{id}` - View another user's profile (supports Optional Auth for follow status)
-
----
-
-## 📝 Epic 2: Content Sharing
 
 ### Posts & Feed
 - `POST /api/posts` - Create a new post
@@ -69,19 +62,6 @@ Most protected endpoints require a JWT token passed in the `Authorization` heade
 - `GET /api/users/{id}/followers` - Get followers list
 - `GET /api/users/{id}/following` - Get following list
 
----
-
-## 🌐 Epic 3: Federation
-
-- `GET /api/federation/instances` - List all known federated instances
-- `GET /api/activitypub/resolve?handle={handle}` - Resolve a remote handle via WebFinger
-- `POST /api/federation/users/follow` - Follow a remote user via ActivityPub
-- `GET /api/users/search?q={query}` - Federated user search (respects follow status and privacy)
-
----
-
-## 🛡️ Epic 4: Moderation & Reports
-
 ### User Features
 - `POST /api/reports/user` - Report another user for violations
 - `POST /api/posts/{id}/report` - Report a specific post
@@ -96,9 +76,3 @@ Most protected endpoints require a JWT token passed in the `Authorization` heade
 - `DELETE /api/admin/posts` - Remove violating content
 - `GET /api/admin/reports` - View all pending user/content reports
 - `DELETE /api/admin/reports/resolve` - Dismiss or resolve a report
-
----
-
-## 🛠️ System
-- `GET /health` - Service health status
-- `WS /ws?token={jwt}` - Real-time WebSocket connection for notifications and activity
