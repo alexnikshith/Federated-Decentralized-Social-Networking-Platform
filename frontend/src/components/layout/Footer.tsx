@@ -46,7 +46,7 @@ export function Footer() {
                 </a>
               </div>
               <p className="text-[10px] font-bold tracking-[0.4em] uppercase text-foreground/70 dark:text-white/70 whitespace-nowrap text-center md:text-left w-full">
-                © {new Date().getFullYear()} NEXUS CORE
+                © {new Date().getFullYear()} NEXUS
               </p>
             </div>
 
@@ -60,7 +60,7 @@ export function Footer() {
                 <li key={link.name}>
                   <Link
                     to={link.href}
-                    className="text-sm text-foreground/30 dark:text-white/30 hover:text-foreground dark:hover:text-white transition-colors uppercase tracking-widest font-light"
+                    className="text-sm text-foreground/30 dark:text-white/15 hover:text-foreground dark:hover:text-white transition-colors uppercase tracking-widest font-light"
                   >
                     {link.name}
                   </Link>
@@ -77,7 +77,7 @@ export function Footer() {
                 <li key={link.name}>
                   <Link
                     to={link.href}
-                    className="text-sm text-foreground/30 dark:text-white/30 hover:text-foreground dark:hover:text-white transition-colors uppercase tracking-widest font-light"
+                    className="text-sm text-foreground/30 dark:text-white/15 hover:text-foreground dark:hover:text-white transition-colors uppercase tracking-widest font-light"
                   >
                     {link.name}
                   </Link>
@@ -94,7 +94,7 @@ export function Footer() {
                 <li key={link.name}>
                   <Link
                     to={link.href}
-                    className="text-sm text-foreground/30 dark:text-white/30 hover:text-foreground dark:hover:text-white transition-colors uppercase tracking-widest font-light"
+                    className="text-sm text-foreground/30 dark:text-white/15 hover:text-foreground dark:hover:text-white transition-colors uppercase tracking-widest font-light"
                   >
                     {link.name}
                   </Link>

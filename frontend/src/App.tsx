@@ -42,6 +42,11 @@ import MessagingUI from '../epics/messaging/pages/MessagingUI';
 
 // Epic 4: Reports - Import pages
 import About from '../epics/reports/pages/About';
+import PrivacyPolicy from '../epics/reports/pages/PrivacyPolicy';
+import TermsOfService from '../epics/reports/pages/TermsOfService';
+import Documentation from '../epics/reports/pages/Documentation';
+import Protocol from '../epics/reports/pages/Protocol';
+import Setup from '../epics/reports/pages/Setup';
 import { RefinedReportsPage } from '../epics/reports/pages/RefinedReportsPage';
 
 // Admin Epic
@@ -336,6 +341,11 @@ const AppContent: React.FC = () => {
                     />
                     <Route path="/guidelines" element={<GuidelinesPage />} />
                     <Route path="/about" element={<About />} />
+                    <Route path="/privacy" element={<PrivacyPolicy />} />
+                    <Route path="/terms" element={<TermsOfService />} />
+                    <Route path="/docs" element={<Documentation />} />
+                    <Route path="/protocol" element={<Protocol />} />
+                    <Route path="/setup" element={<Setup />} />
                     <Route path="*" element={<NotFound />} />
                 </Routes>
             </BrowserRouter>
