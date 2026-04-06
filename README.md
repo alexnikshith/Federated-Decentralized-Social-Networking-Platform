@@ -1,5 +1,5 @@
 # Federate Social - Federated Decentralized Social Networking Platform
-##check out our app here
+### Check out our app here
 https://nexiverse.vercel.app/
 
 ## 🚀 Quick Start
