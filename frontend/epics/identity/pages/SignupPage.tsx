@@ -4,7 +4,7 @@ import { authApi } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import type { SignupRequest } from '../types';
 import { COMMUNITIES } from '../../../src/config/communities';
-import { Users, Globe, ArrowRight, Check, AlertCircle, Loader2, ChevronLeft, Upload, Orbit, Eye, EyeOff, ShieldCheck, ShieldAlert, Info, Search, Ban } from 'lucide-react';
+import { Users, Globe, ArrowRight, Check, AlertCircle, Loader2, ChevronLeft, Upload, Orbit, Eye, EyeOff, ShieldCheck, ShieldAlert, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { IdentityLayout } from '../../../src/components/auth/IdentityLayout';
@@ -14,8 +14,7 @@ export const SignupPage: React.FC = () => {
     const setAuth = useAuthStore((state) => state.setAuth);
 
     const [step, setStep] = useState<1 | 2 | 3>(1);
-    const [selectedCommunityId, setSelectedCommunityId] = useState<string>('');
-    const [communitySearchQuery, setCommunitySearchQuery] = useState('');
+    const [selectedCommunityId, setSelectedCommunityId] = useState<string>(COMMUNITIES[0].id);
 
     const [formData, setFormData] = useState<SignupRequest>({
         username: '',
@@ -50,7 +49,7 @@ export const SignupPage: React.FC = () => {
         hasUpper: /[A-Z]/.test(formData.password),
         hasLower: /[a-z]/.test(formData.password),
         hasNumber: /\d/.test(formData.password),
-        hasSpecial: /[@$!%*?&#^}{()]/.test(formData.password),
+        hasSpecial: /[@$!%*?&]/.test(formData.password),
     };
 
     const isPasswordValid = Object.values(passwordRequirements).every(Boolean);
@@ -286,68 +285,38 @@ export const SignupPage: React.FC = () => {
                                     <div className="text-xs font-mono text-amber-500/40">[ PHASE_01 ]</div>
                                 </div>
 
-                                <div className="mb-3 flex-shrink-0 relative">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-500/40" />
-                                    <input
-                                        type="text"
-                                        placeholder="SEARCH COMMUNITIES..."
-                                        value={communitySearchQuery}
-                                        onChange={(e) => setCommunitySearchQuery(e.target.value)}
-                                        className="w-full bg-amber-500/[0.03] border border-amber-500/20 rounded-lg py-2 pl-9 pr-3 text-amber-50 text-xs font-mono tracking-wider focus:outline-none focus:border-amber-400 focus:bg-amber-500/[0.08] transition-all placeholder:text-amber-800/30"
-                                    />
-                                </div>
-
-                                <div className="space-y-3 flex-1 overflow-y-auto custom-scrollbar pr-3 max-h-[300px]">
-                                    {COMMUNITIES.filter(c => c.name.toLowerCase().includes(communitySearchQuery.toLowerCase())).map((community) => {
-                                        const isDisabled = community.id === 'community-2';
-
-                                        return (
-                                            <button
-                                                key={community.id}
-                                                onClick={() => {
-                                                    if (!isDisabled) setSelectedCommunityId(community.id);
-                                                }}
-                                                disabled={isDisabled}
-                                                className={cn(
-                                                    "w-full p-4 border rounded-xl transition-all flex items-center justify-between group relative overflow-hidden",
-                                                    "bg-amber-500/[0.05] backdrop-blur-md",
-                                                    isDisabled && "opacity-40 cursor-not-allowed grayscale",
-                                                    !isDisabled && selectedCommunityId === community.id
-                                                        ? "border-amber-400 shadow-[0_0_20px_rgba(255,146,0,0.2),inset_0_0_15px_rgba(255,146,0,0.05)] bg-amber-500/[0.12]"
-                                                        : !isDisabled && "border-amber-500/30 hover:border-amber-400/60 hover:bg-amber-500/[0.1]"
-                                                )}
-                                            >
-                                                <div className="flex items-center gap-3 relative z-10 w-full">
-                                                    <div className={cn(
-                                                        "w-10 h-10 rounded-lg flex items-center justify-center border transition-colors shrink-0",
-                                                        selectedCommunityId === community.id ? "bg-amber-500/20 border-amber-400/50" : "bg-black/40 border-amber-500/10"
-                                                    )}>
-                                                        <Globe className={cn("w-5 h-5", selectedCommunityId === community.id ? "text-amber-200" : "text-amber-600/40")} />
-                                                    </div>
-                                                    <div className="text-left flex-1 min-w-0">
-                                                        <div className="flex items-center justify-between gap-2">
-                                                            <span className={cn("font-mono font-bold block text-sm tracking-wider truncate", selectedCommunityId === community.id ? "text-amber-100" : "text-amber-500/60")}>{community.name}</span>
-                                                            {isDisabled && (
-                                                                <span className="text-[9px] font-mono tracking-widest text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded uppercase shrink-0">Coming Soon</span>
-                                                            )}
-                                                        </div>
-                                                        <span className="text-[10px] text-amber-600/40 font-mono block mt-0.5 uppercase tracking-widest truncate">{community.url}</span>
-                                                    </div>
+                                <div className="space-y-3 flex-1 overflow-y-auto custom-scrollbar pr-3">
+                                    {COMMUNITIES.map((community) => (
+                                        <button
+                                            key={community.id}
+                                            onClick={() => setSelectedCommunityId(community.id)}
+                                            className={cn(
+                                                "w-full p-4 border rounded-xl transition-all flex items-center justify-between group relative overflow-hidden",
+                                                "bg-amber-500/[0.02] backdrop-blur-md",
+                                                selectedCommunityId === community.id
+                                                    ? "border-amber-400 shadow-[0_0_20px_rgba(255,146,0,0.2),inset_0_0_15px_rgba(255,146,0,0.05)] bg-amber-500/[0.08]"
+                                                    : "border-amber-500/10 hover:border-amber-400/40 hover:bg-amber-500/[0.04]"
+                                            )}
+                                        >
+                                            <div className="flex items-center gap-3 relative z-10">
+                                                <div className={cn(
+                                                    "w-10 h-10 rounded-lg flex items-center justify-center border transition-colors",
+                                                    selectedCommunityId === community.id ? "bg-amber-500/20 border-amber-400/50" : "bg-black/40 border-amber-500/10"
+                                                )}>
+                                                    <Globe className={cn("w-5 h-5", selectedCommunityId === community.id ? "text-amber-200" : "text-amber-600/40")} />
                                                 </div>
-                                                {selectedCommunityId === community.id && !isDisabled ? (
-                                                    <div className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center shadow-[0_0_10px_rgba(245,158,11,0.5)] shrink-0 ml-3">
-                                                        <Check className="w-3 h-3 text-amber-950 stroke-[3]" />
-                                                    </div>
-                                                ) : isDisabled ? (
-                                                    <div className="w-5 h-5 flex items-center justify-center shrink-0 ml-3 opacity-40">
-                                                        <Ban className="w-4 h-4 text-amber-500" />
-                                                    </div>
-                                                ) : (
-                                                    <div className="w-5 h-5 rounded-full border-2 border-amber-500/40 flex items-center justify-center shrink-0 ml-3" />
-                                                )}
-                                            </button>
-                                        )
-                                    })}
+                                                <div className="text-left">
+                                                    <span className={cn("font-mono font-bold block text-sm tracking-wider", selectedCommunityId === community.id ? "text-amber-100" : "text-amber-500/60")}>{community.name}</span>
+                                                    <span className="text-[10px] text-amber-600/40 font-mono block mt-0.5 uppercase tracking-widest">{community.url}</span>
+                                                </div>
+                                            </div>
+                                            {selectedCommunityId === community.id && (
+                                                <div className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center shadow-[0_0_10px_rgba(245,158,11,0.5)]">
+                                                    <Check className="w-3 h-3 text-amber-950 stroke-[3]" />
+                                                </div>
+                                            )}
+                                        </button>
+                                    ))}
                                 </div>
 
                                 <div className="mt-4 pt-4 border-t border-amber-500/10 flex-shrink-0">
@@ -734,8 +703,7 @@ export const SignupPage: React.FC = () => {
                         </div>
                     </div>
                 </>
-            )
-            }
-        </IdentityLayout >
+            )}
+        </IdentityLayout>
     );
 };

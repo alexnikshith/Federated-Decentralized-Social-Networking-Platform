@@ -43,10 +43,6 @@ export const adminApi = {
         await api.delete(`/api/admin/reports/resolve?id=${reportId}`);
     },
 
-    resolveUserReport: async (reportId: string): Promise<void> => {
-        await api.delete(`/api/reports/admin/resolve?id=${reportId}`);
-    },
-
     getTraffic: async (start_date?: string, end_date?: string): Promise<TrafficReport> => {
         const response = await api.get('/api/admin/traffic', {
             params: { start_date, end_date }

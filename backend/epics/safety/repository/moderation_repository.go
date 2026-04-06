@@ -116,18 +116,6 @@ func (r *ModerationRepository) GetAllLogs(ctx context.Context, limit int64) ([]m
 	return logs, nil
 }
 
-func (r *ModerationRepository) UpdateLogMetadata(ctx context.Context, logID primitive.ObjectID, username, displayName string) error {
-	_, err := r.logCollection.UpdateOne(
-		ctx,
-		bson.M{"_id": logID},
-		bson.M{"$set": bson.M{
-			"username":     username,
-			"display_name": displayName,
-		}},
-	)
-	return err
-}
-
 func (r *ModerationRepository) CreateIndexes(ctx context.Context) error {
 	// Guidelines indexes
 	gIndexes := []mongo.IndexModel{

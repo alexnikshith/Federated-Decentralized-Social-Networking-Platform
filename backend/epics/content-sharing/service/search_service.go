@@ -11,7 +11,6 @@ import (
 	"log"
 	"regexp"
 	"strings"
-	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -42,38 +41,28 @@ func NewSearchService() *SearchService {
 	}
 }
 
-// getUserKey generates a consistent key for deduplication across local and remote results.
+// getUserKey generates a consistent key for deduplication
 func getUserKey(user identityModels.PublicUser) string {
-	username := strings.ToLower(user.Username)
-	domain := strings.ToLower(user.InstanceID)
-
-	// Normalize local and internal domains to "local" for consistent matching
-	if domain == "" || domain == "nexus.social" || domain == "default" || domain == "default-instance" || domain == strings.ToLower(config.AppConfig.InstanceDomain) ||
-		strings.Contains(domain, "localhost") || strings.Contains(domain, "backend") ||
-		strings.Contains(domain, "community-1") || strings.Contains(domain, "federated-decentralized-social") {
-		domain = "local"
-	} else if strings.Contains(domain, "community-2") {
-		// Specific mapping for the other test community if it's treated as "remote" but we want consistency
-		domain = "local-2"
+	if user.ID != primitive.NilObjectID {
+		return user.ID.Hex()
 	}
-
-	return username + "@" + domain
+	if user.InstanceID != "" {
+		return user.Username + "@" + user.InstanceID
+	}
+	return user.Username
 }
 
 func (s *SearchService) mapInstanceToName(url string) string {
 	if url == "" {
 		return ""
 	}
-	// Map local and production URLs for Community 1 to Nexus.Social
-	if strings.Contains(url, "localhost:8080") ||
-		strings.Contains(url, "backend:8080") ||
-		strings.Contains(url, "federated-decentralized-social.onrender.com") ||
-		strings.Contains(url, "community-1") {
-		return "Nexus.Social"
+	// Map localhost:8080 and Docker internal backend:8080 to community-1
+	if strings.Contains(url, "localhost:8080") || strings.Contains(url, "backend:8080") || strings.Contains(url, "community-1") {
+		return "community-1"
 	}
-	// Map local and community-2 aliases to Nexus Community 2
+	// Map localhost:8081 and Docker internal backend2:8080 to community-2
 	if strings.Contains(url, "localhost:8081") || strings.Contains(url, "backend2:8080") || strings.Contains(url, "community-2") {
-		return "Nexus Community 2"
+		return "community-2"
 	}
 	return url
 }
@@ -95,8 +84,7 @@ func (s *SearchService) SearchUsers(ctx context.Context, query string, limit int
 			instanceStr, _ := result["domain"].(string)
 			avatarStr, _ := result["avatar_url"].(string)
 			handleStr, _ := result["handle"].(string)
-			actorIDStr, _ := result["actor_id"].(string)
-
+			_ = handleStr
 			resolvedUser := identityModels.PublicUser{
 				ID:             primitive.NilObjectID,
 				Username:       usernameStr,
@@ -105,8 +93,6 @@ func (s *SearchService) SearchUsers(ctx context.Context, query string, limit int
 				AvatarURL:      avatarStr,
 				IsFollowing:    false,
 				CanViewDetails: false,
-				Handle:         handleStr,
-				ActorID:        actorIDStr,
 			}
 			// Return immediately — exact handle match has no local results to merge
 			return []identityModels.PublicUser{resolvedUser}, nil
@@ -140,11 +126,6 @@ func (s *SearchService) SearchUsers(ctx context.Context, query string, limit int
 				if query == "" || strings.Contains(strings.ToLower(user.Username), strings.ToLower(query)) ||
 					strings.Contains(strings.ToLower(user.DisplayName), strings.ToLower(query)) {
 					p := user.ToPublicUser()
-					if p.InstanceID == "" || p.InstanceID == "default" {
-						p.InstanceID = "Nexus.Social"
-					} else {
-						p.InstanceID = s.mapInstanceToName(p.InstanceID)
-					}
 					p.IsFollowing = true
 					explicitFollows = append(explicitFollows, p)
 				}
@@ -153,23 +134,12 @@ func (s *SearchService) SearchUsers(ctx context.Context, query string, limit int
 
 		// Remote Follows
 		remoteFollows, _ := s.remoteRelationshipRepo.GetRemoteFollowing(ctx, *requestingUserID)
-		staleThreshold := time.Now().Add(-30 * 24 * time.Hour)
-
 		for _, f := range remoteFollows {
 			remoteFollowedActorIDs[f.RemoteActorID] = true
 			if query == "" || strings.Contains(strings.ToLower(f.RemoteUsername), strings.ToLower(query)) {
 				// Fetch remote user details from cache
 				ru, _ := s.remoteUserRepo.GetRemoteUserByActorID(ctx, f.RemoteActorID)
 				if ru != nil {
-					// Apply Ghost User filtering even for followed users
-					if (ru.FetchedAt.IsZero() || ru.FetchedAt.Before(staleThreshold)) && ru.InboxURL == "" {
-						log.Printf("[Search] Skipping stale followed remote user: %s", ru.Username)
-						continue
-					}
-					if ru.IsDeactivated {
-						continue
-					}
-
 					explicitFollows = append(explicitFollows, identityModels.PublicUser{
 						ID:             ru.ID,
 						Username:       ru.Username,
@@ -180,18 +150,15 @@ func (s *SearchService) SearchUsers(ctx context.Context, query string, limit int
 						CanViewDetails: false,
 					})
 				} else {
-					// Fallback if not in cache — but we don't have enough info to show safely if it's a ghost
-					// Allow only if we have a recent follow record?
-					if time.Since(f.CreatedAt) < 30*24*time.Hour {
-						explicitFollows = append(explicitFollows, identityModels.PublicUser{
-							ID:             primitive.NilObjectID,
-							Username:       f.RemoteUsername,
-							DisplayName:    f.RemoteUsername,
-							InstanceID:     s.mapInstanceToName(f.RemoteInstance),
-							IsFollowing:    true,
-							CanViewDetails: false,
-						})
-					}
+					// Fallback to basic info if not in cache
+					explicitFollows = append(explicitFollows, identityModels.PublicUser{
+						ID:             primitive.NilObjectID,
+						Username:       f.RemoteUsername,
+						DisplayName:    f.RemoteUsername,
+						InstanceID:     s.mapInstanceToName(f.RemoteInstance),
+						IsFollowing:    true,
+						CanViewDetails: false,
+					})
 				}
 			}
 		}
@@ -213,11 +180,6 @@ func (s *SearchService) SearchUsers(ctx context.Context, query string, limit int
 	// Add other local matches
 	for _, user := range users {
 		p := user.ToPublicUser()
-		if p.InstanceID == "" || p.InstanceID == "default" {
-			p.InstanceID = "Nexus.Social"
-		} else {
-			p.InstanceID = s.mapInstanceToName(p.InstanceID)
-		}
 		key := getUserKey(p)
 		if !seen[key] {
 			p.IsFollowing = followedMap[user.ID]
@@ -229,30 +191,10 @@ func (s *SearchService) SearchUsers(ctx context.Context, query string, limit int
 	// 4. Search Remote User cache for other matches (Dedup)
 	if query != "" {
 		escapedQuery := regexp.QuoteMeta(strings.TrimLeft(query, "@"))
-		// Users not fetched in the last 30 days are likely gone or irrelevant.
-		staleThreshold := time.Now().Add(-30 * 24 * time.Hour)
-
 		filter := bson.M{
-			"$and": []bson.M{
-				{
-					"$or": []bson.M{
-						{"username": bson.M{"$regex": escapedQuery, "$options": "i"}},
-						{"display_name": bson.M{"$regex": escapedQuery, "$options": "i"}},
-					},
-				},
-				// If fetched_at is missing or older than 30 days, we skip it
-				{"fetched_at": bson.M{"$gt": primitive.NewDateTimeFromTime(staleThreshold)}},
-				// Also skip deactivated remote users
-				{"is_deactivated": bson.M{"$ne": true}},
-				// Skip local users cached in remote_users (should only come from 'users' collection)
-				{"instance": bson.M{"$nin": []string{
-					"local",
-					config.AppConfig.InstanceDomain,
-					"localhost:8080",
-					"localhost:8081",
-					"backend:8080",
-					"backend2:8080",
-				}}},
+			"$or": []bson.M{
+				{"username": bson.M{"$regex": escapedQuery, "$options": "i"}},
+				{"display_name": bson.M{"$regex": escapedQuery, "$options": "i"}},
 			},
 		}
 

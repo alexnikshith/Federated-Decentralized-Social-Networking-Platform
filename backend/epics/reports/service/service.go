@@ -136,14 +136,6 @@ func (s *reportService) GetTrafficReport(ctx context.Context, startStr, endStr s
 	return s.repo.GetTrafficReport(ctx, startDate, endDate)
 }
 
-func (s *reportService) ResolveReport(ctx context.Context, reportID string) error {
-	oid, err := primitive.ObjectIDFromHex(reportID)
-	if err != nil {
-		return errors.New("invalid report ID")
-	}
-	return s.repo.ResolveReport(ctx, oid)
-}
-
 // Helper functions (private)
 
 func parseDateRange(startStr, endStr string) (time.Time, time.Time) {

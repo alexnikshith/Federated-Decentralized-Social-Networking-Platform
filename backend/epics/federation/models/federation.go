@@ -31,9 +31,7 @@ type RemoteUser struct {
 	InboxURL          string             `json:"inbox_url" bson:"inbox_url"`                   // Actor inbox URL
 	SharedInboxURL    string             `json:"shared_inbox_url" bson:"shared_inbox_url"`     // Actor sharedInbox (preferred for delivery)
 	ProfileVisibility string             `json:"profile_visibility" bson:"profile_visibility"` // "public", "private", "followers"
-	IsActive          bool               `json:"is_active" bson:"is_active"`                   // Cache control
-	IsDeactivated     bool               `json:"is_deactivated" bson:"is_deactivated"`
-	FetchedAt         time.Time          `json:"fetched_at" bson:"fetched_at"` // Last time we fetched this user's data
+	FetchedAt         time.Time          `json:"fetched_at" bson:"fetched_at"`                 // Last time we fetched this user's data
 	CreatedAt         time.Time          `json:"created_at" bson:"created_at"`
 }
 

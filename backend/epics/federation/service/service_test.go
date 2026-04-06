@@ -69,18 +69,6 @@ func (m *mockFederationEventRepo) CreateEvent(ctx context.Context, event *models
 	}
 	return nil
 }
-func (m *mockFederationEventRepo) GetPendingEvents(ctx context.Context) ([]models.FederationEvent, error) {
-	return nil, nil
-}
-func (m *mockFederationEventRepo) GetFailedEvents(ctx context.Context, maxRetries int) ([]models.FederationEvent, error) {
-	return nil, nil
-}
-func (m *mockFederationEventRepo) MarkEventSent(ctx context.Context, eventID primitive.ObjectID) error {
-	return nil
-}
-func (m *mockFederationEventRepo) MarkEventFailed(ctx context.Context, eventID primitive.ObjectID, errorMessage string) error {
-	return nil
-}
 
 // Stubs for other repos (implement as needed)
 type mockRemoteUserRepo struct {
@@ -113,20 +101,8 @@ func (m *mockRemotePostRepo) UpsertRemotePost(ctx context.Context, remotePost *m
 func (m *mockRemotePostRepo) DeleteRemotePost(ctx context.Context, remotePostID string) error {
 	return nil
 }
-func (m *mockRemotePostRepo) DeleteRemotePostByLocalID(ctx context.Context, id primitive.ObjectID) error {
-	return nil
-}
 func (m *mockRemotePostRepo) GetRemotePostsByAuthors(ctx context.Context, actorIDs []string, limit int64) ([]models.RemotePost, error) {
 	return nil, nil
-}
-func (m *mockRemotePostRepo) GetRemotePostByObjectID(ctx context.Context, id primitive.ObjectID) (*models.RemotePost, error) {
-	return nil, nil
-}
-func (m *mockRemotePostRepo) IncrementLikeCount(ctx context.Context, remotePostID string) error {
-	return nil
-}
-func (m *mockRemotePostRepo) DecrementLikeCount(ctx context.Context, remotePostID string) error {
-	return nil
 }
 
 type mockRelationshipsRepo struct {
@@ -167,12 +143,6 @@ func (m *mockRelationshipsRepo) CountRemoteFollowers(ctx context.Context, localU
 	return 0, nil
 }
 func (m *mockRelationshipsRepo) CountRemoteFollowing(ctx context.Context, localUserID primitive.ObjectID) (int64, error) {
-	return 0, nil
-}
-func (m *mockRelationshipsRepo) CountLocalFollowersOfRemoteActor(ctx context.Context, remoteActorID string) (int64, error) {
-	return 0, nil
-}
-func (m *mockRelationshipsRepo) CountLocalUsersFollowedByRemoteActor(ctx context.Context, remoteActorID string) (int64, error) {
 	return 0, nil
 }
 

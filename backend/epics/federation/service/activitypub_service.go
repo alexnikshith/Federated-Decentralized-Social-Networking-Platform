@@ -20,7 +20,6 @@ import (
 	"strings"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -346,14 +345,6 @@ func (s *FederationService) FollowMastodonUser(ctx context.Context, localUserID 
 		log.Printf("ActivityPub: Warning - failed to send Follow to %s: %v", actor.Inbox, err)
 		// Not fatal — local record is saved; delivery can be retried
 	}
-
-	// Asynchronously fetch their history to populate feed
-	go func() {
-		bgCtx := context.Background()
-		if err := s.FetchAndIngestOutbox(bgCtx, actor, remoteUser); err != nil {
-			log.Printf("ActivityPub: Warning - failed to fetch outbox for %s: %v", actor.PreferredUsername, err)
-		}
-	}()
 
 	log.Printf("ActivityPub: Sent Follow activity to %s (inbox: %s)", actor.ID, actor.Inbox)
 	return nil
@@ -688,23 +679,9 @@ func (s *FederationService) StoreRemotePost(ctx context.Context, postID, actorID
 }
 
 // IncrementRemotePostLike increments the like_count on a cached remote post.
-func (s *FederationService) IncrementRemotePostLike(ctx context.Context, remotePostID string) {
-	if err := s.remotePostRepo.IncrementLikeCount(ctx, remotePostID); err != nil {
-		log.Printf("ActivityPub: IncrementRemotePostLike failed for %s: %v", remotePostID, err)
-	}
-}
-
-// DecrementRemotePostLike decrements the like_count on a cached remote post.
-func (s *FederationService) DecrementRemotePostLike(ctx context.Context, remotePostID string) {
-	if err := s.remotePostRepo.DecrementLikeCount(ctx, remotePostID); err != nil {
-		log.Printf("ActivityPub: DecrementRemotePostLike failed for %s: %v", remotePostID, err)
-	}
-}
-
-// GetRemotePostByObjectID returns a cached remote post by its MongoDB ObjectID.
-// Used when the frontend sends the MongoDB _id (not the AP URL) of a cached remote post.
-func (s *FederationService) GetRemotePostByObjectID(ctx context.Context, id primitive.ObjectID) (*models.RemotePost, error) {
-	return s.remotePostRepo.GetRemotePostByObjectID(ctx, id)
+func (s *FederationService) IncrementRemotePostLike(ctx context.Context, postID string) {
+	log.Printf("ActivityPub: IncrementRemotePostLike for %s (best-effort)", postID)
+	// The remote_posts collection doesn't yet have like_count — log for now, no-op.
 }
 
 // StoreRemoteBoost stores an Announce (boost) as a RemotePost referencing the original.
@@ -727,205 +704,6 @@ func (s *FederationService) StoreRemoteBoost(ctx context.Context, actorID, boost
 func (s *FederationService) DeleteRemotePostByID(ctx context.Context, postID string) {
 	if err := s.remotePostRepo.DeleteRemotePost(ctx, postID); err != nil {
 		log.Printf("ActivityPub: DeleteRemotePostByID %s failed: %v", postID, err)
-	}
-}
-
-// DeleteRemotePostByLocalID deletes a remote post from the local cache by its MongoDB ObjectID.
-func (s *FederationService) DeleteRemotePostByLocalID(ctx context.Context, id primitive.ObjectID) error {
-	return s.remotePostRepo.DeleteRemotePostByLocalID(ctx, id)
-}
-
-// SendRemoteLike builds an AP Like activity and delivers it to the remote actor's inbox.
-// Falls back to the retry queue if the inbox is unreachable.
-func (s *FederationService) SendRemoteLike(ctx context.Context, localUsername, privateKeyPem, keyID string, remotePost *models.RemotePost) {
-	base := config.AppConfig.BaseURL()
-	localActorURL := fmt.Sprintf("%s/users/%s", base, localUsername)
-	activityID := fmt.Sprintf("%s/activities/like-%s", base, newUUID())
-
-	likeActivity := map[string]interface{}{
-		"@context": "https://www.w3.org/ns/activitystreams",
-		"id":       activityID,
-		"type":     "Like",
-		"actor":    localActorURL,
-		"object":   remotePost.RemotePostID,
-	}
-
-	inboxURL := s.resolveInboxForActorID(ctx, remotePost.AuthorActorID)
-	if inboxURL == "" {
-		log.Printf("[AP Like] No inbox URL for actor %s — queuing for retry", remotePost.AuthorActorID)
-		_ = s.enqueueAPActivity(ctx, "", likeActivity, privateKeyPem, keyID, remotePost.OriginInstance)
-		return
-	}
-
-	go func() {
-		deliverCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		if err := s.SendAPActivity(deliverCtx, inboxURL, likeActivity, privateKeyPem, keyID); err != nil {
-			log.Printf("[AP Like] Delivery failed to %s: %v — queuing for retry", inboxURL, err)
-			_ = s.enqueueAPActivity(context.Background(), inboxURL, likeActivity, privateKeyPem, keyID, remotePost.OriginInstance)
-		} else {
-			log.Printf("[AP Like] Delivered Like to %s", inboxURL)
-		}
-	}()
-}
-
-// SendRemoteComment builds an AP Create{Note, inReplyTo} activity and delivers it
-// to the remote actor's inbox. Falls back to the retry queue on failure.
-func (s *FederationService) SendRemoteComment(ctx context.Context, localUsername, privateKeyPem, keyID, commentContent, commentObjectID string, remotePost *models.RemotePost) {
-	base := config.AppConfig.BaseURL()
-	localActorURL := fmt.Sprintf("%s/users/%s", base, localUsername)
-	noteID := fmt.Sprintf("%s/users/%s/comments/%s", base, localUsername, commentObjectID)
-	activityID := fmt.Sprintf("%s/activities/create-%s", base, commentObjectID)
-
-	note := map[string]interface{}{
-		"type":         "Note",
-		"id":           noteID,
-		"attributedTo": localActorURL,
-		"content":      commentContent,
-		"inReplyTo":    remotePost.RemotePostID,
-		"published":    time.Now().UTC().Format(time.RFC3339),
-		"to":           []string{"https://www.w3.org/ns/activitystreams#Public"},
-	}
-	createActivity := map[string]interface{}{
-		"@context":  "https://www.w3.org/ns/activitystreams",
-		"id":        activityID,
-		"type":      "Create",
-		"actor":     localActorURL,
-		"published": time.Now().UTC().Format(time.RFC3339),
-		"to":        []string{"https://www.w3.org/ns/activitystreams#Public"},
-		"object":    note,
-	}
-
-	inboxURL := s.resolveInboxForActorID(ctx, remotePost.AuthorActorID)
-	if inboxURL == "" {
-		log.Printf("[AP Comment] No inbox for actor %s — queuing for retry", remotePost.AuthorActorID)
-		_ = s.enqueueAPActivity(ctx, "", createActivity, privateKeyPem, keyID, remotePost.OriginInstance)
-		return
-	}
-
-	go func() {
-		deliverCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		if err := s.SendAPActivity(deliverCtx, inboxURL, createActivity, privateKeyPem, keyID); err != nil {
-			log.Printf("[AP Comment] Delivery failed to %s: %v — queuing for retry", inboxURL, err)
-			_ = s.enqueueAPActivity(context.Background(), inboxURL, createActivity, privateKeyPem, keyID, remotePost.OriginInstance)
-		} else {
-			log.Printf("[AP Comment] Delivered Create{Note} to %s", inboxURL)
-		}
-	}()
-}
-
-// resolveInboxForActorID looks up a remote user's inbox URL from cache,
-// falling back to a live actor fetch on cache miss.
-func (s *FederationService) resolveInboxForActorID(ctx context.Context, actorID string) string {
-	cached, err := s.remoteUserRepo.GetRemoteUsersByActorIDs(ctx, []string{actorID})
-	if err == nil {
-		if ru, ok := cached[actorID]; ok && ru.InboxURL != "" {
-			return ru.InboxURL
-		}
-	}
-	fetchCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
-	defer cancel()
-	actor, fetchErr := s.FetchRemoteActor(fetchCtx, actorID)
-	if fetchErr == nil && actor.Inbox != "" {
-		return actor.Inbox
-	}
-	return ""
-}
-
-// enqueueAPActivity persists an AP activity in the federation_events collection
-// so it can be retried by StartRetryWorker.
-func (s *FederationService) enqueueAPActivity(ctx context.Context, inboxURL string, activity map[string]interface{}, privateKeyPem, keyID, targetInstance string) error {
-	activityType, _ := activity["type"].(string)
-	// Clone and annotate with delivery metadata
-	payload := make(bson.M)
-	for k, v := range activity {
-		payload[k] = v
-	}
-	payload["_inbox_url"] = inboxURL
-	payload["_private_key_pem"] = privateKeyPem
-	payload["_key_id"] = keyID
-
-	event := &models.FederationEvent{
-		Type:           activityType,
-		TargetInstance: targetInstance,
-		Payload:        payload,
-		Status:         "pending",
-	}
-	return s.eventRepo.CreateEvent(ctx, event)
-}
-
-// StartRetryWorker launches a background goroutine that periodically retries failed AP
-// deliveries stored in the federation_events collection.
-// Max 5 retries; uses exponential back-off: 2^n minutes between attempts.
-func (s *FederationService) StartRetryWorker(ctx context.Context) {
-	const maxRetries = 5
-	const tickInterval = 30 * time.Second
-
-	log.Printf("[RetryWorker] Started (interval=%s, maxRetries=%d)", tickInterval, maxRetries)
-
-	go func() {
-		ticker := time.NewTicker(tickInterval)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				log.Printf("[RetryWorker] Shutting down")
-				return
-			case <-ticker.C:
-				s.processRetryQueue(ctx, maxRetries)
-			}
-		}
-	}()
-}
-
-// processRetryQueue fetches pending/failed events and attempts delivery for each.
-func (s *FederationService) processRetryQueue(ctx context.Context, maxRetries int) {
-	pending, _ := s.eventRepo.GetPendingEvents(ctx)
-	failed, _ := s.eventRepo.GetFailedEvents(ctx, maxRetries)
-	events := append(pending, failed...)
-	if len(events) == 0 {
-		return
-	}
-	log.Printf("[RetryWorker] Processing %d event(s)", len(events))
-
-	for _, event := range events {
-		// Exponential back-off
-		if event.LastAttempt != nil {
-			backOff := time.Duration(1<<uint(event.RetryCount)) * time.Minute
-			if time.Since(*event.LastAttempt) < backOff {
-				continue
-			}
-		}
-
-		inboxURL, _ := event.Payload["_inbox_url"].(string)
-		privateKeyPem, _ := event.Payload["_private_key_pem"].(string)
-		keyID, _ := event.Payload["_key_id"].(string)
-
-		if inboxURL == "" {
-			_ = s.eventRepo.MarkEventFailed(ctx, event.ID, "no inbox URL available")
-			continue
-		}
-
-		// Rebuild activity (strip internal metadata fields)
-		activity := make(map[string]interface{})
-		for k, v := range event.Payload {
-			if k != "_inbox_url" && k != "_private_key_pem" && k != "_key_id" {
-				activity[k] = v
-			}
-		}
-
-		deliverCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-		err := s.SendAPActivity(deliverCtx, inboxURL, activity, privateKeyPem, keyID)
-		cancel()
-
-		if err != nil {
-			log.Printf("[RetryWorker] Attempt %d failed → %s: %v", event.RetryCount+1, inboxURL, err)
-			_ = s.eventRepo.MarkEventFailed(ctx, event.ID, err.Error())
-		} else {
-			log.Printf("[RetryWorker] Delivered on attempt %d → %s", event.RetryCount+1, inboxURL)
-			_ = s.eventRepo.MarkEventSent(ctx, event.ID)
-		}
 	}
 }
 

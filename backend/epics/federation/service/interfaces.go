@@ -28,20 +28,12 @@ type RemoteUserRepositoryInterface interface {
 type RemotePostRepositoryInterface interface {
 	UpsertRemotePost(ctx context.Context, remotePost *models.RemotePost) error
 	DeleteRemotePost(ctx context.Context, remotePostID string) error
-	DeleteRemotePostByLocalID(ctx context.Context, id primitive.ObjectID) error
 	GetRemotePostsByAuthors(ctx context.Context, actorIDs []string, limit int64) ([]models.RemotePost, error)
-	GetRemotePostByObjectID(ctx context.Context, id primitive.ObjectID) (*models.RemotePost, error)
-	IncrementLikeCount(ctx context.Context, remotePostID string) error
-	DecrementLikeCount(ctx context.Context, remotePostID string) error
 }
 
 // FederationEventRepositoryInterface defines methods for interacting with federation events
 type FederationEventRepositoryInterface interface {
 	CreateEvent(ctx context.Context, event *models.FederationEvent) error
-	GetPendingEvents(ctx context.Context) ([]models.FederationEvent, error)
-	GetFailedEvents(ctx context.Context, maxRetries int) ([]models.FederationEvent, error)
-	MarkEventSent(ctx context.Context, eventID primitive.ObjectID) error
-	MarkEventFailed(ctx context.Context, eventID primitive.ObjectID, errorMessage string) error
 }
 
 // RemoteRelationshipsRepositoryInterface defines methods for interacting with remote relationships
@@ -57,8 +49,6 @@ type RemoteRelationshipsRepositoryInterface interface {
 	UpdateRemoteFollowStatus(ctx context.Context, remoteActorID, status string) error
 	CountRemoteFollowers(ctx context.Context, localUserID primitive.ObjectID) (int64, error)
 	CountRemoteFollowing(ctx context.Context, localUserID primitive.ObjectID) (int64, error)
-	CountLocalFollowersOfRemoteActor(ctx context.Context, remoteActorID string) (int64, error)
-	CountLocalUsersFollowedByRemoteActor(ctx context.Context, remoteActorID string) (int64, error)
 }
 
 // UserRepositoryInterface defines methods for interacting with user data (from identity epic)

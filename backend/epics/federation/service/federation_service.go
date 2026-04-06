@@ -31,7 +31,7 @@ type FederationService struct {
 }
 
 func NewFederationService() *FederationService {
-	s := &FederationService{
+	return &FederationService{
 		instanceRepo:      repository.NewInstanceRepository(),
 		remoteUserRepo:    repository.NewRemoteUserRepository(),
 		remotePostRepo:    repository.NewRemotePostRepository(),
@@ -42,9 +42,6 @@ func NewFederationService() *FederationService {
 			Timeout: 10 * time.Second,
 		},
 	}
-	// Start the retry worker in the background (US3.7)
-	s.StartRetryWorker(context.Background())
-	return s
 }
 
 // DiscoverInstance discovers a remote instance by domain
@@ -773,25 +770,6 @@ func (s *FederationService) CountRemoteFollowers(ctx context.Context, localUserI
 // CountRemoteFollowing returns count of remote users a local user is following
 func (s *FederationService) CountRemoteFollowing(ctx context.Context, localUserID primitive.ObjectID) (int64, error) {
 	return s.relationshipsRepo.CountRemoteFollowing(ctx, localUserID)
-}
-
-// CountLocalFollowersOfRemoteActor returns count of local users following a remote actor
-func (s *FederationService) CountLocalFollowersOfRemoteActor(ctx context.Context, remoteActorID string) (int64, error) {
-	// relationshipsRepo holds the interface logic, we must ensure it supports this method.
-	// We added it to RemoteRelationshipsRepository implementer, let's type assert or call directly if interface was modified?
-	// Wait, relationshipsRepo is an interface! Let's cast it locally to the concrete struct or add it to interface.
-	if concreteRepo, ok := s.relationshipsRepo.(*repository.RemoteRelationshipsRepository); ok {
-		return concreteRepo.CountLocalFollowersOfRemoteActor(ctx, remoteActorID)
-	}
-	return 0, nil
-}
-
-// CountLocalUsersFollowedByRemoteActor returns count of local users followed by a remote actor
-func (s *FederationService) CountLocalUsersFollowedByRemoteActor(ctx context.Context, remoteActorID string) (int64, error) {
-	if concreteRepo, ok := s.relationshipsRepo.(*repository.RemoteRelationshipsRepository); ok {
-		return concreteRepo.CountLocalUsersFollowedByRemoteActor(ctx, remoteActorID)
-	}
-	return 0, nil
 }
 
 // SendRemoteNotification sends a notification activity to a remote instance

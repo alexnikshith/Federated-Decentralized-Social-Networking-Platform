@@ -236,13 +236,3 @@ func (r *RemoteRelationshipsRepository) CountRemoteFollowers(ctx context.Context
 	count, err := r.remoteFollowers.CountDocuments(ctx, bson.M{"local_user_id": localUserID})
 	return count, err
 }
-
-// CountLocalFollowersOfRemoteActor returns the count of local users following a specific remote actor
-func (r *RemoteRelationshipsRepository) CountLocalFollowersOfRemoteActor(ctx context.Context, remoteActorID string) (int64, error) {
-	return r.remoteFollows.CountDocuments(ctx, bson.M{"remote_actor_id": remoteActorID})
-}
-
-// CountLocalUsersFollowedByRemoteActor returns the count of local users a specific remote actor follows
-func (r *RemoteRelationshipsRepository) CountLocalUsersFollowedByRemoteActor(ctx context.Context, remoteActorID string) (int64, error) {
-	return r.remoteFollowers.CountDocuments(ctx, bson.M{"remote_actor_id": remoteActorID})
-}

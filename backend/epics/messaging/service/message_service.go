@@ -188,11 +188,11 @@ func (s *MessageService) extractCommunityName(url string) string {
 		return ""
 	}
 	// Dev mapping
-	if strings.Contains(url, "localhost:8080") || strings.Contains(url, "community-1") || strings.Contains(url, "federated-decentralized-social.onrender.com") {
-		return "Nexus.Social"
+	if strings.Contains(url, "localhost:8080") || strings.Contains(url, "community1") {
+		return "Community 1"
 	}
-	if strings.Contains(url, "localhost:8081") || strings.Contains(url, "community-2") {
-		return "Nexus Community 2"
+	if strings.Contains(url, "localhost:8081") || strings.Contains(url, "community2") {
+		return "Community 2"
 	}
 	if strings.Contains(url, "default") {
 		return config.AppConfig.InstanceName

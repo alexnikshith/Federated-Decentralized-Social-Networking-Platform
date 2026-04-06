@@ -59,7 +59,7 @@ export const DashboardPage: React.FC = () => {
 
     return (
         <div className="dashboard-container">
-            <main className="dashboard-content pt-0">
+            <main className="dashboard-content">
 
 
                 <div className="grid grid-cols-1 xl:grid-cols-[1fr_300px] gap-6 max-w-7xl mx-auto">

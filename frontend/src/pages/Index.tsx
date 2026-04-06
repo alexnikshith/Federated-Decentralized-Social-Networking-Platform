@@ -48,8 +48,8 @@ const Index = () => {
 
           {/* Animated Nebula Overlays */}
           <div className="fixed inset-0 pointer-events-none z-[-1] overflow-hidden">
-            <div className="absolute top-[-20%] left-[-10%] w-[140%] h-[140%] bg-gradient-to-br from-cyan-500/10 via-transparent to-purple-500/10 dark:from-cyan-500/30 dark:to-purple-500/30 animate-pulse duration-[12s] blur-[140px]" />
-            <div className="absolute bottom-[-20%] right-[-10%] w-[140%] h-[140%] bg-gradient-to-tr from-blue-600/10 via-transparent to-pink-600/10 dark:from-blue-600/30 dark:to-pink-600/30 animate-pulse duration-[18s] blur-[140px]" style={{ animationDelay: "3s" }} />
+            <div className="absolute top-[-20%] left-[-10%] w-[140%] h-[140%] bg-gradient-to-br from-cyan-500/30 via-transparent to-purple-500/30 animate-pulse duration-[12s] blur-[140px]" />
+            <div className="absolute bottom-[-20%] right-[-10%] w-[140%] h-[140%] bg-gradient-to-tr from-blue-600/30 via-transparent to-pink-600/30 animate-pulse duration-[18s] blur-[140px]" style={{ animationDelay: "3s" }} />
           </div>
 
           {/* Foreground Content */}

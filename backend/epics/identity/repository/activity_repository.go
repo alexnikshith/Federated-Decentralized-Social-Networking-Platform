@@ -59,16 +59,3 @@ func (r *ActivityRepository) CountDailyActivity(ctx context.Context) (int64, err
 	filter := bson.M{"timestamp": bson.M{"$gte": yesterday}}
 	return r.collection.CountDocuments(ctx, filter)
 }
-
-func (r *ActivityRepository) CreateIndexes(ctx context.Context) error {
-	indexes := []mongo.IndexModel{
-		{
-			Keys: bson.D{{Key: "user_id", Value: 1}},
-		},
-		{
-			Keys: bson.D{{Key: "timestamp", Value: -1}},
-		},
-	}
-	_, err := r.collection.Indexes().CreateMany(ctx, indexes)
-	return err
-}

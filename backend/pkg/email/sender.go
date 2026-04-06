@@ -11,18 +11,11 @@ import (
 	"time"
 )
 
-type EmailSenderInterface interface {
-	SendVerificationEmail(toEmail, code string) error
-	SendAdminRoleNotification(toEmail, username, newRole string) error
-	SendAccountDeactivationNotification(toEmail, username, reason string) error
-	SendPasswordResetEmail(toEmail, code string) error
-}
-
 type EmailSender struct {
 	config *config.Config
 }
 
-func NewEmailSender() EmailSenderInterface {
+func NewEmailSender() *EmailSender {
 	return &EmailSender{
 		config: config.AppConfig,
 	}

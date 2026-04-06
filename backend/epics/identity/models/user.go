@@ -42,9 +42,6 @@ type User struct {
 	// ActivityPub RSA keypair — never exposed in JSON, stored in DB only
 	PublicKeyPem  string `json:"-" bson:"public_key_pem,omitempty"`
 	PrivateKeyPem string `json:"-" bson:"private_key_pem,omitempty"`
-
-	// Federation preferences (US3.8)
-	FederationEnabled bool `json:"federation_enabled" bson:"federation_enabled"` // true = broadcast posts to federated network
 }
 
 // ActivityLog represents user activity tracking
@@ -74,11 +71,8 @@ type PublicUser struct {
 	IsFollowing       bool               `json:"is_following"`
 	IsFollowRequested bool               `json:"is_follow_requested"`
 	CanViewDetails    bool               `json:"can_view_details"`
-	Is2FAEnabled      *bool              `json:"is_2fa_enabled,omitempty"`     // Only visible to self
-	FederationEnabled *bool              `json:"federation_enabled,omitempty"` // Only visible to self
-	InstanceID        string             `json:"instance"`                     // home instance domain
-	Handle            string             `json:"handle,omitempty"`             // @user@domain
-	ActorID           string             `json:"actor_id,omitempty"`           // full ActivityPub URL
+	Is2FAEnabled      *bool              `json:"is_2fa_enabled,omitempty"` // Only visible to self
+	InstanceID        string             `json:"instance"`                 // home instance domain
 }
 
 // PrivateUser represents user data visible to the owner (includes email)
@@ -90,7 +84,6 @@ type PrivateUser struct {
 	IsDiscoverable    bool     `json:"is_discoverable"`
 	Strikes           int      `json:"strikes"`
 	AccountStatus     string   `json:"account_status"`
-	FederationEnabled bool     `json:"federation_enabled"`
 }
 
 // Session represents an active user session
@@ -105,11 +98,12 @@ type Session struct {
 
 // ToPublicUser converts User to PublicUser
 func (u *User) ToPublicUser() PublicUser {
+	isEnabled := u.Is2FAEnabled
 	role := u.Role
 	if role == "" {
 		role = "user"
 	}
-	p := PublicUser{
+	return PublicUser{
 		ID:                u.ID,
 		Username:          u.Username,
 		DisplayName:       u.DisplayName,
@@ -118,44 +112,24 @@ func (u *User) ToPublicUser() PublicUser {
 		ProfileVisibility: u.ProfileVisibility,
 		CreatedAt:         u.CreatedAt,
 		Role:              role,
-		Is2FAEnabled:      nil, // Set manually for owner visibility
-		FederationEnabled: nil, // Set manually for owner visibility
+		Is2FAEnabled:      &isEnabled,
 		FollowersCount:    0,
 		FollowingCount:    0,
 		PostsCount:        0,
 		CanViewDetails:    true,
 		InstanceID:        u.InstanceID,
 	}
-
-	if u.Username != "" && u.InstanceID != "" {
-		p.Handle = "@" + u.Username + "@" + u.InstanceID
-	} else if u.Username != "" {
-		p.Handle = "@" + u.Username
-	}
-
-	return p
 }
 
 // ToPrivateUser converts User to PrivateUser (for owner)
 func (u *User) ToPrivateUser() PrivateUser {
-	// Default federation to enabled for existing users (zero value = disabled would break them)
-	fedEnabled := u.FederationEnabled
-	if !fedEnabled && u.InstanceID == "" {
-		// Brand-new users without an instance domain should still default to true
-		fedEnabled = true
-	}
-	p := u.ToPublicUser()
-	p.Is2FAEnabled = &u.Is2FAEnabled
-	p.FederationEnabled = &fedEnabled
-
 	return PrivateUser{
-		PublicUser:        p,
+		PublicUser:        u.ToPublicUser(),
 		Email:             u.Email,
 		InstanceID:        u.InstanceID,
 		JoinedCommunities: u.JoinedCommunities,
 		IsDiscoverable:    u.IsDiscoverable,
 		Strikes:           u.Strikes,
 		AccountStatus:     u.AccountStatus,
-		FederationEnabled: fedEnabled,
 	}
 }

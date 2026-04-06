@@ -8,7 +8,6 @@ import (
 	followService "federated-social/backend/epics/content-sharing/service"
 	federationModels "federated-social/backend/epics/federation/models"
 	federationRepo "federated-social/backend/epics/federation/repository"
-	federationSvc "federated-social/backend/epics/federation/service"
 	"federated-social/backend/epics/identity/dto"
 	"federated-social/backend/epics/identity/models"
 	"federated-social/backend/epics/identity/repository"
@@ -31,7 +30,6 @@ type ProfileService struct {
 	postRepo           PostRepository
 	notificationRepo   NotificationRepository
 	remoteUserRepo     RemoteUserRepository
-	apService          *federationSvc.FederationService // for handle resolution
 	enforcementService *safetyService.EnforcementService
 }
 
@@ -46,7 +44,6 @@ func NewProfileService(enforcement *safetyService.EnforcementService) *ProfileSe
 		postRepo:           followRepo.NewPostRepository(),
 		notificationRepo:   followRepo.NewNotificationRepository(),
 		remoteUserRepo:     federationRepo.NewRemoteUserRepository(),
-		apService:          federationSvc.NewFederationService(),
 		enforcementService: enforcement,
 	}
 }
@@ -73,13 +70,6 @@ func (s *ProfileService) GetProfile(ctx context.Context, userID primitive.Object
 					publicUser.CanViewDetails = false
 				}
 			}
-
-			followersCount, _ := s.followService.CountFollowers(ctx, remoteUser.ID)
-			followingCount, _ := s.followService.CountFollowing(ctx, remoteUser.ID)
-
-			publicUser.FollowersCount = followersCount
-			publicUser.FollowingCount = followingCount
-
 			return publicUser, nil
 		}
 		// If still not found, try by actor ID (which might be a URL or other identifier)
@@ -105,7 +95,6 @@ func (s *ProfileService) GetProfile(ctx context.Context, userID primitive.Object
 	// Populate private fields (like 2FA status) ONLY if viewing own profile
 	if requestingUserID != nil && *requestingUserID == userID {
 		publicUser.Is2FAEnabled = &user.Is2FAEnabled
-		publicUser.FederationEnabled = &user.FederationEnabled
 	}
 
 	// Check and set follow status if a requesting user is provided
@@ -350,83 +339,25 @@ func (s *ProfileService) GetProfileByIdOrUsername(ctx context.Context, identifie
 		return s.GetProfile(ctx, user.ID, requestingUserID)
 	}
 
-	// Still not found? Try as federated handle (@user@domain)
-	if strings.HasPrefix(identifier, "@") || strings.Contains(identifier, "@") {
-		cleanHandle := strings.TrimPrefix(identifier, "@")
-		parts := strings.Split(cleanHandle, "@")
-		if len(parts) == 2 {
-			username, instance := parts[0], parts[1]
-
-			localDomain := config.AppConfig.InstanceDomain
-			if localDomain == "" {
-				localDomain = "localhost:8080"
-			}
-			isLocal := instance == localDomain ||
-				instance == "localhost:8080" ||
-				instance == "nexus.social" ||
-				instance == "default" ||
-				instance == "default-instance" ||
-				strings.Contains(instance, "federated-decentralized-social.onrender.com")
-
-			if isLocal {
-				localUser, err := s.userRepo.FindByUsername(ctx, username)
-				if err == nil {
-					return s.GetProfile(ctx, localUser.ID, requestingUserID)
-				}
-			}
-
-			// Try cache first
-			remoteUser, err := s.remoteUserRepo.GetRemoteUserByUsernameAndInstance(ctx, username, instance)
-			if err == nil {
-				return s.enrichRemoteProfile(ctx, remoteUser, requestingUserID), nil
-			}
-
-			// If ActivityPub enabled, try to resolve on the fly
-			if s.apService != nil {
-				log.Printf("[Profile] Resolving handle on the fly: %s", identifier)
-				_, err := s.apService.ResolveAPHandle(ctx, identifier)
-				if err == nil {
-					// The resolve call caches it, so we can fetch it again or use result
-					// Fetch from repo to get proper ID and model
-					if ru, err := s.remoteUserRepo.GetRemoteUserByUsernameAndInstance(ctx, username, instance); err == nil {
-						return s.enrichRemoteProfile(ctx, ru, requestingUserID), nil
-					}
-				}
-			}
-		}
-	}
-
-	// Still not found? Try remote user cache by username (fallback for ambiguous local-name lookups)
+	// Still not found? Try remote user cache by username
 	remoteUser, remoteErr := s.remoteUserRepo.GetRemoteUserByUsername(ctx, identifier)
 	if remoteErr == nil {
-		return s.enrichRemoteProfile(ctx, remoteUser, requestingUserID), nil
+		publicUser := s.RemoteUserToPublicUser(remoteUser)
+		if requestingUserID != nil {
+			isFollowing, _ := s.followService.IsFollowing(ctx, *requestingUserID, remoteUser.ID)
+			publicUser.IsFollowing = isFollowing
+		}
+
+		// Enforce visibility
+		if publicUser.ProfileVisibility == "followers" || publicUser.ProfileVisibility == "private" {
+			if !publicUser.IsFollowing {
+				publicUser.CanViewDetails = false
+			}
+		}
+		return publicUser, nil
 	}
 
 	return nil, errors.New("user not found")
-}
-
-// enrichRemoteProfile is a helper to convert and add relationship context to a remote user result
-func (s *ProfileService) enrichRemoteProfile(ctx context.Context, ru *federationModels.RemoteUser, requestingUserID *primitive.ObjectID) *models.PublicUser {
-	publicUser := s.RemoteUserToPublicUser(ru)
-	if requestingUserID != nil {
-		isFollowing, _ := s.followService.IsFollowing(ctx, *requestingUserID, ru.ID)
-		publicUser.IsFollowing = isFollowing
-	}
-
-	// Enforce visibility
-	if publicUser.ProfileVisibility == "followers" || publicUser.ProfileVisibility == "private" {
-		if !publicUser.IsFollowing {
-			publicUser.CanViewDetails = false
-		}
-	}
-
-	followersCount, _ := s.followService.CountFollowers(ctx, ru.ID)
-	followingCount, _ := s.followService.CountFollowing(ctx, ru.ID)
-
-	publicUser.FollowersCount = followersCount
-	publicUser.FollowingCount = followingCount
-
-	return publicUser
 }
 
 func (s *ProfileService) RemoteUserToPublicUser(ru *federationModels.RemoteUser) *models.PublicUser {
@@ -467,27 +398,4 @@ func (s *ProfileService) logActivity(ctx context.Context, userID primitive.Objec
 		Details: details,
 	}
 	s.activityRepo.LogActivity(ctx, log)
-}
-
-// UpdateFederationPreference sets whether the user's posts are broadcast to the
-// federated network (US3.8). Pass enabled=true to opt-in, false to opt-out.
-func (s *ProfileService) UpdateFederationPreference(ctx context.Context, userID primitive.ObjectID, enabled bool) error {
-	update := bson.M{"federation_enabled": enabled}
-	if err := s.userRepo.UpdateUser(ctx, userID, update); err != nil {
-		return fmt.Errorf("failed to update federation preference: %w", err)
-	}
-	s.logActivity(ctx, userID, "federation_preference_update", fmt.Sprintf("federation_enabled set to %v", enabled))
-	log.Printf("[ProfileService] User %s set federation_enabled=%v", userID.Hex(), enabled)
-	return nil
-}
-
-// GetPrivateProfile returns the full private user record for the authenticated user,
-// including federation preferences.
-func (s *ProfileService) GetPrivateProfile(ctx context.Context, userID primitive.ObjectID) (*models.PrivateUser, error) {
-	user, err := s.userRepo.FindByID(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-	privateUser := user.ToPrivateUser()
-	return &privateUser, nil
 }

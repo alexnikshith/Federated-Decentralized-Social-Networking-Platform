@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+
+  /* Minimal base layer for mobile */
+  [data-testid="root"] {
+    background-color: #FDFCFB;
+  }
+}

@@ -114,11 +114,6 @@ func (r *ReportRepository) DeactivateUser(ctx context.Context, userID primitive.
 	return err
 }
 
-func (r *ReportRepository) ResolveReport(ctx context.Context, reportID primitive.ObjectID) error {
-	_, err := r.reportsCollection.DeleteOne(ctx, bson.M{"_id": reportID})
-	return err
-}
-
 // GetReports retrieves all reports (for admin)
 func (r *ReportRepository) GetReports(ctx context.Context) ([]models.UserReportResponse, error) {
 	pipeline := []bson.M{

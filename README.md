@@ -74,17 +74,123 @@ Developed as a flagship project for **23CSE311 – Software Engineering**.
 - **JWT-based auth:** Secure token management
 - **REST API:** Standard HTTP endpoints
 
+### Frontend Structure
+The frontend follows an **Epic-Based Architecture** where each feature set has its own self-contained folder:
 
+```
+frontend/
+├── src/
+│   ├── components/          ← Global/Shared UI Components (shadcn UI)
+│   ├── hooks/              ← Global/Shared Custom Hooks
+│   ├── lib/                ← Global/Shared Utilities
+│   ├── pages/              ← Global Pages (Index, 404)
+│   ├── App.tsx             ← Main router
+│   └── main.tsx
+│
+└── epics/                  ← Feature-Specific Code
+    ├── identity/           ← Epic 1: Authentication & Profiles
+    │   ├── pages/
+    │   ├── store/
+    │   ├── api/
+    │   ├── handlers/
+    │   ├── models/
+    │   └── types/
+    │
+    ├── content-sharing/    ← Epic 2: Posts & Feed
+    │   ├── pages/
+    │   ├── components/
+    │   ├── api/
+    │   ├── models/
+    │   ├── types/
+    │   ├── store/
+    │   └── service/
+    │
+    ├── federation/         ← Epic 3: Federated Networks
+    │   ├── pages/
+    │   ├── api/
+    │   ├── store/
+    │   └── types/
+    │
+    ├── reports/            ← Epic 4: Moderation & Safety
+    │   ├── pages/
+    │   ├── api/
+    │   ├── store/
+    │   └── types/
+    │
+    └── safety/             ← Epic 5: Security Features
+        ├── api/
+        ├── models/
+        ├── types/
+        └── store/
+```
+
+**Key Principles:**
+- Global components/hooks/utilities in `src/`
+- Epic-specific code in `epics/<epic_name>/`
+- Clear separation of concerns
+- Easy to scale and maintain
 
 ---
 
-## 🔌 API Documentation
+## Project Structure
 
-For a comprehensive list of all available REST API endpoints across all epics (Auth, Feed, Federation, Moderation), please refer to the [**API Documentation**](API.md).
+```
+Federated-Decentralized-Social-Networking-Platform/
+├── backend/
+│   ├── config/              # Configuration management
+│   ├── database/            # MongoDB connection
+│   ├── middleware/          # Auth, CORS, logging
+│   ├── epics/
+│   │   ├── identity/        # ✅ Epic 1: Identity (DONE)
+│   │   ├── content_sharing/ # 🔄 Epic 2: Content Sharing
+│   │   ├── federation/      # 🔄 Epic 3: Federation
+│   │   ├── safety/          # 🔄 Epic 4: Safety
+│   │   └── reports/         # 🔄 Epic 5: Reports
+│   └── main.go
+│
+├── frontend/
+│   ├── src/
+│   │   ├── components/      # UI components & layouts
+│   │   ├── hooks/          # Custom hooks
+│   │   ├── lib/            # Utilities
+│   │   ├── pages/          # Global pages
+│   │   ├── App.tsx         # Main router
+│   │   └── main.tsx
+│   └── epics/              # Feature-specific code
+│       ├── identity/       # ✅ Epic 1 (DONE)
+│       ├── content-sharing/# 🔄 Epic 2
+│       ├── federation/     # 🔄 Epic 3
+│       ├── reports/        # 🔄 Epic 4
+│       └── safety/         # 🔄 Epic 5
+│
+├── docs/                    # Documentation
+│   ├── EPIC1_IDENTITY.md
+│   ├── architecture/
+│   └── epics/
+│
+├── docker-compose.yml       # Docker orchestration
+└── README.md               # This file
+```
+
+---
+
+## API Endpoints (Epic 1)
+
+### Public Endpoints
+- `POST /api/auth/signup` - Create account
+- `POST /api/auth/login` - User login
+- `GET /api/profile/{id}` - View profile (with privacy check)
+
+### Protected Endpoints
+- `POST /api/auth/logout` - Logout
+- `POST /api/auth/change-password` - Change password
+- `GET /api/profile/me` - Get own profile
+- `PUT /api/profile/me` - Update profile
+- `POST /api/profile/me/deactivate` - Deactivate account
+- `GET /api/profile/me/activity` - View activity logs
 
 ### System
 - `GET /health` - Health check
-- `WS /ws` - Synchronized real-time events via WebSocket
 
 
 ## Frontend Features & Components

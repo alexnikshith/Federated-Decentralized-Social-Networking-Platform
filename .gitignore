@@ -2,7 +2,6 @@
 .env
 .env.local
 .env.*.local
-backend/.env
 
 # Go
 *.exe
@@ -40,13 +39,6 @@ lerna-debug.log*
 # Build outputs
 build/
 *.log
-
-mobile_flutter_app/myapp/logs.txt
-scripts/init_federation.sh
-
-# Windows path variants for the same sensitive files
-mobile_flutter_app\\myapp\\logs.txt
-scripts\\init_federation.sh
 
 # Database
 *.db
