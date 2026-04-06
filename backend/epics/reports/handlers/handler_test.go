@@ -364,67 +364,6 @@ func TestGetInteractionMadeReport(t *testing.T) {
 	}
 }
 
-func TestResolveReport(t *testing.T) {
-	reportID := primitive.NewObjectID().Hex()
-
-	tests := []struct {
-		name           string
-		reportID       string
-		mockService    func(*MockReportService)
-		expectedStatus int
-	}{
-		{
-			name:     "Success",
-			reportID: reportID,
-			mockService: func(m *MockReportService) {
-				m.ResolveReportFunc = func(ctx context.Context, id string) error {
-					if id != reportID {
-						return errors.New("report ID mismatch")
-					}
-					return nil
-				}
-			},
-			expectedStatus: http.StatusOK,
-		},
-		{
-			name:     "Service Error",
-			reportID: reportID,
-			mockService: func(m *MockReportService) {
-				m.ResolveReportFunc = func(ctx context.Context, id string) error {
-					return errors.New("delete error")
-				}
-			},
-			expectedStatus: http.StatusInternalServerError,
-		},
-		{
-			name:           "Missing ID",
-			reportID:       "",
-			mockService:    func(m *MockReportService) {},
-			expectedStatus: http.StatusBadRequest,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mockSvc := &MockReportService{}
-			tt.mockService(mockSvc)
-			handler := &ReportHandler{Service: mockSvc}
-
-			url := "/api/reports/resolve"
-			if tt.reportID != "" {
-				url += "?id=" + tt.reportID
-			}
-			req := httptest.NewRequest("DELETE", url, nil)
-			w := httptest.NewRecorder()
-			handler.ResolveReport(w, req)
-
-			if w.Code != tt.expectedStatus {
-				t.Errorf("Expected status %d, got %d", tt.expectedStatus, w.Code)
-			}
-		})
-	}
-}
-
 // Helper to create timestamp
 func now() time.Time {
 	return time.Now().UTC()

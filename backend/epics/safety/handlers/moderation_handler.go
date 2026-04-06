@@ -118,7 +118,6 @@ func (h *ModerationHandler) GetMyLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.enforcement.EnrichModerationLogs(r.Context(), logs)
 	respondSuccess(w, "Moderation logs retrieved", logs, http.StatusOK)
 }
 
@@ -129,6 +128,5 @@ func (h *ModerationHandler) GetAllLogs(w http.ResponseWriter, r *http.Request) {
 		respondError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	h.enforcement.EnrichModerationLogs(r.Context(), logs)
 	respondSuccess(w, "All moderation logs retrieved", logs, http.StatusOK)
 }

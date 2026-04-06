@@ -100,13 +100,11 @@ func (s *AuthService) Signup(ctx context.Context, req dto.SignupRequest) (*model
 		ProfileVisibility: "public",
 		InstanceID:        config.AppConfig.InstanceDomain,
 		Is2FAEnabled:      true,
-		FederationEnabled: true,
 		IsActive:          true,
 		Role:              "user",
 		IsDiscoverable:    req.IsDiscoverable,
 		AvatarURL:         avatarURL,
 	}
-
 
 	if err := s.userRepo.CreateUser(ctx, user); err != nil {
 		return nil, err

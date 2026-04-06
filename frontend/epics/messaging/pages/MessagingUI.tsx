@@ -18,7 +18,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn, resolveMediaUrl } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { UserSearch } from '../../content-sharing/components/UserSearch';
 import { motion, AnimatePresence } from 'motion/react';
@@ -601,13 +601,7 @@ const MessagingUI: React.FC = () => {
                                                     </span>
                                                     {other.community_name && (
                                                         <span className="text-[9px] text-muted-foreground font-bold tracking-widest uppercase truncate opacity-70">
-                                                            from {(() => {
-                                                                const name = other.community_name;
-                                                                if (name === "Community 1" || name?.includes("localhost:8080") || name?.includes("federated-decentralized-social.onrender.com")) {
-                                                                    return "Nexus.Social";
-                                                                }
-                                                                return name;
-                                                            })()}
+                                                            from {other.community_name}
                                                         </span>
                                                     )}
                                                 </div>
@@ -680,13 +674,7 @@ const MessagingUI: React.FC = () => {
                                     <div className="flex items-center gap-2 mt-1">
                                         {(isNewChat ? (newChatUser?.instance || newChatUser?.community_name) : getOtherParticipant(selectedConversation!.participants).community_name) && (
                                             <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter opacity-70">
-                                                from {(() => {
-                                                    const name = (isNewChat ? (newChatUser?.instance || newChatUser?.community_name) : getOtherParticipant(selectedConversation!.participants).community_name);
-                                                    if (name === "Community 1" || name?.includes("localhost:8080") || name?.includes("federated-decentralized-social.onrender.com")) {
-                                                        return "Nexus.Social";
-                                                    }
-                                                    return name;
-                                                })()}
+                                                from {isNewChat ? (newChatUser?.instance || newChatUser?.community_name) : getOtherParticipant(selectedConversation!.participants).community_name}
                                             </span>
                                         )}
                                     </div>
@@ -777,26 +765,26 @@ const MessagingUI: React.FC = () => {
                                                             isMine
                                                                 ? "text-foreground/90 pr-4 border-r-2 border-primary/20"
                                                                 : "text-foreground/80 pl-4 border-l-2 border-accent/20"
-                                                        )}>                                                            {/* Media Rendering */}
+                                                        )}>
+                                                            {/* Media Rendering */}
                                                             {msg.type === 'image' && msg.media_url && (
-                                                                <div className={cn("mb-3 rounded-2xl overflow-hidden border border-white/10 shadow-2xl relative group/img cursor-pointer", isMine ? "ml-auto" : "mr-auto")} onClick={() => window.open(resolveMediaUrl(msg.media_url))}>
+                                                                <div className={cn("mb-3 rounded-2xl overflow-hidden border border-white/10 shadow-2xl relative group/img cursor-pointer", isMine ? "ml-auto" : "mr-auto")} onClick={() => window.open(msg.media_url?.startsWith('http') ? msg.media_url : `${import.meta.env.VITE_API_URL}${msg.media_url}`)}>
                                                                     <div className="absolute inset-0 bg-primary/20 mix-blend-overlay opacity-0 group-hover/img:opacity-100 transition-opacity pointer-events-none" />
                                                                     <img
-                                                                         src={resolveMediaUrl(msg.media_url)}
-                                                                         alt="attachment"
-                                                                         className="max-w-[280px] w-full h-auto max-h-80 object-cover"
-                                                                         onError={(e) => (e.currentTarget.src = "/placeholder-image.png")}
-                                                                     />
+                                                                        src={msg.media_url.startsWith('http') ? msg.media_url : `${import.meta.env.VITE_API_URL}${msg.media_url}`}
+                                                                        alt="attachment"
+                                                                        className="max-w-[280px] w-full h-auto max-h-80 object-cover"
+                                                                        onError={(e) => (e.currentTarget.src = "/placeholder-image.png")}
+                                                                    />
                                                                 </div>
                                                             )}
                                                             {msg.type === 'file' && (
                                                                 <a
-                                                                     href={resolveMediaUrl(msg.media_url)}
-                                                                     target="_blank"
-                                                                     rel="noopener noreferrer"
-                                                                     className={cn("inline-flex items-center gap-3 px-4 py-3 bg-secondary/20 backdrop-blur-md rounded-2xl mb-3 hover:bg-secondary/40 transition-all border border-white/5", isMine ? "ml-auto" : "mr-auto")}
+                                                                    href={msg.media_url?.startsWith('http') ? msg.media_url : `${import.meta.env.VITE_API_URL}${msg.media_url}`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className={cn("inline-flex items-center gap-3 px-4 py-3 bg-secondary/20 backdrop-blur-md rounded-2xl mb-3 hover:bg-secondary/40 transition-all border border-white/5", isMine ? "ml-auto" : "mr-auto")}
                                                                 >
-
                                                                     <div className="p-2 bg-primary/10 rounded-xl">
                                                                         <FileText className="w-4 h-4 text-primary" />
                                                                     </div>

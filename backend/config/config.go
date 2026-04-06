@@ -49,7 +49,7 @@ func LoadConfig() {
 		GroqAPIKey: getEnv("GROQ_API_KEY", ""),
 
 		// Federation settings
-		InstanceName:       getEnv("INSTANCE_ID", getEnv("INSTANCE_NAME", "Nexus.Social")),
+		InstanceName:       getEnv("INSTANCE_ID", getEnv("INSTANCE_NAME", "Community 1")),
 		InstanceDomain:     getEnv("INSTANCE_DOMAIN", "localhost:8080"),
 		FederationEnabled:  getEnvBool("FEDERATION_ENABLED", true),
 		ActivityPubEnabled: getEnvBool("ACTIVITYPUB_ENABLED", true),

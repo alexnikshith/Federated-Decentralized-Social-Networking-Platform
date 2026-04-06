@@ -24,9 +24,7 @@ type ModerationLog struct {
 	TargetID      primitive.ObjectID   `json:"target_id" bson:"target_id"`     // ID of the Post or User
 	TargetType    string               `json:"target_type" bson:"target_type"` // "post", "username", "display_name", "bio"
 	UserID        primitive.ObjectID   `json:"user_id" bson:"user_id"`         // ID of the User who owns the content
-	Username      string               `json:"username" bson:"username"`
-	DisplayName   string               `json:"display_name" bson:"display_name"`
-	Content       string               `json:"content" bson:"content"` // The content that was checked
+	Content       string               `json:"content" bson:"content"`         // The content that was checked
 	IsViolation   bool                 `json:"is_violation" bson:"is_violation"`
 	Reason        string               `json:"reason" bson:"reason"`                   // AI's explanation
 	Score         int                  `json:"score" bson:"score"`                     // Severity 1-10

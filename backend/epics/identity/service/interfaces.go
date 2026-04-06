@@ -76,7 +76,6 @@ type RemoteUserRepository interface {
 	GetRemoteUserByID(ctx context.Context, userID primitive.ObjectID) (*federationModels.RemoteUser, error)
 	GetRemoteUserByActorID(ctx context.Context, actorID string) (*federationModels.RemoteUser, error)
 	GetRemoteUserByUsername(ctx context.Context, username string) (*federationModels.RemoteUser, error)
-	GetRemoteUserByUsernameAndInstance(ctx context.Context, username, instance string) (*federationModels.RemoteUser, error)
 }
 
 // FollowService defines the interface for high-level follow operations

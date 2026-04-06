@@ -194,17 +194,6 @@ export const profileApi = {
         const response = await api.get(`/api/profile/me/activity?limit=${limit}`);
         return response.data;
     },
-
-    // US3.8 — get current federation toggle value
-    getFederationPreference: async (): Promise<{ federation_enabled: boolean }> => {
-        const response = await api.get('/api/profile/me/federation');
-        return response.data;
-    },
-
-    // US3.8 — update federation toggle
-    updateFederationPreference: async (enabled: boolean): Promise<void> => {
-        await api.patch('/api/profile/me/federation', { federation_enabled: enabled });
-    },
 };
 
 export { api };

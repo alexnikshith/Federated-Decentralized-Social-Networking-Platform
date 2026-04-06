@@ -245,23 +245,7 @@ func (s *FollowService) Follow(ctx context.Context, followerID, followingID prim
 	if s.federationService != nil {
 		remoteUser, remoteErr := s.remoteUserRepo.GetRemoteUserByID(ctx, followingID)
 		if remoteErr == nil {
-			// If it's an ActivityPub user (has an inbox), we must use the signed AP flow.
-			// The internal federation protocol (FollowRemoteUser) won't work for external Mastodon instances.
-			if remoteUser.InboxURL != "" {
-				handle := "@" + remoteUser.Username + "@" + remoteUser.Instance
-				log.Printf("[Follow] Redirecting ID-based follow to Handle-based AP follow for %s", handle)
-				return s.FollowByHandle(ctx, followerID, handle)
-			}
-
-			// If InboxURL is missing but it's a remote user, we should try a handle-based follow anyway
-			// to refresh the cache and see if we can get an Actor/Inbox via WebFinger.
-			if remoteUser.Username != "" && remoteUser.Instance != "" {
-				handle := "@" + remoteUser.Username + "@" + remoteUser.Instance
-				log.Printf("[Follow] Inbox missing for %s - attempting refresh via handle-based follow", handle)
-				return s.FollowByHandle(ctx, followerID, handle)
-			}
-
-			// Federated Follow (Internal protocol fallback)
+			// Federated Follow
 			return s.federationService.FollowRemoteUser(ctx, followerID, remoteUser)
 		}
 	}
@@ -389,16 +373,6 @@ func (s *FollowService) IsFollowing(ctx context.Context, followerID, followingID
 
 // CountFollowers returns total count of followers (local + remote)
 func (s *FollowService) CountFollowers(ctx context.Context, userID primitive.ObjectID) (int64, error) {
-	// Remote user check
-	if s.federationService != nil {
-		if remoteUser, err := s.remoteUserRepo.GetRemoteUserByID(ctx, userID); err == nil && remoteUser != nil {
-			if s.concreteFedSvc != nil {
-				return s.concreteFedSvc.CountLocalFollowersOfRemoteActor(ctx, remoteUser.ActorID)
-			}
-			return 0, nil
-		}
-	}
-
 	localCount, err := s.followRepo.CountFollowers(ctx, userID)
 	if err != nil {
 		return 0, err
@@ -414,16 +388,6 @@ func (s *FollowService) CountFollowers(ctx context.Context, userID primitive.Obj
 
 // CountFollowing returns total count of following users (local + remote)
 func (s *FollowService) CountFollowing(ctx context.Context, userID primitive.ObjectID) (int64, error) {
-	// Remote user check
-	if s.federationService != nil {
-		if remoteUser, err := s.remoteUserRepo.GetRemoteUserByID(ctx, userID); err == nil && remoteUser != nil {
-			if s.concreteFedSvc != nil {
-				return s.concreteFedSvc.CountLocalUsersFollowedByRemoteActor(ctx, remoteUser.ActorID)
-			}
-			return 0, nil
-		}
-	}
-
 	localCount, err := s.followRepo.CountFollowing(ctx, userID)
 	if err != nil {
 		return 0, err

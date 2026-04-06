@@ -1,5 +1,4 @@
-import React, { useState, useMemo } from 'react';
-import DOMPurify from 'dompurify';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { Post, PublicUser } from '../types';
 import { useContentStore } from '../store/contentStore';
@@ -37,7 +36,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { cn, resolveMediaUrl } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { getPostLikers, getFollowers } from '../api/client';
 import { messagingApi } from '../../messaging/api/client';
 import type { PostLiker } from '../types';
@@ -234,15 +233,33 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
         f.display_name.toLowerCase().includes(followerSearchQuery.toLowerCase())
     );
 
-    // Sanitize Mastodon HTML content using DOMPurify.
-    // This preserves clickable mentions (@user), hashtags (#tag), and links
-    // embedded inside <a> elements, while stripping unsafe scripts/attributes.
-    const cleanContent = useMemo(() => {
-        return DOMPurify.sanitize(post.content, {
-            ALLOWED_TAGS: ['p', 'br', 'a', 'span', 'strong', 'em', 'del', 'pre', 'code', 'ul', 'ol', 'li'],
-            ALLOWED_ATTR: ['href', 'class', 'rel', 'target'],
+    // Helper to render content with clickable mentions
+    const renderContentWithMentions = (content: string) => {
+        const parts = content.split(/(@\w+)/g);
+        return parts.map((part, index) => {
+            if (part.startsWith('@')) {
+                const username = part.substring(1);
+
+                // Only highlight if it's a valid mention stored in the post metadata.
+                // The backend now populates this field for all posts (including legacy ones).
+                const isValidMention = post.mentioned_usernames?.some(u => u.toLowerCase() === username.toLowerCase());
+
+                if (!isValidMention) return part;
+
+                return (
+                    <Link
+                        key={index}
+                        to={`/profile/${username}`}
+                        className="text-primary hover:underline font-bold transition-all"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {part}
+                    </Link>
+                );
+            }
+            return part;
         });
-    }, [post.content]);
+    };
 
     return (
         <>
@@ -289,7 +306,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
                                         </Link>
                                         <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-accent/10 border border-accent/20">
                                             <span className="text-[10px] font-bold text-accent uppercase tracking-widest whitespace-nowrap">
-                                                {post.author_instance || 'Nexus.Social'}
+                                                {post.author_instance || 'Nexus Social'}
                                             </span>
                                         </div>
                                     </div>
@@ -350,21 +367,20 @@ export const PostCard: React.FC<PostCardProps> = ({ post, initialShowComments = 
 
                         {/* Post Body/Content */}
                         <div className="post-content-area mb-6">
-                            <div
-                                className={cn(
-                                    "post-content text-foreground/90 leading-relaxed font-sans",
-                                    isExpanded ? "text-lg md:text-xl" : "text-[1.05rem]"
-                                )}
-                                dangerouslySetInnerHTML={{ __html: cleanContent }}
-                            />
+                            <p className={cn(
+                                "text-foreground/90 leading-relaxed whitespace-pre-wrap font-sans",
+                                isExpanded ? "text-lg md:text-xl" : "text-[1.05rem]"
+                            )}>
+                                {renderContentWithMentions(post.content)}
+                            </p>
 
                             {/* Media Content */}
                             {post.media_url && (
-                                <div className="mt-4 rounded-xl overflow-hidden border border-border/50 shadow-sm bg-secondary/10 flex items-center justify-center">
+                                <div className="mt-4 rounded-xl overflow-hidden border border-border/50 shadow-sm">
                                     {post.media_type === 'video' ? (
-                                        <video controls src={resolveMediaUrl(post.media_url)} className="w-full max-h-[600px] object-contain bg-black" />
+                                        <video controls src={post.media_url.startsWith('http') ? post.media_url : `${import.meta.env.VITE_API_URL || import.meta.env.VITE_COMMUNITY1_URL || 'http://localhost:8080'}${post.media_url}`} className="w-full max-h-[500px] object-cover bg-black" />
                                     ) : (
-                                        <img src={resolveMediaUrl(post.media_url)} alt="Post content" className="w-full max-h-[600px] object-contain hover:scale-[1.01] transition-transform duration-500" />
+                                        <img src={post.media_url.startsWith('http') ? post.media_url : `${import.meta.env.VITE_API_URL || import.meta.env.VITE_COMMUNITY1_URL || 'http://localhost:8080'}${post.media_url}`} alt="Post content" className="w-full max-h-[500px] object-cover hover:scale-[1.01] transition-transform duration-500" />
                                     )}
                                 </div>
                             )}

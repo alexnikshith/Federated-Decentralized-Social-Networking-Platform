@@ -7,12 +7,11 @@ import (
 	identityRepo "federated-social/backend/epics/identity/repository"
 	messagingRepo "federated-social/backend/epics/messaging/repository"
 	"federated-social/backend/pkg/email"
-	"federated-social/backend/config"
-	"federated-social/backend/database"
 	"log"
 	"net/http"
 	"strings"
 
+	reportRepo "federated-social/backend/epics/reports/repository"
 	reportService "federated-social/backend/epics/reports/service"
 	safetyService "federated-social/backend/epics/safety/service"
 
@@ -21,47 +20,34 @@ import (
 )
 
 type AdminHandler struct {
-	userRepo           identityRepo.UserRepositoryInterface
-	postRepo           contentRepo.PostRepositoryInterface
-	storyRepo          contentRepo.StoryRepositoryInterface
-	messageRepo        messagingRepo.MessageRepositoryInterface
-	activityRepo       identityRepo.ActivityRepositoryInterface
-	sessionRepo        identityRepo.SessionRepositoryInterface
-	followRepo         contentRepo.FollowRepositoryInterface
-	notificationRepo   contentRepo.NotificationRepositoryInterface
-	reportRepo         reportService.ReportRepository
-	postService        *service.PostService
-	reportService      reportService.ReportService
+	userRepo         *identityRepo.UserRepository
+	postRepo         *contentRepo.PostRepository
+	storyRepo        *contentRepo.StoryRepository
+	messageRepo      *messagingRepo.MessageRepository
+	activityRepo     *identityRepo.ActivityRepository
+	sessionRepo      *identityRepo.SessionRepository
+	followRepo       *contentRepo.FollowRepository
+	notificationRepo *contentRepo.NotificationRepository
+	postService      *service.PostService
+	reportService    reportService.ReportService
 	enforcementService *safetyService.EnforcementService
-	emailSender        email.EmailSenderInterface
+	emailSender      *email.EmailSender
 }
 
-func NewAdminHandler(
-	userRepo identityRepo.UserRepositoryInterface,
-	postRepo contentRepo.PostRepositoryInterface,
-	storyRepo contentRepo.StoryRepositoryInterface,
-	messageRepo messagingRepo.MessageRepositoryInterface,
-	activityRepo identityRepo.ActivityRepositoryInterface,
-	sessionRepo identityRepo.SessionRepositoryInterface,
-	followRepo contentRepo.FollowRepositoryInterface,
-	notificationRepo contentRepo.NotificationRepositoryInterface,
-	reportRepo reportService.ReportRepository,
-	enforcement *safetyService.EnforcementService,
-) *AdminHandler {
+func NewAdminHandler(enforcement *safetyService.EnforcementService) *AdminHandler {
 	return &AdminHandler{
-		userRepo:           userRepo,
-		postRepo:           postRepo,
-		storyRepo:          storyRepo,
-		messageRepo:        messageRepo,
-		activityRepo:       activityRepo,
-		sessionRepo:        sessionRepo,
-		followRepo:         followRepo,
-		notificationRepo:   notificationRepo,
-		reportRepo:         reportRepo,
-		postService:        service.NewPostService(enforcement),
-		reportService:      reportService.NewReportService(reportRepo),
+		userRepo:         identityRepo.NewUserRepository(),
+		postRepo:         contentRepo.NewPostRepository(),
+		storyRepo:        contentRepo.NewStoryRepository(),
+		messageRepo:      messagingRepo.NewMessageRepository(),
+		activityRepo:     identityRepo.NewActivityRepository(),
+		sessionRepo:      identityRepo.NewSessionRepository(),
+		followRepo:       contentRepo.NewFollowRepository(),
+		notificationRepo: contentRepo.NewNotificationRepository(),
+		postService:      service.NewPostService(enforcement),
+		reportService:    reportService.NewReportService(reportRepo.NewReportRepository()),
 		enforcementService: enforcement,
-		emailSender:        email.NewEmailSender(),
+		emailSender:      email.NewEmailSender(),
 	}
 }
 
@@ -167,10 +153,7 @@ func (h *AdminHandler) ToggleUserStatus(w http.ResponseWriter, r *http.Request) 
 		h.sessionRepo.InvalidateAllUserSessions(r.Context(), oid)
 	}
 
-	update := bson.M{
-		"is_active":      req.Status,
-		"is_deactivated": !req.Status,
-	}
+	update := bson.M{"is_active": req.Status}
 	if err := h.userRepo.UpdateUser(r.Context(), oid, update); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -221,7 +204,7 @@ func (h *AdminHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	oid, _ := primitive.ObjectIDFromHex(postID)
-	if err := h.postService.DeletePostAsAdmin(r.Context(), oid); err != nil {
+	if err := h.postRepo.DeletePost(r.Context(), oid); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -243,13 +226,6 @@ func (h *AdminHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-
-	// Get user details first so we can purge caches by username
-	user, _ := h.userRepo.FindByID(ctx, oid)
-	var username string
-	if user != nil {
-		username = user.Username
-	}
 
 	// Full cascade wipe:
 
@@ -284,17 +260,7 @@ func (h *AdminHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 8. ALSO purge from remote_users cache if they were accidentally filed there (e.g. via federated search)
-	if username != "" {
-		remoteUsersCol := database.GetCollection("remote_users")
-		localInstances := []string{"local", config.AppConfig.InstanceDomain, "localhost:8080", "localhost:8081", "backend:8080", "backend2:8080"}
-		_, _ = remoteUsersCol.DeleteMany(ctx, bson.M{
-			"username": username,
-			"instance": bson.M{"$in": localInstances},
-		})
-	}
-
-	log.Printf("Admin: fully deleted user %s (@%s) and all associated data", userID, username)
+	log.Printf("Admin: fully deleted user %s and all associated data", userID)
 	w.WriteHeader(http.StatusOK)
 }
 

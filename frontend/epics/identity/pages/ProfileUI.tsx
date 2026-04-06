@@ -68,7 +68,6 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { COMMUNITIES, DEFAULT_COMMUNITY } from "@/config/communities";
 import axios from "axios";
-import DOMPurify from "dompurify";
 
 interface UserListModalProps {
   isOpen: boolean;
@@ -167,8 +166,7 @@ const ProfileUI = () => {
   const [endDate, setEndDate] = useState<Date | undefined>();
 
 
-  const cleanUsername = username?.startsWith('@') ? username.split('@')[1] : username;
-  const isOwnProfile = !username || cleanUsername === currentUser?.username || username === currentUser?.id;
+  const isOwnProfile = !username || username === currentUser?.username || username === currentUser?.id;
 
   const loadProfileData = async (showLoading = true) => {
     if (showLoading) setLoading(true);
@@ -671,14 +669,7 @@ const ProfileUI = () => {
                         const instance = profileUser.instance || targetCommunityUrl;
                         if (instance) {
                           const known = COMMUNITIES.find(c => c.url === instance || (instance && c.url.includes(instance)) || c.name === instance);
-                          if (known) return known.name;
-
-                          // Explicit fallbacks for local and production environment aliases
-                          const clean = instance.replace(/^https?:\/\//, '').replace(/\/$/, '');
-                          if (clean === 'localhost:8080' || clean === 'backend:8080' || clean.includes('federated-decentralized-social.onrender.com')) {
-                            return 'Nexus.Social';
-                          }
-                          return clean;
+                          return known ? known.name : instance.replace(/^https?:\/\//, '');
                         }
                         const savedCommId = localStorage.getItem('active_community_id');
                         const currentComm = COMMUNITIES.find(c => c.id === savedCommId) || DEFAULT_COMMUNITY;
@@ -820,12 +811,8 @@ const ProfileUI = () => {
                                 });
                               }
                             }
-                            // Soft reload data after a delay — but NOT for Mastodon users,
-                            // because their followers_count in our DB isn't live-updated by the AP handshake,
-                            // so reloading would reset the optimistic +1 we just showed.
-                            if (!isMastodonNode) {
-                              setTimeout(() => loadProfileData(false), 800);
-                            }
+                            // Soft reload data after a delay
+                            setTimeout(() => loadProfileData(false), 800);
                           } catch (err: any) {
                             console.error("Follow/unfollow failed:", err);
                             const errorMsg = err.response?.data?.message || err.message || "Action failed. Please try again.";
@@ -867,10 +854,9 @@ const ProfileUI = () => {
             <div className="flex flex-col lg:flex-row gap-6">
               {/* Bio & Details */}
               <div className="flex-[2] glass-card rounded-[2rem] p-8 border-primary/10">
-                <div
-                  className="text-foreground/90 leading-relaxed mb-6 text-lg prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-a:text-primary prose-a:no-underline hover:prose-a:underline"
-                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(profileUser.bio || "No bio yet.") }}
-                />
+                <p className="text-foreground/90 leading-relaxed mb-6 text-lg">
+                  {profileUser.bio || "No bio yet."}
+                </p>
 
                 <div className="space-y-4 text-sm font-medium">
                   {profileUser.location && (

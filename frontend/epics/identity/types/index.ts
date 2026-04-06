@@ -15,14 +15,12 @@ export interface User {
     following_count?: number;
     posts_count?: number;
     is_following?: boolean;
-    is_follow_requested?: boolean;
     can_view_details?: boolean;
     instance?: string;
     is_2fa_enabled?: boolean;
     role?: 'user' | 'admin';
     is_active?: boolean;
     joined_communities?: string[];
-    federation_enabled?: boolean;
 }
 
 // ActivityLog tracks security-relevant user actions (login, updates, etc.)

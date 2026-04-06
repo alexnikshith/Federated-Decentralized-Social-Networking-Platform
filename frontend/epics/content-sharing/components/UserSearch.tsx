@@ -33,15 +33,7 @@ export const UserSearch: React.FC<{
             // Federated Search: Query all known communities
             const searchPromises = COMMUNITIES.map(async (community) => {
                 try {
-                    const token = localStorage.getItem('auth_token');
-                    const activeCommunityUrl = localStorage.getItem('active_community_url');
-                    const isLocal = community.url === activeCommunityUrl ||
-                        (community.url.includes('localhost:8080') && activeCommunityUrl?.includes('localhost:8080'));
-
-                    const response = await axios.get(
-                        `${community.url}/api/users/search?q=${encodeURIComponent(searchQuery)}&limit=10`,
-                        isLocal && token ? { headers: { Authorization: `Bearer ${token}` } } : {}
-                    );
+                    const response = await axios.get(`${community.url}/api/users/search?q=${encodeURIComponent(searchQuery)}&limit=10`);
                     const users: PublicUser[] = response.data.data || [];
 
                     // Add community context to remote users
@@ -140,8 +132,7 @@ export const UserSearch: React.FC<{
                                     if ((user as any).community_url) {
                                         params.set('community', (user as any).community_url);
                                     }
-                                    const identifier = (user as any).handle || user.username;
-                                    navigate(`/profile/${identifier}${params.toString() ? '?' + params.toString() : ''}`);
+                                    navigate(`/profile/${user.username}${params.toString() ? '?' + params.toString() : ''}`);
                                 }
                                 if (onClose) onClose();
                             }}
@@ -159,7 +150,7 @@ export const UserSearch: React.FC<{
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-1.5 overflow-hidden">
                                     <span className="font-semibold text-sm truncate">{user.display_name || user.username}</span>
-                                    {user.instance && (
+                                    {user.username.includes('@') && (
                                         <Globe className="w-2.5 h-2.5 text-accent flex-shrink-0" />
                                     )}
                                 </div>
@@ -167,24 +158,12 @@ export const UserSearch: React.FC<{
                                     <div className="text-[10px] text-muted-foreground truncate font-mono">
                                         @{user.username}
                                     </div>
-                                    {(() => {
-                                        const instance = user.instance;
-                                        let displayDomain = "";
-
-                                        if (!instance || instance === "default-instance" || instance === "default" || instance.includes("localhost:8080") || instance.includes("federated-decentralized-social.onrender.com")) {
-                                            displayDomain = "Nexus.Social";
-                                        } else {
-                                            // Extract domain from URL and remove protocol
-                                            displayDomain = instance.replace(/^https?:\/\//, '').replace(/\/$/, '');
-                                        }
-
-                                        return (
-                                            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-primary/10 text-[8px] font-bold text-primary uppercase tracking-tighter">
-                                                <Globe className="w-2 h-2" />
-                                                {displayDomain}
-                                            </div>
-                                        );
-                                    })()}
+                                    {(user as any).community_name && (
+                                        <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-primary/10 text-[8px] font-bold text-primary uppercase tracking-tighter">
+                                            <Globe className="w-2 h-2" />
+                                            {(user as any).community_name}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

@@ -114,15 +114,6 @@ func main() {
 		log.Printf("Warning: Failed to create verification indexes: %v", err)
 	}
 
-	activityRepo := repository.NewActivityRepository()
-	if err := activityRepo.CreateIndexes(ctx); err != nil {
-		log.Printf("Warning: Failed to create activity indexes: %v", err)
-	}
-
-	sessionRepo := repository.NewSessionRepository()
-	// sessionRepo doesn't have CreateIndexes in its interface, but it might in the struct
-	// Let's assume it's fine for now or check if it needs one.
-
 	// Run migrations
 	if err := userRepo.MigrateGlobalDiscovery(ctx); err != nil {
 		log.Printf("Warning: Failed to migrate user discovery settings: %v", err)
@@ -239,19 +230,7 @@ func main() {
 	contentRoutes.RegisterContentSharingRoutes(router, enforcementService)
 	reportRoutes.RegisterReportRoutes(router)
 	safetyRoutes.RegisterSafetyRoutes(router, modHandler)
-	adminRoutes.RegisterAdminRoutes(
-		router,
-		userRepo,
-		postRepo,
-		storyRepo,
-		messagingR,
-		activityRepo,
-		sessionRepo,
-		followRepo,
-		notificationRepo,
-		userReportRepo,
-		enforcementService,
-	)
+	adminRoutes.RegisterAdminRoutes(router, enforcementService)
 	messagingRoutes.RegisterMessagingRoutes(router)
 
 	// Register federation routes

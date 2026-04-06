@@ -10,7 +10,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type SessionRepository struct {
@@ -92,23 +91,5 @@ func (r *SessionRepository) CleanupExpiredSessions(ctx context.Context) error {
 	_, err := r.collection.DeleteMany(ctx, bson.M{
 		"expires_at": bson.M{"$lt": time.Now()},
 	})
-	return err
-}
-
-func (r *SessionRepository) CreateIndexes(ctx context.Context) error {
-	indexes := []mongo.IndexModel{
-		{
-			Keys:    bson.D{{Key: "token", Value: 1}},
-			Options: options.Index().SetUnique(true),
-		},
-		{
-			Keys: bson.D{{Key: "user_id", Value: 1}},
-		},
-		{
-			Keys:    bson.D{{Key: "expires_at", Value: 1}},
-			Options: options.Index().SetExpireAfterSeconds(0), // TTL index
-		},
-	}
-	_, err := r.collection.Indexes().CreateMany(ctx, indexes)
 	return err
 }

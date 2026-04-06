@@ -28,10 +28,10 @@ export function HeroSection() {
           transition={{ duration: 0.8, ease: "easeOut" }}
           className="mb-8"
         >
-          <h1 className="text-4xl md:text-6xl lg:text-8xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-foreground via-cyan-500/80 to-purple-500/80 dark:from-white dark:via-cyan-100 dark:to-purple-400 mb-6 drop-shadow-sm uppercase">
+          <h1 className="text-4xl md:text-6xl lg:text-8xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-cyan-100 to-purple-400 mb-6 drop-shadow-sm uppercase">
             Nexus Core
           </h1>
-          <p className="text-xl md:text-2xl text-foreground/70 dark:text-cyan-100/70 leading-relaxed max-w-3xl mx-auto font-light tracking-wide uppercase">
+          <p className="text-xl md:text-2xl text-cyan-100/70 leading-relaxed max-w-3xl mx-auto font-light tracking-wide uppercase">
             The next evolution of social intelligence.
           </p>
         </motion.div>
@@ -52,6 +52,32 @@ export function HeroSection() {
             </button>
           </Link>
         </motion.div>
+
+        {/* Feature Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 w-full max-w-4xl border-t border-white/10 pt-16 pointer-events-auto">
+          {[
+            { icon: Shield, label: "ENCRYPTED", color: "text-cyan-400", bg: "bg-cyan-500/10", border: "border-cyan-500/20" },
+            { icon: Cpu, label: "DISTRIBUTED", color: "text-purple-400", bg: "bg-purple-500/10", border: "border-purple-500/20" },
+            { icon: Share2, label: "FEDERATED", color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20" },
+            { icon: Zap, label: "REAL-TIME", color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20" },
+          ].map((item, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 + i * 0.1 }}
+              className="flex flex-col items-center gap-4 group cursor-default"
+            >
+              <div className={`p-4 rounded-sm ${item.bg} border-t border-l-2 ${item.border} group-hover:border-current transition-all duration-300 ${item.color} group-hover:scale-110 shadow-lg`}>
+                <item.icon className="w-6 h-6" />
+              </div>
+              <span className="text-[10px] font-mono font-bold tracking-[0.3em] text-white/50 group-hover:text-white transition-colors duration-300">
+                {item.label}
+              </span>
+            </motion.div>
+          ))}
+        </div>
+
       </div>
     </section>
   );

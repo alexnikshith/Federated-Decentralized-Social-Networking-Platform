@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { TrendingUp, Users, UserPlus, Info, ShieldCheck, Settings } from 'lucide-react';
+import { TrendingUp, Users, UserPlus } from 'lucide-react';
 import { searchUsers, followUser } from '../api/client';
 import type { PublicUser } from '../types';
 import { showToast } from '@/lib/toast';
@@ -46,7 +46,7 @@ export const RightSidebar: React.FC = () => {
     };
 
     return (
-        <div className="w-[300px] hidden xl:block flex-shrink-0 space-y-6 pt-2 pb-8 fixed right-8 top-4 h-[calc(100vh-4rem)] overflow-y-auto scroller-hidden">
+        <div className="w-[300px] hidden xl:block flex-shrink-0 space-y-6 pt-2 pb-8 fixed right-8 top-8 h-[calc(100vh-4rem)] overflow-y-auto scroller-hidden">
 
             {/* Suggested Connections Widget */}
             <div className="glass-card rounded-2xl p-5 border border-white/5 shadow-sm bg-background/40 backdrop-blur-xl">
@@ -112,7 +112,7 @@ export const RightSidebar: React.FC = () => {
                                 setIsLoading(true);
                                 const users = await searchUsers('', 30);
                                 const shuffled = users.sort(() => 0.5 - Math.random());
-                                setSuggestedUsers(shuffled.filter(u => !u.is_following && u.id !== currentUser?.id).slice(0, 4));
+                                setSuggestedUsers(shuffled.filter(u => !u.is_following && u.id !== currentUser?.id).slice(0, 6));
                             } catch (error) {
                                 console.error("Failed to fetch suggested users", error);
                             } finally {
@@ -127,40 +127,6 @@ export const RightSidebar: React.FC = () => {
                 </button>
             </div>
 
-            {/* Informational Box */}
-            {(currentUser?.federation_enabled === false || currentUser?.is_2fa_enabled) && (
-                <div className="glass-card rounded-2xl p-5 border border-amber-500/10 shadow-sm bg-amber-500/[0.03] backdrop-blur-xl space-y-5">
-                    {currentUser?.federation_enabled === false && (
-                        <div className="flex items-start gap-4">
-                            <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0 border border-amber-500/20">
-                                <Info className="w-4 h-4 text-amber-500" />
-                            </div>
-                            <div className="space-y-1">
-                                <h3 className="text-[13px] font-bold text-amber-500 uppercase tracking-widest">Federation</h3>
-                                <p className="text-[11px] text-muted-foreground leading-relaxed font-bold uppercase tracking-wide">
-                                    is <span className="text-amber-500/80">Disabled</span> by default. You can enable it in <span className="underline text-amber-400 cursor-pointer hover:text-amber-500 transition-colors" onClick={() => window.location.href='/settings?tab=privacy'}>Privacy and Security</span> settings.
-                                </p>
-                            </div>
-                        </div>
-                    )}
-
-                    {currentUser?.is_2fa_enabled && (
-                        <div className="flex items-start gap-4">
-                            <div className="w-8 h-8 rounded-lg bg-teal-500/10 flex items-center justify-center shrink-0 border border-teal-500/20">
-                                <ShieldCheck className="w-4 h-4 text-teal-500" />
-                            </div>
-                            <div className="space-y-1">
-                                <h3 className="text-[13px] font-bold text-teal-500 uppercase tracking-widest">Multi-Factor Authentication</h3>
-                                <p className="text-[11px] text-muted-foreground leading-relaxed font-bold uppercase tracking-wide">
-                                    can be disabled in <span className="underline text-teal-400 cursor-pointer hover:text-teal-500 transition-colors" onClick={() => window.location.href='/settings?tab=privacy'}>Privacy and Security</span> settings.
-                                </p>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
-
         </div>
     );
 };
-
