@@ -104,7 +104,7 @@ The execution of these tests utilizes a standardized environment designed to par
 * **Frontend Unit:** Jest & React Testing Library
 * **CI/CD Platform:** GitHub Actions
 
----
+--
 
 ## 7. Test Case Design
 
